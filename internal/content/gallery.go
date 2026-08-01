@@ -109,14 +109,14 @@ var Clients = []Client{
 
 // Vacancy is an open position on the careers page.
 type Vacancy struct {
-	ID          string
-	Title       string
-	Type        string // Full-time | Contract
-	Location    string
-	Openings    int
-	Pay         string
-	Experience  string
-	Summary     string
+	ID           string
+	Title        string
+	Type         string // Full-time | Contract
+	Location     string
+	Openings     int
+	Pay          string
+	Experience   string
+	Summary      string
 	Requirements []string
 }
 
@@ -125,49 +125,49 @@ var Vacancies = []Vacancy{
 	{
 		ID: "sg-kkj", Title: "Security Guard", Type: "Full-time", Location: "Kokrajhar & Chirang", Openings: 60,
 		Pay: "As per Assam minimum wage + EPF, ESI, bonus", Experience: "Freshers welcome",
-		Summary: "Gate, floor and perimeter duty on commercial, industrial and institutional sites. Twenty-one day paid induction before first posting.",
+		Summary:      "Gate, floor and perimeter duty on commercial, industrial and institutional sites. Twenty-one day paid induction before first posting.",
 		Requirements: []string{"Age 21–45, physically fit", "Class VIII pass or above", "Height 168 cm and above (relaxable for ST candidates)", "Aadhaar, address proof and two references", "Willing to work rotating shifts"},
 	},
 	{
 		ID: "lg-btr", Title: "Lady Security Guard", Type: "Full-time", Location: "All five BTR districts", Openings: 35,
 		Pay: "As per Assam minimum wage + EPF, ESI, bonus", Experience: "Freshers welcome",
-		Summary: "Frisking, hostel, ward and retail floor duty. Postings are only made to sites with separate rest and changing facilities.",
+		Summary:      "Frisking, hostel, ward and retail floor duty. Postings are only made to sites with separate rest and changing facilities.",
 		Requirements: []string{"Age 20–45, physically fit", "Class VIII pass or above", "Aadhaar, address proof and two references", "Day-shift and general-shift postings available", "Local candidates from BTR districts preferred"},
 	},
 	{
 		ID: "sup-btr", Title: "Security Supervisor", Type: "Full-time", Location: "Kokrajhar, Baksa, Udalguri", Openings: 12,
 		Pay: "₹16,000 – ₹21,000 per month", Experience: "2+ years in guarding",
-		Summary: "Runs the muster, the shift handover and the site register for a cluster of postings. First escalation point for the guards on site.",
+		Summary:      "Runs the muster, the shift handover and the site register for a cluster of postings. First escalation point for the guards on site.",
 		Requirements: []string{"Two years or more as a security guard", "Class X pass", "Able to write a clear incident report in Assamese or English", "Two-wheeler licence preferred", "Ex-servicemen and ex-police strongly encouraged"},
 	},
 	{
 		ID: "fo-btr", Title: "Field Officer", Type: "Full-time", Location: "Kokrajhar (roving)", Openings: 5,
 		Pay: "₹22,000 – ₹28,000 per month + travel", Experience: "3+ years in security operations",
-		Summary: "Owns a district cluster: surprise checks, reliever placement, client liaison and monthly compliance reporting.",
+		Summary:      "Owns a district cluster: surprise checks, reliever placement, client liaison and monthly compliance reporting.",
 		Requirements: []string{"Three years in security or facility operations", "Graduate preferred, Class XII minimum", "Valid two-wheeler or four-wheeler licence", "Comfortable with night surprise checks", "Fluent in Bodo and Assamese"},
 	},
 	{
 		ID: "cro-kkj", Title: "Control Room Operator", Type: "Full-time", Location: "Kokrajhar HQ", Openings: 6,
 		Pay: "₹15,000 – ₹19,000 per month", Experience: "1+ year preferred",
-		Summary: "Works the beat check-in board, logs incidents and drives the escalation ladder on the night shift.",
+		Summary:      "Works the beat check-in board, logs incidents and drives the escalation ladder on the night shift.",
 		Requirements: []string{"Class XII pass with basic computer skills", "Comfortable on rotating night shifts", "Clear telephone manner in Bodo, Assamese and Hindi", "Able to maintain an accurate written log", "CCTV monitoring experience an advantage"},
 	},
 	{
 		ID: "hk-btr", Title: "Housekeeping Staff", Type: "Full-time", Location: "Kokrajhar, Bongaigaon", Openings: 40,
 		Pay: "As per Assam minimum wage + EPF, ESI, bonus", Experience: "Freshers welcome",
-		Summary: "Daily and periodic cleaning cycles on office, hospital and institutional sites, working to a signed checklist.",
+		Summary:      "Daily and periodic cleaning cycles on office, hospital and institutional sites, working to a signed checklist.",
 		Requirements: []string{"Age 18–50, physically fit", "No formal education requirement", "Aadhaar and address proof", "Training provided on machines and chemicals", "Male and female candidates both welcome"},
 	},
 	{
 		ID: "drv-btr", Title: "Driver (LMV / HMV)", Type: "Full-time", Location: "Kokrajhar, Guwahati", Openings: 8,
 		Pay: "₹14,000 – ₹20,000 per month", Experience: "2+ years driving",
-		Summary: "Client vehicle, ambulance and logistics duty. Licence is verified with the issuing RTO before placement.",
+		Summary:      "Client vehicle, ambulance and logistics duty. Licence is verified with the issuing RTO before placement.",
 		Requirements: []string{"Valid LMV or HMV licence, minimum two years old", "Clean police record", "Passes a practical assessment on the vehicle class", "Knowledge of BTR and Lower Assam routes", "Willing to work extended duty when required"},
 	},
 	{
 		ID: "tech-kkj", Title: "Electronic Security Technician", Type: "Full-time", Location: "Kokrajhar HQ", Openings: 4,
 		Pay: "₹18,000 – ₹26,000 per month", Experience: "1+ year in CCTV/networking",
-		Summary: "Installs and commissions CCTV, access control and fire alarm systems, and supports the control room feed.",
+		Summary:      "Installs and commissions CCTV, access control and fire alarm systems, and supports the control room feed.",
 		Requirements: []string{"ITI or diploma in electronics/electrical", "Hands-on with IP cameras, NVRs and cabling", "Basic networking — IP addressing, switches, PoE", "Comfortable with height and ladder work", "Willing to travel across BTR districts"},
 	},
 }

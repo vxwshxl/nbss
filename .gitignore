@@ -1,0 +1,13 @@
+# build artefacts
+/bin/
+coverage.out
+
+# runtime data — submissions are per-deployment, never committed
+/data/submissions.json
+/data/submissions.json.tmp
+
+# editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp

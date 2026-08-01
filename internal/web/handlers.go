@@ -41,12 +41,12 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 }
 
 type aboutData struct {
-	Timeline   []content.Milestone
-	Team       []content.Person
-	Licenses   []content.Credential
-	Stats      []content.Stat
-	Coverage   []content.District
-	Pillars    []content.Pillar
+	Timeline []content.Milestone
+	Team     []content.Person
+	Licenses []content.Credential
+	Stats    []content.Stat
+	Coverage []content.District
+	Pillars  []content.Pillar
 }
 
 func (s *Server) handleAbout(w http.ResponseWriter, r *http.Request) {

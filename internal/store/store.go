@@ -31,9 +31,9 @@ const (
 type Status string
 
 const (
-	StatusNew      Status = "new"
+	StatusNew       Status = "new"
 	StatusContacted Status = "contacted"
-	StatusClosed   Status = "closed"
+	StatusClosed    Status = "closed"
 )
 
 // Submission is one record from any of the public forms. Fields that do not

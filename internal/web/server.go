@@ -20,12 +20,12 @@ import (
 
 // Config holds everything the server needs from main.
 type Config struct {
-	Assets     fs.FS  // the embedded (or on-disk) web/ tree
-	Dev        bool   // re-parse templates on every request
-	AdminUser  string
-	AdminPass  string
-	BaseURL    string
-	Logger     *slog.Logger
+	Assets    fs.FS // the embedded (or on-disk) web/ tree
+	Dev       bool  // re-parse templates on every request
+	AdminUser string
+	AdminPass string
+	BaseURL   string
+	Logger    *slog.Logger
 }
 
 // Server owns the router and the shared dependencies.
