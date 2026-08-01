@@ -1,0 +1,82 @@
+{{ define "content" }}
+{{ $d := .Data }}
+
+<section class="phead phead--admin">
+  <div class="wrap phead__in">
+    <p class="eyebrow"><span class="eyebrow__num">OPS</span><span class="eyebrow__rule"></span>Internal — not indexed</p>
+    <h1 class="phead__h">Submissions</h1>
+    <p class="phead__lede">Everything that came off the public forms, newest first.</p>
+  </div>
+  {{ template "aronai-band" }}
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="admin-stats">
+      <div class="astat"><span class="astat__v">{{ index $d.Counts "total" }}</span><span class="astat__l">total</span></div>
+      <div class="astat astat--hot"><span class="astat__v">{{ index $d.Counts "new" }}</span><span class="astat__l">new</span></div>
+      <div class="astat"><span class="astat__v">{{ index $d.Counts "quote" }}</span><span class="astat__l">quotes</span></div>
+      <div class="astat"><span class="astat__v">{{ index $d.Counts "enquiry" }}</span><span class="astat__l">enquiries</span></div>
+      <div class="astat"><span class="astat__v">{{ index $d.Counts "application" }}</span><span class="astat__l">applications</span></div>
+    </div>
+
+    <div class="chips">
+      <a class="chip {{ if eq $d.Filter "" }}is-on{{ end }}" href="/admin">All</a>
+      <a class="chip {{ if eq $d.Filter "quote" }}is-on{{ end }}" href="/admin?kind=quote">Quotes</a>
+      <a class="chip {{ if eq $d.Filter "enquiry" }}is-on{{ end }}" href="/admin?kind=enquiry">Enquiries</a>
+      <a class="chip {{ if eq $d.Filter "application" }}is-on{{ end }}" href="/admin?kind=application">Applications</a>
+    </div>
+
+    {{ if $d.Submissions }}
+    <div class="subs">
+      {{ range $s := $d.Submissions }}
+      <article class="sub">
+        <header class="sub__head">
+          <span class="sub__ref">{{ $s.ID }}</span>
+          <span class="sub__kind sub__kind--{{ $s.Kind }}">{{ $s.Kind }}</span>
+          <span class="sub__when">{{ date $s.CreatedAt }}</span>
+          <span class="sub__status" id="st-{{ $s.ID }}">{{ template "status-badge" (dict "ID" $s.ID "Status" (printf "%s" $s.Status)) }}</span>
+        </header>
+
+        <div class="sub__body">
+          <dl class="sub__dl">
+            <div><dt>Name</dt><dd>{{ $s.Name }}</dd></div>
+            <div><dt>Phone</dt><dd><a href="tel:{{ tel $s.Phone }}">{{ $s.Phone }}</a></dd></div>
+            {{ if $s.Email }}<div><dt>Email</dt><dd><a href="mailto:{{ $s.Email }}">{{ $s.Email }}</a></dd></div>{{ end }}
+            {{ if $s.Company }}<div><dt>Organisation</dt><dd>{{ $s.Company }}</dd></div>{{ end }}
+            {{ if $s.Subject }}<div><dt>Subject</dt><dd>{{ $s.Subject }}</dd></div>{{ end }}
+            {{ if $s.Service }}<div><dt>Service</dt><dd>{{ $s.Service }}</dd></div>{{ end }}
+            {{ if $s.SiteType }}<div><dt>Site</dt><dd>{{ $s.SiteType }}</dd></div>{{ end }}
+            {{ if $s.District }}<div><dt>District</dt><dd>{{ $s.District }}</dd></div>{{ end }}
+            {{ if $s.Headcount }}<div><dt>Headcount</dt><dd>{{ $s.Headcount }}</dd></div>{{ end }}
+            {{ if $s.StartWhen }}<div><dt>Start</dt><dd>{{ $s.StartWhen }}</dd></div>{{ end }}
+            {{ if $s.VacancyTitle }}<div><dt>Applied for</dt><dd>{{ $s.VacancyTitle }}</dd></div>{{ end }}
+            {{ if $s.Age }}<div><dt>Age</dt><dd>{{ $s.Age }}</dd></div>{{ end }}
+            {{ if $s.Education }}<div><dt>Education</dt><dd>{{ $s.Education }}</dd></div>{{ end }}
+          </dl>
+
+          {{ if $s.Message }}<p class="sub__msg">{{ $s.Message }}</p>{{ end }}
+          {{ if $s.Experience }}<p class="sub__msg">{{ $s.Experience }}</p>{{ end }}
+        </div>
+
+        <footer class="sub__foot">
+          <span class="sub__ip">{{ $s.RemoteIP }}</span>
+          <div class="sub__acts">
+            {{ range $st := (list "new" "contacted" "closed") }}
+            <button class="btn btn--xs" type="button"
+                    hx-post="/admin/status"
+                    hx-vals='{"id":"{{ $s.ID }}","status":"{{ $st }}"}'
+                    hx-target="#st-{{ $s.ID }}"
+                    hx-swap="innerHTML">{{ $st }}</button>
+            {{ end }}
+          </div>
+        </footer>
+      </article>
+      {{ end }}
+    </div>
+    {{ else }}
+    <p class="empty">Nothing here yet. Submit the contact, quote or application form and it will appear.</p>
+    {{ end }}
+  </div>
+</section>
+{{ end }}

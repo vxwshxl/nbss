@@ -1,0 +1,49 @@
+{{/*
+  Shared page furniture. These live in partials/ rather than in a single page so
+  every template set gets them — each page is parsed with the layout and all
+  partials, but only its own page file.
+*/}}
+
+{{ define "cta-band" }}
+<section class="cta">
+  <div class="wrap cta__in">
+    <div>
+      <p class="eyebrow"><span class="eyebrow__num">◆</span><span class="eyebrow__rule"></span>Next step</p>
+      <h2 class="cta__h">Tell us about the site. We will come and look at it.</h2>
+      <p class="cta__p">
+        No obligation, no pressure, and a written quotation with the statutory build-up shown line by line —
+        so you can see exactly what the guard is paid and what we charge on top.
+      </p>
+    </div>
+    <div class="cta__actions">
+      <a class="btn btn--gold btn--lg" href="/contact#quote">Request a quotation</a>
+      <a class="btn btn--ghost btn--lg" href="tel:{{ tel .Site.Phone }}">{{ template "icon" "phone" }} {{ .Site.Phone }}</a>
+    </div>
+  </div>
+</section>
+{{ end }}
+
+
+{{/*
+  Page masthead for every non-home page.
+  Expects: dict "Kicker" "…" "Title" "…" "Lede" "…" "Image" "/path" "Crumb" "…"
+*/}}
+{{ define "page-head" }}
+<section class="phead {{ if .Image }}phead--img{{ end }}">
+  {{ if .Image }}
+  <div class="phead__bg" aria-hidden="true"><img src="{{ .Image }}" alt="" decoding="async"></div>
+  <div class="phead__veil" aria-hidden="true"></div>
+  {{ end }}
+  <div class="wrap phead__in">
+    {{ if .Crumb }}
+    <nav class="crumb" aria-label="Breadcrumb">
+      <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">{{ .Crumb }}</span>
+    </nav>
+    {{ end }}
+    <p class="eyebrow"><span class="eyebrow__num">{{ .Kicker }}</span><span class="eyebrow__rule"></span>{{ .Sub }}</p>
+    <h1 class="phead__h">{{ .Title }}</h1>
+    {{ if .Lede }}<p class="phead__lede">{{ .Lede }}</p>{{ end }}
+  </div>
+  {{ template "aronai-band" }}
+</section>
+{{ end }}

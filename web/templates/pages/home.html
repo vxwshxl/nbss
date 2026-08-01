@@ -1,0 +1,255 @@
+{{ define "content" }}
+{{ $d := .Data }}
+
+<!-- ============================================================== HERO -->
+<section class="hero">
+  <div class="hero__bg" aria-hidden="true">
+    <img src="/static/img/hero-guard.jpg" alt="" fetchpriority="high" decoding="async">
+  </div>
+  <div class="hero__veil" aria-hidden="true"></div>
+
+  <div class="wrap hero__in">
+    <div class="hero__copy">
+      <p class="eyebrow eyebrow--hero">
+        <span class="eyebrow__num">EST 2009</span><span class="eyebrow__rule"></span>Kokrajhar · Bodoland Territorial Region
+      </p>
+
+      <h1 class="hero__h">
+        <span class="hero__line" style="--i:0">Trained in</span>
+        <span class="hero__line hero__line--accent" style="--i:1">Bodoland.</span>
+        <span class="hero__line" style="--i:2">Trusted across</span>
+        <span class="hero__line" style="--i:3">the Northeast.</span>
+      </h1>
+
+      <p class="hero__lede" style="--i:4">
+        National Bodo Security Services puts verified, drilled and properly paid people on your gate —
+        and backs them with a control room in Kokrajhar that is staffed at three in the morning.
+        Guarding, facility management, manpower and electronic security, on one contract.
+      </p>
+
+      <div class="hero__cta" style="--i:5">
+        <a class="btn btn--gold btn--lg" href="/contact#quote">Request a site survey</a>
+        <a class="btn btn--ghost btn--lg" href="/services">See all 31 services {{ template "icon" "arrow" }}</a>
+      </div>
+
+      <ul class="hero__badges" style="--i:6">
+        <li>PSARA licensed</li>
+        <li>ISO 9001:2015</li>
+        <li>EPF &amp; ESI compliant</li>
+        <li>24 × 7 control room</li>
+      </ul>
+    </div>
+
+    <aside class="hero__card" style="--i:7">
+      <p class="hero__card-k">Deployment desk</p>
+      <a class="hero__card-tel" href="tel:{{ tel .Site.Phone }}">{{ .Site.Phone }}</a>
+      <dl class="hero__card-list">
+        <div><dt>Site survey</dt><dd>Within 48 hours</dd></div>
+        <div><dt>Guards on site</dt><dd>7 working days</dd></div>
+        <div><dt>Districts covered</dt><dd>8 across Assam</dd></div>
+      </dl>
+      <a class="hero__card-go" href="/contact">Talk to us {{ template "icon" "arrow" }}</a>
+    </aside>
+  </div>
+
+  <div class="hero__ticker" aria-hidden="true">
+    <div class="ticker__track">
+      {{ range $n := seq 2 }}
+      <span>Kokrajhar</span><span class="dot">◆</span><span>Chirang</span><span class="dot">◆</span>
+      <span>Baksa</span><span class="dot">◆</span><span>Udalguri</span><span class="dot">◆</span>
+      <span>Tamulpur</span><span class="dot">◆</span><span>Bongaigaon</span><span class="dot">◆</span>
+      <span>Dhubri</span><span class="dot">◆</span><span>Guwahati</span><span class="dot">◆</span>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================= STATS -->
+<section class="stats" aria-label="Key figures">
+  <div class="wrap stats__grid">
+    {{ range $i, $s := $d.Stats }}
+    <div class="stat" style="--i:{{ $i }}">
+      <p class="stat__v"><span data-count="{{ $s.Value }}">{{ $s.Value }}</span>{{ $s.Suffix }}</p>
+      <p class="stat__l">{{ $s.Label }}</p>
+      <p class="stat__n">{{ $s.Note }}</p>
+    </div>
+    {{ end }}
+  </div>
+</section>
+
+<!-- ========================================================== DIVISIONS -->
+<section class="section section--divisions">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "01" "Text" "What we do" }}
+      <h2 class="sec-h">Four divisions, one field officer, one invoice.</h2>
+      <p class="sec-lede">
+        Most clients start with guards and end up handing us the housekeeping, the waste and the cameras —
+        because chasing four vendors for one building is nobody's idea of a job.
+      </p>
+    </header>
+
+    <div class="divisions">
+      {{ range $i, $v := $d.Divisions }}
+      <a class="division" href="/services?division={{ $v.Slug }}" data-accent="{{ $v.Accent }}" style="--i:{{ $i }}">
+        <div class="division__img"><img src="{{ $v.Cover }}" alt="" loading="lazy" decoding="async"></div>
+        <div class="division__body">
+          <span class="division__ico">{{ template "icon" $v.Icon }}</span>
+          <p class="division__k">{{ $v.Kicker }}</p>
+          <h3 class="division__t">{{ $v.Name }}</h3>
+          <p class="division__p">{{ $v.Blurb }}</p>
+          <span class="division__go">Explore {{ template "icon" "arrow" }}</span>
+        </div>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================== FEATURED -->
+<section class="section section--alt">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <div>
+        {{ template "eyebrow" dict "Num" "02" "Text" "Most asked for" }}
+        <h2 class="sec-h">The postings we fill most weeks.</h2>
+      </div>
+      <a class="btn btn--ghost" href="/services">All 31 services {{ template "icon" "arrow" }}</a>
+    </header>
+
+    <div class="cards">
+      {{ range $i, $s := $d.Featured }}
+      <a class="card" href="/services/{{ $s.Slug }}" style="--i:{{ $i }}">
+        <span class="card__ico">{{ template "icon" $s.Icon }}</span>
+        <span class="card__div">{{ $s.Division }}</span>
+        <h3 class="card__t">{{ $s.Name }}</h3>
+        <p class="card__p">{{ $s.Summary }}</p>
+        <span class="card__go">Read the scope {{ template "icon" "arrow" }}</span>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ PILLARS -->
+<section class="section section--pillars">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "03" "Text" "Why NBSS" }}
+      <h2 class="sec-h">Six things that are hard to copy.</h2>
+      <p class="sec-lede">
+        Any agency can print a uniform. These are the parts that take years and cost money —
+        which is exactly why they are the ones worth asking about.
+      </p>
+    </header>
+
+    <div class="pillars">
+      {{ range $i, $p := $d.Pillars }}
+      <article class="pillar" style="--i:{{ $i }}">
+        <span class="pillar__n">{{ $p.Index }}</span>
+        <span class="pillar__ico">{{ template "icon" $p.Icon }}</span>
+        <h3 class="pillar__t">{{ $p.Title }}</h3>
+        <p class="pillar__p">{{ $p.Body }}</p>
+      </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================== COVERAGE -->
+<section class="section section--coverage">
+  <div class="wrap coverage">
+    <div class="coverage__copy">
+      {{ template "eyebrow" dict "Num" "04" "Text" "Where we deploy" }}
+      <h2 class="sec-h">Five BTR districts, plus three we can actually supervise.</h2>
+      <p class="sec-lede">
+        We turn work down. A site we cannot reach on a surprise check at 02:00 is a site
+        we cannot promise anything about — so the map stops where the supervision does.
+      </p>
+      <a class="btn btn--ghost" href="/contact">Ask about your district {{ template "icon" "arrow" }}</a>
+    </div>
+
+    <ul class="coverage__list">
+      {{ range $i, $c := $d.Coverage }}
+      <li class="district {{ if $c.Core }}district--core{{ end }}" style="--i:{{ $i }}">
+        <span class="district__n">{{ $c.Name }}</span>
+        <span class="district__r">{{ $c.Region }}</span>
+        <span class="district__s">{{ $c.Sites }}</span>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ SECTORS -->
+<section class="section section--alt">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <div>
+        {{ template "eyebrow" dict "Num" "05" "Text" "Sectors" }}
+        <h2 class="sec-h">A bank branch is not a tea estate.</h2>
+      </div>
+      <a class="btn btn--ghost" href="/sectors">All sectors {{ template "icon" "arrow" }}</a>
+    </header>
+  </div>
+
+  <div class="rail" tabindex="0" aria-label="Sectors we serve, scroll horizontally">
+    {{ range $i, $s := $d.Sectors }}
+    <a class="tile" href="/sectors#{{ $s.Slug }}" style="--i:{{ $i }}">
+      <img src="{{ $s.Image }}" alt="" loading="lazy" decoding="async">
+      <span class="tile__body">
+        <strong>{{ $s.Name }}</strong>
+        <em>{{ $s.Blurb }}</em>
+      </span>
+    </a>
+    {{ end }}
+  </div>
+</section>
+
+<!-- ======================================================= TESTIMONIALS -->
+<section class="section section--quotes">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "06" "Text" "In their words" }}
+      <h2 class="sec-h">What clients say when the auditor is not in the room.</h2>
+    </header>
+
+    <div class="quotes">
+      {{ range $i, $q := $d.Quotes }}
+      <blockquote class="quote" style="--i:{{ $i }}">
+        <p class="quote__t">{{ $q.Quote }}</p>
+        <footer class="quote__by">
+          <span class="quote__who">{{ $q.Author }}</span>
+          <span class="quote__co">{{ $q.Company }}</span>
+          <span class="quote__sec">{{ $q.Sector }}</span>
+        </footer>
+      </blockquote>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ GALLERY -->
+<section class="section section--peek">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <div>
+        {{ template "eyebrow" dict "Num" "07" "Text" "On the ground" }}
+        <h2 class="sec-h">Operations, training and the region we come from.</h2>
+      </div>
+      <a class="btn btn--ghost" href="/gallery">Open the gallery {{ template "icon" "arrow" }}</a>
+    </header>
+
+    <div class="peek">
+      {{ range $i, $p := $d.Photos }}
+      <figure class="shot" style="--i:{{ $i }}">
+        <img src="{{ $p.Src }}" alt="{{ $p.Alt }}" loading="lazy" decoding="async">
+        <figcaption><span class="shot__cap">{{ $p.Caption }}</span></figcaption>
+      </figure>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+{{ template "cta-band" . }}
+{{ end }}

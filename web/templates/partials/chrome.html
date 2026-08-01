@@ -1,0 +1,172 @@
+{{ define "site-header" }}
+<div class="topbar">
+  <div class="wrap topbar__in">
+    <p class="topbar__note">
+      <span class="pulse" aria-hidden="true"></span>
+      Control room staffed 24 × 7 — <a href="tel:{{ tel .Site.Emergency }}">{{ .Site.Emergency }}</a>
+    </p>
+    <p class="topbar__note topbar__note--end">
+      PSARA licensed · ISO 9001:2015 · Kokrajhar, BTR
+    </p>
+  </div>
+</div>
+
+<header class="masthead" id="masthead">
+  <div class="wrap masthead__in">
+    <a class="brand" href="/" aria-label="{{ .Site.Name }} — home">
+      {{ template "logo" }}
+      <span class="brand__text">
+        <strong class="brand__mark">NBSS</strong>
+        <span class="brand__full">National Bodo Security Services</span>
+      </span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="/"          {{ if eq .Nav "home" }}aria-current="page"{{ end }}>Home</a>
+      <a href="/about"     {{ if eq .Nav "about" }}aria-current="page"{{ end }}>About</a>
+      <a href="/services"  {{ if eq .Nav "services" }}aria-current="page"{{ end }}>Services</a>
+      <a href="/sectors"   {{ if eq .Nav "sectors" }}aria-current="page"{{ end }}>Sectors</a>
+      <a href="/training"  {{ if eq .Nav "training" }}aria-current="page"{{ end }}>Training</a>
+      <a href="/clients"   {{ if eq .Nav "clients" }}aria-current="page"{{ end }}>Clients</a>
+      <a href="/gallery"   {{ if eq .Nav "gallery" }}aria-current="page"{{ end }}>Gallery</a>
+      <a href="/careers"   {{ if eq .Nav "careers" }}aria-current="page"{{ end }}>Careers</a>
+      <a href="/contact"   {{ if eq .Nav "contact" }}aria-current="page"{{ end }}>Contact</a>
+
+      {{/* Only rendered inside the mobile sheet — the desktop bar has its own. */}}
+      <span class="nav__foot">
+        <a class="btn btn--gold btn--lg" href="/contact#quote">Request a quote</a>
+        <a class="nav__tel" href="tel:{{ tel .Site.Emergency }}">
+          {{ template "icon" "phone" }} Control room {{ .Site.Emergency }}
+        </a>
+      </span>
+    </nav>
+
+    <div class="masthead__actions">
+      <button class="icon-btn" type="button" data-search-open aria-label="Search services" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <a class="btn btn--gold masthead__cta" href="/contact#quote">Request a quote</a>
+      <button class="icon-btn nav-toggle" type="button" data-nav-toggle aria-label="Menu" aria-expanded="false" aria-controls="nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+  {{ template "aronai-band" }}
+</header>
+
+<div class="searchbar" id="searchbar" hidden>
+  <div class="wrap searchbar__in">
+    <label class="searchbar__field">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" name="q" id="site-search" placeholder="Search 31 services — “bank”, “housekeeping”, “tea estate”…"
+             autocomplete="off" aria-label="Search services"
+             hx-get="/partials/search"
+             hx-trigger="input changed delay:180ms, search"
+             hx-target="#search-results"
+             hx-indicator="#search-spin">
+      <span class="spin" id="search-spin" aria-hidden="true"></span>
+    </label>
+    <button class="icon-btn" type="button" data-search-close aria-label="Close search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="wrap"><div id="search-results" class="search-results" role="status" aria-live="polite"></div></div>
+</div>
+{{ end }}
+
+
+{{ define "site-footer" }}
+<footer class="footer">
+  {{ template "aronai-band" }}
+  <div class="wrap footer__grid">
+
+    <div class="footer__brand">
+      <a class="brand brand--footer" href="/">
+        {{ template "logo" }}
+        <span class="brand__text">
+          <strong class="brand__mark">NBSS</strong>
+          <span class="brand__full">National Bodo Security Services</span>
+        </span>
+      </a>
+      <p class="footer__blurb">{{ .Site.Descriptor }}</p>
+      <p class="footer__tagline">{{ .Site.Tagline }}</p>
+      <ul class="social" aria-label="Social profiles">
+        {{ range .Site.Social }}
+        <li><a href="{{ .URL }}" aria-label="{{ .Label }}" rel="noopener">{{ .Label }}</a></li>
+        {{ end }}
+      </ul>
+    </div>
+
+    <nav class="footer__col" aria-label="Company">
+      <h2 class="footer__h">Company</h2>
+      <ul>
+        <li><a href="/about">About NBSS</a></li>
+        <li><a href="/training">Training academy</a></li>
+        <li><a href="/clients">Clients</a></li>
+        <li><a href="/gallery">Gallery</a></li>
+        <li><a href="/careers">Careers</a></li>
+        <li><a href="/contact">Contact</a></li>
+      </ul>
+    </nav>
+
+    <nav class="footer__col" aria-label="Services">
+      <h2 class="footer__h">Divisions</h2>
+      <ul>
+        <li><a href="/services?division=security">Security services</a></li>
+        <li><a href="/services?division=facility">Facility management</a></li>
+        <li><a href="/services?division=manpower">Manpower &amp; staffing</a></li>
+        <li><a href="/services?division=electronic">Electronic security</a></li>
+        <li><a href="/sectors">Sectors we serve</a></li>
+        <li><a href="/services">All 31 services</a></li>
+      </ul>
+    </nav>
+
+    <div class="footer__col">
+      <h2 class="footer__h">Reach us</h2>
+      <address class="footer__addr">
+        {{ .Site.Address.Line1 }}<br>
+        {{ .Site.Address.Line2 }}<br>
+        {{ .Site.Address.City }} — {{ .Site.Address.Pin }}<br>
+        {{ .Site.Address.State }}
+      </address>
+      <ul class="footer__contact">
+        <li><a href="tel:{{ tel .Site.Phone }}">{{ .Site.Phone }}</a></li>
+        <li><a href="tel:{{ tel .Site.PhoneAlt }}">{{ .Site.PhoneAlt }}</a></li>
+        <li><a href="mailto:{{ .Site.Email }}">{{ .Site.Email }}</a></li>
+        <li><a href="mailto:{{ .Site.EmailHR }}">{{ .Site.EmailHR }}</a></li>
+      </ul>
+      <ul class="footer__hours">
+        {{ range .Site.Hours }}<li>{{ . }}</li>{{ end }}
+      </ul>
+    </div>
+  </div>
+
+  <div class="wrap footer__legal">
+    <p>© {{ year }} {{ .Site.Name }}. Established {{ .Site.Founded }}, Kokrajhar.</p>
+    <p class="footer__licence">PSARA {{ (index .Site.Licenses 0).Number }} · GSTIN {{ (index .Site.Licenses 4).Number }}</p>
+    <p class="footer__demo">Demonstration site — all names, figures and credentials are illustrative.</p>
+  </div>
+</footer>
+{{ end }}
+
+
+{{ define "logo" }}
+<svg class="logo" viewBox="0 0 44 48" aria-hidden="true" focusable="false">
+  <!-- shield outline -->
+  <path class="logo__shield" d="M22 2 4 8v16.5C4 35.6 11.6 43.7 22 46c10.4-2.3 18-10.4 18-21.5V8L22 2Z"/>
+  <!-- aronai diamond stack: the woven motif of the Bodo scarf -->
+  <path class="logo__d1" d="M22 12.5 27.5 19 22 25.5 16.5 19Z"/>
+  <path class="logo__d2" d="M22 26 26 30.5 22 35 18 30.5Z"/>
+  <path class="logo__bar" d="M12 21.5h4M28 21.5h4"/>
+</svg>
+{{ end }}
+
+
+{{ define "aronai-band" }}
+<div class="aronai" role="presentation" aria-hidden="true"></div>
+{{ end }}
+
+
+{{ define "eyebrow" }}
+<p class="eyebrow"><span class="eyebrow__num">{{ .Num }}</span><span class="eyebrow__rule"></span>{{ .Text }}</p>
+{{ end }}

@@ -1,0 +1,118 @@
+{{ define "content" }}
+{{ $d := .Data }}
+
+{{ template "page-head" dict
+   "Kicker" "21" "Sub" "Training academy" "Crumb" "Training"
+   "Title" "Twenty-one days before anyone stands at your gate."
+   "Lede" "Eight modules, paid from day one, ending in a supervised attachment on a real posting. Then a refresher every quarter, for as long as they wear the uniform."
+   "Image" "/static/img/ops-fire-training.jpg" }}
+
+<section class="section">
+  <div class="wrap split">
+    <div class="split__copy">
+      {{ template "eyebrow" dict "Num" "01" "Text" "The premise" }}
+      <h2 class="sec-h">Most guarding failures are training failures.</h2>
+      <p class="prose">
+        A guard who lets a truck out because the paperwork looked roughly right has not been dishonest —
+        he has been untrained. A guard who freezes at a fire alarm has not been careless. A guard who argues
+        with an agitated attendant in a casualty ward has not been rude. In each case somebody skipped a module.
+      </p>
+      <p class="prose">
+        So we do not deploy on the strength of an interview. Every recruit, fresher or twenty-year veteran,
+        goes through the same induction at the Kokrajhar training ground and is signed off by a field officer
+        before independent posting. It is paid time, which is why we take it seriously and so do they.
+      </p>
+      <ul class="ticks">
+        <li style="--i:0">{{ template "icon" "check" }}<span>Paid from day one — nobody trains hungry</span></li>
+        <li style="--i:1">{{ template "icon" "check" }}<span>Uniform, boots and ID issued on completion, not before</span></li>
+        <li style="--i:2">{{ template "icon" "check" }}<span>Written and practical assessment at the end of each module</span></li>
+        <li style="--i:3">{{ template "icon" "check" }}<span>Quarterly refresher for every person on the roll</span></li>
+        <li style="--i:4">{{ template "icon" "check" }}<span>Site-specific briefing before every new posting</span></li>
+      </ul>
+    </div>
+
+    <figure class="split__fig">
+      <img src="/static/img/ops-parade.jpg" alt="Security personnel in formation during a morning turnout inspection" loading="lazy" decoding="async">
+      <figcaption>Morning turnout inspection at the training ground. <span>Beijing Patrol, CC BY 2.0</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section section--alt">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "02" "Text" "The syllabus" }}
+      <h2 class="sec-h">Eight modules, twenty-one days.</h2>
+    </header>
+
+    <div class="modules">
+      {{ range $i, $m := $d.Syllabus }}
+      <article class="module" style="--i:{{ $i }}">
+        <div class="module__top">
+          <span class="module__c">{{ $m.Code }}</span>
+          <span class="module__d">{{ $m.Days }}</span>
+        </div>
+        <h3 class="module__t">{{ $m.Title }}</h3>
+        <p class="module__p">{{ $m.Body }}</p>
+      </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "03" "Text" "Before the uniform" }}
+      <h2 class="sec-h">Verification runs in parallel, and it is the harder gate.</h2>
+    </header>
+
+    <div class="verify">
+      <article class="vstep" style="--i:0"><span class="vstep__n">01</span><h3>Identity</h3><p>Aadhaar and permanent address verified against documents, not against a photocopy handed over at interview.</p></article>
+      <article class="vstep" style="--i:1"><span class="vstep__n">02</span><h3>Police clearance</h3><p>Requested from the home police station of the candidate's permanent address, not the district they applied in.</p></article>
+      <article class="vstep" style="--i:2"><span class="vstep__n">03</span><h3>References</h3><p>Two independent references contacted by an HR officer by phone. A reference nobody can reach is not a reference.</p></article>
+      <article class="vstep" style="--i:3"><span class="vstep__n">04</span><h3>Medical fitness</h3><p>Basic fitness, vision and blood pressure. Night-shift and armed postings carry a stricter standard.</p></article>
+      <article class="vstep" style="--i:4"><span class="vstep__n">05</span><h3>Re-verification</h3><p>The whole file is refreshed every two years for every person still on the roll.</p></article>
+      <article class="vstep" style="--i:5"><span class="vstep__n">06</span><h3>Enhanced check</h3><p>School, hostel and hospital postings carry an additional check before a candidate is placed on that site.</p></article>
+    </div>
+  </div>
+</section>
+
+{{ if $d.Photos }}
+<section class="section section--alt">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "04" "Text" "The ground" }}
+      <h2 class="sec-h">Kokrajhar training ground.</h2>
+    </header>
+    <div class="peek">
+      {{ range $i, $p := $d.Photos }}
+      <figure class="shot" style="--i:{{ $i }}">
+        <img src="{{ $p.Src }}" alt="{{ $p.Alt }}" loading="lazy" decoding="async">
+        <figcaption>
+          <span class="shot__cap">{{ $p.Caption }}</span>
+          <span class="shot__credit">{{ $p.Credit }} · {{ $p.Licence }}</span>
+        </figcaption>
+      </figure>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }}
+
+<section class="section section--pillars">
+  <div class="wrap narrow">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "◆" "Text" "Join the next batch" }}
+      <h2 class="sec-h">Freshers welcome. Training is paid.</h2>
+      <p class="sec-lede">
+        You need to be reasonably fit, willing to work shifts, and able to produce Aadhaar, address proof and
+        two references. Everything else, we teach.
+      </p>
+      <a class="btn btn--gold btn--lg" href="/careers">See open positions {{ template "icon" "arrow" }}</a>
+    </header>
+  </div>
+</section>
+
+{{ template "cta-band" . }}
+{{ end }}

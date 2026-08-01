@@ -1,0 +1,42 @@
+{{ define "content" }}
+{{ template "page-head" dict
+   "Kicker" "12" "Sub" "Sectors" "Crumb" "Sectors"
+   "Title" "The same uniform. A different job in every one."
+   "Lede" "A bank guard runs a written opening drill. A tea-estate guard supervises leaf weighment. A hospital guard talks down a frightened family at two in the morning. We brief for the sector, not just the post."
+   "Image" "/static/img/services/mall.jpg" }}
+
+<section class="section">
+  <div class="wrap">
+    <div class="sectors">
+      {{ range $i, $s := .Data }}
+      <article class="sector" id="{{ $s.Slug }}" style="--i:{{ $i }}">
+        <div class="sector__img"><img src="{{ $s.Image }}" alt="" loading="lazy" decoding="async"></div>
+        <div class="sector__body">
+          <span class="sector__n">{{ pad (add $i 1) }}</span>
+          <h2 class="sector__t">{{ $s.Name }}</h2>
+          <p class="sector__p">{{ $s.Blurb }}</p>
+          <a class="sector__go" href="/contact#quote">Discuss a site {{ template "icon" "arrow" }}</a>
+        </div>
+      </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt">
+  <div class="wrap narrow">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "◆" "Text" "Not on the list?" }}
+      <h2 class="sec-h">Then tell us what the site is.</h2>
+      <p class="sec-lede">
+        We have taken postings at a river ferry ghat, a seed farm and a district library.
+        If it has a gate, a stock, or people who need to feel safe walking to their car, it is a security problem
+        and we will look at it.
+      </p>
+      <a class="btn btn--gold btn--lg" href="/contact">Describe your site {{ template "icon" "arrow" }}</a>
+    </header>
+  </div>
+</section>
+
+{{ template "cta-band" . }}
+{{ end }}

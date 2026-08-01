@@ -1,0 +1,137 @@
+{{ define "content" }}
+{{ $d := .Data }}
+
+{{ template "page-head" dict
+   "Kicker" "24×7" "Sub" "Contact" "Crumb" "Contact"
+   "Title" "Call the desk. Somebody picks up."
+   "Lede" "The corporate office keeps office hours. The control room does not — it is staffed every hour of every day, including the ones nobody wants." }}
+
+<!-- ======================================================== CONTACT ROWS -->
+<section class="section">
+  <div class="wrap">
+    <div class="contact-cards">
+      <article class="ccard" style="--i:0">
+        <span class="ccard__ico">{{ template "icon" "phone" }}</span>
+        <h2 class="ccard__t">Deployment desk</h2>
+        <a class="ccard__big" href="tel:{{ tel .Site.Phone }}">{{ .Site.Phone }}</a>
+        <a class="ccard__alt" href="tel:{{ tel .Site.PhoneAlt }}">{{ .Site.PhoneAlt }}</a>
+        <p class="ccard__n">Mon–Sat, 09:30–18:00</p>
+      </article>
+
+      <article class="ccard ccard--live" style="--i:1">
+        <span class="ccard__ico"><span class="pulse" aria-hidden="true"></span></span>
+        <h2 class="ccard__t">Control room — 24 × 7</h2>
+        <a class="ccard__big" href="tel:{{ tel .Site.Emergency }}">{{ .Site.Emergency }}</a>
+        <p class="ccard__n">Never unstaffed, never outsourced, never a phone tree.</p>
+      </article>
+
+      <article class="ccard" style="--i:2">
+        <span class="ccard__ico">{{ template "icon" "mail" }}</span>
+        <h2 class="ccard__t">Email</h2>
+        <a class="ccard__big ccard__big--sm" href="mailto:{{ .Site.Email }}">{{ .Site.Email }}</a>
+        <a class="ccard__alt" href="mailto:{{ .Site.EmailHR }}">{{ .Site.EmailHR }} — jobs</a>
+        <p class="ccard__n">Answered within one working day</p>
+      </article>
+
+      <article class="ccard" style="--i:3">
+        <span class="ccard__ico">{{ template "icon" "pin" }}</span>
+        <h2 class="ccard__t">Registered office</h2>
+        <address class="ccard__addr">
+          {{ .Site.Address.Line1 }}<br>
+          {{ .Site.Address.Line2 }}<br>
+          {{ .Site.Address.City }} — {{ .Site.Address.Pin }}<br>
+          {{ .Site.Address.State }}
+        </address>
+        <a class="ccard__alt" href="{{ .Site.Address.MapURL }}" rel="noopener">Open in maps {{ template "icon" "arrow" }}</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================= QUOTE FORM -->
+<section class="section section--alt" id="quote">
+  <div class="wrap forms">
+    <div class="forms__intro">
+      {{ template "eyebrow" dict "Num" "01" "Text" "Request a quotation" }}
+      <h2 class="sec-h">Four details, then a field officer calls.</h2>
+      <p class="sec-lede">
+        Give us the district, the site type and roughly how many people you have in mind. If you are not sure
+        about the headcount, leave it blank — working that out is what the survey is for.
+      </p>
+      <ul class="ticks">
+        <li style="--i:0">{{ template "icon" "check" }}<span>Survey within 48 hours inside the BTR districts</span></li>
+        <li style="--i:1">{{ template "icon" "check" }}<span>Costing with wage, EPF, ESI, bonus and GST shown separately</span></li>
+        <li style="--i:2">{{ template "icon" "check" }}<span>Guards on site within seven working days of signing</span></li>
+        <li style="--i:3">{{ template "icon" "check" }}<span>No obligation, and we will say so if you do not need us</span></li>
+      </ul>
+    </div>
+
+    <div class="forms__form">
+      {{ template "quote-form" $d.Quote }}
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================= GENERAL FORM -->
+<section class="section">
+  <div class="wrap forms forms--rev">
+    <div class="forms__form">
+      {{ template "contact-form" $d.Enquiry }}
+    </div>
+
+    <div class="forms__intro">
+      {{ template "eyebrow" dict "Num" "02" "Text" "General enquiry" }}
+      <h2 class="sec-h">Something else on your mind?</h2>
+      <p class="sec-lede">
+        Compliance documents, a tender query, a complaint about one of our guards, a request for a copy of the
+        PSARA licence — this form reaches the same desk, and a complaint reaches it faster.
+      </p>
+      <ul class="office-hours">
+        {{ range .Site.Hours }}<li>{{ template "icon" "clock" }}<span>{{ . }}</span></li>{{ end }}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== FAQ -->
+<section class="section section--alt">
+  <div class="wrap narrow">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "03" "Text" "Before you ask" }}
+      <h2 class="sec-h">The eight questions we get first.</h2>
+    </header>
+
+    <div class="faqs">
+      {{ range $i, $f := $d.FAQs }}
+      <details class="faq" style="--i:{{ $i }}" {{ if eq $i 0 }}open{{ end }}>
+        <summary class="faq__q">
+          <span>{{ $f.Q }}</span>
+          <span class="faq__sign" aria-hidden="true"></span>
+        </summary>
+        <div class="faq__a"><p>{{ $f.A }}</p></div>
+      </details>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================== COVERAGE -->
+<section class="section section--coverage">
+  <div class="wrap coverage">
+    <div class="coverage__copy">
+      {{ template "eyebrow" dict "Num" "04" "Text" "Coverage" }}
+      <h2 class="sec-h">Eight districts.</h2>
+      <p class="sec-lede">Five in the Bodoland Territorial Region, three in Lower Assam. Anything further, ask — we will give you a straight answer.</p>
+    </div>
+    <ul class="coverage__list">
+      {{ range $i, $c := $d.Coverage }}
+      <li class="district {{ if $c.Core }}district--core{{ end }}" style="--i:{{ $i }}">
+        <span class="district__n">{{ $c.Name }}</span>
+        <span class="district__r">{{ $c.Region }}</span>
+        <span class="district__s">{{ $c.Sites }}</span>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</section>
+{{ end }}

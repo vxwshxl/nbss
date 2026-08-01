@@ -1,0 +1,79 @@
+{{ define "content" }}
+{{ $d := .Data }}
+
+{{ template "page-head" dict
+   "Kicker" (printf "%d" $d.Openings) "Sub" "Open positions" "Crumb" "Careers"
+   "Title" "Honest work, trained properly, paid on the seventh."
+   "Lede" "We hire from Kokrajhar, Chirang, Baksa, Udalguri and Tamulpur. Freshers are welcome — induction is twenty-one days and it is paid. EPF, ESI and bonus are not optional extras here."
+   "Image" "/static/img/ops-drill.jpg" }}
+
+<section class="section">
+  <div class="wrap">
+    <header class="sec-head sec-head--split">
+      <div>
+        {{ template "eyebrow" dict "Num" "01" "Text" "Vacancies" }}
+        <h2 class="sec-h">{{ $d.Openings }} seats open right now.</h2>
+      </div>
+      <a class="btn btn--ghost" href="/training">How the training works {{ template "icon" "arrow" }}</a>
+    </header>
+
+    <div class="jobs">
+      {{ range $i, $v := $d.Vacancies }}
+      <article class="job" style="--i:{{ $i }}">
+        <div class="job__head">
+          <h3 class="job__t"><a href="/careers/{{ $v.ID }}">{{ $v.Title }}</a></h3>
+          <span class="job__count">{{ $v.Openings }} open</span>
+        </div>
+        <p class="job__p">{{ $v.Summary }}</p>
+        <dl class="job__meta">
+          <div><dt>Location</dt><dd>{{ $v.Location }}</dd></div>
+          <div><dt>Type</dt><dd>{{ $v.Type }}</dd></div>
+          <div><dt>Experience</dt><dd>{{ $v.Experience }}</dd></div>
+          <div><dt>Pay</dt><dd>{{ $v.Pay }}</dd></div>
+        </dl>
+        <div class="job__foot">
+          <a class="btn btn--sm btn--gold" href="/careers/{{ $v.ID }}">View &amp; apply {{ template "icon" "arrow" }}</a>
+        </div>
+      </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt">
+  <div class="wrap">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "02" "Text" "What you get" }}
+      <h2 class="sec-h">The terms, stated plainly.</h2>
+    </header>
+    <div class="perks">
+      <article class="perk" style="--i:0"><span class="perk__ico">{{ template "icon" "rupee" }}</span><h3>Paid by the 7th</h3><p>Wages credited to your bank account by the seventh of every month. Not "around the tenth". The seventh.</p></article>
+      <article class="perk" style="--i:1"><span class="perk__ico">{{ template "icon" "shield-check" }}</span><h3>EPF &amp; ESI from day one</h3><p>Calculated on your declared wage. You get the numbers, the passbook and help using them.</p></article>
+      <article class="perk" style="--i:2"><span class="perk__ico">{{ template "icon" "drill" }}</span><h3>Paid induction</h3><p>Twenty-one days of training, paid. Uniform, boots and photo ID issued on completion, at our cost.</p></article>
+      <article class="perk" style="--i:3"><span class="perk__ico">{{ template "icon" "roots" }}</span><h3>Posted near home</h3><p>We place you in your own district wherever the deployment allows. Most of our people sleep at home.</p></article>
+      <article class="perk" style="--i:4"><span class="perk__ico">{{ template "icon" "layers" }}</span><h3>A way up</h3><p>Guard to supervisor to field officer. Two of our six department heads started on a gate.</p></article>
+      <article class="perk" style="--i:5"><span class="perk__ico">{{ template "icon" "person" }}</span><h3>Women encouraged</h3><p>The lady-guard programme has run since 2015. Separate rest and changing facilities are a condition of every posting.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap narrow">
+    <header class="sec-head">
+      {{ template "eyebrow" dict "Num" "03" "Text" "How to apply" }}
+      <h2 class="sec-h">Three steps, and nobody asks you for money.</h2>
+      <p class="sec-lede">
+        NBSS never charges a fee for a job, training, a uniform or a "placement". If anyone asks you for money
+        in our name, call {{ .Site.Phone }} and tell us.
+      </p>
+    </header>
+    <ol class="steps">
+      <li class="step" style="--i:0"><span class="step__n">01</span><h3 class="step__t">Apply online or walk in</h3><p class="step__p">Use the form on any vacancy page, or come to the Kokrajhar office between 09:30 and 18:00, Monday to Saturday.</p></li>
+      <li class="step" style="--i:1"><span class="step__n">02</span><h3 class="step__t">Verification interview</h3><p class="step__p">HR shortlists weekly. Bring Aadhaar, address proof and two references with working phone numbers.</p></li>
+      <li class="step" style="--i:2"><span class="step__n">03</span><h3 class="step__t">Induction, then posting</h3><p class="step__p">Twenty-one paid days at the training ground, a supervised attachment, then your first independent posting.</p></li>
+    </ol>
+  </div>
+</section>
+
+{{ template "cta-band" . }}
+{{ end }}

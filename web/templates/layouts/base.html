@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en-IN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ .Title }}</title>
+<meta name="description" content="{{ .Description }}">
+<link rel="canonical" href="{{ .Canonical }}">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ .Site.Name }}">
+<meta property="og:title" content="{{ .Title }}">
+<meta property="og:description" content="{{ .Description }}">
+<meta property="og:url" content="{{ .Canonical }}">
+<meta property="og:image" content="/static/img/hero-guard.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0A100D">
+
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/static/fonts/bricolage-grotesque-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/instrument-sans-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<link rel="stylesheet" href="/static/css/nbss.css">
+
+<script src="/static/js/htmx.min.js" defer></script>
+<script src="/static/js/app.js" defer></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SecurityService",
+  "name": "{{ .Site.Name }}",
+  "alternateName": "{{ .Site.ShortName }}",
+  "description": "{{ .Site.Descriptor }}",
+  "foundingDate": "{{ .Site.Founded }}",
+  "telephone": "{{ .Site.Phone }}",
+  "email": "{{ .Site.Email }}",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "{{ .Site.Address.Line1 }}, {{ .Site.Address.Line2 }}",
+    "addressLocality": "{{ .Site.Address.City }}",
+    "addressRegion": "Assam",
+    "postalCode": "{{ .Site.Address.Pin }}",
+    "addressCountry": "IN"
+  },
+  "geo": { "@type": "GeoCoordinates", "latitude": "{{ .Site.Address.Lat }}", "longitude": "{{ .Site.Address.Lng }}" },
+  "areaServed": "Bodoland Territorial Region, Assam, India"
+}
+</script>
+</head>
+
+<body hx-boost="false">
+<a class="skip-link" href="#main">Skip to content</a>
+
+{{ template "site-header" . }}
+
+<main id="main">
+  {{ block "content" . }}{{ end }}
+</main>
+
+{{ template "site-footer" . }}
+
+<div class="grain" aria-hidden="true"></div>
+</body>
+</html>
