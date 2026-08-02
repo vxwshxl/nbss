@@ -13,8 +13,10 @@ import {
   StatStrip,
 } from "@/components/blocks";
 import { leadership, site, timeline } from "@/content/site";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/about"),
   title: "About — sixteen years of guarding in the Bodoland Territorial Region",
   description:
     "How National Bodo Security Services recruits, verifies, trains and supervises the people it puts on your gate.",

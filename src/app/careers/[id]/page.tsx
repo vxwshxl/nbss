@@ -7,6 +7,7 @@ import { PageHead, TickList } from "@/components/blocks";
 import { ApplyForm } from "@/components/forms/ApplyForm";
 import { vacancies, vacancyById } from "@/content/gallery";
 import { site, tel } from "@/content/site";
+import { canonical } from "@/lib/seo";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,7 +19,17 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const vacancy = vacancyById(id);
   if (!vacancy) return {};
-  return { title: `${vacancy.title} — careers`, description: vacancy.summary };
+  return {
+    title: `${vacancy.title} — careers`,
+    description: vacancy.summary,
+    alternates: canonical(`/careers/${vacancy.id}`),
+    openGraph: {
+      type: "article",
+      url: `/careers/${vacancy.id}`,
+      title: `${vacancy.title} — ${site.shortName}`,
+      description: vacancy.summary,
+    },
+  };
 }
 
 export default async function VacancyPage({ params }: Params) {

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { CtaBand, Eyebrow, PageHead } from "@/components/blocks";
 import { sectors } from "@/content/services";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/sectors"),
   title: "Sectors we serve — from bank branches to tea estates",
   description:
     "Twelve verticals NBSS deploys into, and what changes about the posting in each one.",

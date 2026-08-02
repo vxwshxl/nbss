@@ -201,8 +201,19 @@ button { background: none; border: 0; cursor: pointer; }
 }
 
 /* ============================================================== masthead */
+/* The bar and the search panel stick as one unit. Sticking them separately at
+   top:0 parked the panel underneath the bar — it was only ever visible at
+   scroll top, where flow order still put it below. A shared sticky parent also
+   avoids hard-coding the bar's height as the panel's offset, which differs
+   between the mobile and desktop layouts.
+
+   position:sticky does not create a containing block for fixed descendants
+   (only transform/filter/backdrop-filter do), so the mobile nav sheet inside
+   the masthead still escapes to the viewport. */
+.headerstack { position: sticky; top: 0; z-index: 500; }
+
 .masthead {
-  position: sticky; top: 0; z-index: 500;
+  position: relative; z-index: 2;
   background: color-mix(in srgb, var(--ink-050) 88%, transparent);
   backdrop-filter: blur(14px) saturate(1.3);
   border-bottom: 1px solid var(--line-soft);
@@ -264,7 +275,10 @@ button { background: none; border: 0; cursor: pointer; }
 .icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .icon-btn:hover { color: var(--paper); border-color: var(--line-hot); background: var(--ink-150); }
 
-.nav-toggle { display: none; flex-direction: column; gap: 4px; }
+/* Switching .icon-btn's grid to flex drops its centring: place-items only
+   feeds align-items here (justify-items does nothing in flexbox), so the main
+   axis needs justify-content of its own or the bars stack at the top. */
+.nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 4px; }
 .nav-toggle span { width: 17px; height: 1.5px; background: currentColor; transition: .25s var(--snap); }
 .nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
 .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
@@ -327,11 +341,16 @@ button { background: none; border: 0; cursor: pointer; }
 
 /* ============================================================== searchbar */
 .searchbar {
-  position: sticky; top: 0; z-index: 480;
+  /* Stickiness is owned by .headerstack; this only has to sit under the bar. */
+  position: relative; z-index: 1;
   background: var(--ink-100);
   border-bottom: 1px solid var(--line);
   padding: 1rem 0 1.25rem;
   animation: drop .32s var(--snap);
+  /* The panel plus the bar above it must never exceed the viewport, or the
+     results list scrolls out of reach on a short screen in landscape. */
+  max-height: calc(100dvh - 4.5rem);
+  overflow-y: auto;
 }
 @keyframes drop { from { opacity: 0; transform: translateY(-14px); } }
 .searchbar__in { display: flex; gap: .75rem; align-items: center; }
@@ -361,6 +380,14 @@ button { background: none; border: 0; cursor: pointer; }
   text-transform: uppercase; color: var(--paper-mut); margin-bottom: .6rem;
 }
 .search-results__meta--empty { text-transform: none; letter-spacing: 0; font-family: var(--f-body); font-size: .9rem; color: var(--paper-dim); }
+/* Section heading between the page hits and the service hits. */
+.search-results__group {
+  font-family: var(--f-mono); font-size: .66rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--paper-mut);
+  margin: .9rem 0 .45rem; padding-bottom: .3rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+.search-results__group:first-child { margin-top: 0; }
 .search-results__meta--empty a { color: var(--gld-300); text-decoration: underline; }
 .search-results__list { display: grid; gap: 2px; max-height: 52vh; overflow-y: auto; }
 .search-results__list a {

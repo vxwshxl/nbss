@@ -12,6 +12,7 @@ import {
   services,
 } from "@/content/services";
 import { site, tel } from "@/content/site";
+import { canonical } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -27,10 +28,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return {
     title: service.name,
     description: service.summary,
+    alternates: canonical(`/services/${service.slug}`),
     openGraph: {
+      type: "article",
+      url: `/services/${service.slug}`,
       title: `${service.name} — ${site.shortName}`,
       description: service.summary,
-      images: [{ url: service.image }],
+      images: [{ url: service.image, alt: `${service.name} — ${site.name}` }],
     },
   };
 }

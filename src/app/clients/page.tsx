@@ -6,8 +6,10 @@ import { CtaBand, PageHead, Quotes, SectionHead } from "@/components/blocks";
 import { clients } from "@/content/gallery";
 import { sectors } from "@/content/services";
 import { testimonials } from "@/content/site";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/clients"),
   title: "Clients — who we guard and what they say",
   description:
     "Reference sites across banking, healthcare, education, retail, plantations and government in the Northeast.",

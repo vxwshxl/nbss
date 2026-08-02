@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { CtaBand, Eyebrow, PageHead, SectionHead, Shot, TickList } from "@/components/blocks";
 import { photosIn, syllabus } from "@/content/gallery";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/training"),
   title: "Training — the twenty-one day induction and what comes after",
   description:
     "Eight modules, twenty-one days, then quarterly refreshers at the Kokrajhar training ground.",

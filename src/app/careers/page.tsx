@@ -5,10 +5,12 @@ import { Icon } from "@/components/Icon";
 import { CtaBand, Eyebrow, PageHead, SectionHead } from "@/components/blocks";
 import { totalOpenings, vacancies } from "@/content/gallery";
 import { site } from "@/content/site";
+import { canonical } from "@/lib/seo";
 
 const openings = totalOpenings();
 
 export const metadata: Metadata = {
+  alternates: canonical("/careers"),
   title: `Careers — ${openings} openings across the Bodoland districts`,
   description:
     "Guards, lady guards, supervisors, field officers, control-room operators, drivers and technicians. Freshers trained and paid from day one.",

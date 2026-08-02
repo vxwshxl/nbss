@@ -3,8 +3,10 @@ import Link from "next/link";
 
 import { CtaBand, Eyebrow, PageHead, ServiceCards } from "@/components/blocks";
 import { divisionBySlug, divisions, services, servicesIn } from "@/content/services";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/services"),
   title: "Services — guarding, facility management, manpower and electronic security",
   description: `${services.length} services across four divisions, delivered from Kokrajhar across the Bodoland Territorial Region and Lower Assam.`,
 };

@@ -2,8 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { services } from "@/content/services";
 import { vacancies } from "@/content/gallery";
-
-const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+import { baseUrl as BASE } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

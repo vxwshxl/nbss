@@ -3,8 +3,10 @@ import Link from "next/link";
 
 import { CtaBand, Eyebrow, PageHead, Shot } from "@/components/blocks";
 import { galleryCategories, photosIn } from "@/content/gallery";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/gallery"),
   title: "Gallery — operations, training and the region we come from",
   description:
     "Photographs from NBSS operations and from Bodoland, the region that supplies our people.",

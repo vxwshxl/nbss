@@ -5,16 +5,38 @@ import { CoverageList, Eyebrow, PageHead, TickList } from "@/components/blocks";
 import { EnquiryForm } from "@/components/forms/EnquiryForm";
 import { QuoteForm } from "@/components/forms/QuoteForm";
 import { faqs, site, tel } from "@/content/site";
+import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
+  alternates: canonical("/contact"),
   title: "Contact — Kokrajhar, Bodoland Territorial Region",
   description:
     "Talk to the deployment desk. Survey within 48 hours, guards on site within seven working days.",
 };
 
+/**
+ * FAQPage schema, valid here because the same answers are rendered on this
+ * page — Google drops the rich result if the markup describes questions the
+ * visitor cannot actually see.
+ */
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 export default function ContactPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // Hand-authored copy from src/content/site.ts — no user input.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <PageHead
         kicker="24×7"
         sub="Contact"

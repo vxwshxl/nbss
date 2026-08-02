@@ -85,83 +85,86 @@ export function Header() {
         </div>
       </div>
 
-      <header className={`masthead${stuck ? " is-stuck" : ""}`}>
-        <div className="wrap masthead__in">
-          <Link className="brand" href="/" aria-label={`${site.name} — home`}>
-            <Logo />
-            <span className="brand__text">
-              <strong className="brand__mark">{site.shortName}</strong>
-              <span className="brand__full">{site.name}</span>
-            </span>
-          </Link>
-
-          <nav
-            className={`nav${navOpen ? " is-open" : ""}`}
-            id="nav"
-            aria-label="Primary"
-          >
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isCurrent(item.href) ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
-
-            {/* Only visible inside the mobile sheet — the bar has its own CTA. */}
-            <span className="nav__foot">
-              <Link className="btn btn--gold btn--lg" href="/contact#quote">
-                Request a quote
-              </Link>
-              <a className="nav__tel" href={`tel:${tel(site.emergency)}`}>
-                <Icon name="phone" /> Control room {site.emergency}
-              </a>
-            </span>
-          </nav>
-
-          <div className="masthead__actions">
-            <button
-              ref={searchButton}
-              className="icon-btn"
-              type="button"
-              aria-label="Search services"
-              aria-expanded={searchOpen}
-              onClick={() => setSearchOpen((v) => !v)}
-            >
-              <Icon name="search" />
-            </button>
-
-            <Link className="btn btn--gold masthead__cta" href="/contact#quote">
-              Request a quote
+      <div className="headerstack">
+        <header className={`masthead${stuck ? " is-stuck" : ""}`}>
+          <div className="wrap masthead__in">
+            <Link className="brand" href="/" aria-label={`${site.name} — home`}>
+              <Logo />
+              <span className="brand__text">
+                <strong className="brand__mark">{site.shortName}</strong>
+                <span className="brand__full">{site.name}</span>
+              </span>
             </Link>
 
-            <button
-              className="icon-btn nav-toggle"
-              type="button"
-              aria-label="Menu"
-              aria-expanded={navOpen}
-              aria-controls="nav"
-              onClick={() => setNavOpen((v) => !v)}
+            <nav
+              className={`nav${navOpen ? " is-open" : ""}`}
+              id="nav"
+              aria-label="Primary"
             >
-              <span />
-              <span />
-              <span />
-            </button>
-          </div>
-        </div>
-        <AronaiBand />
-      </header>
+              {NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isCurrent(item.href) ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              ))}
 
-      {searchOpen && (
-        <SiteSearch
-          onClose={() => {
-            setSearchOpen(false);
-            searchButton.current?.focus();
-          }}
-        />
-      )}
+              {/* Only visible inside the mobile sheet — the bar has its own CTA. */}
+              <span className="nav__foot">
+                <Link className="btn btn--gold btn--lg" href="/contact#quote">
+                  Request a quote
+                </Link>
+                <a className="nav__tel" href={`tel:${tel(site.emergency)}`}>
+                  <Icon name="phone" /> Control room {site.emergency}
+                </a>
+              </span>
+            </nav>
+
+            <div className="masthead__actions">
+              <button
+                ref={searchButton}
+                className="icon-btn"
+                type="button"
+                aria-label="Search this site"
+                aria-expanded={searchOpen}
+                onClick={() => setSearchOpen((v) => !v)}
+              >
+                <Icon name="search" />
+              </button>
+
+              <Link className="btn btn--gold masthead__cta" href="/contact#quote">
+                Request a quote
+              </Link>
+
+              <button
+                className="icon-btn nav-toggle"
+                type="button"
+                aria-label="Menu"
+                aria-expanded={navOpen}
+                aria-controls="nav"
+                onClick={() => setNavOpen((v) => !v)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
+          </div>
+
+          <AronaiBand />
+        </header>
+
+        {searchOpen && (
+          <SiteSearch
+            onClose={() => {
+              setSearchOpen(false);
+              searchButton.current?.focus();
+            }}
+          />
+        )}
+      </div>
     </>
   );
 }
