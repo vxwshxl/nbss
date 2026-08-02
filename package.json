@@ -13,7 +13,10 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm lint"
+    "check": "pnpm typecheck && pnpm lint",
+    "clean": "rm -rf .next out tsconfig.tsbuildinfo",
+    "clean:all": "pnpm clean && rm -rf node_modules",
+    "reinstall": "pnpm clean:all && pnpm install"
   },
   "dependencies": {
     "next": "^15.5.4",
