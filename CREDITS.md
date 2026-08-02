@@ -7,7 +7,7 @@ require.
 
 ## Typefaces
 
-Self-hosted as latin/latin-ext `woff2` subsets under `web/static/fonts/`.
+Self-hosted as latin/latin-ext `woff2` subsets under `public/fonts/`.
 All three are licensed under the **SIL Open Font License 1.1**.
 
 | Family | Role | Source |
@@ -16,13 +16,16 @@ All three are licensed under the **SIL Open Font License 1.1**.
 | Instrument Sans | Body copy | Google Fonts |
 | JetBrains Mono | Eyebrows, data, labels | Google Fonts |
 
-## JavaScript
+## Runtime dependencies
 
-| Library | Version | Licence |
-| --- | --- | --- |
-| [htmx](https://htmx.org) | 2.0.4 | Zero-Clause BSD |
+| Package | Licence |
+| --- | --- |
+| [next](https://nextjs.org) | MIT |
+| [react](https://react.dev) | MIT |
+| [react-dom](https://react.dev) | MIT |
 
-No other runtime dependency exists. `web/static/js/app.js` is original code.
+Three packages, no UI library, no CSS framework, no icon package. Every component,
+icon and stylesheet in `src/` is original code.
 
 ## Photographs
 
@@ -34,48 +37,49 @@ prints beneath each image.
 
 | File | Credit | Licence |
 | --- | --- | --- |
-| `hero-guard.jpg` | liber(the poet) | CC BY-SA 2.0 |
-| `ops-team.jpg` | Wikimedia Commons | CC BY-SA 4.0 |
-| `ops-drill.jpg`, `ops-parade.jpg` | Beijing Patrol | CC BY 2.0 |
-| `ops-bank.jpg` | Brad & Ying | CC BY 2.0 |
-| `ops-cctv.jpg` | Ivan Radic | CC BY 2.0 |
-| `ops-cctv2.jpg` | stwn | CC BY-SA 2.0 |
-| `ops-control-room.jpg` | West Midlands Police | CC BY-SA 2.0 |
-| `ops-fire-training.jpg` | BLM Oregon & Washington | CC BY-SA 2.0 |
+| `img/hero-guard.jpg` | liber(the poet) | CC BY-SA 2.0 |
+| `img/ops-team.jpg` | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/ops-drill.jpg`, `ops-parade.jpg` | Beijing Patrol | CC BY 2.0 |
+| `img/ops-bank.jpg` | Brad & Ying | CC BY 2.0 |
+| `img/ops-cctv.jpg` | Ivan Radic | CC BY 2.0 |
+| `img/ops-cctv2.jpg` | stwn | CC BY-SA 2.0 |
+| `img/ops-control-room.jpg` | West Midlands Police | CC BY-SA 2.0 |
+| `img/ops-fire-training.jpg` | BLM Oregon & Washington | CC BY-SA 2.0 |
 
 ### Bodoland & Kokrajhar
 
 | File | Subject | Credit | Licence |
 | --- | --- | --- | --- |
-| `gallery/aronai.jpg` | Aronai, the woven Bodo scarf | Wikimedia Commons | CC BY 4.0 |
-| `gallery/aronai-2.jpg` | Aronai detail | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/bagurumba-1..3.jpg` | Bagurumba (butterfly dance) | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/bwisagu.jpg` | Bwisagu, the Bodo new year | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/bardoi-sikhla.jpg` | Bardoi Sikhla dance | Wikimedia Commons | CC BY 2.0 |
-| `gallery/bodo-women.jpg` | Bodo women in dokhona | Wikimedia Commons | CC BY-SA 3.0 |
-| `gallery/bodo-elder.jpg` | Elderly Bodo man | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/kokrajhar-rail.jpg` | Kokrajhar railway station | Wikimedia Commons | CC0 |
-| `gallery/kokrajhar-med.jpg`, `kokrajhar-eve.jpg` | Kokrajhar Medical College | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/manas.jpg` | Manas National Park | Wikimedia Commons | CC BY 3.0 |
-| `gallery/manas-2.jpg` | Manas grassland | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/rubber.jpg` | Rubber sheets drying, Kokrajhar | Wikimedia Commons | CC BY-SA 4.0 |
-| `gallery/marigold.jpg` | Marigolds, Kokrajhar | Wikimedia Commons | CC BY 4.0 |
+| `img/gallery/aronai.jpg` | Aronai, the woven Bodo scarf | Wikimedia Commons | CC BY 4.0 |
+| `img/gallery/aronai-2.jpg` | Aronai detail | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/bagurumba-1..3.jpg` | Bagurumba (butterfly dance) | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/bwisagu.jpg` | Bwisagu, the Bodo new year | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/bardoi-sikhla.jpg` | Bardoi Sikhla dance | Wikimedia Commons | CC BY 2.0 |
+| `img/gallery/bodo-women.jpg` | Bodo women in dokhona | Wikimedia Commons | CC BY-SA 3.0 |
+| `img/gallery/bodo-elder.jpg` | Elderly Bodo man | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/kokrajhar-rail.jpg` | Kokrajhar railway station | Wikimedia Commons | CC0 |
+| `img/gallery/kokrajhar-med.jpg`, `kokrajhar-eve.jpg` | Kokrajhar Medical College | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/manas.jpg` | Manas National Park | Wikimedia Commons | CC BY 3.0 |
+| `img/gallery/manas-2.jpg` | Manas grassland | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/rubber.jpg` | Rubber sheets drying, Kokrajhar | Wikimedia Commons | CC BY-SA 4.0 |
+| `img/gallery/marigold.jpg` | Marigolds, Kokrajhar | Wikimedia Commons | CC BY 4.0 |
 
 ### Sectors
 
 | File | Credit | Licence |
 | --- | --- | --- |
-| `services/mall.jpg` | shankar s. | CC BY 2.0 |
-| `services/warehouse.jpg` | tm-md | CC BY 2.0 |
-| `services/hospital.jpg` | jepoirrier | CC BY-SA 2.0 |
-| `services/construction.jpg` | gregor_y | CC BY-SA 2.0 |
-| `services/housekeeping.jpg` | vastateparksstaff | CC BY 2.0 |
-| `services/office.jpg` | chip_p | CC BY 2.0 |
+| `img/services/mall.jpg` | shankar s. | CC BY 2.0 |
+| `img/services/warehouse.jpg` | tm-md | CC BY 2.0 |
+| `img/services/hospital.jpg` | jepoirrier | CC BY-SA 2.0 |
+| `img/services/construction.jpg` | gregor_y | CC BY-SA 2.0 |
+| `img/services/housekeeping.jpg` | vastateparksstaff | CC BY 2.0 |
+| `img/services/office.jpg` | chip_p | CC BY 2.0 |
 
 ## Original work
 
-The NBSS mark, the Aronai band motif, the icon set, the stylesheet, the
-templates and all Go source in this repository are original to this project.
+The NBSS mark, the `nbss-banner.svg` header, the Aronai band motif, the 45-glyph
+icon set, the stylesheet and all TypeScript in this repository are original to
+this project.
 
 ## A note on the CC BY-SA images
 

@@ -1,10 +1,21 @@
-# build artefacts
-/bin/
-coverage.out
+# dependencies
+/node_modules
+.pnpm-store
+
+# next
+/.next/
+/out/
+next-env.d.ts
+*.tsbuildinfo
 
 # runtime data — submissions are per-deployment, never committed
 /data/submissions.json
-/data/submissions.json.tmp
+/data/*.tmp
+
+# env
+.env
+.env.local
+.env*.local
 
 # editor / OS noise
 .DS_Store

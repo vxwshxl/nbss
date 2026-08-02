@@ -135,7 +135,14 @@ export function setStatus(id: string, status: Status): Promise<boolean> {
   });
 }
 
-export type Counts = Record<string, number>;
+/** Fixed shape so the admin view can read every bucket without a fallback. */
+export type Counts = {
+  total: number;
+  new: number;
+  enquiry: number;
+  quote: number;
+  application: number;
+};
 
 export function countSubmissions(): Promise<Counts> {
   return withLock(async () => {
@@ -148,7 +155,7 @@ export function countSubmissions(): Promise<Counts> {
       application: 0,
     };
     for (const s of subs) {
-      counts[s.kind] = (counts[s.kind] ?? 0) + 1;
+      counts[s.kind] += 1;
       if (s.status === "new") counts.new += 1;
     }
     return counts;
