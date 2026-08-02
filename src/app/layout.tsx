@@ -76,7 +76,10 @@ const jsonLd = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-IN" data-theme="dark">
-      <body>
+      {/* Browser extensions inject attributes onto <body> before React hydrates
+          (Bitdefender's `bis_register`, password managers, etc). Suppressing here
+          covers only this element's attributes, not any subtree content. */}
+      <body suppressHydrationWarning>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
