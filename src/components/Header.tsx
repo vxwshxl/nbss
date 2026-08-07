@@ -12,9 +12,7 @@ const NAV = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/services", label: "Services" },
-  { href: "/sectors", label: "Sectors" },
   { href: "/training", label: "Training" },
-  { href: "/clients", label: "Clients" },
   { href: "/gallery", label: "Gallery" },
   { href: "/careers", label: "Careers" },
   { href: "/contact", label: "Contact" },
@@ -76,11 +74,10 @@ export function Header() {
         <div className="wrap topbar__in">
           <p className="topbar__note">
             <span className="pulse" aria-hidden="true" />
-            Control room staffed 24 × 7 —{" "}
-            <a href={`tel:${tel(site.emergency)}`}>{site.emergency}</a>
+            Deployment desk — <a href={`tel:${tel(site.phone)}`}>{site.phone}</a>
           </p>
           <p className="topbar__note topbar__note--end">
-            PSARA licensed · ISO 9001:2015 · Kokrajhar, BTR
+            24 × 7 supervision · Police-verified guards · Kokrajhar, BTC
           </p>
         </div>
       </div>
@@ -116,8 +113,8 @@ export function Header() {
                 <Link className="btn btn--gold btn--lg" href="/contact#quote">
                   Request a quote
                 </Link>
-                <a className="nav__tel" href={`tel:${tel(site.emergency)}`}>
-                  <Icon name="phone" /> Control room {site.emergency}
+                <a className="nav__tel" href={`tel:${tel(site.phone)}`}>
+                  <Icon name="phone" /> Call {site.phone}
                 </a>
               </span>
             </nav>

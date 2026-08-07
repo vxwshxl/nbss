@@ -42,8 +42,8 @@ export default async function VacancyPage({ params }: Params) {
   return (
     <>
       <PageHead
-        kicker={vacancy.openings}
-        sub={`openings · ${vacancy.type}`}
+        kicker={<Icon name="person" />}
+        sub={vacancy.type}
         crumb={vacancy.title}
         crumbs={[{ href: "/careers", label: "Careers" }]}
         title={vacancy.title}
@@ -53,8 +53,8 @@ export default async function VacancyPage({ params }: Params) {
             <Link className="btn btn--gold" href="#apply">
               Apply for this role
             </Link>
-            <a className="btn btn--ghost" href={`mailto:${site.emailHr}`}>
-              <Icon name="mail" /> {site.emailHr}
+            <a className="btn btn--ghost" href={`tel:${tel(site.phone)}`}>
+              <Icon name="phone" /> {site.phone}
             </a>
           </>
         }
@@ -72,12 +72,12 @@ export default async function VacancyPage({ params }: Params) {
             <h3 className="svc__sub">What we give you</h3>
             <TickList
               items={[
-                "Twenty-one days of paid induction before your first posting",
-                "Uniform, boots and photo identity card at our cost",
-                "EPF and ESI registered from your first month",
-                "Wages credited by the 7th of every month",
+                "Training in all six areas before your first posting",
+                "Uniform, cap and photo identity card",
+                "ESI and EPF facility as applicable",
                 "Posting in or near your home district wherever possible",
-                "Quarterly refresher training, paid",
+                "Supervision and a supervisor you can actually reach",
+                "A route up — guard to supervisor to field officer",
               ]}
             />
 
@@ -95,7 +95,6 @@ export default async function VacancyPage({ params }: Params) {
             <div className="panel">
               <h3 className="panel__h">At a glance</h3>
               <dl className="panel__dl">
-                <div><dt>Openings</dt><dd>{vacancy.openings}</dd></div>
                 <div><dt>Location</dt><dd>{vacancy.location}</dd></div>
                 <div><dt>Type</dt><dd>{vacancy.type}</dd></div>
                 <div><dt>Experience</dt><dd>{vacancy.experience}</dd></div>
@@ -105,11 +104,11 @@ export default async function VacancyPage({ params }: Params) {
 
             <div className="panel panel--call">
               <p className="panel__k">Questions about the role</p>
-              <a className="panel__tel" href={`tel:${tel(site.phoneAlt)}`}>
-                {site.phoneAlt}
+              <a className="panel__tel" href={`tel:${tel(site.phone)}`}>
+                {site.phone}
               </a>
               <p className="panel__note">
-                HR desk, Monday to Saturday, 09:30–18:00. Or walk into the Kokrajhar office.
+                Monday to Saturday, 09:00–18:00. Or walk into the Kokrajhar office.
               </p>
             </div>
 
@@ -120,7 +119,7 @@ export default async function VacancyPage({ params }: Params) {
                   {others.map((o) => (
                     <li key={o.id}>
                       <Link href={`/careers/${o.id}`}>
-                        {o.title} <em>{o.openings} open</em>
+                        {o.title} <em>{o.type}</em>
                       </Link>
                     </li>
                   ))}

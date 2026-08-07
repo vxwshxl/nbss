@@ -127,7 +127,7 @@ export function QuoteForm({
         <div className="form__foot">
           <SubmitButton idle="Request the quotation" busy="Sending…" />
           <p className="form__small">
-            Site survey within 48 hours inside the BTR districts. No obligation.
+            We visit the site before quoting a number. No obligation.
           </p>
         </div>
       </form>

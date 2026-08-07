@@ -81,8 +81,7 @@ export function EnquiryForm() {
         <div className="form__foot">
           <SubmitButton idle="Send the enquiry" busy="Sending…" />
           <p className="form__small">
-            Answered within one working day. Urgent? Call the control room on {site.emergency},
-            day or night.
+            Answered within one working day. Urgent? Call the deployment desk on {site.phone}.
           </p>
         </div>
       </form>

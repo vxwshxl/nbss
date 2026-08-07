@@ -99,8 +99,6 @@ function AronaiBand() {
 }
 
 export default function OpengraphImage() {
-  const psara = site.licenses[0]?.label ?? "PSARA licensed";
-
   return new ImageResponse(
     (
       <div
@@ -156,7 +154,7 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            Trained in Bodoland. Trusted across the Northeast.
+            Your Safety, Our Responsibility.
           </div>
 
           <div
@@ -168,11 +166,15 @@ export default function OpengraphImage() {
               maxWidth: 880,
             }}
           >
-            Security · Facility management · Manpower · Electronic security
+            Trained security personnel · Kokrajhar, Assam
           </div>
 
           <div style={{ display: "flex", gap: 14, marginTop: 44 }}>
-            {[psara, "ISO 9001:2015", "EPF & ESI compliant", "24 × 7 control room"].map(
+            {[
+              "Registered under Govt. of Assam",
+              "Police-verified guards",
+              "24 × 7 supervision",
+            ].map(
               (chip) => (
                 <div
                   key={chip}
@@ -203,9 +205,9 @@ export default function OpengraphImage() {
           }}
         >
           <div style={{ display: "flex" }}>
-            {site.address.city}, {site.address.state}
+            {site.address.city}, {site.address.state} ({site.address.region})
           </div>
-          <div style={{ display: "flex", color: GOLD }}>Est. {site.founded}</div>
+          <div style={{ display: "flex", color: GOLD }}>{site.phone}</div>
         </div>
 
         <AronaiBand />

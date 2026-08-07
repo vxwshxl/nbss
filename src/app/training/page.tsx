@@ -3,24 +3,41 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Icon } from "@/components/Icon";
-import { CtaBand, Eyebrow, PageHead, SectionHead, Shot, TickList } from "@/components/blocks";
+import {
+  CtaBand,
+  Eyebrow,
+  PageHead,
+  SectionHead,
+  Shot,
+  TickList,
+  VideoBand,
+} from "@/components/blocks";
 import { photosIn, syllabus } from "@/content/gallery";
 import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   alternates: canonical("/training"),
-  title: "Training — the twenty-one day induction and what comes after",
+  title: "Training — the six areas every guard is trained in",
   description:
-    "Eight modules, twenty-one days, then quarterly refreshers at the Kokrajhar training ground.",
+    "Guarding duties, physical fitness and parade, fire safety, first aid, access control and crowd control — completed before a first posting.",
 };
 
 const VERIFICATION = [
-  { n: "01", title: "Identity", body: "Aadhaar and permanent address verified against documents, not against a photocopy handed over at interview." },
-  { n: "02", title: "Police clearance", body: "Requested from the home police station of the candidate's permanent address, not the district they applied in." },
-  { n: "03", title: "References", body: "Two independent references contacted by an HR officer by phone. A reference nobody can reach is not a reference." },
-  { n: "04", title: "Medical fitness", body: "Basic fitness, vision and blood pressure. Night-shift and armed postings carry a stricter standard." },
-  { n: "05", title: "Re-verification", body: "The whole file is refreshed every two years for every person still on the roll." },
-  { n: "06", title: "Enhanced check", body: "School, hostel and hospital postings carry an additional check before a candidate is placed on that site." },
+  {
+    n: "01",
+    title: "Police verification",
+    body: "Every guard is police-verified before deployment. This is not waived for an urgent posting, and it is not something we start after the guard is already on your gate.",
+  },
+  {
+    n: "02",
+    title: "Identity and address",
+    body: "Aadhaar and permanent address documents are checked and held on file as part of the same verification, not accepted as a photocopy handed over at interview.",
+  },
+  {
+    n: "03",
+    title: "Fitness for duty",
+    body: "Guarding is physical work on long shifts. Basic fitness is assessed before posting, and parade and fitness training continue afterwards.",
+  },
 ];
 
 export default function TrainingPage() {
@@ -29,12 +46,12 @@ export default function TrainingPage() {
   return (
     <>
       <PageHead
-        kicker="21"
-        sub="Training academy"
+        kicker="06"
+        sub="Training"
         crumb="Training"
-        title="Twenty-one days before anyone stands at your gate."
-        lede="Eight modules, paid from day one, ending in a supervised attachment on a real posting. Then a refresher every quarter, for as long as they wear the uniform."
-        image="/img/ops-fire-training.jpg"
+        title="Trained before anyone stands at your gate."
+        lede="Six areas, covered before a first posting and revisited afterwards. A guard who freezes at a fire alarm has not been careless — somebody skipped the training."
+        image="/img/nbss/training-classroom.jpg"
       />
 
       <section className="section">
@@ -43,23 +60,24 @@ export default function TrainingPage() {
             <Eyebrow num="01" text="The premise" />
             <h2 className="sec-h">Most guarding failures are training failures.</h2>
             <p className="prose">
-              A guard who lets a truck out because the paperwork looked roughly right has not been
-              dishonest — he has been untrained. A guard who freezes at a fire alarm has not been
-              careless. A guard who argues with an agitated attendant in a casualty ward has not
-              been rude. In each case somebody skipped a module.
+              A guard who lets a vehicle out because the paperwork looked roughly right has not
+              been dishonest — he has been untrained. A guard who argues with an agitated attendant
+              in a hospital corridor has not been rude. In each case there is a module behind the
+              mistake.
             </p>
             <p className="prose">
-              So we do not deploy on the strength of an interview. Every recruit, fresher or
-              twenty-year veteran, goes through the same induction at the Kokrajhar training ground
-              and is signed off by a field officer before independent posting. It is paid time,
-              which is why we take it seriously and so do they.
+              So we do not deploy on the strength of an interview. Our guards undergo training in
+              guarding duties, physical fitness and parade, fire safety and emergency response,
+              first-aid support, access control and gate management, and crowd control and
+              discipline. Sessions are run with external instructors where the subject calls for
+              it — the emergency-response training on this page was conducted with SDRF Assam.
             </p>
             <TickList
               items={[
-                "Paid from day one — nobody trains hungry",
-                "Uniform, boots and ID issued on completion, not before",
-                "Written and practical assessment at the end of each module",
-                "Quarterly refresher for every person on the roll",
+                "Training completed before the first independent posting",
+                "Uniform, cap and identity card issued to every guard",
+                "Parade and turnout inspection as continuing practice",
+                "Police verification completed before deployment",
                 "Site-specific briefing before every new posting",
               ]}
             />
@@ -68,15 +86,15 @@ export default function TrainingPage() {
           <figure className="split__fig">
             <div className="split__media">
               <Image
-                src="/img/ops-parade.jpg"
-                alt="Security personnel in formation during a morning turnout inspection"
+                src="/img/nbss/parade-ranks.jpg"
+                alt="NBSS guards drawn up in ranks with batons during parade drill"
                 fill
                 sizes="(max-width: 880px) 100vw, 40vw"
               />
             </div>
             <figcaption>
-              Morning turnout inspection at the training ground.{" "}
-              <span>Beijing Patrol, CC BY 2.0</span>
+              Drill ranks — bearing, spacing and discipline.
+              <span>National Bodo Security Service</span>
             </figcaption>
           </figure>
         </div>
@@ -84,13 +102,17 @@ export default function TrainingPage() {
 
       <section className="section section--alt">
         <div className="wrap">
-          <SectionHead num="02" kicker="The syllabus" title="Eight modules, twenty-one days." />
+          <SectionHead
+            num="02"
+            kicker="What we train"
+            title="Six areas, every guard."
+            lede="These are the areas named in our training programme. They are the ones that decide what happens on a site at three in the morning."
+          />
           <div className="modules">
             {syllabus.map((m, i) => (
               <article className="module" key={m.code} style={{ "--i": i } as React.CSSProperties}>
                 <div className="module__top">
                   <span className="module__c">{m.code}</span>
-                  <span className="module__d">{m.days}</span>
                 </div>
                 <h3 className="module__t">{m.title}</h3>
                 <p className="module__p">{m.body}</p>
@@ -105,7 +127,7 @@ export default function TrainingPage() {
           <SectionHead
             num="03"
             kicker="Before the uniform"
-            title="Verification runs in parallel, and it is the harder gate."
+            title="Verification runs alongside, and it is the harder gate."
           />
           <div className="verify">
             {VERIFICATION.map((v, i) => (
@@ -119,13 +141,37 @@ export default function TrainingPage() {
         </div>
       </section>
 
+      <section className="section section--alt">
+        <div className="wrap split">
+          <div className="split__copy">
+            <Eyebrow num="04" text="Parade" />
+            <h2 className="sec-h">Turnout, in motion.</h2>
+            <p className="prose">
+              Parade is where discipline becomes visible. It is also where a supervisor catches the
+              uniform, the cap, the identity card and the bearing — before a client has to notice
+              any of them.
+            </p>
+          </div>
+          <VideoBand
+            src="/video/nbss-parade.mp4"
+            poster="/img/nbss/parade-salute.jpg"
+            caption="NBSS parade, Kokrajhar."
+          />
+        </div>
+      </section>
+
       {photos.length > 0 && (
-        <section className="section section--alt">
+        <section className="section">
           <div className="wrap">
-            <SectionHead num="04" kicker="The ground" title="Kokrajhar training ground." />
+            <SectionHead num="05" kicker="Sessions" title="Training and parade, photographed." />
             <div className="peek">
               {photos.map((p, i) => (
-                <Shot key={p.src} photo={{ ...p, tall: false }} index={i} sizes="(max-width: 700px) 50vw, 25vw" />
+                <Shot
+                  key={p.src}
+                  photo={{ ...p, tall: false }}
+                  index={i}
+                  sizes="(max-width: 700px) 50vw, 25vw"
+                />
               ))}
             </div>
           </div>
@@ -135,11 +181,11 @@ export default function TrainingPage() {
       <section className="section section--pillars">
         <div className="wrap narrow">
           <header className="sec-head">
-            <Eyebrow num="◆" text="Join the next batch" />
-            <h2 className="sec-h">Freshers welcome. Training is paid.</h2>
+            <Eyebrow num="◆" text="Join us" />
+            <h2 className="sec-h">Freshers welcome. Training is provided.</h2>
             <p className="sec-lede">
-              You need to be reasonably fit, willing to work shifts, and able to produce Aadhaar,
-              address proof and two references. Everything else, we teach.
+              You need to be reasonably fit, willing to work shifts, and able to produce Aadhaar and
+              address proof for verification. Everything else, we teach.
             </p>
             <Link className="btn btn--gold btn--lg" href="/careers">
               See open positions <Icon name="arrow" />

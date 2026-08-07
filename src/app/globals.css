@@ -610,62 +610,6 @@ button { background: none; border: 0; cursor: pointer; }
 .prose strong { color: var(--paper); }
 .prose em { color: var(--gld-300); font-style: italic; }
 
-/* ============================================================ divisions */
-.divisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 1px; }
-.division {
-  background: var(--ink-050); display: flex; flex-direction: column;
-  transition: background .3s var(--ease);
-}
-.division:hover { background: var(--ink-150); }
-.division__img { position: relative; aspect-ratio: 16 / 10; overflow: hidden; }
-.division__img::after {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(to top, var(--ink-050), transparent 55%),
-              color-mix(in srgb, var(--accent-soft) 45%, transparent);
-  mix-blend-mode: multiply;
-  transition: opacity .4s var(--ease);
-}
-.division:hover .division__img::after { opacity: .35; }
-.division__img img {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: grayscale(1) contrast(1.04) brightness(.88);
-  transition: transform .7s var(--ease), filter .5s var(--ease);
-}
-.division:hover .division__img img { transform: scale(1.06); filter: grayscale(.15) contrast(1.05) brightness(.9); }
-
-.division__body { padding: 1.5rem; display: flex; flex-direction: column; flex: 1; }
-.division__ico {
-  display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 1rem;
-  border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--accent);
-}
-.division__ico .ico { width: 20px; height: 20px; }
-.division__k {
-  font-family: var(--f-mono); font-size: .67rem; letter-spacing: .13em;
-  text-transform: uppercase; color: var(--paper-mut); margin-bottom: .3rem;
-}
-.division__t { font-size: 1.3rem; margin-bottom: .55rem; }
-.division__p { font-size: .92rem; color: var(--paper-dim); flex: 1; }
-.division__go {
-  display: inline-flex; align-items: center; gap: .4rem; margin-top: 1.2rem;
-  font-family: var(--f-mono); font-size: .72rem; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--accent);
-}
-.division__go .ico { width: 15px; height: 15px; transition: transform .25s var(--ease); }
-.division:hover .division__go .ico { transform: translateX(4px); }
-
-
-/* Hairline grids.
-   These grids draw 1px rules between cells. Painting a background behind the
-   whole grid is the usual trick, but a partly-filled last row then shows a lit
-   rectangle where a cell should be. Outlining each cell instead keeps the rule
-   attached to real content; adjacent outlines meet exactly inside the 1px gap,
-   so the line stays crisp and single-width. */
-.divisions > *, .cards > *, .pillars > *, .creed > *, .team > *, .creds > *,
-.modules > *, .verify > *, .steps > *, .jobs > *, .perks > *, .clients > *,
-.contact-cards > *, .sectors > *, .admin-stats > *, .subs > * {
-  box-shadow: 0 0 0 1px var(--line-soft);
-}
-
 /* ================================================================= chips */
 .chips { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 2rem; }
 .chip {
@@ -713,10 +657,6 @@ button { background: none; border: 0; cursor: pointer; }
 .card__ico .ico { width: 19px; height: 19px; }
 .card:hover .card__ico { border-color: var(--grn-400); background: color-mix(in srgb, var(--grn-700) 40%, transparent); }
 
-.card__div {
-  font-family: var(--f-mono); font-size: .64rem; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--paper-mut); margin-bottom: .4rem;
-}
 .card__t { font-size: 1.12rem; margin-bottom: .5rem; letter-spacing: -.025em; }
 .card__p { font-size: .89rem; color: var(--paper-dim); flex: 1; line-height: 1.6; }
 .card__go {
@@ -730,7 +670,7 @@ button { background: none; border: 0; cursor: pointer; }
 .card:hover .card__go .ico { transform: translateX(4px); }
 
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
-@media (prefers-reduced-motion: reduce) { .card, .pillar, .shot, .quote, .tl, .step { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .card, .pillar, .shot, .step { animation: none !important; } }
 
 /* =============================================================== pillars */
 .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1px; }
@@ -764,7 +704,7 @@ button { background: none; border: 0; cursor: pointer; }
 .coverage__copy .btn { margin-top: 1.5rem; }
 .coverage__list { border-top: 1px solid var(--line); }
 .district {
-  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr) auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: 1rem; align-items: baseline;
   padding: 1rem .4rem; border-bottom: 1px solid var(--line-soft);
   transition: .25s var(--ease);
@@ -774,54 +714,26 @@ button { background: none; border: 0; cursor: pointer; }
 .district:hover { background: var(--ink-150); padding-left: 1rem; }
 .district__n { font-family: var(--f-display); font-size: 1.15rem; font-weight: 700; letter-spacing: -.025em; }
 .district__r { font-size: .82rem; color: var(--paper-mut); }
-.district__s { font-family: var(--f-mono); font-size: .74rem; color: var(--paper-dim); text-align: right; }
 .district--core .district__n { color: var(--grn-300); }
 .district--core::before { content: "◆"; color: var(--gld-500); font-size: .55rem; position: absolute; margin-left: -.9rem; }
 @media (max-width: 560px) {
-  .district { grid-template-columns: 1fr auto; }
-  .district__r { display: none; }
+  .district { grid-template-columns: 1fr; gap: .15rem; }
 }
 
-/* ================================================================== rail */
-.rail {
-  display: flex; gap: 1px; overflow-x: auto; scroll-snap-type: x mandatory;
-  padding-inline: var(--gut); padding-block: .5rem 1.5rem;
-  scrollbar-width: thin; scrollbar-color: var(--ink-300) transparent;
+/* ================================================================= video */
+/* Sits in the right-hand column of a `.split`, where the still figure
+   normally goes, so the parade footage inherits the same rhythm as the
+   photography rather than becoming a full-bleed hero nobody asked for. */
+.vband { margin: 0; }
+.vband__v {
+  display: block; width: 100%; aspect-ratio: 16 / 9;
+  background: var(--ink-000); object-fit: cover;
+  border: 1px solid var(--line-soft);
 }
-.tile {
-  position: relative; flex: 0 0 clamp(230px, 26vw, 320px);
-  aspect-ratio: 4 / 5; scroll-snap-align: start; overflow: hidden;
-  background: var(--ink-150);
+.vband__cap {
+  display: block; margin-top: .8rem; font-size: .84rem; color: var(--paper-dim);
+  border-left: 2px solid var(--gld-500); padding-left: .8rem;
 }
-.tile img {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: grayscale(1) brightness(.78) contrast(1.05);
-  transition: transform .7s var(--ease), filter .5s var(--ease);
-}
-.tile:hover img { transform: scale(1.07); filter: grayscale(0) brightness(.92) contrast(1); }
-.tile__body {
-  position: absolute; inset: auto 0 0 0; padding: 1.3rem;
-  background: linear-gradient(to top, var(--ink-050) 12%, color-mix(in srgb, var(--ink-050) 70%, transparent) 60%, transparent);
-}
-.tile__body strong { display: block; font-family: var(--f-display); font-size: 1.18rem; letter-spacing: -.025em; margin-bottom: .3rem; }
-.tile__body em { display: block; font-style: normal; font-size: .82rem; color: var(--paper-dim); line-height: 1.5; }
-
-/* ================================================================ quotes */
-.quotes { columns: 3 300px; column-gap: 1.5rem; }
-.quote {
-  break-inside: avoid; margin: 0 0 1.5rem;
-  padding: 1.7rem 1.6rem;
-  border: 1px solid var(--line-soft); border-left: 2px solid var(--gld-500);
-  background: var(--ink-050);
-  animation: rise .55s var(--ease) backwards;
-  animation-delay: calc(var(--i, 0) * 70ms);
-}
-.quote__t { font-size: 1.02rem; line-height: 1.62; margin-bottom: 1.2rem; }
-.quote__t::before { content: "“"; color: var(--gld-400); font-family: var(--f-display); font-size: 1.6em; line-height: 0; vertical-align: -.22em; margin-right: .1em; }
-.quote__by { display: grid; gap: .12rem; border-top: 1px solid var(--line-soft); padding-top: .9rem; }
-.quote__who { font-weight: 600; font-size: .88rem; }
-.quote__co { font-size: .84rem; color: var(--paper-dim); }
-.quote__sec { font-family: var(--f-mono); font-size: .67rem; letter-spacing: .1em; text-transform: uppercase; color: var(--paper-mut); margin-top: .25rem; }
 
 /* ============================================================== gallery */
 .section--gallery { padding-top: clamp(2.5rem, 5vw, 4rem); }
@@ -832,6 +744,9 @@ button { background: none; border: 0; cursor: pointer; }
 .mosaic {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   grid-auto-rows: 210px; gap: 6px;
+  /* Tall frames otherwise leave a hole in the row below them whenever a filter
+     returns a count that does not divide evenly. Dense packing backfills it. */
+  grid-auto-flow: dense;
 }
 .shot {
   position: relative; overflow: hidden; margin: 0; background: var(--ink-150);
@@ -845,6 +760,12 @@ button { background: none; border: 0; cursor: pointer; }
   transition: transform .8s var(--ease), filter .45s var(--ease);
 }
 .shot:hover img { transform: scale(1.05); filter: none; }
+/* NBSS's own photographs are mostly night parades that are already dark. The
+   full duotone treatment turns them into black mush, so they get a much
+   lighter grade — and a lift rather than a knock-down in brightness. These are
+   the real photographs of the company; making them legible beats making them
+   uniform. */
+.shot--own img { filter: grayscale(.3) contrast(1.05) brightness(1.06); }
 .shot figcaption {
   position: absolute; inset: auto 0 0 0; padding: 1rem .95rem .85rem;
   background: linear-gradient(to top, color-mix(in srgb, var(--ink-000) 92%, transparent), transparent);
@@ -857,51 +778,6 @@ button { background: none; border: 0; cursor: pointer; }
 
 .peek { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); grid-auto-rows: 220px; gap: 6px; }
 .peek .shot figcaption { transform: translateY(calc(100% - 2.4rem)); }
-
-/* ============================================================== sectors */
-.sectors { display: grid; gap: 1px; }
-.sector {
-  display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
-  background: var(--ink-050); scroll-margin-top: 7rem;
-  animation: rise .5s var(--ease) backwards;
-  animation-delay: calc(var(--i, 0) * 35ms);
-}
-.sector:nth-child(even) { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
-.sector:nth-child(even) .sector__img { order: 2; }
-@media (max-width: 760px) {
-  .sector, .sector:nth-child(even) { grid-template-columns: 1fr; }
-  .sector:nth-child(even) .sector__img { order: 0; }
-}
-.sector__img { position: relative; overflow: hidden; aspect-ratio: 16 / 9; }
-.sector__img img {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: grayscale(1) contrast(1.04) brightness(.8);
-  transition: transform .8s var(--ease), filter .5s var(--ease);
-}
-.sector:hover .sector__img img { transform: scale(1.05); filter: grayscale(0) brightness(.95); }
-.sector__body { padding: clamp(1.6rem, 3.5vw, 2.8rem); display: flex; flex-direction: column; justify-content: center; }
-.sector__n {
-  font-family: var(--f-mono); font-size: .72rem; letter-spacing: .16em;
-  color: var(--gld-500); margin-bottom: .6rem;
-}
-.sector__t { font-size: clamp(1.35rem, 2.6vw, 1.95rem); margin-bottom: .6rem; }
-.sector__p { color: var(--paper-dim); font-size: .96rem; max-width: 48ch; }
-.sector__go {
-  display: inline-flex; align-items: center; gap: .4rem; margin-top: 1.2rem;
-  font-family: var(--f-mono); font-size: .71rem; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--grn-300);
-}
-.sector__go .ico { width: 15px; height: 15px; transition: transform .25s var(--ease); }
-.sector__go:hover .ico { transform: translateX(4px); }
-
-.sector-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
-.sector-chips li { animation: rise .4s var(--ease) backwards; animation-delay: calc(var(--i,0) * 30ms); }
-.sector-chips a {
-  display: inline-block; padding: .55rem 1.05rem;
-  border: 1px solid var(--line); border-radius: 100px;
-  font-size: .84rem; color: var(--paper-dim); transition: .2s;
-}
-.sector-chips a:hover { color: var(--ink-050); background: var(--gld-400); border-color: var(--gld-400); }
 
 /* ========================================================== page header */
 .phead {
@@ -1038,29 +914,20 @@ button { background: none; border: 0; cursor: pointer; }
   margin-bottom: 1rem;
 }
 .creed__p { font-size: 1.06rem; line-height: 1.62; color: var(--paper-dim); }
-
-/* ============================================================= timeline */
-.timeline { position: relative; padding-left: 1rem; }
-.timeline::before {
-  content: ""; position: absolute; left: 0; top: .5rem; bottom: .5rem; width: 1px;
-  background: linear-gradient(to bottom, transparent, var(--line-hot) 12%, var(--line-hot) 88%, transparent);
+.creed__list { display: grid; gap: .7rem; margin-top: 1.2rem; }
+.creed__list li {
+  position: relative; padding-left: 1.4rem;
+  font-size: .95rem; line-height: 1.55; color: var(--paper-dim);
 }
-.tl {
-  position: relative; display: grid; grid-template-columns: 5.5rem 1fr;
-  gap: 1.5rem; padding: 1.1rem 0 1.1rem 1.5rem;
-  animation: rise .5s var(--ease) backwards; animation-delay: calc(var(--i,0) * 60ms);
+.creed__list li::before {
+  content: "◆"; position: absolute; left: 0; top: .08em;
+  font-size: .55rem; color: var(--gld-500);
 }
-@media (max-width: 600px) { .tl { grid-template-columns: 1fr; gap: .4rem; } }
-.tl__y { font-family: var(--f-display); font-size: 1.35rem; font-weight: 800; color: var(--gld-300); letter-spacing: -.03em; }
-.tl__dot {
-  position: absolute; left: -.31rem; top: 1.55rem;
-  width: 9px; height: 9px; background: var(--ink-050);
-  border: 2px solid var(--grn-400); transform: rotate(45deg);
-}
-.tl__p { color: var(--paper-dim); font-size: .96rem; max-width: 62ch; margin: 0; }
 
 /* ================================================================= team */
 .team { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; }
+/* One named person should read as a card, not as a full-width banner. */
+.team--single { grid-template-columns: minmax(0, 26rem); }
 .member {
   padding: 1.9rem 1.6rem; background: var(--ink-100);
   animation: rise .5s var(--ease) backwards; animation-delay: calc(var(--i,0) * 45ms);
@@ -1099,7 +966,6 @@ button { background: none; border: 0; cursor: pointer; }
   border: 1px solid var(--line-hot); border-radius: 2px;
   font-family: var(--f-mono); font-size: .74rem; font-weight: 600; color: var(--grn-300);
 }
-.module__d { font-family: var(--f-mono); font-size: .69rem; letter-spacing: .08em; color: var(--paper-mut); }
 .module__t { font-size: 1.08rem; margin-bottom: .55rem; }
 .module__p { font-size: .88rem; color: var(--paper-dim); margin: 0; }
 
@@ -1167,22 +1033,6 @@ button { background: none; border: 0; cursor: pointer; }
 .perk h3 { font-size: 1.06rem; margin-bottom: .45rem; }
 .perk p { font-size: .87rem; color: var(--paper-dim); margin: 0; }
 
-/* ============================================================= clients */
-.clients { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 1px; }
-.client {
-  padding: 1.6rem 1.4rem; background: var(--ink-050); transition: background .3s;
-  animation: rise .45s var(--ease) backwards; animation-delay: calc(var(--i,0) * 30ms);
-}
-.client:hover { background: var(--ink-150); }
-.client__mark { display: block; margin-bottom: 1rem; opacity: .35; transition: opacity .3s; }
-.client:hover .client__mark { opacity: .7; }
-.client__mark .logo { width: 26px; height: 29px; }
-.client__n { font-size: 1.04rem; margin-bottom: .3rem; }
-.client__s { font-family: var(--f-mono); font-size: .67rem; letter-spacing: .1em; text-transform: uppercase; color: var(--paper-mut); margin-bottom: .9rem; }
-.client__meta { display: flex; gap: 1.5rem; border-top: 1px solid var(--line-soft); padding-top: .8rem; }
-.client__meta dt { font-size: .7rem; color: var(--paper-mut); }
-.client__meta dd { font-family: var(--f-mono); font-size: .88rem; font-weight: 600; color: var(--gld-300); }
-
 /* ========================================================== contact page */
 .contact-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; }
 .ccard {
@@ -1207,6 +1057,7 @@ button { background: none; border: 0; cursor: pointer; }
 .ccard__alt .ico { width: 14px; height: 14px; }
 .ccard__n { font-family: var(--f-mono); font-size: .68rem; letter-spacing: .07em; color: var(--paper-mut); margin: .8rem 0 0; }
 .ccard__addr { font-style: normal; font-size: .89rem; color: var(--paper-dim); line-height: 1.62; margin-bottom: .8rem; }
+.ccard__hours { display: grid; gap: .45rem; font-size: .89rem; color: var(--paper-dim); line-height: 1.5; }
 
 .forms {
   display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);

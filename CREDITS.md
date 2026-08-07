@@ -29,11 +29,31 @@ icon and stylesheet in `src/` is original code.
 
 ## Photographs
 
+### Supplied by the client — © National Bodo Security Service
+
+These are NBSS's own photographs of its guards, parades and postings, supplied
+by the client for use on this site. They are **not** Creative Commons licensed
+and must not be reused outside this project. The gallery prints the company name
+beneath each one rather than a third-party credit and licence.
+
+| File | Subject |
+| --- | --- |
+| `img/nbss/parade-salute.jpg` | Evening parade, turnout and salute |
+| `img/nbss/parade-night.jpg` | Parade inspection at full strength |
+| `img/nbss/parade-ranks.jpg` | Drill ranks with batons |
+| `img/nbss/guards-on-duty.jpg` | Gate duty at a public building, Kokrajhar |
+| `img/nbss/training-classroom.jpg` | Classroom training session |
+| `img/nbss/training-briefing.jpg` | Emergency response briefing with SDRF Assam |
+| `img/nbss/training-demo.jpg` | Rescue equipment demonstration, SDRF Assam |
+| `video/nbss-parade.mp4` | NBSS parade footage, Kokrajhar |
+
+### Licensed stock
+
 Sourced from Wikimedia Commons and Flickr via the Openverse index, resized to a
 1500px long edge and re-encoded. Attribution below matches what the gallery
 prints beneath each image.
 
-### Operations & training
+#### Operations & training
 
 | File | Credit | Licence |
 | --- | --- | --- |
@@ -46,7 +66,7 @@ prints beneath each image.
 | `img/ops-control-room.jpg` | West Midlands Police | CC BY-SA 2.0 |
 | `img/ops-fire-training.jpg` | BLM Oregon & Washington | CC BY-SA 2.0 |
 
-### Bodoland & Kokrajhar
+#### Bodoland & Kokrajhar
 
 | File | Subject | Credit | Licence |
 | --- | --- | --- | --- |
@@ -64,7 +84,7 @@ prints beneath each image.
 | `img/gallery/rubber.jpg` | Rubber sheets drying, Kokrajhar | Wikimedia Commons | CC BY-SA 4.0 |
 | `img/gallery/marigold.jpg` | Marigolds, Kokrajhar | Wikimedia Commons | CC BY 4.0 |
 
-### Sectors
+#### Site types
 
 | File | Credit | Licence |
 | --- | --- | --- |

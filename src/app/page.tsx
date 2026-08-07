@@ -7,26 +7,23 @@ import {
   CtaBand,
   Eyebrow,
   Pillars,
-  Quotes,
   SectionHead,
   ServiceCards,
   Shot,
   StatStrip,
+  VideoBand,
 } from "@/components/blocks";
-import { photosIn } from "@/content/gallery";
-import { divisions, featuredServices, sectors, services } from "@/content/services";
-import { site, tel, testimonials } from "@/content/site";
+import { ownPhotos } from "@/content/gallery";
+import { featuredServices, services } from "@/content/services";
+import { coverage, site, tel } from "@/content/site";
 
-const HERO_LINES = ["Trained in", "Bodoland.", "Trusted across", "the Northeast."];
+const HERO_LINES = ["Your Safety,", "Our Responsibility."];
 
 /** Districts, repeated twice so the marquee loops seamlessly at -50%. */
-const TICKER = [
-  "Kokrajhar", "Chirang", "Baksa", "Udalguri",
-  "Tamulpur", "Bongaigaon", "Dhubri", "Guwahati",
-];
+const TICKER = coverage.map((d) => d.name);
 
 export default function HomePage() {
-  const peek = photosIn("operations").slice(0, 6);
+  const peek = ownPhotos().slice(0, 6);
 
   return (
     <>
@@ -34,7 +31,7 @@ export default function HomePage() {
       <section className="hero">
         <div className="hero__bg" aria-hidden="true">
           <Image
-            src="/img/hero-guard.jpg"
+            src="/img/nbss/parade-salute.jpg"
             alt=""
             fill
             sizes="100vw"
@@ -47,9 +44,9 @@ export default function HomePage() {
         <div className="wrap hero__in">
           <div className="hero__copy">
             <p className="eyebrow eyebrow--hero">
-              <span className="eyebrow__num">EST {site.founded}</span>
+              <span className="eyebrow__num">NBSS</span>
               <span className="eyebrow__rule" />
-              Kokrajhar · Bodoland Territorial Region
+              Kokrajhar · Bodoland Territorial Council
             </p>
 
             <h1 className="hero__h">
@@ -64,47 +61,47 @@ export default function HomePage() {
               ))}
             </h1>
 
-            <p className="hero__lede" style={{ "--i": 4 } as React.CSSProperties}>
-              National Bodo Security Services puts verified, drilled and properly paid people on
-              your gate — and backs them with a control room in Kokrajhar that is staffed at three
-              in the morning. Guarding, facility management, manpower and electronic security, on
-              one contract.
+            <p className="hero__lede" style={{ "--i": 2 } as React.CSSProperties}>
+              National Bodo Security Service is a trusted and professionally managed security
+              agency headquartered in Kokrajhar. We supply trained, disciplined and responsible
+              security personnel to government departments, corporate offices, educational
+              institutions, hospitals, banks, industry and commercial establishments.
             </p>
 
-            <div className="hero__cta" style={{ "--i": 5 } as React.CSSProperties}>
+            <div className="hero__cta" style={{ "--i": 3 } as React.CSSProperties}>
               <Link className="btn btn--gold btn--lg" href="/contact#quote">
-                Request a site survey
+                Request a quotation
               </Link>
               <Link className="btn btn--ghost btn--lg" href="/services">
                 See all {services.length} services <Icon name="arrow" />
               </Link>
             </div>
 
-            <ul className="hero__badges" style={{ "--i": 6 } as React.CSSProperties}>
-              <li>PSARA licensed</li>
-              <li>ISO 9001:2015</li>
-              <li>EPF &amp; ESI compliant</li>
-              <li>24 × 7 control room</li>
+            <ul className="hero__badges" style={{ "--i": 4 } as React.CSSProperties}>
+              <li>Registered under Govt. of Assam</li>
+              <li>Police-verified guards</li>
+              <li>ESI &amp; EPF as applicable</li>
+              <li>24 × 7 supervision</li>
             </ul>
           </div>
 
-          <aside className="hero__card" style={{ "--i": 7 } as React.CSSProperties}>
+          <aside className="hero__card" style={{ "--i": 5 } as React.CSSProperties}>
             <p className="hero__card-k">Deployment desk</p>
             <a className="hero__card-tel" href={`tel:${tel(site.phone)}`}>
               {site.phone}
             </a>
             <dl className="hero__card-list">
               <div>
-                <dt>Site survey</dt>
-                <dd>Within 48 hours</dd>
+                <dt>Head office</dt>
+                <dd>Kokrajhar, Assam (BTC)</dd>
               </div>
               <div>
-                <dt>Guards on site</dt>
-                <dd>7 working days</dd>
+                <dt>Districts served</dt>
+                <dd>{coverage.length} and nearby</dd>
               </div>
               <div>
-                <dt>Districts covered</dt>
-                <dd>8 across Assam</dd>
+                <dt>Supervision</dt>
+                <dd>24 × 7</dd>
               </div>
             </dl>
             <Link className="hero__card-go" href="/contact">
@@ -129,52 +126,14 @@ export default function HomePage() {
 
       <StatStrip />
 
-      {/* ======================================================= DIVISIONS */}
-      <section className="section section--divisions">
+      {/* ======================================================== SERVICES */}
+      <section className="section section--alt">
         <div className="wrap">
           <SectionHead
             num="01"
             kicker="What we do"
-            title="Four divisions, one field officer, one invoice."
-            lede="Most clients start with guards and end up handing us the housekeeping, the waste and the cameras — because chasing four vendors for one building is nobody's idea of a job."
-          />
-
-          <div className="divisions">
-            {divisions.map((d, i) => (
-              <Link
-                className="division"
-                href={`/services?division=${d.slug}`}
-                data-accent={d.accent}
-                key={d.slug}
-                style={{ "--i": i } as React.CSSProperties}
-              >
-                <div className="division__img">
-                  <Image src={d.cover} alt="" fill sizes="(max-width: 700px) 100vw, 25vw" />
-                </div>
-                <div className="division__body">
-                  <span className="division__ico">
-                    <Icon name={d.icon} />
-                  </span>
-                  <p className="division__k">{d.kicker}</p>
-                  <h3 className="division__t">{d.name}</h3>
-                  <p className="division__p">{d.blurb}</p>
-                  <span className="division__go">
-                    Explore <Icon name="arrow" />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ======================================================== FEATURED */}
-      <section className="section section--alt">
-        <div className="wrap">
-          <SectionHead
-            num="02"
-            kicker="Most asked for"
-            title="The postings we fill most weeks."
+            title="We provide security personnel. That is the whole business."
+            lede="Trained, uniformed and police-verified guards, posted where you need them and supervised after they get there. These are the sites we are asked for most often."
             aside={
               <Link className="btn btn--ghost" href="/services">
                 All {services.length} services <Icon name="arrow" />
@@ -189,12 +148,41 @@ export default function HomePage() {
       <section className="section section--pillars">
         <div className="wrap">
           <SectionHead
-            num="03"
-            kicker="Why NBSS"
-            title="Six things that are hard to copy."
-            lede="Any agency can print a uniform. These are the parts that take years and cost money — which is exactly why they are the ones worth asking about."
+            num="02"
+            kicker="Why choose us"
+            title="Six reasons clients stay with us."
+            lede="Any agency can print a uniform. These are the parts that take work — which is exactly why they are the ones worth asking us about."
           />
           <Pillars />
+        </div>
+      </section>
+
+      {/* =========================================================== VIDEO */}
+      <section className="section">
+        <div className="wrap split">
+          <div className="split__copy">
+            <Eyebrow num="03" text="On the ground" />
+            <h2 className="sec-h">Parade is where the discipline shows.</h2>
+            <p className="prose">
+              Turnout, drill and bearing are not ceremony. A guard who stands a parade properly
+              stands a gate properly, and the morning inspection is where a supervisor catches the
+              uniform, the identity card and the attitude before a client does.
+            </p>
+            <p className="prose">
+              Physical fitness and parade is one of six areas every NBSS guard is trained in before
+              a first posting, alongside guarding duties, fire safety, first aid, access control
+              and crowd handling.
+            </p>
+            <Link className="btn btn--ghost" href="/training">
+              How we train <Icon name="arrow" />
+            </Link>
+          </div>
+
+          <VideoBand
+            src="/video/nbss-parade.mp4"
+            poster="/img/nbss/parade-ranks.jpg"
+            caption="NBSS parade, Kokrajhar."
+          />
         </div>
       </section>
 
@@ -203,10 +191,11 @@ export default function HomePage() {
         <div className="wrap coverage">
           <div className="coverage__copy">
             <Eyebrow num="04" text="Where we deploy" />
-            <h2 className="sec-h">Five BTR districts, plus three we can actually supervise.</h2>
+            <h2 className="sec-h">Kokrajhar outward, as far as we can supervise.</h2>
             <p className="sec-lede">
-              We turn work down. A site we cannot reach on a surprise check at 02:00 is a site we
-              cannot promise anything about — so the map stops where the supervision does.
+              We operate across Kokrajhar, Chirang, Baksa, Udalguri, Bongaigaon, Barpeta and other
+              nearby districts. If your site is just outside that list, ask — we would rather give
+              you a straight answer than take on a posting we cannot check on properly.
             </p>
             <Link className="btn btn--ghost" href="/contact">
               Ask about your district <Icon name="arrow" />
@@ -216,58 +205,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========================================================= SECTORS */}
-      <section className="section section--alt">
+      {/* ========================================================= GALLERY */}
+      <section className="section section--alt section--peek">
         <div className="wrap">
           <SectionHead
             num="05"
-            kicker="Sectors"
-            title="A bank branch is not a tea estate."
-            aside={
-              <Link className="btn btn--ghost" href="/sectors">
-                All sectors <Icon name="arrow" />
-              </Link>
-            }
-          />
-        </div>
-
-        <div className="rail" tabIndex={0} aria-label="Sectors we serve, scroll horizontally">
-          {sectors.map((s, i) => (
-            <Link
-              className="tile"
-              href={`/sectors#${s.slug}`}
-              key={s.slug}
-              style={{ "--i": i } as React.CSSProperties}
-            >
-              <Image src={s.image} alt="" fill sizes="320px" loading="lazy" />
-              <span className="tile__body">
-                <strong>{s.name}</strong>
-                <em>{s.blurb}</em>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ==================================================== TESTIMONIALS */}
-      <section className="section section--quotes">
-        <div className="wrap">
-          <SectionHead
-            num="06"
-            kicker="In their words"
-            title="What clients say when the auditor is not in the room."
-          />
-          <Quotes quotes={testimonials} />
-        </div>
-      </section>
-
-      {/* ========================================================= GALLERY */}
-      <section className="section section--peek">
-        <div className="wrap">
-          <SectionHead
-            num="07"
-            kicker="On the ground"
-            title="Operations, training and the region we come from."
+            kicker="Our people"
+            title="Parade, training and duty — our own photographs."
             aside={
               <Link className="btn btn--ghost" href="/gallery">
                 Open the gallery <Icon name="arrow" />

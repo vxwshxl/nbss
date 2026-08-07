@@ -9,9 +9,9 @@ import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   alternates: canonical("/contact"),
-  title: "Contact — Kokrajhar, Bodoland Territorial Region",
+  title: "Contact — Kokrajhar, Bodoland Territorial Council",
   description:
-    "Talk to the deployment desk. Survey within 48 hours, guards on site within seven working days.",
+    "Talk to the deployment desk at National Bodo Security Service, Kokrajhar. Call 7002071628 or request a quotation.",
 };
 
 /**
@@ -38,52 +38,52 @@ export default function ContactPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <PageHead
-        kicker="24×7"
+        kicker="◆"
         sub="Contact"
         crumb="Contact"
         title="Call the desk. Somebody picks up."
-        lede="The corporate office keeps office hours. The control room does not — it is staffed every hour of every day, including the ones nobody wants."
+        lede="Tell us about the site — where it is, what it is, and roughly how many guards you have in mind. If you are not sure about the number, say so; working that out is what the visit is for."
       />
 
       {/* ==================================================== CONTACT CARDS */}
       <section className="section">
         <div className="wrap">
           <div className="contact-cards">
-            <article className="ccard" style={{ "--i": 0 } as React.CSSProperties}>
+            <article className="ccard ccard--live" style={{ "--i": 0 } as React.CSSProperties}>
               <span className="ccard__ico"><Icon name="phone" /></span>
               <h2 className="ccard__t">Deployment desk</h2>
               <a className="ccard__big" href={`tel:${tel(site.phone)}`}>{site.phone}</a>
-              <a className="ccard__alt" href={`tel:${tel(site.phoneAlt)}`}>{site.phoneAlt}</a>
-              <p className="ccard__n">Mon–Sat, 09:30–18:00</p>
+              <p className="ccard__n">
+                For quotations, site visits, existing contracts and complaints.
+              </p>
             </article>
 
-            <article className="ccard ccard--live" style={{ "--i": 1 } as React.CSSProperties}>
-              <span className="ccard__ico"><span className="pulse" aria-hidden="true" /></span>
-              <h2 className="ccard__t">Control room — 24 × 7</h2>
-              <a className="ccard__big" href={`tel:${tel(site.emergency)}`}>{site.emergency}</a>
-              <p className="ccard__n">Never unstaffed, never outsourced, never a phone tree.</p>
-            </article>
-
-            <article className="ccard" style={{ "--i": 2 } as React.CSSProperties}>
-              <span className="ccard__ico"><Icon name="mail" /></span>
-              <h2 className="ccard__t">Email</h2>
-              <a className="ccard__big ccard__big--sm" href={`mailto:${site.email}`}>{site.email}</a>
-              <a className="ccard__alt" href={`mailto:${site.emailHr}`}>{site.emailHr} — jobs</a>
-              <p className="ccard__n">Answered within one working day</p>
-            </article>
-
-            <article className="ccard" style={{ "--i": 3 } as React.CSSProperties}>
+            <article className="ccard" style={{ "--i": 1 } as React.CSSProperties}>
               <span className="ccard__ico"><Icon name="pin" /></span>
-              <h2 className="ccard__t">Registered office</h2>
+              <h2 className="ccard__t">{site.address.label}</h2>
               <address className="ccard__addr">
-                {site.address.line1}<br />
-                {site.address.line2}<br />
-                {site.address.city} — {site.address.pin}<br />
-                {site.address.state}
+                {site.address.lines.map((line) => (
+                  <span key={line} style={{ display: "block" }}>
+                    {line}
+                  </span>
+                ))}
               </address>
               <a className="ccard__alt" href={site.address.mapUrl} rel="noopener noreferrer" target="_blank">
                 Open in maps <Icon name="arrow" />
               </a>
+            </article>
+
+            <article className="ccard" style={{ "--i": 2 } as React.CSSProperties}>
+              <span className="ccard__ico"><Icon name="clock" /></span>
+              <h2 className="ccard__t">Hours</h2>
+              <ul className="ccard__hours">
+                {site.hours.map((h) => (
+                  <li key={h}>{h}</li>
+                ))}
+              </ul>
+              <p className="ccard__n">
+                Or use the forms below — they reach the same desk.
+              </p>
             </article>
           </div>
         </div>
@@ -98,13 +98,13 @@ export default function ContactPage() {
             <p className="sec-lede">
               Give us the district, the site type and roughly how many people you have in mind. If
               you are not sure about the headcount, leave it blank — working that out is what the
-              survey is for.
+              site visit is for.
             </p>
             <TickList
               items={[
-                "Survey within 48 hours inside the BTR districts",
-                "Costing with wage, EPF, ESI, bonus and GST shown separately",
-                "Guards on site within seven working days of signing",
+                "A site visit before any number is quoted",
+                "Wage, statutory heads and service charge shown separately",
+                "Police-verified, trained and uniformed personnel",
                 "No obligation, and we will say so if you do not need us",
               ]}
             />
@@ -128,7 +128,7 @@ export default function ContactPage() {
             <h2 className="sec-h">Something else on your mind?</h2>
             <p className="sec-lede">
               Compliance documents, a tender query, a complaint about one of our guards, a request
-              for a copy of the PSARA licence — this form reaches the same desk, and a complaint
+              to see our registration papers — this form reaches the same desk, and a complaint
               reaches it faster.
             </p>
             <ul className="office-hours">
@@ -177,10 +177,10 @@ export default function ContactPage() {
         <div className="wrap coverage">
           <div className="coverage__copy">
             <Eyebrow num="04" text="Coverage" />
-            <h2 className="sec-h">Eight districts.</h2>
+            <h2 className="sec-h">Where we operate.</h2>
             <p className="sec-lede">
-              Five in the Bodoland Territorial Region, three in Lower Assam. Anything further, ask
-              — we will give you a straight answer.
+              Kokrajhar, Chirang, Baksa, Udalguri, Bongaigaon, Barpeta and other nearby districts.
+              Anything further, ask — we will give you a straight answer.
             </p>
           </div>
           <CoverageList />

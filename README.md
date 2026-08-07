@@ -15,7 +15,7 @@
 
 <br>
 
-**53 pages · 31 services · 3 runtime dependencies · 0 UI libraries · 0 CDN requests**
+**24 pages · 9 services · 3 runtime dependencies · 0 UI libraries · 0 CDN requests**
 
 <br>
 
@@ -62,7 +62,7 @@ and the site is built around each of them.
 <td>The <b>Bodoland Territorial Region (BTR)</b> — an autonomous area of roughly 9,600 km² across five districts: <b>Kokrajhar, Chirang, Baksa, Udalguri and Tamulpur</b>, governed by the Bodoland Territorial Council. Population ≈ 3.15 million (2011 census). Kokrajhar is its headquarters.</td></tr>
 
 <tr><td><b>Security<br>Services</b></td>
-<td>Private security in India is regulated under the <b>Private Security Agencies (Regulation) Act, 2005 (PSARA)</b> — a state-issued licence, valid five years, requiring a tie-up with a recognised training institute. That framework drives the licensing, training and compliance content throughout the site.</td></tr>
+<td>Private security in India is regulated under the <b>Private Security Agencies (Regulation) Act, 2005 (PSARA)</b> — a state-issued licence, valid five years, requiring a tie-up with a recognised training institute. The site does <b>not</b> assert a PSARA licence: the client's profile does not mention one, and a licence number is not something to publish on the agency's behalf. Add it to <code>site.compliance</code> once confirmed.</td></tr>
 </table>
 
 A real business by this name — **"National Bodo Security Service"** — is listed in Kokrajhar on
@@ -85,9 +85,9 @@ locally, verify properly, train seriously, pay on time.
 
 ## Design
 
-The **information architecture** is modelled on [nsservices.co.in](https://www.nsservices.co.in),
-a Pune security/facility/manpower agency — four divisions, a deep service catalogue, sectors,
-clients, gallery, careers, contact. The visual language is entirely its own.
+The **information architecture** follows the company profile supplied by the client: NBSS
+supplies trained security personnel, and the catalogue is the nine kinds of site it supplies them
+to. The visual language is entirely its own.
 
 ### Direction: "Bodoland field dossier"
 
@@ -124,20 +124,18 @@ duotone shift colour without a second stylesheet.
 
 ## What's in the box
 
-### Pages — 12 routes, 39 generated detail pages
+### Pages — 10 routes, 13 generated detail pages
 
 | Route | What it is |
 | :-- | :-- |
-| `/` | Hero, animated stat counters, four divisions, featured services, six pillars, coverage map, sector rail, testimonials, gallery peek |
-| `/about` | Company story, mission/vision, 8-entry timeline, leadership, six licences, coverage |
-| `/services` | Full catalogue with division filter and a four-step onboarding explainer |
-| `/services/[slug]` | **31 pages** — detail, scope of work, who it's for, inline quote form, related services |
-| `/sectors` | 12 verticals, alternating full-bleed layout |
-| `/training` | The 21-day induction syllabus (8 modules) and the 6-step verification process |
-| `/clients` | 16 reference sites, testimonials, sector spread |
+| `/` | Hero, animated stat counters, featured services, six pillars, parade video, coverage list, gallery peek |
+| `/about` | Company profile, vision & mission, six pillars, management, compliance, coverage |
+| `/services` | Full catalogue and a four-step onboarding explainer |
+| `/services/[slug]` | **9 pages** — detail, scope of work, who it's for, inline quote form, related services |
+| `/training` | The six training areas, the verification steps, and the parade video |
 | `/gallery` | 28 photographs with category filter and per-image attribution |
-| `/careers` | 8 vacancies (170 seats), terms, how to apply |
-| `/careers/[id]` | **8 pages** — requirements, benefits, inline application form |
+| `/careers` | 4 roles, terms, how to apply |
+| `/careers/[id]` | **4 pages** — requirements, benefits, inline application form |
 | `/contact` | Contact cards, quote form, enquiry form, 8-question FAQ, coverage |
 | `/admin` | Basic-auth submissions inbox with status triage |
 
@@ -147,8 +145,8 @@ Plus `/api/health`, a generated `/sitemap.xml` and `/robots.txt`, and a custom 4
 
 | Feature | How it works |
 | :-- | :-- |
-| **Live service search** | Client component, `/` keyboard shortcut. The 31-item catalogue already ships in the route bundle, so filtering is local — no request, no debounce, no spinner. |
-| **Division & gallery filters** | Plain `<Link>`s to a search param. Every filtered view is a real, shareable URL and the back button behaves; Next handles the transition client-side. |
+| **Live service search** | Client component, `/` keyboard shortcut. The catalogue already ships in the route bundle, so filtering is local — no request, no debounce, no spinner. |
+| **Gallery filters** | Plain `<Link>`s to a search param. Every filtered view is a real, shareable URL and the back button behaves; Next handles the transition client-side. |
 | **Three forms** | Server Actions + `useActionState`. Validation failures return **every** error at once with values preserved. |
 | **Admin triage** | Server Action + `revalidatePath`, so the badge and the counters re-render from the file rather than from local state that could drift. |
 
@@ -158,9 +156,9 @@ with no JS returns a fully server-rendered success page and a stored reference n
 
 ### Content
 
-31 services across 4 divisions · 12 sectors · 8 districts · 8 vacancies · 8 training modules ·
-6 pillars · 6 licences · 8 FAQs · 28 captioned photographs — all typed TypeScript in
-`src/content`. No CMS, no database on the read path, compile-time safety, fully static rendering.
+9 services · 6 districts · 4 vacancies · 6 training areas · 6 pillars · 5 compliance
+categories · 8 FAQs · 28 captioned photographs — all typed TypeScript in `src/content`. No CMS,
+no database on the read path, compile-time safety, fully static rendering.
 
 ---
 
@@ -175,8 +173,8 @@ nbss/
 │   │   ├── globals.css           # the entire design system, one file
 │   │   ├── fonts.css             # self-hosted woff2 subsets
 │   │   ├── page.tsx              # home
-│   │   ├── <route>/page.tsx      # about, services, sectors, training, …
-│   │   ├── services/[slug]/      # 31 prerendered detail pages
+│   │   ├── <route>/page.tsx      # about, services, training, …
+│   │   ├── services/[slug]/      # 9 prerendered detail pages
 │   │   ├── careers/[id]/         # 8 prerendered vacancy pages
 │   │   ├── admin/page.tsx        # operations inbox (force-dynamic)
 │   │   ├── sitemap.ts · robots.ts
@@ -281,15 +279,21 @@ against each submission.
 
 ---
 
-## Content disclaimer
+## Content provenance
 
-**This is a demonstration build.** The company story, personnel names, licence numbers, client
-list, statistics, testimonials and vacancies are illustrative and were written for this project.
-The place names, cultural references, regional facts and the PSARA regulatory framing are real and
-researched. The footer states this on every page.
+Company facts on this site come from the profile supplied by the client: the name, slogan, phone
+number, registered office, vision and mission, service list, "why choose us" points, training
+areas, compliance categories, management and districts served.
 
-Photograph credits and licences are in **[CREDITS.md](CREDITS.md)** and are also printed under
-each image in the gallery.
+Where the profile is silent, the field is **absent rather than filled in**. There is no founding
+year, no company timeline, no registration or licence numbers, no ISO claim, no email address, no
+client names, no testimonials and no headcount or renewal statistics on the site, because none of
+those have been confirmed. `src/content/site.ts` documents this at the top; add values there as
+the client supplies them.
+
+Photographs and video credited to National Bodo Security Service were supplied by the client and
+are **not** Creative Commons licensed. The remaining images are CC or public domain. Full details
+in **[CREDITS.md](CREDITS.md)**, and printed under each image in the gallery.
 
 ---
 

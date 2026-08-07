@@ -5,18 +5,13 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Eyebrow, PageHead, SectionHead, ServiceCards, TickList } from "@/components/blocks";
 import { QuoteForm } from "@/components/forms/QuoteForm";
-import {
-  divisionBySlug,
-  relatedServices,
-  serviceBySlug,
-  services,
-} from "@/content/services";
+import { relatedServices, serviceBySlug, services } from "@/content/services";
 import { site, tel } from "@/content/site";
 import { canonical } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
-/** All thirty-one detail pages are prerendered at build time. */
+/** Every detail page is prerendered at build time. */
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
 }
@@ -44,23 +39,19 @@ export default async function ServiceDetailPage({ params }: Params) {
   const service = serviceBySlug(slug);
   if (!service) notFound();
 
-  const division = divisionBySlug(service.division);
-  const related = relatedServices(service, 4);
+  const related = relatedServices(service, 3);
 
   return (
     <>
       <PageHead
         kicker={<Icon name={service.icon} />}
-        sub={division?.name ?? "Services"}
+        sub="Security services"
         title={service.name}
         lede={service.summary}
         image={service.image}
-        accent={division?.accent}
+        accent={service.accent}
         crumb={service.name}
-        crumbs={[
-          { href: "/services", label: "Services" },
-          { href: `/services?division=${service.division}`, label: division?.name ?? "" },
-        ]}
+        crumbs={[{ href: "/services", label: "Services" }]}
         actions={
           <>
             <Link className="btn btn--gold" href="#quote">
@@ -96,12 +87,12 @@ export default async function ServiceDetailPage({ params }: Params) {
             <div className="panel panel--accent">
               <h3 className="panel__h">Included on every contract</h3>
               <ul className="panel__list">
-                <li>Verified, police-cleared personnel</li>
-                <li>Twenty-one day induction before posting</li>
-                <li>24 × 7 control room and escalation ladder</li>
-                <li>EPF, ESI and statutory compliance</li>
-                <li>Guaranteed reliever against absence</li>
-                <li>Monthly site report to the client</li>
+                <li>Police-verified personnel</li>
+                <li>Training completed before posting</li>
+                <li>Uniformed and disciplined staff</li>
+                <li>24 × 7 monitoring and supervision</li>
+                <li>Quick replacement and backup support</li>
+                <li>ESI and EPF facility as applicable</li>
               </ul>
             </div>
 
@@ -111,7 +102,7 @@ export default async function ServiceDetailPage({ params }: Params) {
                 {site.phone}
               </a>
               <p className="panel__note">
-                Mon–Sat 09:30–18:00. Control room answers 24 × 7 on {site.emergency}.
+                Mon–Sat, 09:00–18:00. Supervision and deployment run 24 × 7.
               </p>
             </div>
           </aside>
@@ -137,11 +128,11 @@ export default async function ServiceDetailPage({ params }: Params) {
           <div className="wrap">
             <SectionHead
               num="◆"
-              kicker="Also in this division"
-              title={division?.name ?? "Related services"}
+              kicker="Other sites we guard"
+              title="We post guards here too."
               aside={
-                <Link className="btn btn--ghost" href={`/services?division=${service.division}`}>
-                  See the division <Icon name="arrow" />
+                <Link className="btn btn--ghost" href="/services">
+                  All {services.length} services <Icon name="arrow" />
                 </Link>
               }
             />

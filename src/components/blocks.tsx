@@ -13,7 +13,6 @@ import {
   type District,
   type Pillar,
   type Stat,
-  type Testimonial,
 } from "@/content/site";
 import type { Photo } from "@/content/gallery";
 import type { Service } from "@/content/services";
@@ -173,7 +172,6 @@ export function CoverageList({ districts = allDistricts }: { districts?: Distric
         >
           <span className="district__n">{d.name}</span>
           <span className="district__r">{d.region}</span>
-          <span className="district__s">{d.sites}</span>
         </li>
       ))}
     </ul>
@@ -193,7 +191,6 @@ export function ServiceCards({ services }: { services: Service[] }) {
           <span className="card__ico">
             <Icon name={s.icon} />
           </span>
-          <span className="card__div">{s.division}</span>
           <h3 className="card__t">{s.name}</h3>
           <p className="card__p">{s.summary}</p>
           <span className="card__go">
@@ -201,25 +198,45 @@ export function ServiceCards({ services }: { services: Service[] }) {
           </span>
         </Link>
       ))}
-      {services.length === 0 && <p className="empty">No services in this division yet.</p>}
+      {services.length === 0 && <p className="empty">No services listed yet.</p>}
     </div>
   );
 }
 
-export function Quotes({ quotes }: { quotes: Testimonial[] }) {
+/**
+ * The parade footage supplied by the client.
+ *
+ * Muted, looping and `playsInline` so it behaves as motion rather than media —
+ * no controls to operate, nothing that hijacks a phone into fullscreen. It is
+ * not `autoPlay`: the file is ~4.7 MB, and firing that at every visitor on a
+ * mobile connection in Kokrajhar to decorate a section is not a trade worth
+ * making. `preload="none"` plus a poster frame means nothing is fetched until
+ * the visitor presses play.
+ */
+export function VideoBand({
+  src,
+  poster,
+  caption,
+}: {
+  src: string;
+  poster: string;
+  caption: string;
+}) {
   return (
-    <div className="quotes">
-      {quotes.map((q, i) => (
-        <blockquote className="quote" key={q.company} style={{ "--i": i } as React.CSSProperties}>
-          <p className="quote__t">{q.quote}</p>
-          <footer className="quote__by">
-            <span className="quote__who">{q.author}</span>
-            <span className="quote__co">{q.company}</span>
-            <span className="quote__sec">{q.sector}</span>
-          </footer>
-        </blockquote>
-      ))}
-    </div>
+    <figure className="vband">
+      <video
+        className="vband__v"
+        src={src}
+        poster={poster}
+        controls
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={caption}
+      />
+      <figcaption className="vband__cap">{caption}</figcaption>
+    </figure>
   );
 }
 
@@ -240,7 +257,7 @@ export function Shot({
 }) {
   return (
     <figure
-      className={`shot${photo.tall ? " shot--tall" : ""}`}
+      className={`shot${photo.tall ? " shot--tall" : ""}${photo.own ? " shot--own" : ""}`}
       style={{ "--i": index } as React.CSSProperties}
     >
       <Image src={photo.src} alt={photo.alt} fill sizes={sizes} loading="lazy" />
@@ -248,7 +265,7 @@ export function Shot({
         <span className="shot__cap">{photo.caption}</span>
         {showCredit && (
           <span className="shot__credit">
-            {photo.credit} · {photo.licence}
+            {photo.licence ? `${photo.credit} · ${photo.licence}` : photo.credit}
           </span>
         )}
       </figcaption>
@@ -277,8 +294,9 @@ export function CtaBand() {
           <Eyebrow num="◆" text="Next step" />
           <h2 className="cta__h">Tell us about the site. We will come and look at it.</h2>
           <p className="cta__p">
-            No obligation, no pressure, and a written quotation with the statutory build-up shown
-            line by line — so you can see exactly what the guard is paid and what we charge on top.
+            No obligation, no pressure, and a written quotation with the wage, the applicable
+            statutory heads and our service charge shown separately — so you can see exactly what
+            the guard receives and what we charge on top.
           </p>
         </div>
         <div className="cta__actions">

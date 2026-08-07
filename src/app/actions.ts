@@ -134,7 +134,7 @@ export async function submitQuote(_prev: FormState, data: FormData): Promise<For
     success: {
       reference: saved.id,
       title: `Quotation request logged — ${saved.id}`,
-      body: "A field officer will call to arrange the site survey. Inside the BTR districts that survey happens within 48 hours, and you get a costed proposal with the statutory build-up shown line by line.",
+      body: "A field officer will call to arrange a visit to the site, and you will get a costed proposal with the wage, the applicable statutory heads and our service charge shown separately.",
     },
   };
 }

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { site, tel } from "@/content/site";
+import { coverage, site, tel } from "@/content/site";
 import { absoluteUrl, baseUrl, canonical } from "@/lib/seo";
 
 import "./fonts.css";
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   alternates: canonical("/"),
   title: {
-    default: `${site.shortName} — Security, Facility & Manpower Services in Bodoland`,
+    default: `${site.shortName} — Security Services in Kokrajhar, Assam`,
     template: `%s — ${site.shortName}`,
   },
   description: site.descriptor,
@@ -20,11 +20,11 @@ export const metadata: Metadata = {
   authors: [{ name: site.name }],
   keywords: [
     "security agency Kokrajhar",
-    "PSARA licensed security Assam",
-    "Bodoland security services",
-    "facility management Assam",
-    "manpower staffing Kokrajhar",
-    "security guards BTR",
+    "security guards Assam",
+    "Bodoland security service",
+    "security agency BTC",
+    "security guard supply Kokrajhar",
+    "National Bodo Security Service",
   ],
   category: "Security services",
   creator: site.name,
@@ -91,18 +91,14 @@ const jsonLd = {
       description: site.descriptor,
       url: absoluteUrl("/"),
       logo: absoluteUrl("/img/favicon.svg"),
-      image: absoluteUrl("/img/hero-guard.jpg"),
-      foundingDate: String(site.founded),
+      image: absoluteUrl("/img/nbss/parade-salute.jpg"),
       telephone: site.phone,
-      email: site.email,
       priceRange: "₹₹",
       currenciesAccepted: "INR",
       address: {
         "@type": "PostalAddress",
-        streetAddress: `${site.address.line1}, ${site.address.line2}`,
         addressLocality: site.address.city,
-        addressRegion: "Assam",
-        postalCode: site.address.pin,
+        addressRegion: site.address.state,
         addressCountry: "IN",
       },
       geo: {
@@ -111,56 +107,32 @@ const jsonLd = {
         longitude: site.address.lng,
       },
       hasMap: site.address.mapUrl,
-      areaServed: [
-        { "@type": "AdministrativeArea", name: "Bodoland Territorial Region, Assam" },
-        { "@type": "AdministrativeArea", name: "Lower Assam" },
-      ],
+      areaServed: coverage.map((d) => ({
+        "@type": "AdministrativeArea",
+        name: `${d.name}, Assam`,
+      })),
       contactPoint: [
         {
           "@type": "ContactPoint",
-          contactType: "Control room",
-          telephone: tel(site.emergency),
-          availableLanguage: ["en", "as", "brx", "hi"],
-          hoursAvailable: {
-            "@type": "OpeningHoursSpecification",
-            dayOfWeek: [
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday",
-              "Sunday",
-            ],
-            opens: "00:00",
-            closes: "23:59",
-          },
-        },
-        {
-          "@type": "ContactPoint",
-          contactType: "Sales",
+          contactType: "Customer service",
           telephone: tel(site.phone),
-          email: site.email,
-        },
-        {
-          "@type": "ContactPoint",
-          contactType: "Human resources",
-          email: site.emailHr,
+          availableLanguage: ["en", "as", "brx", "hi"],
         },
       ],
       openingHoursSpecification: [
         {
           "@type": "OpeningHoursSpecification",
           dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-          opens: "09:30",
+          opens: "09:00",
           closes: "18:00",
         },
       ],
-      hasCredential: site.licenses.map((l) => ({
+      // Compliance categories only — the client has supplied no registration
+      // numbers, and `identifier` is not a field to guess at.
+      hasCredential: site.compliance.map((c) => ({
         "@type": "EducationalOccupationalCredential",
-        credentialCategory: l.label,
-        identifier: l.number,
-        recognizedBy: { "@type": "Organization", name: l.body },
+        credentialCategory: c.label,
+        recognizedBy: { "@type": "Organization", name: c.body },
       })),
     },
     {

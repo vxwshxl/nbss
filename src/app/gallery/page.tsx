@@ -27,8 +27,8 @@ export default async function GalleryPage({
         kicker="◆"
         sub="Gallery"
         crumb="Gallery"
-        title="Operations, training, and the region behind them."
-        lede="Photographs from our sites and our training ground, alongside the Bodoland the agency comes from — the Aronai, Bwisagu, Manas, and the districts we recruit in."
+        title="Our parades, our training, our postings."
+        lede="Photographs from NBSS parades, training sessions and live deployments, alongside the Bodoland the agency comes from — the Aronai, Bwisagu, Manas, and the districts we recruit in."
       />
 
       <section className="section section--gallery">
@@ -67,10 +67,11 @@ export default async function GalleryPage({
             <Eyebrow num="◆" text="Credits" />
             <h2 className="sec-h">On the photographs.</h2>
             <p className="sec-lede">
-              Every image on this site is used under a Creative Commons licence or is public
-              domain, and the photographer and licence are printed under each frame. Cultural
-              photographs of Bodoland — the Aronai, Bagurumba, Bwisagu and Manas — are included
-              because the region is the point, not decoration.
+              Photographs credited to National Bodo Security Service are our own — our guards, our
+              parades, our postings. The remaining images are used under a Creative Commons licence
+              or are public domain, and the photographer and licence are printed under each frame.
+              Cultural photographs of Bodoland are included because the region is the point, not
+              decoration.
             </p>
           </header>
         </div>

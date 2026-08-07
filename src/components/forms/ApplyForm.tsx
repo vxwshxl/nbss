@@ -43,7 +43,7 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
           <Eyebrow num="APP" text="Application" />
           <h3 className="form__title">Apply for {vacancy.title}</h3>
           <p className="form__lede">
-            {vacancy.openings} opening{vacancy.openings === 1 ? "" : "s"} · {vacancy.location}
+            {vacancy.type} · {vacancy.location}
           </p>
         </div>
 

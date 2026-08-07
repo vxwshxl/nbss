@@ -1,93 +1,53 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { CtaBand, Eyebrow, PageHead, ServiceCards } from "@/components/blocks";
-import { divisionBySlug, divisions, services, servicesIn } from "@/content/services";
+import { services } from "@/content/services";
 import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
   alternates: canonical("/services"),
-  title: "Services — guarding, facility management, manpower and electronic security",
-  description: `${services.length} services across four divisions, delivered from Kokrajhar across the Bodoland Territorial Region and Lower Assam.`,
+  title: "Services — trained security personnel for every kind of site",
+  description: `Security guards supplied to ${services.length} kinds of site, from Kokrajhar across the Bodoland Territorial Council and lower Assam.`,
 };
 
 const STEPS = [
   {
     n: "01",
     title: "You call or send the form",
-    body: "Tell us the site, the shift pattern and roughly how many people you have in mind. A rough answer is fine — that is what the survey is for.",
+    body: "Tell us the site, the shift pattern and roughly how many people you have in mind. A rough answer is fine — that is what the visit is for.",
   },
   {
     n: "02",
-    title: "A field officer walks the site",
-    body: "Within 48 hours inside the BTR districts. We look at entries, blind spots, lighting, the rest facility and where the register will live.",
+    title: "We come and look at the site",
+    body: "Entries, blind spots, lighting, the rest facility and where the duty register will live. A number quoted without seeing the site is a guess.",
   },
   {
     n: "03",
-    title: "A costed proposal, built up line by line",
-    body: "Wage, EPF, ESI, bonus, leave, uniform, service charge and GST shown separately. If a number looks odd, ask — it will have a reason.",
+    title: "A costed proposal, shown line by line",
+    body: "Wage, the applicable statutory heads and the agency service charge set out separately. If a figure looks odd, ask — it will have a reason.",
   },
   {
     n: "04",
-    title: "Deployment and a two-week review",
-    body: "Guards on site within seven working days of signing, then a review at day fourteen to fix whatever the site survey did not anticipate.",
+    title: "Deployment, then supervision",
+    body: "Trained, verified and uniformed guards on site, with supervision running from day one rather than starting when something goes wrong.",
   },
 ];
 
-export default async function ServicesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ division?: string }>;
-}) {
-  const { division } = await searchParams;
-  // An unknown slug falls back to "everything" rather than an empty grid.
-  const active = division && divisionBySlug(division) ? division : undefined;
-  const shown = servicesIn(active);
-
+export default function ServicesPage() {
   return (
     <>
       <PageHead
         kicker={services.length}
-        sub="Service catalogue"
+        sub="Our services"
         crumb="Services"
-        title="Everything one building needs, from one agency."
-        lede="Four divisions, thirty-one line items. Pick the ones you need — most clients start with the gate and add the rest once they have watched us run it for a season."
-        image="/img/ops-team.jpg"
+        title="We provide security personnel for these sites."
+        lede="One thing, done properly: trained, disciplined and police-verified guards, posted where you need them and supervised after they get there."
+        image="/img/nbss/guards-on-duty.jpg"
       />
 
       <section className="section">
         <div className="wrap">
-          {/*
-            Filtering is a plain link to a search param, so each division is a
-            real, shareable URL and the back button behaves. Next handles the
-            transition client-side, so it still feels instant.
-          */}
-          <div className="chips" role="tablist" aria-label="Filter services by division">
-            <Link
-              className={`chip${!active ? " is-on" : ""}`}
-              role="tab"
-              aria-selected={!active}
-              href="/services"
-              scroll={false}
-            >
-              All services <span className="chip__n">{services.length}</span>
-            </Link>
-            {divisions.map((d) => (
-              <Link
-                key={d.slug}
-                className={`chip${active === d.slug ? " is-on" : ""}`}
-                role="tab"
-                aria-selected={active === d.slug}
-                data-accent={d.accent}
-                href={`/services?division=${d.slug}`}
-                scroll={false}
-              >
-                {d.name}
-              </Link>
-            ))}
-          </div>
-
-          <ServiceCards services={shown} />
+          <ServiceCards services={services} />
         </div>
       </section>
 
@@ -95,7 +55,7 @@ export default async function ServicesPage({
         <div className="wrap">
           <header className="sec-head">
             <Eyebrow num="◆" text="How a contract starts" />
-            <h2 className="sec-h">Four steps, roughly ten days.</h2>
+            <h2 className="sec-h">Four steps, and a visit before any number.</h2>
           </header>
 
           <ol className="steps">
