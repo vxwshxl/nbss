@@ -48,6 +48,34 @@ const nextConfig: NextConfig = {
         source: "/fonts/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
+      {
+        /**
+         * Logo marks and photographs. Deliberately *not* `immutable`: unlike the
+         * fonts these live at stable, unhashed names, so pinning them for a year
+         * would mean a visitor who has seen the site keeps the old artwork until
+         * their cache evicts. A day of hard caching plus a week of
+         * stale-while-revalidate gives repeat visits an instant render while
+         * still picking up new artwork on the next background fetch.
+         */
+        source: "/:dir(logo|img|video)/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
+      {
+        // Favicons and touch icons, same reasoning — browsers refetch these
+        // rarely enough that a stale pin is very visible.
+        source: "/:file(favicon.ico|apple-touch-icon.png|icon-\\d+.png)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
+          },
+        ],
+      },
     ];
   },
 };

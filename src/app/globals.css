@@ -227,13 +227,12 @@ button { background: none; border: 0; cursor: pointer; }
 }
 
 .brand { display: flex; align-items: center; gap: .7rem; flex: none; }
-.logo { width: 34px; height: 37px; overflow: visible; }
-.logo__shield { fill: none; stroke: var(--grn-400); stroke-width: 2.2; }
-.logo__d1 { fill: var(--gld-400); }
-.logo__d2 { fill: var(--rst-400); }
-.logo__bar { stroke: var(--grn-300); stroke-width: 2; stroke-linecap: round; }
-.brand:hover .logo__d1 { animation: nudge .5s var(--ease); }
-@keyframes nudge { 50% { transform: translateY(-2px); } }
+/* The badge is a detailed patch, so it is given more room than the drawn mark
+   it replaced — below about 40px the inner type stops resolving entirely. */
+.logo { width: 42px; height: 42px; object-fit: contain; flex: none; }
+.brand:hover .logo { transform: scale(1.06); }
+.logo, .brand .logo { transition: transform .3s var(--ease); }
+@media (prefers-reduced-motion: reduce) { .brand:hover .logo { transform: none; } }
 
 .brand__text { display: flex; flex-direction: column; line-height: 1; }
 .brand__mark {
@@ -935,7 +934,7 @@ button { background: none; border: 0; cursor: pointer; }
 }
 .member:hover { background: var(--ink-150); }
 .member__mono { display: block; margin-bottom: 1.2rem; opacity: .5; }
-.member__mono .logo { width: 30px; height: 33px; }
+.member__mono .logo { width: 34px; height: 34px; }
 .member__n { font-size: 1.16rem; margin-bottom: .25rem; }
 .member__r { font-family: var(--f-mono); font-size: .69rem; letter-spacing: .11em; text-transform: uppercase; color: var(--gld-400); margin-bottom: .8rem; }
 .member__b { font-size: .89rem; color: var(--paper-dim); margin: 0; }

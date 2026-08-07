@@ -46,6 +46,11 @@ beneath each one rather than a third-party credit and licence.
 | `img/nbss/training-briefing.jpg` | Emergency response briefing with SDRF Assam |
 | `img/nbss/training-demo.jpg` | Rescue equipment demonstration, SDRF Assam |
 | `video/nbss-parade.mp4` | NBSS parade footage, Kokrajhar |
+| `logo/NBSS.png` | The company badge — source artwork |
+
+The badge is the client's trademark. Everything under `public/logo/nbss-*`, plus
+`favicon.ico`, `icon-*.png` and `apple-touch-icon.png`, is generated from it by
+`scripts/generate-logo-assets.mjs` and carries the same restriction.
 
 ### Licensed stock
 
@@ -97,9 +102,12 @@ prints beneath each image.
 
 ## Original work
 
-The NBSS mark, the `nbss-banner.svg` header, the Aronai band motif, the 45-glyph
-icon set, the stylesheet and all TypeScript in this repository are original to
-this project.
+The `nbss-banner.svg` README header, the Aronai band motif, the 45-glyph icon
+set, the stylesheet and all TypeScript in this repository are original to this
+project.
+
+The **NBSS badge is not** — it is the client's own mark, supplied as
+`public/logo/NBSS.png`. See the section above.
 
 ## A note on the CC BY-SA images
 

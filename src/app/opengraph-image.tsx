@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
 
 import { site } from "@/content/site";
@@ -98,6 +101,23 @@ function AronaiBand() {
   );
 }
 
+/**
+ * The badge, inlined as a data URI.
+ *
+ * `ImageResponse` renders on the server and cannot fetch a relative URL — there
+ * is no origin to resolve it against — so the file is read off disk and
+ * base64'd into the `src`.
+ *
+ * PNG, not the WebP the rest of the site uses: Satori, which rasterises this
+ * card, decodes PNG, JPEG and SVG only, and hands back an opaque
+ * "u2 is not iterable" if given anything else. The 96px size matches the size
+ * it is drawn at, and keeps the inlined bytes off a card that WhatsApp drops
+ * once it grows past a few hundred KB.
+ */
+const badge = `data:image/png;base64,${readFileSync(
+  join(process.cwd(), "public/icon-96.png"),
+).toString("base64")}`;
+
 export default function OpengraphImage() {
   return new ImageResponse(
     (
@@ -122,19 +142,8 @@ export default function OpengraphImage() {
             padding: "0 84px",
           }}
         >
-          {/* Shield mark, drawn from the same geometry as the site logo. */}
-          <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-            <svg width="66" height="72" viewBox="0 0 44 48">
-              <path
-                d="M22 2 4 8v16.5C4 35.6 11.6 43.7 22 46c10.4-2.3 18-10.4 18-21.5V8L22 2Z"
-                fill="none"
-                stroke={GREEN}
-                strokeWidth="2.2"
-              />
-              <path d="M22 12.5 27.5 19 22 25.5 16.5 19Z" fill={GOLD} />
-              <path d="M22 26 26 30.5 22 35 18 30.5Z" fill={RUST} />
-              <path d="M12 21.5h4M28 21.5h4" stroke={GREEN} strokeWidth="2" strokeLinecap="round" />
-            </svg>
+          <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
+            <img src={badge} width={96} height={96} alt="" />
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 62, fontWeight: 700, letterSpacing: -2 }}>
                 {site.shortName}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactElement } from "react";
 
 /**
@@ -69,20 +70,37 @@ export function Icon({ name, className }: { name: string; className?: string }) 
 }
 
 /**
- * The NBSS mark: a shield holding the Aronai diamond stack — the woven motif of
- * the Bodo scarf given to honour a guest.
+ * The NBSS badge, as supplied by the client.
+ *
+ * Served from a 256px WebP rather than the 2.6 MB source PNG, and `unoptimized`
+ * because that file is already the right size and format — putting a 27 KB
+ * asset through `/_next/image` costs a round trip and returns the same bytes.
+ *
+ * It is an embroidered patch: dense line work, two rings of type and a laurel.
+ * That artwork stops resolving somewhere around 40px, which is why the brand
+ * lockup keeps the "NBSS" wordmark beside it instead of leaning on the mark
+ * alone. Decorative here — the accessible name comes from the adjacent text —
+ * so the alt is empty by design.
  */
-export function Logo({ className = "logo" }: { className?: string }) {
+export function Logo({
+  className = "logo",
+  size = 40,
+  priority = false,
+}: {
+  className?: string;
+  size?: number;
+  priority?: boolean;
+}) {
   return (
-    <svg className={className} viewBox="0 0 44 48" aria-hidden="true" focusable="false">
-      <path
-        className="logo__shield"
-        d="M22 2 4 8v16.5C4 35.6 11.6 43.7 22 46c10.4-2.3 18-10.4 18-21.5V8L22 2Z"
-      />
-      <path className="logo__d1" d="M22 12.5 27.5 19 22 25.5 16.5 19Z" />
-      <path className="logo__d2" d="M22 26 26 30.5 22 35 18 30.5Z" />
-      <path className="logo__bar" d="M12 21.5h4M28 21.5h4" />
-    </svg>
+    <Image
+      className={className}
+      src="/logo/nbss-256.webp"
+      alt=""
+      width={size}
+      height={size}
+      priority={priority}
+      unoptimized
+    />
   );
 }
 

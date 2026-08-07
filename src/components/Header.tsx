@@ -86,7 +86,7 @@ export function Header() {
         <header className={`masthead${stuck ? " is-stuck" : ""}`}>
           <div className="wrap masthead__in">
             <Link className="brand" href="/" aria-label={`${site.name} — home`}>
-              <Logo />
+              <Logo priority />
               <span className="brand__text">
                 <strong className="brand__mark">{site.shortName}</strong>
                 <span className="brand__full">{site.name}</span>

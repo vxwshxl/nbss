@@ -47,7 +47,20 @@ export const metadata: Metadata = {
     title: `${site.shortName} — ${site.tagline}`,
     description: site.descriptor,
   },
-  icons: { icon: "/img/favicon.svg" },
+  // Generated from the client's badge (public/logo/NBSS.png). The .ico carries
+  // 16/32/48 because browsers still hit /favicon.ico directly, ignoring these
+  // tags; the PNGs cover tabs, Android home screens and iOS.
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: ["/favicon.ico"],
+  },
+  manifest: "/manifest.webmanifest",
   robots: {
     index: true,
     follow: true,
@@ -90,7 +103,7 @@ const jsonLd = {
       slogan: site.tagline,
       description: site.descriptor,
       url: absoluteUrl("/"),
-      logo: absoluteUrl("/img/favicon.svg"),
+      logo: absoluteUrl("/logo/nbss-512.png"),
       image: absoluteUrl("/img/nbss/parade-salute.jpg"),
       telephone: site.phone,
       priceRange: "₹₹",
