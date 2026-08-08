@@ -1,11 +1,13 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { districtOptions, site } from "@/content/site";
 import { serviceBySlug } from "@/content/services";
 import { educationOptions, startWhenOptions, vacancyById } from "@/content/gallery";
+import { credentialsValid, createSession, sessionCookie } from "@/lib/session";
 import { addSubmission, setStatus, type NewSubmission, type Status } from "@/lib/store";
 import { Validator, type FormState } from "@/lib/validate";
 
@@ -199,4 +201,100 @@ export async function submitApplication(_prev: FormState, data: FormData): Promi
 export async function updateStatus(id: string, status: Status): Promise<void> {
   await setStatus(id, status);
   revalidatePath("/admin");
+}
+
+/**
+ * Attempts per address, so a stolen or guessed username cannot simply be
+ * ground against the password. In-memory and therefore per-instance: this app
+ * already keeps its submissions in a single file on a single box, so a shared
+ * store would be solving a problem the deployment does not have.
+ */
+const ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
+const ATTEMPT_LIMIT = 8;
+const attempts = new Map<string, { count: number; resetAt: number }>();
+
+function throttle(key: string): { blocked: boolean; record: () => void } {
+  const now = Date.now();
+  const seen = attempts.get(key);
+  const live = seen && seen.resetAt > now ? seen : { count: 0, resetAt: now + ATTEMPT_WINDOW_MS };
+
+  // Sweep expired entries so a long uptime cannot grow the map without bound.
+  if (attempts.size > 512) {
+    for (const [ip, entry] of attempts) if (entry.resetAt <= now) attempts.delete(ip);
+  }
+
+  return {
+    blocked: live.count >= ATTEMPT_LIMIT,
+    record: () => attempts.set(key, { count: live.count + 1, resetAt: live.resetAt }),
+  };
+}
+
+/**
+ * Only ever send someone back inside the operations area.
+ *
+ * The value arrives on a hidden field, so it is entirely attacker-chosen. The
+ * prefix test alone is not enough for that: `//host` and `/\host` are
+ * protocol-relative and leave the site altogether, and `/admin/../x` passes a
+ * `startsWith` while resolving somewhere else once the browser normalises it.
+ */
+function safeReturnTo(raw: string): string {
+  if (!raw.startsWith("/admin") || raw.startsWith("/admin/login")) return "/admin";
+  if (raw.startsWith("//") || raw.includes("\\") || raw.includes("..")) return "/admin";
+  // CR/LF and other control characters have no business in a Location header.
+  if (/[\u0000-\u001f\u007f]/.test(raw)) return "/admin";
+  return raw;
+}
+
+export async function signIn(_prev: FormState, data: FormData): Promise<FormState> {
+  const f = new Validator(data);
+  const user = f.get("user");
+
+  // Read straight off the FormData rather than through the Validator, which
+  // trims: a trimmed password is a quietly different password.
+  const raw = data.get("pass");
+  const pass = typeof raw === "string" ? raw : "";
+
+  // Echoed back without the password, so a failed attempt keeps the operator
+  // name but always clears the secret.
+  const values = { user, pass: "" };
+
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+  const limit = throttle(ip);
+
+  if (limit.blocked) {
+    return {
+      ok: false,
+      values,
+      errors: { form: "Too many attempts from this connection. Wait ten minutes and try again." },
+    };
+  }
+
+  if (!user || !pass) {
+    limit.record();
+    return { ok: false, values, errors: { form: "Enter both the operator name and the passphrase." } };
+  }
+
+  if (!credentialsValid(user, pass)) {
+    limit.record();
+    // Deliberately one message for both fields: saying which half was wrong
+    // halves the work of guessing the other.
+    return { ok: false, values, errors: { form: "Those credentials were not accepted." } };
+  }
+
+  attempts.delete(ip);
+
+  const session = await createSession();
+  (await cookies()).set(sessionCookie.name, session.value, {
+    ...sessionCookie,
+    maxAge: session.maxAge,
+  });
+
+  // `redirect` signals by throwing, so it must sit outside any try/catch.
+  redirect(safeReturnTo(f.get("from")));
+}
+
+export async function signOut(): Promise<void> {
+  (await cookies()).delete({ name: sessionCookie.name, path: sessionCookie.path });
+  redirect("/admin/login");
 }

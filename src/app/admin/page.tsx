@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { signOut } from "@/app/actions";
 import { AronaiBand, Icon } from "@/components/Icon";
 import { StatusButtons } from "@/components/StatusButtons";
 import { tel } from "@/content/site";
@@ -53,6 +54,12 @@ export default async function AdminPage({
           <p className="phead__lede">
             Everything that came off the public forms, newest first.
           </p>
+          {/* A plain form, so signing out needs no client bundle of its own. */}
+          <form className="phead__cta" action={signOut}>
+            <button className="btn btn--ghost btn--sm" type="submit">
+              Sign out
+            </button>
+          </form>
         </div>
         <AronaiBand />
       </section>

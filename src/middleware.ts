@@ -1,52 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { SESSION_COOKIE, verifySession } from "@/lib/session";
+
 /**
- * HTTP basic auth in front of the operations pages.
+ * The gate in front of the operations pages.
  *
- * The comparison is constant-time so the credentials cannot be probed by
- * timing, and the middleware runs on the edge runtime, so it must not import
- * anything from `src/lib/store` (Node `fs`).
+ * It no longer answers with `401 WWW-Authenticate`, because that hands the
+ * visitor to the browser's built-in credential dialog. Instead an unsigned
+ * request is sent to `/admin/login`, which renders the site's own sign-in
+ * popup; the credential check itself lives in the server action behind that
+ * form. See `src/lib/session.ts` for why the crypto is Web Crypto.
  */
 
-const USER = process.env.NBSS_ADMIN_USER ?? "admin";
-const PASS = process.env.NBSS_ADMIN_PASS ?? "nbss-kokrajhar";
+const LOGIN_PATH = "/admin/login";
 
-/** Length-independent equality — never bails out early on a mismatch. */
-function safeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const x = enc.encode(a);
-  const y = enc.encode(b);
-  // Fold the length difference into the result rather than returning early.
-  let diff = x.length ^ y.length;
-  for (let i = 0; i < Math.max(x.length, y.length); i++) {
-    diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
-  }
-  return diff === 0;
-}
+export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const signedIn = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
 
-export function middleware(request: NextRequest) {
-  const header = request.headers.get("authorization");
-
-  if (header?.startsWith("Basic ")) {
-    const decoded = atob(header.slice(6));
-    const separator = decoded.indexOf(":");
-    const user = decoded.slice(0, separator);
-    const pass = decoded.slice(separator + 1);
-
-    // Both comparisons always run, so a correct username cannot be detected
-    // from how long the request takes.
-    const userOk = safeEqual(user, USER);
-    const passOk = safeEqual(pass, PASS);
-    if (userOk && passOk) return NextResponse.next();
+  if (pathname === LOGIN_PATH) {
+    // Nothing to ask someone who is already through the door.
+    return signedIn ? NextResponse.redirect(new URL("/admin", request.url)) : NextResponse.next();
   }
 
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="NBSS operations", charset="UTF-8"',
-      "Content-Type": "text/plain; charset=utf-8",
-    },
-  });
+  if (signedIn) return NextResponse.next();
+
+  const url = new URL(LOGIN_PATH, request.url);
+  // `/admin` is where sign-in lands anyway, so only a deeper target is worth
+  // carrying. The action re-validates this before it redirects to it.
+  if (pathname !== "/admin" || search) url.searchParams.set("from", pathname + search);
+  return NextResponse.redirect(url);
 }
 
 export const config = {

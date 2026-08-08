@@ -2,7 +2,7 @@
    NBSS — National Bodo Security Services
    Design language: "Bodoland field dossier"
 
-   Dark, institutional, editorial. Three ideas carry the whole system:
+   Light, institutional, editorial. Three ideas carry the whole system:
 
    1. The ARONAI BAND. The Bodo woven scarf is a strip of nested diamonds.
       It is rendered here as a pure-CSS repeating gradient and used as the
@@ -11,46 +11,66 @@
    2. THE DOSSIER GRID. Hairline borders, mono eyebrows with numbered
       sections, generous negative space. Information looks filed, not styled.
    3. DUOTONE PHOTOGRAPHY. Source photographs vary wildly in quality, so
-      every image is pushed through the same green-black treatment and
+      every image is pushed through the same washed green treatment and
       lifts to full colour only on hover. Inconsistency becomes intent.
    ========================================================================== */
 
-/* ------------------------------------------------------------------ tokens */
+/* ------------------------------------------------------------------ tokens
+   The ramps are named by ROLE, not by luminance, which is what lets the whole
+   theme turn over from one block. Two families behave in opposite directions:
+
+   - `--ink-*` and the 700/900 rungs of green are SURFACES. On paper they run
+     white → faintly tinted, the higher number sitting further back.
+   - `--paper-*` and the 300/400/500 rungs of green, gold and rust are MARKS —
+     type, rules, icons. On paper they are the dark end, the lower gold number
+     being the *richer* ink, exactly as it was the brighter one on black.
+
+   Because `--ink-050` is now white, every "foreground against an accent" rule
+   in the sheet (white text on a gold button, on a NEW badge, on the skip link)
+   inverts for free — no rule below needed touching for it. */
 :root {
-  /* Ink — a near-black with a green cast, taken from Manas forest shadow */
-  --ink-000: #050907;
-  --ink-050: #0A100D;
-  --ink-100: #0E1613;
-  --ink-150: #131E19;
-  --ink-200: #182720;
-  --ink-300: #21362D;
+  /* Paper — a warm white with a green cast, taken from Manas morning haze */
+  --ink-000: #E3EAE4;
+  --ink-050: #FFFFFF;
+  --ink-100: #F3F7F2;
+  --ink-150: #E9F0E9;
+  --ink-200: #DCE6DD;
+  --ink-300: #C7D5C9;
 
-  /* Bodoland green */
-  --grn-900: #04120C;
-  --grn-700: #0B4830;
-  --grn-500: #128A5A;
-  --grn-400: #19A96E;
-  --grn-300: #33D492;
+  /* Bodoland green — 900/700 wash behind panels, 500/400/300 draw */
+  --grn-900: #E9F4ED;
+  --grn-700: #CFE7D8;
+  --grn-500: #08573A;
+  --grn-400: #0B6B45;
+  --grn-300: #0F7A4E;
 
-  /* Marigold — from the Kokrajhar bloom, and from Aronai borderwork */
-  --gld-500: #C8912F;
-  --gld-400: #E2A93C;
-  --gld-300: #F2C669;
+  /* Marigold — from the Kokrajhar bloom, and from Aronai borderwork.
+     Inverted against the black theme: 300 is now the deepest, because it was
+     the loudest. Gold on white has to be bronze to hold 4.5:1. */
+  --gld-500: #A87B1C;
+  --gld-400: #865C0E;
+  --gld-300: #6E4B0B;
 
   /* Aronai rust — used sparingly, for the motif and for alerts */
-  --rst-500: #B4442A;
-  --rst-400: #D45A3A;
+  --rst-500: #A83B22;
+  --rst-400: #A6371B;
 
   /* Sky — electronic security division only */
-  --sky-400: #3F93C4;
+  --sky-400: #1F6FA8;
 
-  --paper:     #ECF2ED;
-  --paper-dim: #A9BCAF;
-  --paper-mut: #728578;
+  --paper:     #101A15;
+  --paper-dim: #3D4F45;
+  /* The mono eyebrows and legal lines are the smallest type on the site, and
+     the footer's tinted ground is the darkest thing they ever sit on — both of
+     the muted tones are set to clear 4.5:1 *there*, not merely on white. */
+  --paper-mut: #57685C;
 
-  --line:      color-mix(in srgb, var(--paper) 12%, transparent);
-  --line-soft: color-mix(in srgb, var(--paper) 7%, transparent);
-  --line-hot:  color-mix(in srgb, var(--grn-300) 35%, transparent);
+  /* Hairlines are a percentage of the ink, so they follow it across themes.
+     They need a touch more weight on white than they did on black — a 12%
+     tint that read as a crisp rule on ink disappears on paper. */
+  --line:      color-mix(in srgb, var(--paper) 16%, transparent);
+  --line-soft: color-mix(in srgb, var(--paper) 10%, transparent);
+  --line-hot:  color-mix(in srgb, var(--grn-300) 38%, transparent);
 
   /* accent is re-pointed per division via [data-accent] */
   --accent:      var(--grn-400);
@@ -72,9 +92,9 @@
 }
 
 [data-accent="green"]  { --accent: var(--grn-400); --accent-soft: var(--grn-700); }
-[data-accent="gold"]   { --accent: var(--gld-400); --accent-soft: #4A3611; }
-[data-accent="rust"]   { --accent: var(--rst-400); --accent-soft: #4A1C11; }
-[data-accent="sky"]    { --accent: var(--sky-400); --accent-soft: #10303F; }
+[data-accent="gold"]   { --accent: var(--gld-400); --accent-soft: #F6EBD3; }
+[data-accent="rust"]   { --accent: var(--rst-400); --accent-soft: #F8E4DD; }
+[data-accent="sky"]    { --accent: var(--sky-400); --accent-soft: #DDECF7; }
 
 /* -------------------------------------------------------------- foundation */
 *, *::before, *::after { box-sizing: border-box; }
@@ -161,14 +181,18 @@ button { background: none; border: 0; cursor: pointer; }
 .aronai {
   height: 12px;
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='12' viewBox='0 0 36 12'%3E%3Crect width='36' height='12' fill='%2304120C'/%3E%3Cpath d='M0 .5h36M0 11.5h36' stroke='%230B4830' stroke-width='1'/%3E%3Cpath d='M9 1.6 13.6 6 9 10.4 4.4 6Z' fill='none' stroke='%23E2A93C' stroke-width='1.15'/%3E%3Cpath d='M27 1.6 31.6 6 27 10.4 22.4 6Z' fill='none' stroke='%2319A96E' stroke-width='1.15'/%3E%3Cpath d='M18 3.4 20.6 6 18 8.6 15.4 6Z' fill='%23D45A3A'/%3E%3Cpath d='M0 3.4 2.6 6 0 8.6Z' fill='%23D45A3A'/%3E%3Cpath d='M36 3.4 33.4 6 36 8.6Z' fill='%23D45A3A'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='12' viewBox='0 0 36 12'%3E%3Crect width='36' height='12' fill='%23DCEBE1'/%3E%3Cpath d='M0 .5h36M0 11.5h36' stroke='%23A9C9B6' stroke-width='1'/%3E%3Cpath d='M9 1.6 13.6 6 9 10.4 4.4 6Z' fill='none' stroke='%23A87B1C' stroke-width='1.15'/%3E%3Cpath d='M27 1.6 31.6 6 27 10.4 22.4 6Z' fill='none' stroke='%230B6B45' stroke-width='1.15'/%3E%3Cpath d='M18 3.4 20.6 6 18 8.6 15.4 6Z' fill='%23A83B22'/%3E%3Cpath d='M0 3.4 2.6 6 0 8.6Z' fill='%23A83B22'/%3E%3Cpath d='M36 3.4 33.4 6 36 8.6Z' fill='%23A83B22'/%3E%3C/svg%3E")
     repeat-x center / auto 12px,
     var(--grn-900);
 }
-/* ------------------------------------------------------------ film grain */
+/* ------------------------------------------------------------ film grain
+   `overlay` was the right blend on ink — it lifted the shadows without
+   touching the highlights. On white it does nothing at all, because overlay
+   leaves a white backdrop white. `multiply` is the paper-stock equivalent:
+   it only ever darkens, so the noise reads as tooth rather than as haze. */
 .grain {
   position: fixed; inset: 0; z-index: 900;
-  pointer-events: none; opacity: .038; mix-blend-mode: overlay;
+  pointer-events: none; opacity: .04; mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 @media (prefers-reduced-motion: reduce) { .grain { display: none; } }
@@ -219,7 +243,7 @@ button { background: none; border: 0; cursor: pointer; }
   border-bottom: 1px solid var(--line-soft);
   transition: box-shadow .3s var(--ease);
 }
-.masthead.is-stuck { box-shadow: 0 18px 40px -24px #000; }
+.masthead.is-stuck { box-shadow: 0 14px 30px -22px color-mix(in srgb, var(--paper) 45%, transparent); }
 
 .masthead__in {
   display: flex; align-items: center; gap: clamp(1rem, 2.5vw, 2.5rem);
@@ -465,9 +489,12 @@ button { background: none; border: 0; cursor: pointer; }
 .hero { position: relative; isolation: isolate; overflow: hidden; }
 
 .hero__bg { position: absolute; inset: 0; z-index: -2; }
+/* The grade is the inverse of the ink theme's: the headline is now dark type,
+   so the plate has to be pushed up into the highlights rather than crushed
+   into the shadows, or the veil and the photograph fight for the same range. */
 .hero__bg img {
   width: 100%; height: 100%; object-fit: cover; object-position: 55% 25%;
-  filter: grayscale(1) contrast(1.05) brightness(.62);
+  filter: grayscale(1) contrast(.9) brightness(1.32);
   animation: kenburns 26s var(--ease) infinite alternate;
 }
 @keyframes kenburns { to { transform: scale(1.09) translateY(-1.5%); } }
@@ -683,7 +710,7 @@ button { background: none; border: 0; cursor: pointer; }
 .pillar__n {
   position: absolute; top: 1.4rem; right: 1.5rem;
   font-family: var(--f-display); font-size: 3.1rem; font-weight: 800;
-  color: color-mix(in srgb, var(--paper) 5%, transparent);
+  color: color-mix(in srgb, var(--paper) 8%, transparent);
   letter-spacing: -.05em; line-height: 1;
 }
 .pillar__ico {
@@ -755,7 +782,7 @@ button { background: none; border: 0; cursor: pointer; }
 .shot--tall { grid-row: span 2; }
 .shot img {
   width: 100%; height: 100%; object-fit: cover;
-  filter: grayscale(1) contrast(1.04) brightness(.82);
+  filter: grayscale(1) contrast(1.02) brightness(.96);
   transition: transform .8s var(--ease), filter .45s var(--ease);
 }
 .shot:hover img { transform: scale(1.05); filter: none; }
@@ -789,7 +816,7 @@ button { background: none; border: 0; cursor: pointer; }
 .phead__bg { position: absolute; inset: 0; z-index: -2; }
 .phead__bg img {
   width: 100%; height: 100%; object-fit: cover; object-position: center 35%;
-  filter: grayscale(1) contrast(1.08) brightness(.55);
+  filter: grayscale(1) contrast(.92) brightness(1.3);
 }
 .phead__veil {
   position: absolute; inset: 0; z-index: -1;
@@ -891,7 +918,7 @@ button { background: none; border: 0; cursor: pointer; }
 }
 .split__fig img {
   width: 100%; height: 100%; object-fit: cover;
-  filter: grayscale(.5) contrast(1.08) brightness(.85);
+  filter: grayscale(.5) contrast(1.04) brightness(1);
   transition: filter .5s var(--ease);
 }
 .split__fig:hover img { filter: none; }
@@ -974,7 +1001,7 @@ button { background: none; border: 0; cursor: pointer; }
   padding: 1.6rem 1.4rem; background: var(--ink-050);
   animation: rise .45s var(--ease) backwards; animation-delay: calc(var(--i,0) * 45ms);
 }
-.vstep__n { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .14em; color: var(--gld-500); }
+.vstep__n { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .14em; color: var(--gld-400); }
 .vstep h3 { font-size: 1.05rem; margin: .55rem 0 .45rem; }
 .vstep p { font-size: .86rem; color: var(--paper-dim); margin: 0; }
 
@@ -1123,9 +1150,12 @@ button { background: none; border: 0; cursor: pointer; }
   border: 1px solid var(--line); border-radius: var(--r-sm);
   font-size: .95rem; transition: .2s;
 }
-.form--boxed .field input, .form--boxed .field select, .form--boxed .field textarea { background: var(--ink-100); }
+/* No `.form--boxed` override of the field background: it restated the value
+   the rule above already sets, but as the `background` shorthand and at higher
+   specificity — so it also reset `background-image`, and every select inside a
+   boxed form lost the chevron drawn for it below. */
 .field textarea { resize: vertical; min-height: 5rem; line-height: 1.6; }
-.field input::placeholder, .field textarea::placeholder { color: var(--paper-mut); opacity: .6; }
+.field input::placeholder, .field textarea::placeholder { color: var(--paper-mut); opacity: .78; }
 .field input:focus, .field select:focus, .field textarea:focus {
   outline: none; border-color: var(--gld-400);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--gld-400) 16%, transparent);
@@ -1133,7 +1163,7 @@ button { background: none; border: 0; cursor: pointer; }
 .field [aria-invalid="true"] { border-color: var(--rst-400); }
 .field select {
   appearance: none; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23A9BCAF' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2357685C' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right .9rem center; background-size: 11px;
   padding-right: 2.4rem;
 }
@@ -1231,8 +1261,11 @@ button { background: none; border: 0; cursor: pointer; }
 .sub__status { margin-left: auto; }
 .badge { font-family: var(--f-mono); font-size: .64rem; text-transform: uppercase; letter-spacing: .1em; padding: .22rem .55rem; border-radius: 2px; }
 .badge--new { background: var(--gld-400); color: var(--ink-050); }
-.badge--contacted { background: var(--grn-700); color: var(--grn-300); }
-.badge--closed { background: var(--ink-300); color: var(--paper-mut); }
+/* Both of these are a wash carrying its own ink. On black the wash was the
+   dark half and the lightest rung of the ramp was the legible one; on paper
+   that reverses, so each reaches for the deepest rung it has. */
+.badge--contacted { background: var(--grn-700); color: var(--grn-500); }
+.badge--closed { background: var(--ink-300); color: var(--paper-dim); }
 
 .sub__body { padding: 1.2rem; }
 .sub__dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .6rem 1.5rem; }
@@ -1253,6 +1286,75 @@ button { background: none; border: 0; cursor: pointer; }
   padding: 3rem 1.5rem; text-align: center; color: var(--paper-mut);
   border: 1px dashed var(--line); font-size: .92rem;
 }
+
+/* ========================================================= ops sign-in
+   The operations prompt. It replaces the browser's basic-auth dialog, so it
+   has to read as a modal without being one: there is no page behind it to
+   dismiss back to, and `<dialog>`'s modal behaviour would need showModal()
+   and therefore JavaScript, which this form deliberately does not require. */
+.lock {
+  position: fixed; inset: 0; z-index: 800;
+  display: grid;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  overflow-y: auto;
+  /* Stops a flick at the end of the panel from scrolling the page behind it. */
+  overscroll-behavior: contain;
+}
+.lock__veil {
+  position: fixed; inset: 0;
+  background: color-mix(in srgb, var(--ink-000) 88%, transparent);
+  backdrop-filter: blur(7px) saturate(1.1);
+}
+
+/* `margin: auto` rather than `place-items: center`: a centred grid item taller
+   than the viewport has its overflowing top pinned out of reach, and this
+   panel gets tall on a short phone in landscape. Auto margins centre when
+   there is room and collapse to the start when there is not. */
+.dialog {
+  position: relative;
+  margin: auto;
+  width: min(100%, 30rem);
+  display: grid;
+  background: var(--ink-050);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--gld-400);
+  padding: clamp(1.5rem, 4.5vw, 2.4rem);
+  box-shadow: 0 30px 70px -40px color-mix(in srgb, var(--paper) 60%, transparent);
+  animation: rise .45s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) { .dialog { animation: none; } }
+
+.dialog__ico {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  border: 1px solid var(--line-hot); border-radius: var(--r-sm);
+  color: var(--grn-300); margin-bottom: 1.1rem;
+}
+.dialog__ico .ico { width: 21px; height: 21px; }
+
+.dialog__t { font-size: clamp(1.4rem, 4.2vw, 1.85rem); letter-spacing: -.032em; margin-bottom: .7rem; }
+.dialog__lede { font-size: .92rem; color: var(--paper-dim); margin-bottom: 1.5rem; }
+
+.dialog .form-note { margin-bottom: 1.2rem; }
+.dialog__fields { display: grid; gap: 1.1rem; }
+
+.dialog__foot {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  align-items: center; justify-content: space-between;
+  margin-top: 1.6rem; padding-top: 1.4rem;
+  border-top: 1px solid var(--line-soft);
+}
+/* The button is the only thing that should stretch when the row wraps. */
+.dialog__foot .btn { flex: 1 1 auto; }
+
+.dialog__back {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: var(--f-mono); font-size: .69rem; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--paper-mut);
+  transition: color .25s;
+}
+.dialog__back .ico { width: 14px; height: 14px; transition: transform .25s var(--ease); }
+.dialog__back:hover { color: var(--gld-300); }
+.dialog__back:hover .ico { transform: translateX(3px); }
 
 /* =============================================================== footer */
 .footer { background: var(--ink-000); border-top: 1px solid var(--line-soft); }

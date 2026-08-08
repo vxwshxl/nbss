@@ -77,8 +77,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A100D",
-  colorScheme: "dark",
+  themeColor: "#E9F4ED",
+  colorScheme: "light",
 };
 
 /**
@@ -161,7 +161,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" data-theme="dark">
+    <html lang="en-IN" data-theme="light">
       {/* Browser extensions inject attributes onto <body> before React hydrates
           (Bitdefender's `bis_register`, password managers, etc). Suppressing here
           covers only this element's attributes, not any subtree content. */}

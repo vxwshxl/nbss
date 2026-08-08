@@ -18,8 +18,10 @@ export default function manifest(): MetadataRoute.Manifest {
     description: site.descriptor,
     start_url: "/",
     display: "standalone",
-    background_color: "#0A100D",
-    theme_color: "#0A100D",
+    // Splash sits on the page's own paper; the tint matches the topbar, which
+    // is the strip the Android status bar actually butts up against.
+    background_color: "#FFFFFF",
+    theme_color: "#E9F4ED",
     lang: "en-IN",
     categories: ["business", "security"],
     icons: [

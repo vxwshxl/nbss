@@ -24,11 +24,19 @@ export const alt = `${site.name} — ${site.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const GOLD = "#E2A93C";
-const GREEN = "#19A96E";
-const RUST = "#D45A3A";
-const INK = "#0A100D";
-const PAPER = "#F4F1EA";
+/* Literals rather than the CSS custom properties, because Satori resolves no
+   cascade — but they are the same values `globals.css` sets, and INK and PAPER
+   have swapped jobs along with the site: PAPER is now the ground, INK the type. */
+const GOLD = "#8C6210";
+const GREEN = "#0B6B45";
+const RUST = "#A83B22";
+const PAPER = "#FFFFFF";
+const INK = "#101A15";
+const INK_DIM = "#3D4F45";
+const INK_MUT = "#57685C";
+const BAND = "#DCEBE1";
+const BAND_LINE = "#A9C9B6";
+const RULE = "#C8D5CB";
 
 /** One Aronai tile, repeated across the band. Mirrors the SVG pattern 1:1. */
 function AronaiTile({ x }: { x: number }) {
@@ -89,9 +97,9 @@ function AronaiBand() {
         display: "flex",
         width: "100%",
         height: 14,
-        background: "#04120C",
-        borderTop: `1px solid ${GREEN}`,
-        borderBottom: `1px solid ${GREEN}`,
+        background: BAND,
+        borderTop: `1px solid ${BAND_LINE}`,
+        borderBottom: `1px solid ${BAND_LINE}`,
       }}
     >
       {tiles.map((x) => (
@@ -127,8 +135,8 @@ export default function OpengraphImage() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: INK,
-          color: PAPER,
+          background: PAPER,
+          color: INK,
         }}
       >
         <AronaiBand />
@@ -148,7 +156,7 @@ export default function OpengraphImage() {
               <div style={{ fontSize: 62, fontWeight: 700, letterSpacing: -2 }}>
                 {site.shortName}
               </div>
-              <div style={{ fontSize: 21, color: "#9BA69F", letterSpacing: 1 }}>{site.name}</div>
+              <div style={{ fontSize: 21, color: INK_DIM, letterSpacing: 1 }}>{site.name}</div>
             </div>
           </div>
 
@@ -170,7 +178,7 @@ export default function OpengraphImage() {
             style={{
               display: "flex",
               fontSize: 25,
-              color: "#9BA69F",
+              color: INK_DIM,
               marginTop: 26,
               maxWidth: 880,
             }}
@@ -190,8 +198,8 @@ export default function OpengraphImage() {
                   style={{
                     display: "flex",
                     fontSize: 18,
-                    color: "#C8CEC8",
-                    border: "1px solid #23302A",
+                    color: INK_DIM,
+                    border: `1px solid ${RULE}`,
                     borderRadius: 4,
                     padding: "9px 16px",
                   }}
@@ -210,7 +218,7 @@ export default function OpengraphImage() {
             alignItems: "center",
             padding: "0 84px 40px",
             fontSize: 20,
-            color: "#7E8A83",
+            color: INK_MUT,
           }}
         >
           <div style={{ display: "flex" }}>
