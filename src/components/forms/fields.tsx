@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
 
@@ -173,6 +174,10 @@ export function ConsentBox({ children }: { children: ReactNode }) {
         </span>
       </label>
       <FieldError message={error} />
+      <p className="check__privacy">
+        What you send is handled as described in the{" "}
+        <Link href="/privacy-policy">Privacy Policy</Link>.
+      </p>
     </>
   );
 }

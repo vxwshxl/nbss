@@ -136,6 +136,39 @@ export const pages: PageEntry[] = [
       "rates",
     ],
   },
+  {
+    href: "/privacy-policy",
+    title: "Privacy Policy",
+    summary: "What the site collects through its forms, why, and the rights you hold over it.",
+    icon: "key",
+    terms: [
+      "privacy",
+      "data",
+      "personal information",
+      "data protection",
+      "dpdp",
+      "consent",
+      "cookies",
+      "delete my data",
+      "legal",
+    ],
+  },
+  {
+    href: "/terms-and-conditions",
+    title: "Terms & Conditions",
+    summary: "The terms this website is offered on, and how quotations and applications work.",
+    icon: "book",
+    terms: [
+      "terms",
+      "conditions",
+      "terms of use",
+      "terms of service",
+      "disclaimer",
+      "liability",
+      "copyright",
+      "legal",
+    ],
+  },
 ];
 
 /** Case-insensitive substring match across every indexed field. */

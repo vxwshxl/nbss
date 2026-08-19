@@ -82,6 +82,11 @@ export function Footer() {
         <p>
           © {year} {site.name}, Kokrajhar, Assam.
         </p>
+        <nav className="footer__policies" aria-label="Legal">
+          <Link href="/privacy-policy">Privacy Policy</Link>
+          <span aria-hidden="true">·</span>
+          <Link href="/terms-and-conditions">Terms &amp; Conditions</Link>
+        </nav>
         <p className="footer__licence">
           Registered under the Government of Assam · GST and labour compliant · ESI &amp; EPF as
           applicable

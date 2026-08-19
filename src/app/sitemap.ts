@@ -20,6 +20,8 @@ const PRIORITY: Record<string, number> = {
   "/careers": 0.8,
   "/training": 0.7,
   "/gallery": 0.6,
+  "/privacy-policy": 0.3,
+  "/terms-and-conditions": 0.3,
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -1173,6 +1173,9 @@ button { background: none; border: 0; cursor: pointer; }
 .check { display: grid; grid-template-columns: auto 1fr; gap: .7rem; align-items: flex-start; font-size: .89rem; color: var(--paper-dim); cursor: pointer; }
 .check input { width: 17px; height: 17px; margin-top: .18rem; accent-color: var(--gld-400); }
 .check b { color: var(--rst-400); font-weight: 400; }
+.check__privacy { font-size: .78rem; color: var(--paper-mut); margin: .1rem 0 0; }
+.check__privacy a { color: var(--paper-dim); text-decoration: underline; text-underline-offset: 2px; }
+.check__privacy a:hover { color: var(--gld-300); }
 
 .radios { border: 0; padding: 0; margin: 0; display: grid; gap: .55rem; }
 .radios legend { padding: 0; margin-bottom: .2rem; }
@@ -1356,6 +1359,77 @@ button { background: none; border: 0; cursor: pointer; }
 .dialog__back:hover { color: var(--gld-300); }
 .dialog__back:hover .ico { transform: translateX(3px); }
 
+/* ================================================================ legal */
+.section--legal { padding-top: clamp(2.8rem, 5vw, 4.5rem); }
+.legal {
+  display: grid; grid-template-columns: 264px minmax(0, 1fr);
+  gap: clamp(2.2rem, 5vw, 5.5rem); align-items: start;
+}
+
+.legal__aside { position: sticky; top: 96px; display: grid; gap: 1.7rem; }
+.legal__stamp {
+  font-family: var(--f-mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--paper-mut); line-height: 2;
+}
+.legal__stamp time { display: block; color: var(--paper); }
+
+.legal__toc-h {
+  font-family: var(--f-mono); font-size: .68rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--gld-400);
+  margin-bottom: .8rem; padding-bottom: .7rem; border-bottom: 1px solid var(--line-soft);
+}
+.legal__toc ol { display: grid; }
+.legal__toc a {
+  display: flex; gap: .7rem; align-items: baseline;
+  padding: .38rem 0 .38rem .6rem; margin-left: -.6rem;
+  border-left: 2px solid transparent;
+  font-size: .85rem; line-height: 1.35; color: var(--paper-dim);
+  transition: color .18s, border-color .18s;
+}
+.legal__toc a:hover { color: var(--paper); border-color: var(--gld-400); }
+.legal__toc-n { font-family: var(--f-mono); font-size: .66rem; color: var(--paper-mut); flex: none; }
+.legal__toc a:hover .legal__toc-n { color: var(--gld-300); }
+
+.legal__other { justify-self: start; }
+
+.legal__doc { max-width: 70ch; }
+.legal__sec { scroll-margin-top: 96px; }
+.legal__sec + .legal__sec {
+  margin-top: clamp(2.4rem, 4vw, 3.4rem);
+  padding-top: clamp(2.2rem, 3.5vw, 3rem);
+  border-top: 1px solid var(--line-soft);
+}
+.legal__h {
+  display: flex; gap: .9rem; align-items: baseline;
+  font-size: clamp(1.25rem, 2vw, 1.55rem); letter-spacing: -.024em;
+  margin-bottom: 1rem;
+}
+.legal__num { font-family: var(--f-mono); font-size: .72rem; font-weight: 500; color: var(--gld-400); flex: none; }
+.legal__sec .prose + .prose,
+.legal__sec .legal__list + .prose { margin-top: .9rem; }
+
+.legal__list { display: grid; gap: .6rem; margin: 1rem 0; max-width: 62ch; }
+.legal__list li { position: relative; padding-left: 1.4rem; color: var(--paper-dim); }
+.legal__list li::before {
+  content: "◆"; position: absolute; left: 0; top: .42em;
+  font-size: .5rem; color: var(--grn-300);
+}
+
+.legal__foot {
+  margin-top: clamp(2.4rem, 4vw, 3.4rem); padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--f-mono); font-size: .72rem; letter-spacing: .04em;
+  line-height: 1.9; color: var(--paper-mut); max-width: 52ch;
+}
+.legal__foot a { color: var(--paper); }
+.legal__foot a:hover { color: var(--gld-300); }
+
+@media (max-width: 880px) {
+  .legal { grid-template-columns: 1fr; }
+  .legal__aside { position: static; }
+  .legal__toc { display: none; }
+}
+
 /* =============================================================== footer */
 .footer { background: var(--ink-000); border-top: 1px solid var(--line-soft); }
 .footer .aronai { margin-bottom: clamp(2.5rem, 5vw, 4rem); }
@@ -1403,6 +1477,9 @@ button { background: none; border: 0; cursor: pointer; }
   font-family: var(--f-mono); font-size: .66rem; letter-spacing: .05em; color: var(--paper-mut);
 }
 .footer__legal p { margin: 0; }
+.footer__policies { display: flex; gap: .6rem; }
+.footer__policies a { color: var(--paper-mut); transition: color .18s; }
+.footer__policies a:hover { color: var(--gld-300); }
 .footer__demo { color: color-mix(in srgb, var(--rst-400) 70%, var(--paper-mut)); }
 
 /* --------------------------------------------------------- htmx niceties */
