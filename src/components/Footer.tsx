@@ -25,7 +25,12 @@ export function Footer() {
           <ul className="social" aria-label="Social profiles">
             {site.social.map((s) => (
               <li key={s.label}>
-                <a href={s.url} aria-label={s.label} rel="noopener">
+                <a
+                  href={s.url}
+                  aria-label={`${site.name} on ${s.label}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {s.label}
                 </a>
               </li>

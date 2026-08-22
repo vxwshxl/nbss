@@ -44,10 +44,17 @@ export const site = {
     "Office — Mon to Sat, 09:00 to 18:00",
     "Supervision & deployment desk — 24 × 7",
   ],
+  /**
+   * Only profiles the client has actually confirmed. Instagram and YouTube are
+   * absent rather than pointing at "#", for the same reason the licence numbers
+   * are absent: a dead link is worse than no link. Add them here when they exist.
+   */
   social: [
-    { label: "Facebook", url: "#" },
-    { label: "Instagram", url: "#" },
-    { label: "YouTube", url: "#" },
+    {
+      label: "Facebook",
+      url: "https://www.facebook.com/p/National-Bodo-security-service-Kokrajhar-61574200313067/",
+    },
+    { label: "WhatsApp", url: "https://wa.me/917577036205" },
   ] satisfies Link[],
   /**
    * Compliance categories only. The client's profile states what NBSS is
