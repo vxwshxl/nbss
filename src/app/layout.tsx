@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { themeScript } from "@/components/ThemeToggle";
 import { coverage, site, tel } from "@/content/site";
 import { absoluteUrl, baseUrl, canonical } from "@/lib/seo";
 
@@ -77,8 +78,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#E9F4ED",
-  colorScheme: "light",
+  /* Geist's two grounds: white paper, true black. The browser chrome follows
+     whichever the reader's system asks for, which is the same switch the
+     stylesheet's `prefers-color-scheme` block reads. */
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+  colorScheme: "light dark",
 };
 
 /**
@@ -164,7 +171,17 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" data-theme="light">
+    /* The head script rewrites `data-theme` before React hydrates, so the
+       attribute React rendered and the one it finds will differ for any reader
+       who has chosen a theme. That is the intended behaviour, not a bug to
+       report. */
+    <html lang="en-IN" data-theme="system" suppressHydrationWarning>
+      <head>
+        {/* Applies a stored light/dark choice before the first paint. Anything
+            later — an effect, a layout script — repaints, and the reader sees
+            a white flash on every navigation. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       {/* Browser extensions inject attributes onto <body> before React hydrates
           (Bitdefender's `bis_register`, password managers, etc). Suppressing here
           covers only this element's attributes, not any subtree content. */}
@@ -177,7 +194,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id="main">{children}</main>
         <Footer />
 
-        <div className="grain" aria-hidden="true" />
 
         <script
           type="application/ld+json"

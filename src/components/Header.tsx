@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AronaiBand, Icon, Logo } from "@/components/Icon";
 import { SiteSearch } from "@/components/SiteSearch";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { site, tel } from "@/content/site";
 
 const NAV = [
@@ -120,6 +121,8 @@ export function Header() {
             </nav>
 
             <div className="masthead__actions">
+              <ThemeToggle />
+
               <button
                 ref={searchButton}
                 className="icon-btn"

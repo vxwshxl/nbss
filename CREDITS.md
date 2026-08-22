@@ -7,14 +7,17 @@ require.
 
 ## Typefaces
 
-Self-hosted as latin/latin-ext `woff2` subsets under `public/fonts/`.
-All three are licensed under the **SIL Open Font License 1.1**.
+Self-hosted as variable `woff2` under `public/fonts/`, taken from the `geist`
+npm package (v1.7.2). Both are licensed under the **SIL Open Font License 1.1**.
 
 | Family | Role | Source |
 | --- | --- | --- |
-| Bricolage Grotesque | Display / headings | Google Fonts |
-| Instrument Sans | Body copy | Google Fonts |
-| JetBrains Mono | Eyebrows, data, labels | Google Fonts |
+| Geist Sans | Headings and body copy | [vercel/geist-font](https://github.com/vercel/geist-font) |
+| Geist Mono | Eyebrows, data, labels | [vercel/geist-font](https://github.com/vercel/geist-font) |
+
+The colour ramps, radius and elevation in `src/app/globals.css` follow Vercel's
+published [Geist design system](https://vercel.com/geist/colors). Geist is used
+here as an open design system; NBSS is not affiliated with Vercel.
 
 ## Runtime dependencies
 
