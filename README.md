@@ -224,7 +224,7 @@ and radio value — a forged `service` slug or `district` is rejected, never sto
 
 ## Configuration
 
-Copy `.env.example` to `.env.local`:
+Create a `.env` in the project root:
 
 | Variable | Default | |
 | :-- | :-- | :-- |
