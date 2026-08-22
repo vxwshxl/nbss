@@ -249,11 +249,18 @@ export function Shot({
   index,
   showCredit = true,
   sizes = "(max-width: 700px) 100vw, 30vw",
+  onOpen,
 }: {
   photo: Photo;
   index: number;
   showCredit?: boolean;
   sizes?: string;
+  /**
+   * Supplied by the gallery's client-side lightbox. Absent everywhere else, so
+   * the strips on the homepage and the training page stay static markup with
+   * no button and no JavaScript attached.
+   */
+  onOpen?: () => void;
 }) {
   return (
     <figure
@@ -261,6 +268,18 @@ export function Shot({
       style={{ "--i": index } as React.CSSProperties}
     >
       <Image src={photo.src} alt={photo.alt} fill sizes={sizes} loading="lazy" />
+      {onOpen && (
+        <button
+          type="button"
+          className="shot__open"
+          onClick={onOpen}
+          aria-label={`View “${photo.caption}” full size`}
+        >
+          <span className="shot__zoom" aria-hidden="true">
+            <Icon name="search" />
+          </span>
+        </button>
+      )}
       <figcaption>
         <span className="shot__cap">{photo.caption}</span>
         {showCredit && (

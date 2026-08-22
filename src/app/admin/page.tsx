@@ -4,7 +4,7 @@ import Link from "next/link";
 import { signOut } from "@/app/actions";
 import { AronaiBand, Icon } from "@/components/Icon";
 import { StatusButtons } from "@/components/StatusButtons";
-import { tel } from "@/content/site";
+import { site, tel } from "@/content/site";
 import { countSubmissions, listSubmissions, type Kind } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -17,15 +17,23 @@ export const dynamic = "force-dynamic";
 
 const KINDS: Kind[] = ["quote", "enquiry", "application"];
 
+/**
+ * Submissions are stored as UTC ISO strings, and this page renders on the
+ * server — which on the host is a UTC box, not a desk in Kokrajhar. Without an
+ * explicit zone the operations desk would read every enquiry as arriving five
+ * and a half hours before it did. The zone is pinned to IST and printed, so
+ * the timestamp says what it means.
+ */
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("en-IN", {
+  return `${new Date(iso).toLocaleString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
-    hour12: false,
-  });
+    hour12: true,
+    timeZone: site.timeZone,
+  })} IST`;
 }
 
 export default async function AdminPage({

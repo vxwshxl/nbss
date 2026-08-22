@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { CtaBand, Eyebrow, PageHead, Shot } from "@/components/blocks";
+import { CtaBand, Eyebrow, PageHead } from "@/components/blocks";
+import { GalleryMosaic } from "@/components/Lightbox";
 import { galleryCategories, photosIn } from "@/content/gallery";
 import { canonical } from "@/lib/seo";
 
@@ -53,11 +54,9 @@ export default async function GalleryPage({
             {photos.length} photograph{photos.length === 1 ? "" : "s"}
           </p>
 
-          <div className="mosaic">
-            {photos.map((p, i) => (
-              <Shot key={p.src} photo={p} index={i} sizes="(max-width: 700px) 100vw, 30vw" />
-            ))}
-          </div>
+          {/* The grid and its full-view lightbox — the one interactive island
+              on an otherwise static page. */}
+          <GalleryMosaic photos={photos} sizes="(max-width: 700px) 100vw, 30vw" />
         </div>
       </section>
 

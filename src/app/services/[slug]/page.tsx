@@ -102,7 +102,7 @@ export default async function ServiceDetailPage({ params }: Params) {
                 {site.phone}
               </a>
               <p className="panel__note">
-                Mon–Sat, 09:00–18:00. Supervision and deployment run 24 × 7.
+                {site.hoursShort}. Supervision and deployment run 24 × 7.
               </p>
             </div>
           </aside>

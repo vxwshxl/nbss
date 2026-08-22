@@ -40,10 +40,27 @@ export const site = {
     lat: "26.4009",
     lng: "90.2711",
   },
+  /**
+   * The office window, written once and reused everywhere it is quoted — the
+   * footer, the contact page, the service sidebars and the careers pages all
+   * read from here rather than repeating the hours in prose, which is how the
+   * four copies drifted apart in the first place.
+   *
+   * Every clock time on this site is India Standard Time and is written in
+   * 12-hour form, because that is how the client, the guards and the callers
+   * all say it. The zone is printed rather than assumed: the site is read from
+   * outside India often enough that "9:00 AM" on its own is a guess.
+   */
+  officeOpen: "9:00 AM",
+  officeClose: "6:00 PM",
+  /** Ready-made for the places that quote the window inside a sentence. */
+  hoursShort: "Mon–Sat, 9:00 AM – 6:00 PM IST",
   hours: [
-    "Office — Mon to Sat, 09:00 to 18:00",
+    "Office — Mon to Sat, 9:00 AM to 6:00 PM IST",
     "Supervision & deployment desk — 24 × 7",
   ],
+  /** IANA zone for every date the site formats. */
+  timeZone: "Asia/Kolkata",
   /**
    * Only profiles the client has actually confirmed. Instagram and YouTube are
    * absent rather than pointing at "#", for the same reason the licence numbers

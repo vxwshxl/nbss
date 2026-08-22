@@ -5,7 +5,13 @@ import { services } from "@/content/services";
 import { site, tel } from "@/content/site";
 
 export function Footer() {
-  const year = new Date().getFullYear();
+  /* Rendered on a UTC server, so the year is taken in IST — otherwise the
+     copyright line rolls over five and a half hours late, and reads as the
+     previous year through the whole of New Year's morning in Kokrajhar. */
+  const year = new Date().toLocaleDateString("en-IN", {
+    year: "numeric",
+    timeZone: site.timeZone,
+  });
 
   return (
     <footer className="footer">

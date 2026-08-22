@@ -51,7 +51,7 @@ const STEPS = [
   {
     n: "01",
     title: "Apply online or walk in",
-    body: "Use the form on any role page, or come to the Kokrajhar office between 09:00 and 18:00, Monday to Saturday.",
+    body: `Use the form on any role page, or come to the Kokrajhar office between ${site.officeOpen} and ${site.officeClose} IST, Monday to Saturday.`,
   },
   {
     n: "02",

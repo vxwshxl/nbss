@@ -108,7 +108,8 @@ export default async function VacancyPage({ params }: Params) {
                 {site.phone}
               </a>
               <p className="panel__note">
-                Monday to Saturday, 09:00–18:00. Or walk into the Kokrajhar office.
+                Monday to Saturday, {site.officeOpen}–{site.officeClose} IST. Or walk into the
+                Kokrajhar office.
               </p>
             </div>
 

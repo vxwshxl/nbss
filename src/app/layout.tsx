@@ -136,8 +136,11 @@ const jsonLd = {
         {
           "@type": "OpeningHoursSpecification",
           dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-          opens: "09:00",
-          closes: "18:00",
+          /* Schema.org wants ISO 8601, so these two stay 24-hour — they are
+             read by crawlers, not by people. The +05:30 offset is what makes
+             them IST rather than whatever zone the crawler assumes. */
+          opens: "09:00:00+05:30",
+          closes: "18:00:00+05:30",
         },
       ],
       // Compliance categories only — the client has supplied no registration
