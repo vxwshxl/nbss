@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
 import { themeScript } from "@/components/ThemeToggle";
+import { extensionNoiseScript } from "@/lib/extension-noise";
 import { coverage, site, tel } from "@/content/site";
 import { absoluteUrl, baseUrl, canonical } from "@/lib/seo";
 
@@ -181,6 +180,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             later — an effect, a layout script — repaints, and the reader sees
             a white flash on every navigation. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* Strips the attributes Bitdefender, Grammarly and friends inject
+            during parse, so React does not hydrate against a DOM the server
+            never rendered. Must stay in <head>: it has to be observing before
+            the body is parsed. */}
+        <script dangerouslySetInnerHTML={{ __html: extensionNoiseScript }} />
       </head>
       {/* Browser extensions inject attributes onto <body> before React hydrates
           (Bitdefender's `bis_register`, password managers, etc). Suppressing here
@@ -190,9 +194,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
 
-        <Header />
-        <main id="main">{children}</main>
-        <Footer />
+        {children}
 
 
         <script

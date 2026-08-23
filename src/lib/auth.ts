@@ -37,11 +37,23 @@ export function isValidCode(code: string): boolean {
 }
 
 /**
- * A PIN is short by design — it is typed on a phone at a gate, in the dark,
- * often in a hurry. Six digits with lockout after repeated failures is the
- * trade the situation calls for; the throttle in the sign-in action is what
- * actually carries the security here, not the length.
+ * Two shapes of secret, because two very different people type them.
+ *
+ * A guard's PIN is short by design — it is entered on a phone at a gate, in the
+ * dark, often in the rain, sometimes by someone who is not a confident typist.
+ * Six digits with lockout after repeated failures is the trade that situation
+ * calls for; the throttle on the sign-in action is what carries the security
+ * here, not the length.
+ *
+ * Office staff sit at a desk with a keyboard and hold far more authority — an
+ * admin can move a geofence or rewrite attendance — so they get a real
+ * passphrase and the digit-only rule would only weaken them.
  */
+export function isValidSecret(secret: string, role: Role): boolean {
+  return role === "guard" ? /^\d{6,12}$/.test(secret) : secret.length >= 8;
+}
+
+/** Guards only. Kept for the check-in screens, which never see another role. */
 export function isValidPin(pin: string): boolean {
   return /^\d{6,12}$/.test(pin);
 }
@@ -124,7 +136,14 @@ export async function createStaffAccount(input: {
   const code = normaliseCode(input.employeeCode);
 
   if (!isValidCode(code)) return { error: "Employee code must be 3–20 letters, digits or hyphens." };
-  if (!isValidPin(input.pin)) return { error: "PIN must be 6–12 digits." };
+  if (!isValidSecret(input.pin, input.role)) {
+    return {
+      error:
+        input.role === "guard"
+          ? "A guard's PIN must be 6–12 digits."
+          : "A staff passphrase must be at least 8 characters.",
+    };
+  }
 
   const admin = supabaseAdmin();
 

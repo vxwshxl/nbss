@@ -37,8 +37,15 @@ if (!["admin", "supervisor", "guard", "client"].includes(role)) {
   console.error("--role must be admin, supervisor, guard or client");
   process.exit(1);
 }
-if (!/^\d{6,12}$/.test(pin)) {
-  console.error("--pin must be 6–12 digits");
+// Guards get a digit PIN they can thumb in at a gate; office staff hold more
+// authority and sit at a keyboard, so they get a real passphrase instead.
+const ok = role === "guard" ? /^\d{6,12}$/.test(pin) : pin.length >= 8;
+if (!ok) {
+  console.error(
+    role === "guard"
+      ? "--pin must be 6–12 digits for a guard"
+      : "--pin must be at least 8 characters for an admin, supervisor or client",
+  );
   process.exit(1);
 }
 

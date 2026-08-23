@@ -111,7 +111,7 @@ export function Header() {
 
               {/* Only visible inside the mobile sheet — the bar has its own CTA. */}
               <span className="nav__foot">
-                <Link className="btn btn--gold btn--lg" href="/admin/login">
+                <Link className="btn btn--gold btn--lg" href="/console/login">
                   Login
                 </Link>
                 <a className="nav__tel" href={`tel:${tel(site.phone)}`}>
@@ -134,7 +134,7 @@ export function Header() {
                 <Icon name="search" />
               </button>
 
-              <Link className="btn btn--gold masthead__cta" href="/admin/login">
+              <Link className="btn btn--gold masthead__cta" href="/console/login">
                 Login
               </Link>
 
