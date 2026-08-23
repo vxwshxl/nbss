@@ -22,3 +22,6 @@ next-env.d.ts
 .idea/
 .vscode/
 *.swp
+
+# Out-of-the-way build dir, so a production build never disturbs a running dev server.
+/.next-build/

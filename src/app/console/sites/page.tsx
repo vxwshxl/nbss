@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
+import { SiteForm } from "@/components/console/SiteForm";
 import { SitesTable } from "@/components/console/tables";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -30,6 +31,13 @@ export default async function SitesPage() {
         </div>
       </div>
 
+      <div className="cpanel">
+        <div className="cpanel__head">
+          <h2 className="cpanel__h">New site</h2>
+        </div>
+        <SiteForm />
+      </div>
+
       <div className="cpanel cpanel--table">
         <div className="cpanel__head">
           <h2 className="cpanel__h">{sites.length} site{sites.length === 1 ? "" : "s"}</h2>
@@ -42,8 +50,9 @@ export default async function SitesPage() {
       <p className="admin-note">
         <Icon name="pin" />
         <span>
-          Registering a site by dropping a pin on a map is the next piece of work, together with
-          the check-in control it enables.
+          Coordinates can be pasted straight from Google Maps. A drawn map with a draggable pin
+          arrives with the tile proxy, which keeps map tiles behind this site&apos;s own origin
+          rather than opening the content policy to a CDN.
         </span>
       </p>
     </div>

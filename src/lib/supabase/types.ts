@@ -362,7 +362,45 @@ export type Database = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      geo_distance_m: {
+        Args: {
+          lat1: number;
+          lng1: number;
+          lat2: number;
+          lng2: number;
+        };
+        Returns: number;
+      };
+      is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      is_staff: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      my_role: {
+        Args: Record<PropertyKey, never>;
+        Returns: Enums["user_role"];
+      };
+      point_in_ring: {
+        Args: {
+          ring: Json;
+          p_lat: number;
+          p_lng: number;
+        };
+        Returns: boolean;
+      };
+      site_fence_check: {
+        Args: {
+          p_site_id: string;
+          p_lat: number;
+          p_lng: number;
+        };
+        Returns: { inside: boolean; distance_m: number }[];
+      };
+    };
     Enums: Enums;
     CompositeTypes: { [_ in never]: never };
   };

@@ -20,7 +20,8 @@
     "reinstall": "pnpm clean:all && pnpm install",
     "db:migrate": "node scripts/migrate.mjs",
     "db:status": "node scripts/migrate.mjs --status",
-    "db:types": "node scripts/gen-db-types.mjs"
+    "db:types": "node scripts/gen-db-types.mjs",
+    "build:safe": "NEXT_DIST_DIR=.next-build next build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1116.0",

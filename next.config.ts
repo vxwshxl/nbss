@@ -28,6 +28,17 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  /**
+   * `next build` and `next dev` share .next by default, so running a build
+   * while the dev server is up deletes the manifests it is holding open — the
+   * dev server then throws a stream of ENOENT for _buildManifest.js.tmp and
+   * serves 500s until it is restarted and .next is cleared.
+   *
+   * Setting NEXT_DIST_DIR sends a build somewhere else, so the two can run at
+   * once. `pnpm build:safe` uses it.
+   */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+
   async headers() {
     return [
       {
@@ -39,7 +50,19 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+            /**
+             * `geolocation=(self)` — not `()`.
+             *
+             * A guard's check-in is refused unless their device reports a
+             * position inside the site's fence, so the whole attendance system
+             * depends on this permission. It stays scoped to same-origin:
+             * nothing embedded in the page can ask for a position, only the
+             * console itself.
+             *
+             * `camera=(self)` for the same reason — the optional check-in
+             * selfie is what makes a spoofed GPS reading expensive to fake.
+             */
+            value: "camera=(self), microphone=(), geolocation=(self), interest-cohort=()",
           },
         ],
       },

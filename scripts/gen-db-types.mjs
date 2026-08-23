@@ -59,6 +59,29 @@ const { rows: columns } = await client.query(`
   order by c.relname, a.attnum
 `);
 
+// Callable functions, so supabase-js `.rpc()` is typed rather than `never`.
+// Trigger functions are excluded: they are invoked by Postgres, never by us.
+const { rows: functions } = await client.query(`
+  select p.proname as name,
+         p.proretset as returns_set,
+         coalesce(p.proallargtypes::oid[], p.proargtypes::oid[]) as arg_types,
+         p.proargnames as arg_names,
+         p.proargmodes::text[] as arg_modes,
+         rt.typname as return_type
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  join pg_type rt on rt.oid = p.prorettype
+  where n.nspname = 'public'
+    and rt.typname <> 'trigger'
+    and p.prokind = 'f'
+  order by p.proname
+`);
+
+const { rows: typeNames } = await client.query(`
+  select oid, typname from pg_type
+`);
+const typeByOid = new Map(typeNames.map((t) => [String(t.oid), t.typname]));
+
 await client.end();
 
 function tsType(col) {
@@ -127,7 +150,51 @@ out.push(`    };`);
 // Views, Functions and CompositeTypes must be present even when empty, for
 // the same reason: the client's generic constraints require all five keys.
 out.push(`    Views: { [_ in never]: never };`);
-out.push(`    Functions: { [_ in never]: never };`);
+if (functions.length === 0) {
+  out.push(`    Functions: { [_ in never]: never };`);
+} else {
+  out.push(`    Functions: {`);
+  for (const fn of functions) {
+    const argTypes = fn.arg_types ?? [];
+    const argNames = fn.arg_names ?? [];
+    const argModes = fn.arg_modes ?? null;
+
+    const args = [];
+    const returnCols = [];
+
+    for (let i = 0; i < argTypes.length; i++) {
+      // Modes: i=in, o=out, b=inout, v=variadic, t=table column.
+      const mode = argModes ? argModes[i] : "i";
+      const udt = typeByOid.get(String(argTypes[i])) ?? "text";
+      const entry = { column: argNames[i] ?? `arg${i}`, udt };
+      if (mode === "o" || mode === "t") returnCols.push(entry);
+      else args.push(entry);
+    }
+
+    out.push(`      ${fn.name}: {`);
+    // A bare `{}` would mean "any non-nullish value", not "no arguments".
+    if (args.length === 0) {
+      out.push(`        Args: Record<PropertyKey, never>;`);
+    } else {
+      out.push(`        Args: {`);
+      for (const a of args) out.push(`          ${a.column}: ${tsType(a)};`);
+      out.push(`        };`);
+    }
+
+    // A function with OUT columns returns rows shaped like them; otherwise it
+    // returns its declared scalar.
+    if (returnCols.length > 0) {
+      const shape = returnCols.map((c) => `${c.column}: ${tsType(c)}`).join("; ");
+      out.push(`        Returns: { ${shape} }${fn.returns_set ? "[]" : ""};`);
+    } else {
+      const scalar = tsType({ udt: fn.return_type });
+      out.push(`        Returns: ${scalar}${fn.returns_set ? "[]" : ""};`);
+    }
+
+    out.push(`      };`);
+  }
+  out.push(`    };`);
+}
 out.push(`    Enums: Enums;`);
 out.push(`    CompositeTypes: { [_ in never]: never };`);
 out.push(`  };`);
@@ -141,4 +208,4 @@ out.push(``);
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, out.join("\n"), "utf8");
 
-console.log(`wrote ${path.relative(ROOT, OUT)} — ${tables.size} tables, ${enums.length} enums`);
+console.log(`wrote ${path.relative(ROOT, OUT)} — ${tables.size} tables, ${enums.length} enums, ${functions.length} functions`);

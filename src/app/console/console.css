@@ -716,3 +716,133 @@
   flex-direction: column;
   gap: 12px;
 }
+
+/* ==========================================================================
+   Check-in — the guard's one control
+
+   Shows the position before it asks for a decision. A refusal with no
+   explanation is the thing most likely to make somebody give up on the app
+   and phone the office instead, so distance and accuracy are always visible.
+   ========================================================================== */
+
+.cpunch {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cpunch__fix {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cpunch__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--paper-dim);
+}
+
+.cdot--pulse {
+  background: var(--ok-900);
+  animation: cpulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cpulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdot--pulse { animation: none; }
+}
+
+.cpunch__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.cpunch__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--ink-100);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.cpunch__v {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cpunch__v.is-ok  { color: var(--ok-900); }
+.cpunch__v.is-bad { color: var(--err-900); }
+
+.cpunch__note {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--paper-mut);
+  margin: 0;
+}
+
+.cpunch__hint {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--paper-dim);
+  background: var(--ink-100);
+  border-left: 2px solid var(--line-hot);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+}
+
+.cpunch__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cpunch__form .btn--lg { width: 100%; justify-content: center; }
+
+/* Success counterpart to .cerror. */
+.cokay {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--ok-100);
+  border: 1px solid var(--ok-400);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ok-900);
+  margin: 0;
+}
+
+/* ------------------------------------------------------------- site form */
+.cform {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+.cform__wide { grid-column: 1 / -1; }
+
+.cform__foot {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cform select.cfield__i { appearance: auto; }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
+import { PunchControl, type PunchSite } from "@/components/console/PunchControl";
 import { AttendanceTable, type AttendanceRow } from "@/components/console/tables";
 import { site } from "@/content/site";
 import { requireRole } from "@/lib/auth";
@@ -42,7 +43,7 @@ export default async function DutyPage() {
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-  const [openPunch, recent] = await Promise.all([
+  const [openPunch, recent, siteList] = await Promise.all([
     supabase
       .from("attendance")
       .select("id, check_in_at, site_id, status, sites(name, address)")
@@ -56,6 +57,11 @@ export default async function DutyPage() {
       .gte("check_in_at", ninetyDaysAgo.toISOString())
       .order("check_in_at", { ascending: false })
       .limit(500),
+    supabase
+      .from("sites")
+      .select("id, name, lat, lng, geofence_radius_m, max_accuracy_m")
+      .eq("active", true)
+      .order("name"),
   ]);
 
   const open = openPunch.data;
@@ -118,15 +124,16 @@ export default async function DutyPage() {
 
       <div className="cpanel">
         <div className="cpanel__head">
-          <h2 className="cpanel__h">Check in</h2>
+          <h2 className="cpanel__h">{open ? "On duty" : "Check in"}</h2>
         </div>
-        <div className="cpanel__body">
-          <p className="chead__lede" style={{ margin: 0 }}>
-            Checking in needs your phone&apos;s location, and only works while you are standing
-            inside your site&apos;s boundary. That control is the next piece being built — until
-            then a supervisor records your attendance for you.
-          </p>
-        </div>
+        <PunchControl
+          sites={(siteList.data ?? []) as PunchSite[]}
+          openPunch={
+            open
+              ? { siteName: openSite?.name ?? "your site", since: time(open.check_in_at!) }
+              : null
+          }
+        />
       </div>
 
       <div className="cpanel cpanel--table">
