@@ -118,6 +118,9 @@
   --f-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
 
   --wrap: 1280px;
+
+  /* Flips the browser's own calendar glyph so it reads on a dark ground. */
+  --date-icon-invert: 0;
   --gut: clamp(1.25rem, 4vw, 3.5rem);
   --sec-y: clamp(4rem, 8vw, 7rem);
 
@@ -165,6 +168,8 @@
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
     color-scheme: dark;
+
+    --date-icon-invert: 1;
 
     --g-100: #1a1a1a;
     --g-200: #1f1f1f;
@@ -226,6 +231,8 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+
+  --date-icon-invert: 1;
 
   --g-100: #1a1a1a;
   --g-200: #1f1f1f;

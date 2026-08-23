@@ -18,6 +18,15 @@
  * appears in — well before hydration reads the DOM. Removing an attribute
  * cannot cause it to be re-added, so this settles rather than looping.
  *
+ * Only passive, cosmetic attributes are listed. Deliberately absent are
+ * `bis_use` and `data-dynamic-id`, which Bitdefender puts on the <script>
+ * elements it rewrites to proxy through its own scanner — they are how it
+ * finds the code to re-execute. Stripping those would leave it unable to run
+ * the script it took over, which includes the theme script this page depends
+ * on for its first paint. Those mismatches are handled with
+ * `suppressHydrationWarning` in the layout instead, which changes nothing
+ * about the DOM.
+ *
  * This ships in production too, not just development. The mismatch is not a
  * cosmetic console message: React discards and re-renders the mismatched tree,
  * so a visitor running one of these extensions was getting a slower and less

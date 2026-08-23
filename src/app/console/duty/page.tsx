@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
+import { AttendanceTable, type AttendanceRow } from "@/components/console/tables";
 import { site } from "@/content/site";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -38,6 +39,9 @@ export default async function DutyPage() {
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
 
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
   const [openPunch, recent] = await Promise.all([
     supabase
       .from("attendance")
@@ -47,19 +51,38 @@ export default async function DutyPage() {
       .maybeSingle(),
     supabase
       .from("attendance")
-      .select("id, check_in_at, check_out_at, worked_minutes, overtime_minutes, status, sites(name)")
+      .select("id, check_in_at, check_out_at, worked_minutes, overtime_minutes, status, check_in_distance_m, sites(name)")
       .eq("guard_id", profile.id)
-      .gte("check_in_at", weekAgo.toISOString())
+      .gte("check_in_at", ninetyDaysAgo.toISOString())
       .order("check_in_at", { ascending: false })
-      .limit(10),
+      .limit(500),
   ]);
 
   const open = openPunch.data;
   const history = recent.data ?? [];
   const openSite = open ? (Array.isArray(open.sites) ? open.sites[0] : open.sites) : null;
 
-  const weekMinutes = history.reduce((sum, r) => sum + (r.worked_minutes ?? 0), 0);
-  const weekOvertime = history.reduce((sum, r) => sum + (r.overtime_minutes ?? 0), 0);
+  const sinceWeek = weekAgo.toISOString();
+  const thisWeek = history.filter((r) => (r.check_in_at ?? "") >= sinceWeek);
+
+  const weekMinutes = thisWeek.reduce((sum, r) => sum + (r.worked_minutes ?? 0), 0);
+  const weekOvertime = thisWeek.reduce((sum, r) => sum + (r.overtime_minutes ?? 0), 0);
+
+  const rows: AttendanceRow[] = history.map((r) => {
+    const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
+    return {
+      id: r.id,
+      check_in_at: r.check_in_at,
+      check_out_at: r.check_out_at,
+      worked_minutes: r.worked_minutes,
+      overtime_minutes: r.overtime_minutes,
+      status: r.status,
+      check_in_distance_m: r.check_in_distance_m,
+      guard_name: null,
+      guard_code: null,
+      site_name: place?.name ?? null,
+    };
+  });
 
   return (
     <div className="cwrap">
@@ -88,7 +111,7 @@ export default async function DutyPage() {
           <span className="cstat__l">overtime, 7 days</span>
         </div>
         <div className="cstat">
-          <span className="cstat__v">{history.length}</span>
+          <span className="cstat__v">{thisWeek.length}</span>
           <span className="cstat__l">shifts, 7 days</span>
         </div>
       </div>
@@ -106,59 +129,13 @@ export default async function DutyPage() {
         </div>
       </div>
 
-      <div className="cpanel">
+      <div className="cpanel cpanel--table">
         <div className="cpanel__head">
-          <h2 className="cpanel__h">Last 7 days</h2>
+          <h2 className="cpanel__h">My shifts</h2>
         </div>
-
-        {history.length === 0 ? (
-          <p className="cempty">
-            <strong>No attendance recorded yet.</strong>
-            Once you start checking in, every shift and its hours appear here.
-          </p>
-        ) : (
-          <div className="ctable-scroll">
-            <table className="ctable">
-              <thead>
-                <tr>
-                  <th scope="col">Site</th>
-                  <th scope="col">In</th>
-                  <th scope="col">Out</th>
-                  <th scope="col">Worked</th>
-                  <th scope="col">Overtime</th>
-                  <th scope="col">State</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((row) => {
-                  const place = Array.isArray(row.sites) ? row.sites[0] : row.sites;
-                  return (
-                    <tr key={row.id}>
-                      <td>{place?.name ?? "—"}</td>
-                      <td className="mono">{row.check_in_at ? time(row.check_in_at) : "—"}</td>
-                      <td className="mono">{row.check_out_at ? time(row.check_out_at) : "—"}</td>
-                      <td className="mono">{hours(row.worked_minutes)}</td>
-                      <td className="mono">{hours(row.overtime_minutes)}</td>
-                      <td>
-                        <span
-                          className={`cbadge ${
-                            row.status === "late"
-                              ? "cbadge--late"
-                              : row.check_out_at
-                                ? "cbadge--off"
-                                : "cbadge--on"
-                          }`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="cpanel__body">
+          <AttendanceTable rows={rows} showGuard={false} />
+        </div>
       </div>
 
       <p className="admin-note">

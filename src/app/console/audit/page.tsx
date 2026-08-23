@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
-import { site } from "@/content/site";
+import { AuditTable } from "@/components/console/tables";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -12,11 +12,14 @@ export default async function AuditPage() {
   await requireRole("admin");
   const supabase = await supabaseServer();
 
+  // Bounded because this table only grows. Once it outgrows a single page the
+  // date range is the tool for reaching further back, and the filtering moves
+  // into the query.
   const { data } = await supabase
     .from("audit_log")
     .select("id, actor_code, action, entity, entity_id, ip, created_at")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(1000);
 
   const rows = data ?? [];
 
@@ -32,47 +35,10 @@ export default async function AuditPage() {
         </div>
       </div>
 
-      <div className="cpanel">
-        {rows.length === 0 ? (
-          <p className="cempty">
-            <strong>Nothing logged yet.</strong>
-            Sign-ins, attendance corrections and roster changes are recorded here.
-          </p>
-        ) : (
-          <div className="ctable-scroll">
-            <table className="ctable">
-              <thead>
-                <tr>
-                  <th scope="col">When</th>
-                  <th scope="col">Who</th>
-                  <th scope="col">Action</th>
-                  <th scope="col">Entity</th>
-                  <th scope="col">From</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td className="mono">
-                      {new Date(r.created_at).toLocaleString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                        timeZone: site.timeZone,
-                      })}
-                    </td>
-                    <td className="mono">{r.actor_code ?? "—"}</td>
-                    <td>{r.action}</td>
-                    <td>{r.entity ?? "—"}</td>
-                    <td className="mono">{r.ip ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="cpanel cpanel--table">
+        <div className="cpanel__body">
+          <AuditTable rows={rows} />
+        </div>
       </div>
 
       <p className="admin-note">

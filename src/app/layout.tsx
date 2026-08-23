@@ -175,16 +175,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
        who has chosen a theme. That is the intended behaviour, not a bug to
        report. */
     <html lang="en-IN" data-theme="system" suppressHydrationWarning>
-      <head>
+      <head suppressHydrationWarning>
+        {/* Both inline scripts carry `suppressHydrationWarning` because some
+            extensions — Bitdefender most aggressively — do not merely add
+            attributes to them, they rewrite the element: the inline body is
+            emptied and replaced with a `src` pointing at the extension's own
+            executor, which runs the original code after scanning it. React
+            then compares an empty script against the one the server rendered
+            and reports a mismatch nothing in the app can prevent.
+
+            Suppressing is safe precisely here, and only here. These are static,
+            hand-authored strings with no props and no reactive content, so
+            there is no real mismatch the flag could be hiding — the elements
+            are identical on every render by construction. */}
+
         {/* Applies a stored light/dark choice before the first paint. Anything
             later — an effect, a layout script — repaints, and the reader sees
             a white flash on every navigation. */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeScript }} />
+
         {/* Strips the attributes Bitdefender, Grammarly and friends inject
             during parse, so React does not hydrate against a DOM the server
             never rendered. Must stay in <head>: it has to be observing before
             the body is parsed. */}
-        <script dangerouslySetInnerHTML={{ __html: extensionNoiseScript }} />
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: extensionNoiseScript }} />
       </head>
       {/* Browser extensions inject attributes onto <body> before React hydrates
           (Bitdefender's `bis_register`, password managers, etc). Suppressing here
@@ -198,6 +212,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 
         <script
+          suppressHydrationWarning
           type="application/ld+json"
           // Static, hand-authored object — no user input reaches this string.
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

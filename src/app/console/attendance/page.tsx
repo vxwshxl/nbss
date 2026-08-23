@@ -1,37 +1,17 @@
 import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
-import { site } from "@/content/site";
+import { AttendanceTable, type AttendanceRow } from "@/components/console/tables";
 import { requireProfile } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Attendance" };
 export const dynamic = "force-dynamic";
 
-function when(iso: string | null): string {
-  if (!iso) return "—";
-  return `${new Date(iso).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: site.timeZone,
-  })}`;
-}
-
-function hours(minutes: number | null): string {
-  if (minutes === null) return "—";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
-}
-
 /**
  * One page for two audiences. A guard's row-level policy limits them to their
  * own punches, so the same query returns a personal history for them and the
- * whole agency's for an admin — no branch needed, and no way for the branch to
- * be wrong.
+ * whole agency's for an admin — no branch needed, and so no branch to get wrong.
  */
 export default async function AttendancePage() {
   const profile = await requireProfile();
@@ -43,9 +23,28 @@ export default async function AttendancePage() {
       "id, check_in_at, check_out_at, worked_minutes, overtime_minutes, status, check_in_distance_m, profiles(full_name, employee_code), sites(name)",
     )
     .order("check_in_at", { ascending: false })
-    .limit(100);
+    .limit(1000);
 
-  const rows = data ?? [];
+  // Flattened here rather than in the table: PostgREST types an embedded
+  // to-one relationship as possibly-an-array, and that shape has no business
+  // reaching a component whose job is presentation.
+  const rows: AttendanceRow[] = (data ?? []).map((r) => {
+    const guard = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
+    return {
+      id: r.id,
+      check_in_at: r.check_in_at,
+      check_out_at: r.check_out_at,
+      worked_minutes: r.worked_minutes,
+      overtime_minutes: r.overtime_minutes,
+      status: r.status,
+      check_in_distance_m: r.check_in_distance_m,
+      guard_name: guard?.full_name ?? null,
+      guard_code: guard?.employee_code ?? null,
+      site_name: place?.name ?? null,
+    };
+  });
+
   const mine = profile.role === "guard";
 
   return (
@@ -56,67 +55,15 @@ export default async function AttendancePage() {
           <p className="chead__lede">
             {mine
               ? "Every shift you have been recorded for."
-              : "The most recent 100 punches across all sites."}
+              : "Every punch across all sites, newest first."}
           </p>
         </div>
       </div>
 
-      <div className="cpanel">
-        {rows.length === 0 ? (
-          <p className="cempty">
-            <strong>No attendance recorded yet.</strong>
-            Punches appear here as soon as check-in is live.
-          </p>
-        ) : (
-          <div className="ctable-scroll">
-            <table className="ctable">
-              <thead>
-                <tr>
-                  {!mine && <th scope="col">Guard</th>}
-                  <th scope="col">Site</th>
-                  <th scope="col">In</th>
-                  <th scope="col">Out</th>
-                  <th scope="col">Worked</th>
-                  <th scope="col">Overtime</th>
-                  <th scope="col">Distance</th>
-                  <th scope="col">State</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => {
-                  const guard = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-                  const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
-                  return (
-                    <tr key={r.id}>
-                      {!mine && <td>{guard?.full_name ?? "—"}</td>}
-                      <td>{place?.name ?? "—"}</td>
-                      <td className="mono">{when(r.check_in_at)}</td>
-                      <td className="mono">{when(r.check_out_at)}</td>
-                      <td className="mono">{hours(r.worked_minutes)}</td>
-                      <td className="mono">{hours(r.overtime_minutes)}</td>
-                      <td className="mono">
-                        {r.check_in_distance_m === null ? "—" : `${Math.round(r.check_in_distance_m)} m`}
-                      </td>
-                      <td>
-                        <span
-                          className={`cbadge ${
-                            r.status === "late" || r.status === "pending_review"
-                              ? "cbadge--late"
-                              : r.check_out_at
-                                ? "cbadge--off"
-                                : "cbadge--on"
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="cpanel cpanel--table">
+        <div className="cpanel__body">
+          <AttendanceTable rows={rows} showGuard={!mine} />
+        </div>
       </div>
 
       <p className="admin-note">
