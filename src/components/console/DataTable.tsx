@@ -3,6 +3,8 @@
 import { useId, type ReactNode } from "react";
 
 import { Icon } from "@/components/Icon";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { Select } from "@/components/ui/Select";
 import {
   PAGE_SIZES,
   useTableControls,
@@ -38,6 +40,7 @@ export function DataTable<T>({
   rows,
   columns,
   getKey,
+  onRowClick,
   searchFields,
   dateField,
   searchPlaceholder = "Search…",
@@ -51,6 +54,8 @@ export function DataTable<T>({
   rows: T[];
   columns: Column<T>[];
   getKey: (row: T) => string;
+  /** Opens a row. Rows become buttons for the keyboard when this is set. */
+  onRowClick?: (row: T) => void;
   searchFields?: (row: T) => (string | null | undefined)[];
   dateField?: (row: T) => string | null | undefined;
   searchPlaceholder?: string;
@@ -110,24 +115,22 @@ export function DataTable<T>({
 
         {dateField && (
           <div className="ctools__dates" role="group" aria-label={dateLabel}>
-            <input
-              className="ctools__date"
-              type="date"
+            <DatePicker
               value={t.from}
-              onChange={(e) => t.setFrom(e.target.value)}
-              aria-label="From date"
+              onChange={t.setFrom}
               max={t.to || undefined}
+              placeholder="From"
+              ariaLabel="From date"
             />
             <span className="ctools__arrow" aria-hidden="true">
               →
             </span>
-            <input
-              className="ctools__date"
-              type="date"
+            <DatePicker
               value={t.to}
-              onChange={(e) => t.setTo(e.target.value)}
-              aria-label="To date"
+              onChange={t.setTo}
               min={t.from || undefined}
+              placeholder="To"
+              ariaLabel="To date"
             />
             {t.hasDateFilter && (
               <button className="btn btn--ghost btn--sm" type="button" onClick={t.clearDates}>
@@ -175,7 +178,26 @@ export function DataTable<T>({
             </thead>
             <tbody>
               {t.rows.map((row) => (
-                <tr key={getKey(row)}>
+                <tr
+                  key={getKey(row)}
+                  className={onRowClick ? "is-clickable" : undefined}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  // A clickable row has to be reachable without a mouse. Row as
+                  // button rather than a cell full of links: the whole row is
+                  // the target, so that is what should take focus.
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
+                >
                   {columns.map((col) => (
                     <td key={col.key} className={col.mono ? "mono" : undefined}>
                       {col.render(row)}
@@ -225,20 +247,14 @@ export function Pagination({
 
   return (
     <div className="cpage">
-      <label className="cpage__size">
+      <div className="cpage__size">
         <span>Rows</span>
-        <select
-          value={perPage}
-          onChange={(e) => onPerPage(Number(e.target.value))}
-          aria-label="Rows per page"
-        >
-          {PAGE_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </select>
-      </label>
+        <Select
+          value={String(perPage)}
+          onChange={(v) => onPerPage(Number(v))}
+          options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
+        />
+      </div>
 
       <div className="cpage__nav">
         <span className="cpage__count">

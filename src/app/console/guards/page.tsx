@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 
+import { GuardsWorkspace, type PersonRow } from "@/components/console/GuardsWorkspace";
 import { Icon } from "@/components/Icon";
-import { PeopleTable } from "@/components/console/tables";
-import { requireRole } from "@/lib/auth";
+import { requireRoleSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Guards" };
+export const metadata: Metadata = { title: "People" };
 export const dynamic = "force-dynamic";
 
 export default async function GuardsPage() {
-  await requireRole("admin", "supervisor");
+  const session = await requireRoleSession("admin", "supervisor");
   const supabase = await supabaseServer();
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, employee_code, full_name, role, phone, active, joined_at")
+    .select(
+      "id, employee_code, full_name, role, phone, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
+    )
     .order("employee_code");
-
-  const people = data ?? [];
 
   return (
     <div className="cwrap">
@@ -30,20 +30,17 @@ export default async function GuardsPage() {
         </div>
       </div>
 
-      <div className="cpanel cpanel--table">
-        <div className="cpanel__head">
-          <h2 className="cpanel__h">{people.length} account{people.length === 1 ? "" : "s"}</h2>
-        </div>
-        <div className="cpanel__body">
-          <PeopleTable rows={people} />
-        </div>
-      </div>
+      <GuardsWorkspace
+        rows={(data ?? []) as PersonRow[]}
+        canManage={session.profile.role === "admin" && !session.impersonating}
+        selfId={session.realProfile.id}
+      />
 
       <p className="admin-note">
         <Icon name="shield-alt" />
         <span>
-          Adding and deactivating people from this screen — along with PIN resets and the document
-          vault — is Phase 2. For now accounts are created from the command line.
+          A PIN is stored hashed and can never be read back — resetting issues a new one and shows
+          it once. Deactivating an account keeps every shift and punch it ever produced.
         </span>
       </p>
     </div>

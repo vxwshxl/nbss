@@ -3,7 +3,8 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { audit, requireProfile } from "@/lib/auth";
+import { audit, requireSession } from "@/lib/auth";
+import { assertCanWrite } from "@/lib/impersonation";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 
 import type { PunchState } from "./punch-state";
@@ -53,7 +54,17 @@ function readCoords(data: FormData): Coords | null {
 }
 
 export async function checkIn(_prev: PunchState, data: FormData): Promise<PunchState> {
-  const profile = await requireProfile();
+  const session = await requireSession();
+  const profile = session.profile;
+
+  // A punch is evidence that a particular person stood at a particular gate.
+  // An administrator viewing as a guard must never be able to manufacture one.
+  try {
+    assertCanWrite(session, "attendance");
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Not permitted." };
+  }
+
   if (profile.role !== "guard") {
     return { ok: false, error: "Only a guard checks in. Supervisors record attendance for others." };
   }
@@ -177,7 +188,15 @@ export async function checkIn(_prev: PunchState, data: FormData): Promise<PunchS
 }
 
 export async function checkOut(_prev: PunchState, data: FormData): Promise<PunchState> {
-  const profile = await requireProfile();
+  const session = await requireSession();
+  const profile = session.profile;
+
+  try {
+    assertCanWrite(session, "attendance");
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Not permitted." };
+  }
+
   if (profile.role !== "guard") return { ok: false, error: "Only a guard checks out." };
 
   const coords = readCoords(data);

@@ -159,6 +159,10 @@ export type Database = {
           joined_at: string | null;
           created_at: string;
           updated_at: string;
+          must_change_pin: boolean;
+          pin_reset_at: string | null;
+          pin_reset_by: string | null;
+          last_seen_at: string | null;
         };
         Insert: {
           id: string;
@@ -171,6 +175,10 @@ export type Database = {
           joined_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          must_change_pin?: boolean;
+          pin_reset_at?: string | null;
+          pin_reset_by?: string | null;
+          last_seen_at?: string | null;
         };
         Update: {
           id?: string;
@@ -183,6 +191,10 @@ export type Database = {
           joined_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          must_change_pin?: boolean;
+          pin_reset_at?: string | null;
+          pin_reset_by?: string | null;
+          last_seen_at?: string | null;
         };
         Relationships: [];
       };

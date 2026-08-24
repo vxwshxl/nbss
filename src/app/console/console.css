@@ -63,20 +63,21 @@
 
 .csb__sub {
   display: block;
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 11.5px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
 }
 
 .csb__group {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
-  padding: 14px 10px 6px;
+  padding: 16px 10px 6px;
 }
 
 .csb__link {
@@ -150,10 +151,10 @@
 }
 
 .csb__role {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
 }
 
@@ -248,10 +249,10 @@
 }
 
 .cstat__l {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
 }
 
@@ -317,11 +318,14 @@
 
 .ctable tbody tr:last-child td { border-bottom: 0; }
 
+/* Sentence case, in the body face. The tiny letter-spaced uppercase mono
+   header is the default dashboard look and reads as generic; a table is
+   easier to scan when its headers are simply words. */
 .ctable th {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
   font-weight: 500;
   background: var(--ink-100);
@@ -338,10 +342,11 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   padding: 2px 7px;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -416,11 +421,12 @@
 }
 
 .cfield__l {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--paper-mut);
+  font-family: var(--f-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--paper-dim);
 }
 
 .cfield__i {
@@ -474,10 +480,10 @@
 }
 
 .clogin__back {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
   text-decoration: none;
 }
@@ -656,10 +662,10 @@
 }
 
 .cpage__size span {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--f-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--paper-mut);
 }
 
@@ -787,8 +793,8 @@
 .cpunch__v.is-bad { color: var(--err-900); }
 
 .cpunch__note {
-  font-family: var(--f-mono);
-  font-size: 11px;
+  font-family: var(--f-sans);
+  font-size: 12.5px;
   color: var(--paper-mut);
   margin: 0;
 }
@@ -846,3 +852,334 @@
 }
 
 .cform select.cfield__i { appearance: auto; }
+
+/* A row that opens a record. Mono stays where it belongs — on codes, times and
+   measurements inside the cells — and nowhere else. */
+.ctable tr.is-clickable { cursor: pointer; }
+
+.ctable tr.is-clickable:hover td { background: var(--ink-150); }
+
+.ctable tr.is-clickable:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.chead__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------- impersonation band
+   Sticky and undismissable. The whole risk of a "view as" feature is
+   forgetting it is on, so this stays in the way until it is switched off. */
+.cimp {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--warn-band, #f5a62312);
+  border-bottom: 1px solid var(--err-400);
+  color: var(--paper);
+}
+
+.cimp svg { width: 17px; height: 17px; flex: none; color: var(--err-900); }
+
+.cimp__text { margin: 0; font-size: 13.5px; flex: 1; min-width: 0; }
+.cimp__meta { color: var(--paper-mut); }
+.cimp__real { display: block; font-size: 12.5px; color: var(--paper-mut); }
+.cimp__stop { flex: none; }
+
+/* The band takes its own row above the shell, so the sidebar starts below it. */
+.console.is-viewing-as .csb { height: auto; }
+
+/* ==========================================================================
+   Console header — identity and "view as"
+
+   Sits top-right above the content column. Two menus, kept separate on
+   purpose: "view as" changes what is on screen, the avatar menu is about your
+   own account. Merging them would put an impersonation control next to Sign
+   out, which is the wrong neighbour for both.
+   ========================================================================== */
+
+.chdr {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--ink-050);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.chdr__view {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line-hot);
+  border-radius: 999px;
+  background: var(--ink-050);
+  color: var(--paper);
+  font-size: 13.5px;
+  cursor: pointer;
+  max-width: 260px;
+}
+
+.chdr__view:hover { background: var(--ink-150); }
+
+.chdr__view.is-on {
+  background: var(--solid);
+  color: var(--solid-fg);
+  border-color: transparent;
+}
+
+.chdr__view svg { width: 15px; height: 15px; flex: none; opacity: 0.7; }
+.chdr__view.is-on svg { opacity: 1; }
+.chdr__view-lede { color: var(--paper-mut); }
+.chdr__view.is-on .chdr__view-lede { color: inherit; }
+.chdr__view strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Two-column panel, mirroring the shape of the control it replaces. */
+.chdr__pop { padding: 0; min-width: 0; max-height: 460px; }
+
+.chdr__panes {
+  display: grid;
+  grid-template-columns: 190px 300px;
+}
+
+.chdr__pane {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chdr__pane--roles { border-right: 1px solid var(--line); }
+
+.chdr__pane-h {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 8px 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--paper-mut);
+}
+
+.chdr__pane-h svg { width: 14px; height: 14px; }
+
+.chdr__count {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--paper-mut);
+}
+
+.chdr__search { margin: 2px 0 6px; }
+.chdr__search .ctools__input { font-size: 13px; padding-block: 6px; }
+
+.chdr__list {
+  overflow-y: auto;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ------------------------------------------------------------- avatar menu */
+.chdr__me {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 4px 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.chdr__me:hover { background: var(--ink-150); }
+
+.chdr__me-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.chdr__me-name { font-size: 13.5px; font-weight: 500; }
+.chdr__me-role { font-size: 11.5px; color: var(--paper-mut); }
+
+.chdr__avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--solid);
+  color: var(--solid-fg);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.chdr__id {
+  padding: 10px 9px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+}
+
+.chdr__pop .ui-opt,
+.chdr__panes .ui-opt { font-size: 13.5px; }
+
+/* The sidebar footer no longer carries identity — the header does. */
+.csb__foot--slim .csb__who { display: none; }
+
+@media (max-width: 900px) {
+  .chdr { padding: 8px 14px; }
+  .chdr__me-text { display: none; }
+  .chdr__panes { grid-template-columns: 1fr; max-width: 320px; }
+  .chdr__pane--roles {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .chdr__pane--roles .ui-opt { width: auto; }
+}
+
+/* ==========================================================================
+   Fence map
+
+   Leaflet's own stylesheet is imported by the site form. Everything below
+   re-skins its controls onto the console's tokens, so the map does not arrive
+   looking like a different application.
+   ========================================================================== */
+
+.fmap {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-hot);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ink-100);
+}
+
+.fmap__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--ink-050);
+}
+
+.fmap__modes {
+  display: inline-flex;
+  border: 1px solid var(--line-hot);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fmap__mode {
+  font-family: var(--f-sans);
+  font-size: 13px;
+  padding: 6px 12px;
+  background: none;
+  border: 0;
+  color: var(--paper-dim);
+  cursor: pointer;
+}
+
+.fmap__mode + .fmap__mode { border-left: 1px solid var(--line); }
+.fmap__mode:hover { background: var(--ink-150); color: var(--paper); }
+.fmap__mode.is-on { background: var(--solid); color: var(--solid-fg); }
+
+.fmap__radius {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--paper-dim);
+}
+
+.fmap__radius input[type="range"] { width: 150px; accent-color: var(--link); }
+.fmap__radius strong { font-family: var(--f-mono); font-size: 12.5px; color: var(--paper); }
+
+.fmap__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--paper-dim);
+}
+
+.fmap__canvas { height: 380px; width: 100%; background: var(--ink-150); }
+
+.fmap__hint {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--paper-mut);
+  border-top: 1px solid var(--line);
+  background: var(--ink-050);
+}
+
+/* A boundary point. Deliberately small — these sit on a wall or a gate. */
+.fmap__pin-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-100);
+  border: 3px solid var(--blue-900);
+  box-shadow: 0 1px 3px #00000040;
+  cursor: grab;
+}
+
+.fmap__pin-dot:active { cursor: grabbing; }
+
+/* ------------------------------------------------------- leaflet re-skin */
+.leaflet-container {
+  font-family: var(--f-sans);
+  background: var(--ink-150);
+  outline: none;
+}
+
+/* OSM tiles are a light raster; dimming them in dark mode stops the map being
+   the one blinding rectangle on the screen at night. */
+/* Reads the token rather than the theme, so all three states — explicit dark,
+   explicit light and the un-stamped system default — resolve correctly. */
+.leaflet-tile-pane { filter: var(--map-filter, none); }
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--ink-050);
+  color: var(--paper);
+  border-bottom-color: var(--line);
+}
+
+.leaflet-bar a:hover { background: var(--ink-150); }
+
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--ink-050) 85%, transparent) !important;
+  color: var(--paper-mut) !important;
+  font-size: 10.5px !important;
+}
+
+.leaflet-control-attribution a { color: var(--link) !important; }

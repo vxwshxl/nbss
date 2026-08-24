@@ -35,6 +35,7 @@ export async function createSite(
 
   const shiftStart = String(data.get("shift_start") ?? "").trim();
   const shiftEnd = String(data.get("shift_end") ?? "").trim();
+  const rawPolygon = String(data.get("polygon") ?? "").trim();
 
   const values = {
     name,
@@ -68,6 +69,41 @@ export async function createSite(
     return fail("Those coordinates are in the Atlantic Ocean. Check the pin.");
   }
 
+  /**
+   * A drawn boundary. Re-validated here rather than trusted from the form: it
+   * arrives as a JSON string a client composed, and `point_in_ring` will be
+   * asked to decide whether people are at work based on it.
+   */
+  let polygon: [number, number][] | null = null;
+
+  if (rawPolygon) {
+    try {
+      const parsed: unknown = JSON.parse(rawPolygon);
+      const ok =
+        Array.isArray(parsed) &&
+        parsed.length >= 3 &&
+        parsed.length <= 500 &&
+        parsed.every(
+          (pt): pt is [number, number] =>
+            Array.isArray(pt) &&
+            pt.length === 2 &&
+            Number.isFinite(pt[0]) &&
+            Number.isFinite(pt[1]) &&
+            (pt[0] as number) >= -180 &&
+            (pt[0] as number) <= 180 &&
+            (pt[1] as number) >= -90 &&
+            (pt[1] as number) <= 90,
+        );
+
+      if (!ok) return fail("That boundary is not a usable shape. Redraw it with at least three points.");
+      polygon = parsed as [number, number][];
+    } catch {
+      return fail("That boundary could not be read. Redraw it.");
+    }
+  }
+
+  // The radius still has to be sane even when a polygon supersedes it: it is
+  // what the record falls back to if the drawn shape is ever cleared.
   if (!Number.isFinite(radius) || radius < 25 || radius > 5000) {
     return fail("The fence radius must be between 25 m and 5000 m.");
   }
@@ -87,6 +123,7 @@ export async function createSite(
       lat,
       lng,
       geofence_radius_m: Math.round(radius),
+      polygon: polygon as never,
       max_accuracy_m: Math.round(accuracy),
       grace_minutes: Number.isFinite(grace) ? Math.round(grace) : 10,
       standard_shift_minutes: Number.isFinite(standard) ? Math.round(standard) : 480,
@@ -104,7 +141,7 @@ export async function createSite(
     action: "site_created",
     entity: "sites",
     entityId: created.id,
-    detail: { name, lat, lng, radius },
+    detail: { name, lat, lng, radius, shape: polygon ? `polygon:${polygon.length}` : "circle" },
     ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
   });
 

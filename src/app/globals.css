@@ -121,6 +121,7 @@
 
   /* Flips the browser's own calendar glyph so it reads on a dark ground. */
   --date-icon-invert: 0;
+  --map-filter: none;
   --gut: clamp(1.25rem, 4vw, 3.5rem);
   --sec-y: clamp(4rem, 8vw, 7rem);
 
@@ -170,6 +171,7 @@
     color-scheme: dark;
 
     --date-icon-invert: 1;
+    --map-filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9);
 
     --g-100: #1a1a1a;
     --g-200: #1f1f1f;
@@ -233,6 +235,7 @@
   color-scheme: dark;
 
   --date-icon-invert: 1;
+  --map-filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9);
 
   --g-100: #1a1a1a;
   --g-200: #1f1f1f;
@@ -656,6 +659,20 @@ button { background: none; border: 0; cursor: pointer; }
 .btn--gold { --btn-bg: var(--solid); --btn-fg: var(--solid-fg); --btn-bd: var(--solid); }
 .btn--gold:hover { --btn-bg: var(--g-900); --btn-bd: var(--g-900); box-shadow: var(--sh-sm); }
 .btn--ghost:hover { --btn-bd: var(--line-hot); --btn-bg: var(--ink-150); }
+
+/* The primary action. Same treatment as --gold, under the name the console
+   uses; --gold is kept because the public pages already reference it. */
+.btn--solid { --btn-bg: var(--solid); --btn-fg: var(--solid-fg); --btn-bd: var(--solid); }
+.btn--solid:hover { --btn-bg: var(--g-900); --btn-bd: var(--g-900); box-shadow: var(--sh-sm); }
+.btn--solid:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+/* Destructive, and only for something genuinely hard to undo. Outlined rather
+   than filled: a red slab reads as an error message, not a control. */
+.btn--danger { --btn-fg: var(--err-900); --btn-bd: var(--err-400); }
+.btn--danger:hover { --btn-bg: var(--err-100); --btn-bd: var(--err-800); }
+.btn--danger:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn--lg { height: 2.75rem; padding: 0 1.25rem; font-size: .925rem; }
 .btn--sm { height: 2rem; padding: 0 .75rem; font-size: .8rem; }
 .btn--xs { height: 1.65rem; padding: 0 .6rem; font-size: .7rem; font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .04em; border: 1px solid var(--line); }

@@ -2,6 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
+import { impersonatedId, type Session } from "@/lib/impersonation";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import type { Enums, Row } from "@/lib/supabase/types";
 
@@ -84,11 +85,44 @@ export async function currentProfile(): Promise<Profile | null> {
   return data;
 }
 
+/**
+ * The real account, plus whoever the console is currently being viewed as.
+ *
+ * The impersonation cookie is only honoured when the *real* account is an
+ * admin, checked here on every request rather than trusted from the cookie —
+ * so forging it gains nothing.
+ */
+export async function currentSession(): Promise<Session | null> {
+  const realProfile = await currentProfile();
+  if (!realProfile) return null;
+
+  const viewAs = await impersonatedId();
+
+  if (!viewAs || realProfile.role !== "admin" || viewAs === realProfile.id) {
+    return { profile: realProfile, realProfile, impersonating: false };
+  }
+
+  const { data } = await supabaseAdmin().from("profiles").select("*").eq("id", viewAs).maybeSingle();
+
+  // A stale cookie pointing at a deleted or deactivated account simply falls
+  // back to the admin's own view rather than locking them out.
+  if (!data || !data.active) return { profile: realProfile, realProfile, impersonating: false };
+
+  return { profile: data, realProfile, impersonating: true };
+}
+
 /** Redirects to sign-in when nobody is signed in. */
 export async function requireProfile(): Promise<Profile> {
-  const profile = await currentProfile();
-  if (!profile) redirect("/console/login");
-  return profile;
+  const session = await currentSession();
+  if (!session) redirect("/console/login");
+  return session.profile;
+}
+
+/** Like requireProfile, but keeps hold of who is really signed in. */
+export async function requireSession(): Promise<Session> {
+  const session = await currentSession();
+  if (!session) redirect("/console/login");
+  return session;
 }
 
 /**
@@ -102,6 +136,13 @@ export async function requireRole(...roles: Role[]): Promise<Profile> {
   const profile = await requireProfile();
   if (!roles.includes(profile.role)) redirect(homeFor(profile.role));
   return profile;
+}
+
+/** Role check that also reports whether this is an impersonated view. */
+export async function requireRoleSession(...roles: Role[]): Promise<Session> {
+  const session = await requireSession();
+  if (!roles.includes(session.profile.role)) redirect(homeFor(session.profile.role));
+  return session;
 }
 
 /** Where each role lands after signing in. */

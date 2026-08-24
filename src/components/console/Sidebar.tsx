@@ -28,19 +28,7 @@ export type NavGroup = {
  * test; the groups themselves are decided on the server in the layout, which
  * is what keeps a guard from ever being sent the admin nav.
  */
-export function Sidebar({
-  groups,
-  name,
-  role,
-  code,
-  signOut,
-}: {
-  groups: NavGroup[];
-  name: string;
-  role: string;
-  code: string;
-  signOut: () => Promise<void>;
-}) {
+export function Sidebar({ groups, role }: { groups: NavGroup[]; role: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -131,20 +119,13 @@ export function Sidebar({
           </div>
         ))}
 
+        {/* Identity and sign-out live in the header now; what stays here is the
+            one control that belongs with the navigation rather than the
+            account. */}
         <div className="csb__foot">
-          <div className="csb__who">
-            <span className="csb__name">{name}</span>
-            <span className="csb__role">
-              {code} · {role}
-            </span>
-          </div>
           <div className="csb__actions">
             <ThemeToggle />
-            <form action={signOut}>
-              <button className="btn btn--ghost btn--sm" type="submit">
-                Sign out
-              </button>
-            </form>
+            <span className="csb__role">{role}</span>
           </div>
         </div>
       </nav>

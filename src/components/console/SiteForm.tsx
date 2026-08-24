@@ -5,12 +5,15 @@ import { useFormStatus } from "react-dom";
 
 import { createSite } from "@/app/console/sites/actions";
 import { emptySiteForm } from "@/app/console/sites/site-form-state";
+import { FenceMap, type Fence } from "@/components/console/FenceMap";
 import { Icon } from "@/components/Icon";
 
-function Submit() {
+import "leaflet/dist/leaflet.css";
+
+function Submit({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button className="btn btn--solid" type="submit" disabled={pending}>
+    <button className="btn btn--solid" type="submit" disabled={pending || disabled}>
       {pending ? "Saving…" : "Register site"}
     </button>
   );
@@ -19,53 +22,18 @@ function Submit() {
 /**
  * Registering a site.
  *
- * The coordinates are the whole point of the record, so there are two ways in:
- * paste them from Google Maps, which is what an operator sitting at a desk
- * will do, or "use my location", which is what somebody standing at the gate
- * will do. A drawn map comes with the tile proxy in the next piece of work;
- * until then these two cover both people who actually create sites.
+ * The boundary is drawn rather than typed. Coordinates entered by hand are the
+ * easiest thing on this form to get quietly wrong — a transposed digit puts a
+ * fence in the wrong district and every check-in against it is meaningless —
+ * and nobody can proofread a decimal against a place they know. On a map the
+ * mistake is visible immediately.
  */
 export function SiteForm() {
   const [state, action] = useActionState(createSite, emptySiteForm);
-  const [coords, setCoords] = useState({
-    lat: state.values?.lat ?? "",
-    lng: state.values?.lng ?? "",
-  });
-  const [locating, setLocating] = useState(false);
-  const [locateError, setLocateError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [fence, setFence] = useState<Fence>({ mode: "radius", lat: 0, lng: 0, radius: 150 });
 
-  const useMyLocation = () => {
-    setLocateError(null);
-    setLocating(true);
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({
-          lat: pos.coords.latitude.toFixed(6),
-          lng: pos.coords.longitude.toFixed(6),
-        });
-        setLocating(false);
-      },
-      () => {
-        setLocateError("Could not read your location. Enter the coordinates by hand.");
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000 },
-    );
-  };
-
-  /**
-   * Accepts what people actually have on the clipboard: "26.4015, 90.2717",
-   * or a Google Maps URL with an @lat,lng in it. Anything else is left alone
-   * so a half-typed value is never silently discarded.
-   */
-  const onPaste = (text: string) => {
-    const fromUrl = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    const bare = text.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
-    const hit = fromUrl ?? bare;
-    if (hit) setCoords({ lat: hit[1]!, lng: hit[2]! });
-  };
+  const placed = fence.mode === "radius" ? !!(fence.lat || fence.lng) : fence.ring.length >= 3;
 
   if (!open) {
     return (
@@ -118,57 +86,26 @@ export function SiteForm() {
         <input className="cfield__i" name="address" defaultValue={state.values?.address} />
       </label>
 
-      <label className="cfield">
-        <span className="cfield__l">Latitude</span>
-        <input
-          className="cfield__i"
-          name="lat"
-          value={coords.lat}
-          onChange={(e) => setCoords((c) => ({ ...c, lat: e.target.value }))}
-          onPaste={(e) => onPaste(e.clipboardData.getData("text"))}
-          placeholder="26.401500"
-          inputMode="decimal"
-          required
-        />
-      </label>
-
-      <label className="cfield">
-        <span className="cfield__l">Longitude</span>
-        <input
-          className="cfield__i"
-          name="lng"
-          value={coords.lng}
-          onChange={(e) => setCoords((c) => ({ ...c, lng: e.target.value }))}
-          onPaste={(e) => onPaste(e.clipboardData.getData("text"))}
-          placeholder="90.271700"
-          inputMode="decimal"
-          required
-        />
-      </label>
-
-      <div className="cfield cform__wide">
-        <span className="cfield__hint">
-          Paste a Google Maps link or a &ldquo;lat, lng&rdquo; pair into either box and both fill
-          in.{" "}
-          <button className="btn btn--ghost btn--sm" type="button" onClick={useMyLocation} disabled={locating}>
-            {locating ? "Locating…" : "Use my location"}
-          </button>
+      <div className="cform__wide">
+        <span className="ui-label" style={{ display: "block", marginBottom: 8 }}>
+          Boundary<span className="ui-req"> *</span>
         </span>
-        {locateError && <span className="cfield__hint">{locateError}</span>}
+        <FenceMap value={fence} onChange={setFence} />
       </div>
 
-      <label className="cfield">
-        <span className="cfield__l">Fence radius (m)</span>
-        <input
-          className="cfield__i"
-          name="geofence_radius_m"
-          type="number"
-          min={25}
-          max={5000}
-          defaultValue={state.values?.geofence_radius_m ?? "150"}
-        />
-        <span className="cfield__hint">How close a guard must be to punch in.</span>
-      </label>
+      {/* The map is the interface; these carry its result to the server. */}
+      <input type="hidden" name="lat" value={fence.lat || ""} />
+      <input type="hidden" name="lng" value={fence.lng || ""} />
+      <input
+        type="hidden"
+        name="geofence_radius_m"
+        value={fence.mode === "radius" ? fence.radius : 150}
+      />
+      <input
+        type="hidden"
+        name="polygon"
+        value={fence.mode === "polygon" && fence.ring.length >= 3 ? JSON.stringify(fence.ring) : ""}
+      />
 
       <label className="cfield">
         <span className="cfield__l">Required accuracy (m)</span>
@@ -220,7 +157,14 @@ export function SiteForm() {
       </label>
 
       <div className="cform__foot">
-        <Submit />
+        {!placed && (
+          <span className="ui-hint">
+            {fence.mode === "radius"
+              ? "Click the map to place this site."
+              : "Drop at least three points to close the area."}
+          </span>
+        )}
+        <Submit disabled={!placed} />
         <button className="btn btn--ghost btn--sm" type="button" onClick={() => setOpen(false)}>
           Cancel
         </button>

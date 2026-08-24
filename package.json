@@ -2,7 +2,7 @@
   "name": "nbss",
   "version": "1.0.0",
   "private": true,
-  "description": "National Bodo Security Services \u2014 security, facility management and manpower agency, Kokrajhar, Bodoland Territorial Region",
+  "description": "National Bodo Security Services — security, facility management and manpower agency, Kokrajhar, Bodoland Territorial Region",
   "packageManager": "pnpm@10.26.2",
   "engines": {
     "node": ">=20.9.0"
@@ -28,12 +28,14 @@
     "@aws-sdk/s3-request-presigner": "^3.1116.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
+    "leaflet": "^1.9.4",
     "next": "^15.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.18.1",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.1.13",
