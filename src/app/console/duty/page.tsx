@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
 import { PunchControl, type PunchSite } from "@/components/console/PunchControl";
-import { AttendanceTable, type AttendanceRow } from "@/components/console/tables";
+import { AttendanceWorkspace, type AttendanceRow } from "@/components/console/AttendanceWorkspace";
 import { site } from "@/content/site";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -52,7 +52,9 @@ export default async function DutyPage() {
       .maybeSingle(),
     supabase
       .from("attendance")
-      .select("id, check_in_at, check_out_at, worked_minutes, overtime_minutes, status, check_in_distance_m, sites(name)")
+      .select(
+        "id, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, status, device_reported_at, ip, review_note, reviewed_at, sites(name)",
+      )
       .eq("guard_id", profile.id)
       .gte("check_in_at", ninetyDaysAgo.toISOString())
       .order("check_in_at", { ascending: false })
@@ -80,10 +82,20 @@ export default async function DutyPage() {
       id: r.id,
       check_in_at: r.check_in_at,
       check_out_at: r.check_out_at,
+      check_in_lat: r.check_in_lat,
+      check_in_lng: r.check_in_lng,
+      check_in_accuracy_m: r.check_in_accuracy_m,
+      check_in_distance_m: r.check_in_distance_m,
+      check_in_method: r.check_in_method,
+      check_out_distance_m: r.check_out_distance_m,
+      check_out_method: r.check_out_method,
       worked_minutes: r.worked_minutes,
       overtime_minutes: r.overtime_minutes,
       status: r.status,
-      check_in_distance_m: r.check_in_distance_m,
+      device_reported_at: r.device_reported_at,
+      ip: r.ip,
+      review_note: r.review_note,
+      reviewed_at: r.reviewed_at,
       guard_name: null,
       guard_code: null,
       site_name: place?.name ?? null,
@@ -141,7 +153,7 @@ export default async function DutyPage() {
           <h2 className="cpanel__h">My shifts</h2>
         </div>
         <div className="cpanel__body">
-          <AttendanceTable rows={rows} showGuard={false} />
+          <AttendanceWorkspace rows={rows} canReview={false} />
         </div>
       </div>
 

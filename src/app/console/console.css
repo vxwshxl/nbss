@@ -1183,3 +1183,21 @@
 }
 
 .leaflet-control-attribution a { color: var(--link) !important; }
+
+/* The raw payload on an audit entry. Mono earns its place here — this is data
+   being read for exactness, not prose. */
+.caudit__json {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--ink-100);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+  color: var(--paper-dim);
+  white-space: pre;
+}
+
+textarea.cfield__i { resize: vertical; min-height: 64px; line-height: 1.5; }
