@@ -128,6 +128,29 @@
   color: var(--err-900);
 }
 
+/* The one row that leaves the console. It is quieter than a destination —
+   dimmer until hovered — and the arrow nudges outward on hover so the gesture
+   reads as "away from here" rather than "another page in here". */
+.csb__link--away { color: var(--paper-mut); }
+.csb__link--away:hover { color: var(--paper-dim); }
+
+/* Needs the parent class to outrank `.csb__link svg`, which would otherwise
+   win on width, height and opacity at equal-looking specificity. */
+.csb__link .csb__away {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  opacity: 0.55;
+  transition: transform 0.15s var(--ease), opacity 0.15s var(--ease);
+}
+
+.csb__link--away:hover .csb__away { opacity: 0.9; transform: translateX(2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .csb__link .csb__away { transition: none; }
+  .csb__link--away:hover .csb__away { transform: none; }
+}
+
 .csb__foot {
   margin-top: auto;
   padding-top: 12px;
@@ -1201,3 +1224,35 @@
 }
 
 textarea.cfield__i { resize: vertical; min-height: 64px; line-height: 1.5; }
+
+/* The agency's own mark, not a generic shield. Squared off rather than round —
+   it is a crest, and a circular crop cuts the lettering off it. */
+.csb__logo {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 4px;
+}
+
+/* --------------------------------------------------- back to the public site */
+/* The mark and its text belong together; only the action is pushed away.
+   `space-between` across all three children stranded the logo on its own. */
+.csite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.csite__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.csite > a { margin-left: auto; }
+
+/* The crest is dark artwork, so it needs a light plate to read on the dark
+   ground the console uses at night. */
+.csite .csb__logo {
+  background: var(--bg-100);
+  padding: 3px;
+  border: 1px solid var(--line);
+}
+.csite__name { font-size: 14px; font-weight: 500; }
+.csite__note { font-size: 13px; color: var(--paper-mut); margin: 0; }

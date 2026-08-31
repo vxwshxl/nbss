@@ -24,7 +24,13 @@ export function Header() {
   const [navOpen, setNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
+  const [home, setHome] = useState<string | null>(null);
   const searchButton = useRef<HTMLButtonElement>(null);
+
+  // Signed in, this button leads to work rather than back to a sign-in form.
+  const account = home
+    ? { href: home, label: "Dashboard" }
+    : { href: "/console/login", label: "Login" };
 
   const isCurrent = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -48,6 +54,36 @@ export function Header() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /**
+   * The public pages are statically rendered, so the header cannot know at
+   * build time who is reading it — it ships saying "Login" and corrects itself
+   * once the session comes back. Reading the session in the layout instead
+   * would make all eleven public pages dynamic to change one word for the
+   * handful of people who work here.
+   *
+   * The cookie test keeps the request to the people it can possibly apply to.
+   * Supabase's auth cookie is deliberately not httpOnly (its own browser
+   * client has to read it), so its absence is a reliable "signed out" and a
+   * visitor from search pays nothing at all. Its presence proves nothing —
+   * the token may be expired or the account deactivated — so the server still
+   * decides.
+   */
+  useEffect(() => {
+    if (!/(?:^|;\s*)sb-[^=;]*auth-token/.test(document.cookie)) return;
+
+    const abort = new AbortController();
+
+    fetch("/api/session", { cache: "no-store", signal: abort.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.signedIn && typeof d.home === "string") setHome(d.home);
+      })
+      // Signed out is the safe assumption, and it is already on screen.
+      .catch(() => {});
+
+    return () => abort.abort();
   }, []);
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {
@@ -111,8 +147,8 @@ export function Header() {
 
               {/* Only visible inside the mobile sheet — the bar has its own CTA. */}
               <span className="nav__foot">
-                <Link className="btn btn--gold btn--lg" href="/console/login">
-                  Login
+                <Link className="btn btn--gold btn--lg" href={account.href}>
+                  {account.label}
                 </Link>
                 <a className="nav__tel" href={`tel:${tel(site.phone)}`}>
                   <Icon name="phone" /> Call {site.phone}
@@ -134,8 +170,8 @@ export function Header() {
                 <Icon name="search" />
               </button>
 
-              <Link className="btn btn--gold masthead__cta" href="/console/login">
-                Login
+              <Link className="btn btn--gold masthead__cta" href={account.href}>
+                {account.label}
               </Link>
 
               <button

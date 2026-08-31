@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Icon } from "@/components/Icon";
+import { Icon, Logo } from "@/components/Icon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export type NavItem = {
@@ -14,6 +14,12 @@ export type NavItem = {
   /** Rendered at the end of the row — unstaffed shifts, incidents awaiting triage. */
   count?: number;
   hot?: boolean;
+  /**
+   * Leads out of the console entirely. Such a row is never the "current page"
+   * — you are not on it, you are leaving by it — and it says so with an arrow
+   * rather than by looking like every other destination.
+   */
+  away?: boolean;
 };
 
 export type NavGroup = {
@@ -28,7 +34,16 @@ export type NavGroup = {
  * test; the groups themselves are decided on the server in the layout, which
  * is what keeps a guard from ever being sent the admin nav.
  */
-export function Sidebar({ groups, role }: { groups: NavGroup[]; role: string }) {
+export function Sidebar({
+  groups,
+  role,
+  home,
+}: {
+  groups: NavGroup[];
+  role: string;
+  /** Where the brand goes — each role's own landing page, not the public site. */
+  home: string;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -51,13 +66,17 @@ export function Sidebar({ groups, role }: { groups: NavGroup[]; role: string }) 
   }, []);
 
   // The dashboard roots are exact matches; everything else matches its subtree,
-  // so /console/sites/abc still lights up "Sites".
-  const isCurrent = (href: string) =>
-    href === "/console" || href === "/console/duty"
-      ? pathname === href
-      : pathname.startsWith(href);
+  // so /console/sites/abc still lights up "Sites". A row that leaves the
+  // console is never current — and "/" would otherwise prefix-match every
+  // page in the app.
+  const isCurrent = (item: NavItem) =>
+    item.away
+      ? false
+      : item.href === "/console" || item.href === "/console/duty"
+        ? pathname === item.href
+        : pathname.startsWith(item.href);
 
-  const current = groups.flatMap((g) => g.items).find((i) => isCurrent(i.href));
+  const current = groups.flatMap((g) => g.items).find(isCurrent);
 
   return (
     <>
@@ -89,8 +108,11 @@ export function Sidebar({ groups, role }: { groups: NavGroup[]; role: string }) 
         id="console-nav"
         aria-label="Console"
       >
-        <Link className="csb__brand" href="/">
-          <Icon name="shield-check" />
+        {/* The mark leads back into the console, not out of it. Somebody
+            deep in a table reaching for the logo wants their dashboard; the
+            way out to the public site is on the profile page. */}
+        <Link className="csb__brand" href={home}>
+          <Logo size={30} className="csb__logo" />
           <span>
             <span className="csb__mark">NBSS</span>
             <span className="csb__sub">Operations</span>
@@ -103,9 +125,9 @@ export function Sidebar({ groups, role }: { groups: NavGroup[]; role: string }) 
             {group.items.map((item) => (
               <Link
                 key={item.href}
-                className="csb__link"
+                className={`csb__link${item.away ? " csb__link--away" : ""}`}
                 href={item.href}
-                aria-current={isCurrent(item.href) ? "page" : undefined}
+                aria-current={isCurrent(item) ? "page" : undefined}
               >
                 <Icon name={item.icon} />
                 <span>{item.label}</span>
@@ -114,6 +136,7 @@ export function Sidebar({ groups, role }: { groups: NavGroup[]; role: string }) 
                     {item.count}
                   </span>
                 ) : null}
+                {item.away && <Icon name="arrow" className="csb__away" />}
               </Link>
             ))}
           </div>

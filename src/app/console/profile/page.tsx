@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { DetailsForm, PinForm } from "@/components/console/ProfileForms";
-import { Icon } from "@/components/Icon";
+import { Icon, Logo } from "@/components/Icon";
+import { site } from "@/content/site";
 import { requireSession } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "My profile" };
@@ -40,6 +42,29 @@ export default async function ProfilePage() {
             <dt>Role</dt>
             <dd>{ROLE_LABEL[profile.role] ?? profile.role}</dd>
           </dl>
+        </div>
+      </div>
+
+      {/* The console's brand now leads to the dashboard, so the way back out to
+          the public site lives here — findable, but not a click somebody makes
+          by accident while working. */}
+      <div className="cpanel">
+        <div className="cpanel__head">
+          <h2 className="cpanel__h">Public website</h2>
+        </div>
+        <div className="cpanel__body">
+          <div className="csite">
+            <Logo size={36} className="csb__logo" />
+            <div className="csite__text">
+              <span className="csite__name">{site.name}</span>
+              <p className="csite__note">
+                The public site — services, careers and the enquiry forms.
+              </p>
+            </div>
+            <Link className="btn btn--ghost btn--sm" href="/">
+              Visit the site
+            </Link>
+          </div>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { ConsoleHeader, type Person } from "@/components/console/ConsoleHeader";
 import { ImpersonationBar } from "@/components/console/ImpersonationBar";
 import { Sidebar, type NavGroup } from "@/components/console/Sidebar";
 import { ToastProvider } from "@/components/ui/Toast";
-import { currentSession } from "@/lib/auth";
+import { currentSession, homeFor } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { Role } from "@/lib/auth";
 
@@ -35,6 +35,13 @@ function navFor(role: Role): NavGroup[] {
     items: [{ href: "/console/profile", label: "My profile", icon: "user-shield" }],
   };
 
+  // Last in every role's nav, because it is the way out rather than a place to
+  // work. Kept as its own section so it never reads as part of the account.
+  const website: NavGroup = {
+    label: "Website",
+    items: [{ href: "/", label: "Main site", icon: "home", away: true }],
+  };
+
   if (role === "guard") {
     return [
       {
@@ -45,6 +52,7 @@ function navFor(role: Role): NavGroup[] {
         ],
       },
       account,
+      website,
     ];
   }
 
@@ -55,6 +63,7 @@ function navFor(role: Role): NavGroup[] {
         items: [{ href: "/console/site", label: "Deployment", icon: "building" }],
       },
       account,
+      website,
     ];
   }
 
@@ -84,7 +93,7 @@ function navFor(role: Role): NavGroup[] {
     });
   }
 
-  groups.push(account);
+  groups.push(account, website);
 
   return groups;
 }
@@ -136,7 +145,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         )}
 
         <div className="console__grid">
-          <Sidebar groups={navFor(profile.role)} role={ROLE_LABEL[profile.role]} />
+          <Sidebar
+            groups={navFor(profile.role)}
+            role={ROLE_LABEL[profile.role]}
+            home={homeFor(profile.role)}
+          />
           <div className="cmain">
             <ConsoleHeader
               name={profile.full_name}

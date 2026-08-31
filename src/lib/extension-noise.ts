@@ -47,9 +47,20 @@ const ATTRIBUTES = [
 ];
 
 /**
- * Minified by hand rather than by a bundler: this string is inlined into the
- * document head, where every byte is render-blocking.
+ * Errors thrown inside an extension's own script are not this application's,
+ * and Next's development overlay has no way to tell the difference — it shows
+ * a full-screen "Runtime TypeError" for a crash in code we neither wrote nor
+ * load. Bitdefender's executor throws one on most page loads.
+ *
+ * The listener below is registered in <head>, before Next attaches its own, so
+ * capture-phase `stopImmediatePropagation` reaches the overlay's handler first.
+ * It suppresses an error ONLY when the browser reports its source file as a
+ * `chrome-extension://` (or moz-/safari-) URL. Application code can never have
+ * such a filename, so nothing real is hidden — and anything suppressed is
+ * still written to the console, prefixed, so it remains findable.
  */
+const EXTENSION_ORIGIN = /^(chrome-extension|moz-extension|safari-web-extension):\/\//;
+
 export const extensionNoiseScript = `(function(){try{var a=${JSON.stringify(
   ATTRIBUTES,
-)};function s(n){if(n.nodeType!==1)return;for(var i=0;i<a.length;i++)if(n.hasAttribute(a[i]))n.removeAttribute(a[i])}new MutationObserver(function(m){for(var i=0;i<m.length;i++){var r=m[i];if(r.type==="attributes")s(r.target);else for(var j=0;j<r.addedNodes.length;j++)s(r.addedNodes[j])}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:a})}catch(e){}})()`;
+)};function s(n){if(n.nodeType!==1)return;for(var i=0;i<a.length;i++)if(n.hasAttribute(a[i]))n.removeAttribute(a[i])}new MutationObserver(function(m){for(var i=0;i<m.length;i++){var r=m[i];if(r.type==="attributes")s(r.target);else for(var j=0;j<r.addedNodes.length;j++)s(r.addedNodes[j])}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:a});var x=${EXTENSION_ORIGIN.toString()};function ext(v){return typeof v==="string"&&x.test(v)}window.addEventListener("error",function(e){if(!ext(e.filename))return;e.stopImmediatePropagation();e.preventDefault();console.info("[extension error suppressed]",e.message,e.filename)},true);window.addEventListener("unhandledrejection",function(e){var r=e.reason;var st=r&&typeof r==="object"&&typeof r.stack==="string"?r.stack:"";if(!x.test(st))return;e.stopImmediatePropagation();e.preventDefault();console.info("[extension rejection suppressed]",st.split("\\n")[0])},true)}catch(e){}})()`;
