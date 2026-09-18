@@ -1,30 +1,46 @@
 import type { Metadata, Viewport } from "next";
 
-import { themeScript } from "@/components/ThemeToggle";
-import { extensionNoiseScript } from "@/lib/extension-noise";
-import { coverage, site, tel } from "@/content/site";
-import { absoluteUrl, baseUrl, canonical } from "@/lib/seo";
+import { SuppressExtensionWarnings } from "@/components/suppress-extension-warnings";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { site } from "@/content/site";
+import { baseUrl, canonical } from "@/lib/seo";
+import { INDEXABLE } from "@/lib/seo/page-metadata";
+import { BRAND_ALTERNATE_NAMES } from "@/lib/seo/structured-data";
 
-import "./fonts.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   alternates: canonical("/"),
   title: {
-    default: `${site.shortName} — Security Services in Kokrajhar, Assam`,
-    template: `%s — ${site.shortName}`,
+    default: `${site.shortName} — Security Agency in Kokrajhar, Assam`,
+    template: `%s · ${site.name}`,
   },
   description: site.descriptor,
   applicationName: site.name,
   authors: [{ name: site.name }],
+  /**
+   * Branded spellings first — those are the queries this site can realistically
+   * own, and the singular/plural split in the company's own name means they
+   * have to be enumerated rather than assumed. The category terms follow, each
+   * one paired with a place, because "security agency" alone is a national
+   * query this business is not competing in and "security agency Kokrajhar" is
+   * one it should win outright.
+   */
   keywords: [
+    ...BRAND_ALTERNATE_NAMES,
     "security agency Kokrajhar",
-    "security guards Assam",
-    "Bodoland security service",
-    "security agency BTC",
+    "security guard agency Assam",
+    "security services Bodoland",
+    "security agency BTR",
     "security guard supply Kokrajhar",
-    "National Bodo Security Service",
+    "bank security guard Assam",
+    "hospital security agency Assam",
+    "event security Kokrajhar",
+    "housekeeping manpower Kokrajhar",
+    "bouncer service Assam",
   ],
   category: "Security services",
   creator: site.name,
@@ -61,162 +77,67 @@ export const metadata: Metadata = {
     shortcut: ["/favicon.ico"],
   },
   manifest: "/manifest.webmanifest",
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      // Without these Google may clip the thumbnail and snippet on the local
-      // pack listings this site is actually competing for.
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
-  },
+  robots: INDEXABLE,
 };
 
 export const viewport: Viewport = {
-  /* Geist's two grounds: white paper, true black. The browser chrome follows
-     whichever the reader's system asks for, which is the same switch the
-     stylesheet's `prefers-color-scheme` block reads. */
+  width: "device-width",
+  initialScale: 1,
+  // Shrinks the layout viewport (and `dvh`) when the on-screen keyboard opens,
+  // so a centred dialog repositions above the keyboard instead of hiding behind
+  // it. That matters most on the one screen that is always used on a phone: a
+  // guard punching in at a gate.
+  interactiveWidget: "resizes-content",
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: dark)", color: "#1f1f1f" },
   ],
   colorScheme: "light dark",
 };
 
 /**
- * schema.org data so search engines resolve the agency to its real location.
+ * The shell every page sits in.
  *
- * Two nodes joined by @id: the LocalBusiness that Google Business Profile and
- * the local pack read, and the WebSite that carries the search action. Every
- * value below is drawn from `site` — nothing is asserted here that the pages
- * themselves do not also state, and the placeholder social links are left out
- * rather than published as dead `#` hrefs.
+ * Three providers, and each one is here rather than in a sub-layout for a
+ * specific reason. The theme has to wrap the whole document or the marketing
+ * pages and the console would resolve it separately and disagree for a frame.
+ * One `TooltipProvider` shares the delay-skip window, so moving between
+ * tooltips anywhere in a toolbar stays instant instead of re-waiting 700ms per
+ * target. And the `Toaster` is mounted once at the root because a toast raised
+ * by a server action during a route transition must outlive the route that
+ * raised it.
+ *
+ * No JSON-LD here. It used to live in this file, which meant every page — a
+ * careers listing, a legal page, the console — carried the full business graph.
+ * It now sits on the pages that are actually the entity (see
+ * `lib/seo/structured-data`), so there is one assertion of it rather than
+ * twenty-four competing ones.
  */
-const businessId = absoluteUrl("/#organisation");
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": ["SecurityService", "LocalBusiness"],
-      "@id": businessId,
-      name: site.name,
-      alternateName: site.shortName,
-      slogan: site.tagline,
-      description: site.descriptor,
-      url: absoluteUrl("/"),
-      logo: absoluteUrl("/logo/nbss-512.png"),
-      image: absoluteUrl("/img/nbss/parade-salute.jpg"),
-      telephone: site.phone,
-      priceRange: "₹₹",
-      currenciesAccepted: "INR",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: site.address.city,
-        addressRegion: site.address.state,
-        addressCountry: "IN",
-      },
-      geo: {
-        "@type": "GeoCoordinates",
-        latitude: site.address.lat,
-        longitude: site.address.lng,
-      },
-      hasMap: site.address.mapUrl,
-      areaServed: coverage.map((d) => ({
-        "@type": "AdministrativeArea",
-        name: `${d.name}, Assam`,
-      })),
-      contactPoint: [
-        {
-          "@type": "ContactPoint",
-          contactType: "Customer service",
-          telephone: tel(site.phone),
-          availableLanguage: ["en", "as", "brx", "hi"],
-        },
-      ],
-      openingHoursSpecification: [
-        {
-          "@type": "OpeningHoursSpecification",
-          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-          /* Schema.org wants ISO 8601, so these two stay 24-hour — they are
-             read by crawlers, not by people. The +05:30 offset is what makes
-             them IST rather than whatever zone the crawler assumes. */
-          opens: "09:00:00+05:30",
-          closes: "18:00:00+05:30",
-        },
-      ],
-      // Compliance categories only — the client has supplied no registration
-      // numbers, and `identifier` is not a field to guess at.
-      hasCredential: site.compliance.map((c) => ({
-        "@type": "EducationalOccupationalCredential",
-        credentialCategory: c.label,
-        recognizedBy: { "@type": "Organization", name: c.body },
-      })),
-    },
-    {
-      "@type": "WebSite",
-      "@id": absoluteUrl("/#website"),
-      url: absoluteUrl("/"),
-      name: site.name,
-      inLanguage: "en-IN",
-      publisher: { "@id": businessId },
-    },
-  ],
-};
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    /* The head script rewrites `data-theme` before React hydrates, so the
-       attribute React rendered and the one it finds will differ for any reader
-       who has chosen a theme. That is the intended behaviour, not a bug to
-       report. */
-    <html lang="en-IN" data-theme="system" suppressHydrationWarning>
-      <head suppressHydrationWarning>
-        {/* Both inline scripts carry `suppressHydrationWarning` because some
-            extensions — Bitdefender most aggressively — do not merely add
-            attributes to them, they rewrite the element: the inline body is
-            emptied and replaced with a `src` pointing at the extension's own
-            executor, which runs the original code after scanning it. React
-            then compares an empty script against the one the server rendered
-            and reports a mismatch nothing in the app can prevent.
-
-            Suppressing is safe precisely here, and only here. These are static,
-            hand-authored strings with no props and no reactive content, so
-            there is no real mismatch the flag could be hiding — the elements
-            are identical on every render by construction. */}
-
-        {/* Applies a stored light/dark choice before the first paint. Anything
-            later — an effect, a layout script — repaints, and the reader sees
-            a white flash on every navigation. */}
-        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: themeScript }} />
-
-        {/* Strips the attributes Bitdefender, Grammarly and friends inject
-            during parse, so React does not hydrate against a DOM the server
-            never rendered. Must stay in <head>: it has to be observing before
-            the body is parsed. */}
-        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: extensionNoiseScript }} />
-      </head>
+    <html lang="en-IN" className="h-full antialiased" suppressHydrationWarning>
       {/* Browser extensions inject attributes onto <body> before React hydrates
-          (Bitdefender's `bis_register`, password managers, etc). Suppressing here
-          covers only this element's attributes, not any subtree content. */}
-      <body suppressHydrationWarning>
-        <a className="skip-link" href="#main">
+          (Bitdefender's `bis_register`, password managers, and so on).
+          Suppressing here covers only this element's own attributes, not any
+          subtree content. */}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <SuppressExtensionWarnings />
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:rounded-lg focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"
+        >
           Skip to content
         </a>
-
-        {children}
-
-
-        <script
-          suppressHydrationWarning
-          type="application/ld+json"
-          // Static, hand-authored object — no user input reaches this string.
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        <ThemeProvider>
+          <TooltipProvider>
+            {children}
+            {/* Top-centre rather than a corner: on a phone at a gate the
+                bottom of the screen is under a thumb and the corners are where
+                the OS puts its own chrome. */}
+            <Toaster position="top-center" />
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

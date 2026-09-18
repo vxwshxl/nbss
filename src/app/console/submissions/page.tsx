@@ -1,80 +1,77 @@
 import type { Metadata } from "next";
+import { Briefcase, Inbox, Mail, MessageSquareQuote } from "lucide-react";
 
-import { Icon } from "@/components/Icon";
-import { KindChips, SubmissionsList } from "@/components/console/SubmissionsList";
+import { PageHeader } from "@/components/console/page-header";
+import { StatCard } from "@/components/console/stat-card";
+import { SubmissionsWorkspace } from "@/components/console/submissions-workspace";
 import { requireRole } from "@/lib/auth";
-import { countSubmissions, listSubmissions, type Kind } from "@/lib/store";
+import { countSubmissions, listSubmissions } from "@/lib/store";
 
-export const metadata: Metadata = { title: "Submissions" };
+export const metadata: Metadata = { title: "Enquiries" };
 export const dynamic = "force-dynamic";
 
-const KINDS: Kind[] = ["quote", "enquiry", "application"];
-
 /**
- * The public forms' inbox, moved inside the console.
+ * The public forms' inbox.
  *
- * Still reading data/submissions.json: the `submissions` table exists in
+ * Still reading `data/submissions.json`: the `submissions` table exists in
  * Postgres but the three public forms have not been repointed at it yet, and
  * moving the reader before the writer would make today's enquiries vanish from
  * this page. Both halves change together in the next piece of work.
+ *
+ * Everything is fetched unfiltered and the kind filter lives in the client.
+ * The whole inbox is a few hundred rows of text at most, and a desk switching
+ * between "all" and "applications" thirty times an hour should not be waiting
+ * on a round trip to do it.
  */
-export default async function SubmissionsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ kind?: string }>;
-}) {
+export default async function SubmissionsPage() {
   await requireRole("admin", "supervisor");
 
-  const { kind } = await searchParams;
-  const filter = KINDS.includes(kind as Kind) ? (kind as Kind) : undefined;
-
   const [submissions, counts] = await Promise.all([
-    listSubmissions(filter),
+    listSubmissions(),
     countSubmissions(),
   ]);
 
   return (
-    <div className="cwrap">
-      <div className="chead">
-        <div>
-          <h1 className="chead__h">Submissions</h1>
-          <p className="chead__lede">Everything that came off the public forms, newest first.</p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader eyebrow="Desk" title="Enquiries" />
+
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Unactioned"
+          value={String(counts.new)}
+          hint={counts.new ? "Nobody has picked these up" : "The desk is clear"}
+          icon={Inbox}
+          tone={counts.new ? "amber" : "emerald"}
+        />
+        <StatCard
+          label="Quote requests"
+          value={String(counts.quote)}
+          hint="From the quote form"
+          icon={MessageSquareQuote}
+          tone="emerald"
+        />
+        <StatCard
+          label="Enquiries"
+          value={String(counts.enquiry)}
+          hint="From the contact form"
+          icon={Mail}
+          tone="sky"
+        />
+        <StatCard
+          label="Applications"
+          value={String(counts.application)}
+          hint="From the careers pages"
+          icon={Briefcase}
+          tone="violet"
+        />
       </div>
 
-      <div className="cstats">
-        <div className="cstat">
-          <span className="cstat__v">{counts.total}</span>
-          <span className="cstat__l">total</span>
-        </div>
-        <div className={`cstat${counts.new ? " cstat--ok" : ""}`}>
-          <span className="cstat__v">{counts.new}</span>
-          <span className="cstat__l">new</span>
-        </div>
-        <div className="cstat">
-          <span className="cstat__v">{counts.quote}</span>
-          <span className="cstat__l">quotes</span>
-        </div>
-        <div className="cstat">
-          <span className="cstat__v">{counts.enquiry}</span>
-          <span className="cstat__l">enquiries</span>
-        </div>
-        <div className="cstat">
-          <span className="cstat__v">{counts.application}</span>
-          <span className="cstat__l">applications</span>
-        </div>
-      </div>
+      <SubmissionsWorkspace rows={submissions} />
 
-      <KindChips filter={filter} />
-
-      <SubmissionsList rows={submissions} filter={filter} />
-
-      <p className="admin-note">
-        <Icon name="shield-alt" />
-        <span>
-          Still stored in <code>data/submissions.json</code>. On a serverless host that file is
-          wiped on every deploy — moving these into Postgres is the next piece of work.
-        </span>
+      <p className="text-xs text-muted-foreground">
+        Still stored in <code className="font-mono">data/submissions.json</code>. On a
+        serverless host that file is wiped on every deploy — moving these into
+        Postgres is the next piece of work.
       </p>
     </div>
   );

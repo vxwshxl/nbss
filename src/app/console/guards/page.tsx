@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { GuardsWorkspace, type PersonRow } from "@/components/console/GuardsWorkspace";
-import { Icon } from "@/components/Icon";
+import { GuardsWorkspace, type PersonRow } from "@/components/console/guards-workspace";
+import { PageHeader } from "@/components/console/page-header";
 import { requireRoleSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "People" };
+export const metadata: Metadata = { title: "Guards" };
 export const dynamic = "force-dynamic";
 
 export default async function GuardsPage() {
@@ -20,28 +20,21 @@ export default async function GuardsPage() {
     .order("employee_code");
 
   return (
-    <div className="cwrap">
-      <div className="chead">
-        <div>
-          <h1 className="chead__h">People</h1>
-          <p className="chead__lede">
-            Everyone with a login. A guard signs in with the employee code shown here.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader eyebrow="People" title="Guards & staff" />
 
       <GuardsWorkspace
         rows={(data ?? []) as PersonRow[]}
+        // An admin viewing as someone else must not be able to create accounts
+        // or reset PINs in that person's name.
         canManage={session.profile.role === "admin" && !session.impersonating}
         selfId={session.realProfile.id}
       />
 
-      <p className="admin-note">
-        <Icon name="shield-alt" />
-        <span>
-          A PIN is stored hashed and can never be read back — resetting issues a new one and shows
-          it once. Deactivating an account keeps every shift and punch it ever produced.
-        </span>
+      <p className="text-xs text-muted-foreground">
+        A PIN is stored hashed and can never be read back — resetting issues a new
+        one and shows it once. Deactivating an account keeps every shift and punch
+        it ever produced.
       </p>
     </div>
   );

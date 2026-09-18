@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { ScrollText } from "lucide-react";
 
-import { AuditWorkspace, type AuditRow } from "@/components/console/AuditWorkspace";
-import { Icon } from "@/components/Icon";
+import { AuditWorkspace, type AuditRow } from "@/components/console/audit-workspace";
+import { PageHeader } from "@/components/console/page-header";
+import { Panel } from "@/components/ui/panel";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -21,26 +23,20 @@ export default async function AuditPage() {
     .limit(1000);
 
   return (
-    <div className="cwrap">
-      <div className="chead">
-        <div>
-          <h1 className="chead__h">Audit log</h1>
-          <p className="chead__lede">
-            Every privileged action, in the order it happened. Select an entry to see what it
-            recorded.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader eyebrow="Administration" title="Audit log" />
 
-      <div className="cpanel cpanel--table">
-        <div className="cpanel__body">
-          <AuditWorkspace rows={(data ?? []) as AuditRow[]} />
-        </div>
-      </div>
+      <Panel
+        tone="slate"
+        title="Every privileged action, in the order it happened"
+        icon={ScrollText}
+        bodyClassName="p-3 sm:p-4"
+      >
+        <AuditWorkspace rows={(data ?? []) as AuditRow[]} />
+      </Panel>
 
-      <p className="admin-note">
-        <Icon name="key" />
-        <span>Append-only and retained indefinitely. Treat it as a business record.</span>
+      <p className="text-xs text-muted-foreground">
+        Append-only and retained indefinitely. Treat it as a business record.
       </p>
     </div>
   );

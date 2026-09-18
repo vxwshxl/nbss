@@ -1,112 +1,40 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { createPortal } from "react-dom";
+import * as React from "react";
+import { Popover as PopoverPrimitive } from "radix-ui";
 
-/**
- * The anchored surface behind Select, Menu and DatePicker.
- *
- * Portalled and `position: fixed` for one reason: the console's panels and
- * table scroll regions set `overflow`, and any absolutely-positioned popup
- * inside one gets clipped at its edge. Rendering to body and positioning from
- * the trigger's viewport rect avoids that entirely.
- *
- * It flips above the trigger when there is not enough room below, and clamps
- * to the viewport horizontally so a control near the right edge does not open
- * off screen.
- */
-export function Popover({
-  anchor,
-  open,
-  onClose,
-  children,
-  align = "start",
-  className = "",
-  matchWidth = false,
-  labelledBy,
-  role = "listbox",
-}: {
-  anchor: RefObject<HTMLElement | null>;
-  open: boolean;
-  onClose: () => void;
-  children: ReactNode;
-  align?: "start" | "end";
-  className?: string;
-  matchWidth?: boolean;
-  labelledBy?: string;
-  role?: "listbox" | "menu" | "dialog";
-}) {
-  const surface = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 });
+import { cn } from "@/lib/utils";
 
-  useLayoutEffect(() => {
-    if (!open) return;
+function Popover(props: React.ComponentProps<typeof PopoverPrimitive.Root>) {
+  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+}
 
-    const place = () => {
-      const trigger = anchor.current;
-      const el = surface.current;
-      if (!trigger || !el) return;
+function PopoverTrigger(
+  props: React.ComponentProps<typeof PopoverPrimitive.Trigger>,
+) {
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+}
 
-      const t = trigger.getBoundingClientRect();
-      const s = el.getBoundingClientRect();
-      const gap = 6;
-      const margin = 8;
-
-      const spaceBelow = window.innerHeight - t.bottom;
-      const flip = spaceBelow < s.height + gap && t.top > spaceBelow;
-
-      const top = flip ? Math.max(margin, t.top - s.height - gap) : t.bottom + gap;
-
-      let left = align === "end" ? t.right - s.width : t.left;
-      left = Math.min(Math.max(margin, left), window.innerWidth - s.width - margin);
-
-      setStyle({
-        top,
-        left,
-        opacity: 1,
-        ...(matchWidth ? { minWidth: t.width } : null),
-      });
-    };
-
-    place();
-
-    // Reposition rather than close on scroll: closing a select because the
-    // page moved a pixel under a trackpad is maddening.
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-    };
-  }, [open, anchor, align, matchWidth]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointer = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (surface.current?.contains(target) || anchor.current?.contains(target)) return;
-      onClose();
-    };
-
-    // Pointerdown, not click: a click listener fires after the control under
-    // the pointer has already reacted, so the popup would close a beat late.
-    document.addEventListener("pointerdown", onPointer);
-    return () => document.removeEventListener("pointerdown", onPointer);
-  }, [open, onClose, anchor]);
-
-  if (!open || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      className={`ui-pop ${className}`}
-      style={style}
-      ref={surface}
-      role={role}
-      aria-labelledby={labelledBy}
-    >
-      {children}
-    </div>,
-    document.body,
+function PopoverContent({
+  className,
+  align = "center",
+  sideOffset = 6,
+  ...props
+}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  return (
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Content
+        data-slot="popover-content"
+        align={align}
+        sideOffset={sideOffset}
+        className={cn(
+          "z-50 max-h-(--radix-popover-content-available-height) w-64 origin-(--radix-popover-content-transform-origin) overflow-y-auto overscroll-contain rounded-xl bg-popover p-3 text-popover-foreground shadow-raised ring-1 ring-app-line outline-none ease-out-strong data-open:duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          className,
+        )}
+        {...props}
+      />
+    </PopoverPrimitive.Portal>
   );
 }
+
+export { Popover, PopoverTrigger, PopoverContent };

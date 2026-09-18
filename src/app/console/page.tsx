@@ -1,7 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  ArrowRight,
+  Building2,
+  CalendarCheck,
+  MapPinned,
+  Radio,
+  ShieldUser,
+  Timer,
+  TriangleAlert,
+} from "lucide-react";
 
-import { Icon } from "@/components/Icon";
+import { PageHeader } from "@/components/console/page-header";
+import { StatCard } from "@/components/console/stat-card";
+import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
+import { StatusPill } from "@/components/ui/status-pill";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { site } from "@/content/site";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -11,8 +26,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * Timestamps are stored as UTC and this renders on the server, which on the
- * host is a UTC box rather than a desk in Kokrajhar. The zone is pinned to IST
- * and printed, so a time on this page says what it means.
+ * host is a box in some other continent rather than a desk in Kokrajhar. The
+ * zone is pinned to IST and printed, so a time on this page says what it means.
  */
 function time(iso: string): string {
   return `${new Date(iso).toLocaleTimeString("en-IN", {
@@ -30,6 +45,12 @@ function hours(minutes: number | null): string {
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
 }
 
+/** How long someone has been standing at a gate, from their check-in stamp. */
+function elapsed(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return hours(mins);
+}
+
 export default async function ConsoleDashboard() {
   const profile = await requireRole("admin", "supervisor");
   const supabase = await supabaseServer();
@@ -38,11 +59,17 @@ export default async function ConsoleDashboard() {
   startOfToday.setHours(0, 0, 0, 0);
 
   const [guards, sites, onDuty, todayPunches] = await Promise.all([
-    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "guard").eq("active", true),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "guard")
+      .eq("active", true),
     supabase.from("sites").select("id", { count: "exact", head: true }).eq("active", true),
     supabase
       .from("attendance")
-      .select("id, guard_id, site_id, check_in_at, status, profiles(full_name, employee_code), sites(name)")
+      .select(
+        "id, guard_id, site_id, check_in_at, status, profiles(full_name, employee_code), sites(name, district)",
+      )
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false }),
     supabase
@@ -59,129 +86,179 @@ export default async function ConsoleDashboard() {
   const needsReview = punches.filter((p) => p.status === "pending_review").length;
 
   const noSites = (sites.count ?? 0) === 0;
+  const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;
 
   return (
-    <div className="cwrap">
-      <div className="chead">
-        <div>
-          <h1 className="chead__h">Good day, {profile.full_name.split(" ")[0]}</h1>
-          <p className="chead__lede">
-            {live.length > 0
-              ? `${live.length} guard${live.length === 1 ? "" : "s"} on duty right now.`
-              : "Nobody is on duty right now."}
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={`Good day, ${firstName}`}
+        action={
+          <Button asChild variant="outline">
+            <Link href="/console/attendance">
+              <CalendarCheck data-icon="inline-start" />
+              Attendance
+            </Link>
+          </Button>
+        }
+      />
+
+      {/* Six figures, and the order is the order someone actually scans them:
+          what is happening right now, then the standing establishment, then the
+          two numbers that mean somebody has to do something. */}
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          label="On duty now"
+          value={String(live.length)}
+          hint={
+            live.length === 0
+              ? "Nobody is checked in"
+              : `Across ${new Set(live.map((r) => r.site_id)).size} site${
+                  new Set(live.map((r) => r.site_id)).size === 1 ? "" : "s"
+                }`
+          }
+          icon={Radio}
+          tone="emerald"
+          href="/console/attendance"
+          cta="See the ledger"
+        />
+        <StatCard
+          label="Active guards"
+          value={String(guards.count ?? 0)}
+          hint="With a working login"
+          icon={ShieldUser}
+          tone="indigo"
+          href="/console/guards"
+          cta="Manage guards"
+        />
+        <StatCard
+          label="Sites"
+          value={String(sites.count ?? 0)}
+          hint="Each with its own geofence"
+          icon={MapPinned}
+          tone="sky"
+          href="/console/sites"
+          cta="Open the map"
+        />
+        <StatCard
+          label="Late today"
+          value={String(lateToday)}
+          hint={lateToday ? "Past the site's grace window" : "Everyone arrived on time"}
+          icon={Timer}
+          tone={lateToday ? "amber" : "slate"}
+        />
+        <StatCard
+          label="Overtime today"
+          value={hours(overtimeToday)}
+          hint="Computed from punch pairs"
+          icon={CalendarCheck}
+          tone="violet"
+        />
+        <StatCard
+          label="Needs review"
+          value={String(needsReview)}
+          hint={needsReview ? "A punch the fence could not confirm" : "Nothing outstanding"}
+          icon={TriangleAlert}
+          tone={needsReview ? "rose" : "slate"}
+          href={needsReview ? "/console/attendance" : undefined}
+          cta="Review"
+        />
       </div>
 
-      <div className="cstats">
-        <div className="cstat cstat--ok">
-          <span className="cstat__v">{live.length}</span>
-          <span className="cstat__l">on duty</span>
-        </div>
-        <div className="cstat">
-          <span className="cstat__v">{guards.count ?? 0}</span>
-          <span className="cstat__l">active guards</span>
-        </div>
-        <div className="cstat">
-          <span className="cstat__v">{sites.count ?? 0}</span>
-          <span className="cstat__l">sites</span>
-        </div>
-        <div className={`cstat${lateToday ? " cstat--warn" : ""}`}>
-          <span className="cstat__v">{lateToday}</span>
-          <span className="cstat__l">late today</span>
-        </div>
-        <div className="cstat">
-          <span className="cstat__v">{hours(overtimeToday)}</span>
-          <span className="cstat__l">overtime today</span>
-        </div>
-        <div className={`cstat${needsReview ? " cstat--warn" : ""}`}>
-          <span className="cstat__v">{needsReview}</span>
-          <span className="cstat__l">needs review</span>
-        </div>
-      </div>
-
+      {/* Only ever shown on a genuinely empty system. It is the one moment where
+          a console should tell you what to do next rather than what is true. */}
       {noSites && (
-        <div className="cpanel">
-          <div className="cpanel__head">
-            <h2 className="cpanel__h">Start here</h2>
-          </div>
-          <div className="cpanel__body">
-            <p className="chead__lede" style={{ margin: 0 }}>
-              No sites are registered yet. A guard cannot check in until there is a site with a
-              geofence around it — that fence is what makes attendance mean &ldquo;actually at the
-              gate&rdquo; rather than &ldquo;tapped a button&rdquo;.
-            </p>
-            <p style={{ marginTop: 14 }}>
-              <Link className="btn btn--solid btn--sm" href="/console/sites">
-                Register the first site
-              </Link>
-            </p>
-          </div>
-        </div>
+        <Panel tone="amber" title="Start here" icon={Building2}>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            No sites are registered yet. A guard cannot check in until there is a site with
+            a geofence around it — that fence is what makes attendance mean{" "}
+            <em>actually at the gate</em> rather than <em>tapped a button</em>.
+          </p>
+          <Button asChild className="mt-4">
+            <Link href="/console/sites">
+              Register the first site
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        </Panel>
       )}
 
-      <div className="cpanel">
-        <div className="cpanel__head">
-          <h2 className="cpanel__h">On duty now</h2>
-          <Link className="clogin__back" href="/console/attendance">
-            All attendance →
-          </Link>
-        </div>
-
+      <Panel
+        tone="emerald"
+        title="On duty now"
+        icon={Radio}
+        bodyClassName="p-0 sm:p-0"
+        action={
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/console/attendance">
+              All attendance
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        }
+      >
         {live.length === 0 ? (
-          <p className="cempty">
-            <strong>Nobody is checked in.</strong>
-            When a guard punches in at a site, they appear here with the time they arrived.
-          </p>
+          <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+            <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Radio className="size-5" strokeWidth={1.75} />
+            </span>
+            <p className="text-sm font-medium">Nobody is checked in.</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              When a guard punches in at a site, they appear here with the time they
+              arrived and how long they have been standing.
+            </p>
+          </div>
         ) : (
-          <div className="ctable-scroll">
-            <table className="ctable">
-              <thead>
-                <tr>
-                  <th scope="col">Guard</th>
-                  <th scope="col">Code</th>
-                  <th scope="col">Site</th>
-                  <th scope="col">Checked in</th>
-                  <th scope="col">State</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guard</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Site</TableHead>
+                  <TableHead>Checked in</TableHead>
+                  <TableHead className="text-right">On duty for</TableHead>
+                  <TableHead className="text-right">State</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {live.map((row) => {
-                  // The embedded rows come back as an object for a to-one
-                  // relationship, but PostgREST's generated types describe the
-                  // general case, so both shapes are handled.
+                  // An embedded to-one relationship comes back as an object,
+                  // but PostgREST's generated types describe the general case —
+                  // so both shapes are handled rather than cast away.
                   const guard = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
                   const place = Array.isArray(row.sites) ? row.sites[0] : row.sites;
 
                   return (
-                    <tr key={row.id}>
-                      <td>{guard?.full_name ?? "—"}</td>
-                      <td className="mono">{guard?.employee_code ?? "—"}</td>
-                      <td>{place?.name ?? "—"}</td>
-                      <td className="mono">{row.check_in_at ? time(row.check_in_at) : "—"}</td>
-                      <td>
-                        <span className={`cbadge ${row.status === "late" ? "cbadge--late" : "cbadge--on"}`}>
-                          <span className="cdot" />
-                          {row.status === "late" ? "late" : "on duty"}
-                        </span>
-                      </td>
-                    </tr>
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{guard?.full_name ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {guard?.employee_code ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <span className="block">{place?.name ?? "—"}</span>
+                        {place?.district && (
+                          <span className="block text-xs text-muted-foreground">
+                            {place.district}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {row.check_in_at ? time(row.check_in_at) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.check_in_at ? elapsed(row.check_in_at) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <StatusPill status={row.status === "late" ? "late" : "on_duty"} />
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
-      </div>
-
-      <p className="admin-note">
-        <Icon name="shield-alt" />
-        <span>
-          Live location, rosters and the deployment map arrive in Phase 2. Attendance recorded now
-          is already the real ledger — hours and overtime on this page are computed by the database
-          from punch pairs, not estimated.
-        </span>
-      </p>
+      </Panel>
     </div>
   );
 }

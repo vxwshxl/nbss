@@ -27,16 +27,15 @@ export const contentType = "image/png";
 /* Literals rather than the CSS custom properties, because Satori resolves no
    cascade — but they are the same values `globals.css` sets, and INK and PAPER
    have swapped jobs along with the site: PAPER is now the ground, INK the type. */
-const GOLD = "#8C6210";
-const GREEN = "#0B6B45";
-const RUST = "#A83B22";
+const BRAND = "#19A96E";
+const BRAND_DEEP = "#0F7A4E";
 const PAPER = "#FFFFFF";
-const INK = "#101A15";
-const INK_DIM = "#3D4F45";
-const INK_MUT = "#57685C";
-const BAND = "#DCEBE1";
-const BAND_LINE = "#A9C9B6";
-const RULE = "#C8D5CB";
+const INK = "#171717";
+const INK_DIM = "#4D4D4D";
+const INK_MUT = "#7D7D7D";
+const BAND = "#F2F8F4";
+const BAND_LINE = "#DCEBE1";
+const RULE = "#E6E6E6";
 
 /** One Aronai tile, repeated across the band. Mirrors the SVG pattern 1:1. */
 function AronaiTile({ x }: { x: number }) {
@@ -58,7 +57,7 @@ function AronaiTile({ x }: { x: number }) {
           top: 2,
           width: 10,
           height: 10,
-          border: `1.5px solid ${GOLD}`,
+          border: `1.5px solid ${BRAND_DEEP}`,
           transform: "rotate(45deg)",
         }}
       />
@@ -69,7 +68,7 @@ function AronaiTile({ x }: { x: number }) {
           top: 2,
           width: 10,
           height: 10,
-          border: `1.5px solid ${GREEN}`,
+          border: `1.5px solid ${BRAND}`,
           transform: "rotate(45deg)",
         }}
       />
@@ -80,7 +79,7 @@ function AronaiTile({ x }: { x: number }) {
           top: 4,
           width: 6,
           height: 6,
-          background: RUST,
+          background: BRAND_DEEP,
           transform: "rotate(45deg)",
         }}
       />
@@ -224,7 +223,7 @@ export default function OpengraphImage() {
           <div style={{ display: "flex" }}>
             {site.address.city}, {site.address.state} ({site.address.region})
           </div>
-          <div style={{ display: "flex", color: GOLD }}>{site.phone}</div>
+          <div style={{ display: "flex", color: BRAND_DEEP, fontWeight: 600 }}>{site.phone}</div>
         </div>
 
         <AronaiBand />
