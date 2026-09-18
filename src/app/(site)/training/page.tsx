@@ -1,28 +1,34 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
-import { Icon } from "@/components/Icon";
-import {
-  CtaBand,
-  Eyebrow,
-  PageHead,
-  SectionHead,
-  Shot,
-  TickList,
-  VideoBand,
-} from "@/components/blocks";
+import { Eyebrow, TickList, VideoBand } from "@/components/marketing/blocks";
+import { CtaBand } from "@/components/marketing/cta-band";
+import { PageHead } from "@/components/marketing/page-head";
+import { PhotoStrip } from "@/components/marketing/photo-strip";
+import { Reveal } from "@/components/marketing/reveal";
+import { Section, SectionHead } from "@/components/marketing/section";
+import { StepList, type Step } from "@/components/marketing/step-list";
+import { Button } from "@/components/ui/button";
 import { photosIn, syllabus } from "@/content/gallery";
-import { canonical } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo/page-metadata";
+import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
-export const metadata: Metadata = {
-  alternates: canonical("/training"),
+export const metadata: Metadata = pageMetadata({
   title: "Training — the six areas every guard is trained in",
   description:
-    "Guarding duties, physical fitness and parade, fire safety, first aid, access control and crowd control — completed before a first posting.",
-};
+    "Guarding duties, physical fitness and parade, fire safety and emergency response, first aid, access control and crowd control — completed before a first posting, and revisited afterwards.",
+  path: "/training",
+  keywords: [
+    "security guard training Assam",
+    "security guard training Kokrajhar",
+    "fire safety training security guard",
+    "police verification security guard Assam",
+  ],
+});
 
-const VERIFICATION = [
+const VERIFICATION: Step[] = [
   {
     n: "01",
     title: "Police verification",
@@ -45,34 +51,51 @@ export default function TrainingPage() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd(
+          breadcrumbStructuredData([
+            { name: "Home", path: "/" },
+            { name: "Training", path: "/training" },
+          ]),
+        )}
+      />
+
       <PageHead
-        kicker="06"
-        sub="Training"
+        eyebrow="Training"
         crumb="Training"
         title="Trained before anyone stands at your gate."
         lede="Six areas, covered before a first posting and revisited afterwards. A guard who freezes at a fire alarm has not been careless — somebody skipped the training."
         image="/img/nbss/training-classroom.jpg"
       />
 
-      <section className="section">
-        <div className="wrap split">
-          <div className="split__copy">
-            <Eyebrow num="01" text="The premise" />
-            <h2 className="sec-h">Most guarding failures are training failures.</h2>
-            <p className="prose">
-              A guard who lets a vehicle out because the paperwork looked roughly right has not
-              been dishonest — he has been untrained. A guard who argues with an agitated attendant
-              in a hospital corridor has not been rude. In each case there is a module behind the
-              mistake.
-            </p>
-            <p className="prose">
-              So we do not deploy on the strength of an interview. Our guards undergo training in
-              guarding duties, physical fitness and parade, fire safety and emergency response,
-              first-aid support, access control and gate management, and crowd control and
-              discipline. Sessions are run with external instructors where the subject calls for
-              it — the emergency-response training on this page was conducted with SDRF Assam.
-            </p>
+      <Section>
+        <div className="grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:items-start">
+          <Reveal>
+            <SectionHead
+              num="01"
+              kicker="The premise"
+              title="Most guarding failures are training failures."
+              className="mb-6"
+            />
+            <div className="flex flex-col gap-4 text-base leading-relaxed text-muted-foreground">
+              <p>
+                A guard who lets a vehicle out because the paperwork looked roughly right
+                has not been dishonest — he has been untrained. A guard who argues with an
+                agitated attendant in a hospital corridor has not been rude. In each case
+                there is a module behind the mistake.
+              </p>
+              <p>
+                So we do not deploy on the strength of an interview. Our guards undergo
+                training in guarding duties, physical fitness and parade, fire safety and
+                emergency response, first-aid support, access control and gate management,
+                and crowd control and discipline. Sessions are run with external instructors
+                where the subject calls for it — the emergency-response training on this
+                page was conducted with SDRF Assam.
+              </p>
+            </div>
             <TickList
+              className="mt-7"
               items={[
                 "Training completed before the first independent posting",
                 "Uniform, cap and identity card issued to every guard",
@@ -81,118 +104,114 @@ export default function TrainingPage() {
                 "Site-specific briefing before every new posting",
               ]}
             />
-          </div>
+          </Reveal>
 
-          <figure className="split__fig">
-            <div className="split__media">
-              <Image
-                src="/img/nbss/parade-ranks.jpg"
-                alt="NBSS guards drawn up in ranks with batons during parade drill"
-                fill
-                sizes="(max-width: 880px) 100vw, 40vw"
-              />
-            </div>
-            <figcaption>
-              Drill ranks — bearing, spacing and discipline.
-              <span>National Bodo Security Service</span>
-            </figcaption>
-          </figure>
+          <Reveal delay={80}>
+            <figure>
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-app-line-soft bg-muted">
+                <Image
+                  src="/img/nbss/parade-ranks.jpg"
+                  alt="NBSS guards drawn up in ranks with batons during parade drill"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                  className="object-cover"
+                />
+              </div>
+              <figcaption className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Drill ranks — bearing, spacing and discipline.{" "}
+                <span className="text-muted-foreground/70">
+                  National Bodo Security Service
+                </span>
+              </figcaption>
+            </figure>
+          </Reveal>
         </div>
-      </section>
+      </Section>
 
-      <section className="section section--alt">
-        <div className="wrap">
-          <SectionHead
-            num="02"
-            kicker="What we train"
-            title="Six areas, every guard."
-            lede="These are the areas named in our training programme. They are the ones that decide what happens on a site at three in the morning."
-          />
-          <div className="modules">
-            {syllabus.map((m, i) => (
-              <article className="module" key={m.code} style={{ "--i": i } as React.CSSProperties}>
-                <div className="module__top">
-                  <span className="module__c">{m.code}</span>
-                </div>
-                <h3 className="module__t">{m.title}</h3>
-                <p className="module__p">{m.body}</p>
+      <Section alt>
+        <SectionHead
+          num="02"
+          kicker="What we train"
+          title="Six areas, every guard."
+          lede="These are the areas named in our training programme. They are the ones that decide what happens on a site at three in the morning."
+        />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {syllabus.map((module, i) => (
+            <Reveal key={module.code} delay={Math.min(i, 6) * 60}>
+              <article className="flex h-full flex-col rounded-2xl border border-app-line-soft bg-card p-6 shadow-card">
+                <span className="font-mono text-xs font-bold tracking-[0.18em] text-primary">
+                  {module.code}
+                </span>
+                <h3 className="mt-4 font-display text-lg leading-snug font-bold tracking-tight">
+                  {module.title}
+                </h3>
+                <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
+                  {module.body}
+                </p>
               </article>
-            ))}
-          </div>
+            </Reveal>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      <section className="section">
-        <div className="wrap">
-          <SectionHead
-            num="03"
-            kicker="Before the uniform"
-            title="Verification runs alongside, and it is the harder gate."
-          />
-          <div className="verify">
-            {VERIFICATION.map((v, i) => (
-              <article className="vstep" key={v.n} style={{ "--i": i } as React.CSSProperties}>
-                <span className="vstep__n">{v.n}</span>
-                <h3>{v.title}</h3>
-                <p>{v.body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Section>
+        <SectionHead
+          num="03"
+          kicker="Before the uniform"
+          title="Verification runs alongside, and it is the harder gate."
+          lede="Training makes a guard useful. Verification is what makes them safe to put on your site in the first place, and it is the step an agency in a hurry is most tempted to skip."
+        />
+        <StepList steps={VERIFICATION} />
+      </Section>
 
-      <section className="section section--alt">
-        <div className="wrap split">
-          <div className="split__copy">
+      <Section alt>
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <Reveal>
             <Eyebrow num="04" text="Parade" />
-            <h2 className="sec-h">Turnout, in motion.</h2>
-            <p className="prose">
-              Parade is where discipline becomes visible. It is also where a supervisor catches the
-              uniform, the cap, the identity card and the bearing — before a client has to notice
-              any of them.
+            <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
+              Turnout, in motion.
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              Parade is where discipline becomes visible. It is also where a supervisor
+              catches the uniform, the cap, the identity card and the bearing — before a
+              client has to notice any of them.
             </p>
-          </div>
-          <VideoBand
-            src="/video/nbss-parade.mp4"
-            poster="/img/nbss/parade-salute.jpg"
-            caption="NBSS parade, Kokrajhar."
-          />
+          </Reveal>
+          <Reveal delay={80}>
+            <VideoBand
+              src="/video/nbss-parade.mp4"
+              poster="/img/nbss/parade-salute.jpg"
+              caption="NBSS parade, Kokrajhar."
+            />
+          </Reveal>
         </div>
-      </section>
+      </Section>
 
       {photos.length > 0 && (
-        <section className="section">
-          <div className="wrap">
-            <SectionHead num="05" kicker="Sessions" title="Training and parade, photographed." />
-            <div className="peek">
-              {photos.map((p, i) => (
-                <Shot
-                  key={p.src}
-                  photo={{ ...p, tall: false }}
-                  index={i}
-                  sizes="(max-width: 700px) 50vw, 25vw"
-                />
-              ))}
-            </div>
-          </div>
-        </section>
+        <Section>
+          <SectionHead num="05" kicker="Sessions" title="Training and parade, photographed." />
+          <PhotoStrip photos={photos.slice(0, 6)} />
+        </Section>
       )}
 
-      <section className="section section--pillars">
-        <div className="wrap narrow">
-          <header className="sec-head">
-            <Eyebrow num="◆" text="Join us" />
-            <h2 className="sec-h">Freshers welcome. Training is provided.</h2>
-            <p className="sec-lede">
-              You need to be reasonably fit, willing to work shifts, and able to produce Aadhaar and
-              address proof for verification. Everything else, we teach.
-            </p>
-            <Link className="btn btn--gold btn--lg" href="/careers">
-              See open positions <Icon name="arrow" />
+      <Section alt>
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <Eyebrow num="◆" text="Join us" className="justify-center" />
+          <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
+            Freshers welcome. Training is provided.
+          </h2>
+          <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-muted-foreground">
+            You need to be reasonably fit, willing to work shifts, and able to produce
+            Aadhaar and address proof for verification. Everything else, we teach.
+          </p>
+          <Button asChild size="lg" className="mt-7 h-11 px-6 text-base">
+            <Link href="/careers">
+              See open positions
+              <ArrowRight data-icon="inline-end" />
             </Link>
-          </header>
-        </div>
-      </section>
+          </Button>
+        </Reveal>
+      </Section>
 
       <CtaBand />
     </>

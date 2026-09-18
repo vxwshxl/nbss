@@ -9,7 +9,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Phone } from "lucide-react";
 
 import { Mark } from "@/components/brand";
-import { ThemeSwitch } from "@/components/theme-switch";
 import { SliderNav, type SliderNavItem } from "@/components/ui/slider-nav";
 import { site, tel } from "@/content/site";
 import { cn } from "@/lib/utils";
@@ -35,6 +34,16 @@ const ITEMS: SliderNavItem[] = [
 const FOOTER_GAP = 12;
 
 /**
+ * Pages whose first element is a full-bleed stage built to be sat on top of;
+ * everything else gets a spacer of the bar's own height.
+ *
+ * Decided here, from the path, rather than taken as a prop each page passes: a
+ * `pt-*` copied onto six pages is a `pt-*` that will be wrong on the seventh,
+ * and the nav is the only thing that knows how tall it is.
+ */
+const OVERLAY_ROUTES = new Set(["/"]);
+
+/**
  * The public header: a floating island that contracts once the page has been
  * scrolled.
  *
@@ -49,19 +58,7 @@ const FOOTER_GAP = 12;
  * has cleared the top of the document, which is the moment it stops reading as
  * part of the hero and starts reading as an overlay that needs its own ground.
  */
-export function TopNav({
-  overlay = false,
-}: {
-  /**
-   * Let page content run underneath the bar. The landing hero is a full-height
-   * stage designed to be overlaid; every other page starts with a heading that
-   * would otherwise sit behind a fixed, translucent island. Those pages get a
-   * spacer of the bar's own height instead of each remembering to pad itself —
-   * a `pt-*` copied onto six pages is a `pt-*` that will be wrong on the
-   * seventh.
-   */
-  overlay?: boolean;
-}) {
+export function TopNav() {
   const island = useRef<HTMLDivElement>(null);
   const header = useRef<HTMLElement>(null);
   const pathname = usePathname();
@@ -69,6 +66,7 @@ export function TopNav({
   const activeIndex = ITEMS.findIndex((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
   );
+  const overlay = OVERLAY_ROUTES.has(pathname);
 
   // The bar yields to the footer. Once the footer's top edge climbs up to the
   // island, the header is pushed up by the same amount, so it scrolls off with
@@ -132,6 +130,14 @@ export function TopNav({
         <div
           ref={island}
           data-nav-island
+          // Over the landing hero the island has no ground of its own until it
+          // sticks, so its text is sitting directly on a near-black
+          // photograph. Without this the wordmark and the nav pill render in
+          // `foreground` — dark ink on a dark plate — and the brand is
+          // invisible for the first viewport of the most important page on the
+          // site. The attribute drops off the moment `data-stuck` lands, which
+          // is exactly when the island gains a background to be read against.
+          data-overlay={overlay || undefined}
           className={cn(
             "group/nav pointer-events-auto mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 border border-transparent px-3 py-2",
             // Two rows on a phone, so it needs corners a pill cannot give it.
@@ -140,7 +146,8 @@ export function TopNav({
             "data-stuck:max-w-4xl data-stuck:border-border data-stuck:bg-card/75 data-stuck:shadow-lg data-stuck:backdrop-blur-xl",
             // The island is translucent from the first frame on a phone. On
             // desktop it earns its background by being scrolled past; here the
-            // nav sits directly on the headline with nowhere else to go.
+            // nav sits directly on the headline with nowhere else to go —
+            // which is also why the overlay inversion below is desktop-only.
             "max-md:border-border max-md:bg-card/75 max-md:shadow-lg max-md:backdrop-blur-xl",
           )}
         >
@@ -149,6 +156,13 @@ export function TopNav({
             aria-label={`${site.shortName} home`}
             className="press order-1 flex shrink-0 items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
           >
+            {/* The mark is a painted shield with its own dark ground, so over
+                the hero photograph it needs a plate of its own to sit on. That
+                plate, and the inverted text beside it, are applied from CSS —
+                see `[data-nav-island][data-overlay]:not([data-stuck])` in
+                globals.css. It is one condition governing five elements, and
+                expressing it as five compound Tailwind variants was both
+                unreadable and a spelling nobody could verify at a glance. */}
             <Mark size={32} priority />
             {/* The full name is the first thing to go when space runs short:
                 hidden below lg, and again once the island contracts at any
@@ -158,7 +172,7 @@ export function TopNav({
               <span className="font-display text-sm font-bold tracking-tight">
                 {site.shortName}
               </span>
-              <span className="text-[10px] whitespace-nowrap text-muted-foreground max-lg:hidden group-data-stuck/nav:hidden">
+              <span className="nav-tagline text-[10px] whitespace-nowrap text-muted-foreground max-lg:hidden group-data-stuck/nav:hidden">
                 {site.tagline}
               </span>
             </span>
@@ -183,7 +197,6 @@ export function TopNav({
           </div>
 
           <div className="order-2 ml-auto flex shrink-0 items-center gap-2 md:order-3 md:ml-0">
-            <ThemeSwitch className="max-lg:hidden" />
             {/* The phone number is the call to action on this site, not a
                 sign-up. Most of the people who reach this page want a guard at
                 a gate next week and would rather say so out loud. On a phone it

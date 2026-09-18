@@ -3,6 +3,23 @@
 @import "shadcn/tailwind.css";
 
 /* ---------------------------------------------------------------------------
+ * `dark:` is disarmed, not deleted.
+ *
+ * This product ships one palette (see ThemeProvider, which pins `forcedTheme`).
+ * But the vendored shadcn primitives carry `dark:` utilities throughout, and
+ * Tailwind v4's default `dark` variant is `@media (prefers-color-scheme: dark)`
+ * — so simply removing a class-based override does not switch dark mode off, it
+ * hands it to the reader's operating system. A guard opening the check-in
+ * screen on a phone set to dark would get half a dark theme over a light one.
+ *
+ * Pointing the variant at a selector that never appears in the document
+ * compiles every one of those utilities to a rule that cannot match, without
+ * editing sixteen upstream files. If a real dark theme is ever wanted, this
+ * becomes `(&:is(.dark *))` again and the `.dark` token block comes back.
+ * ------------------------------------------------------------------------- */
+@custom-variant dark (&:is(.nbss-never-dark *));
+
+/* ---------------------------------------------------------------------------
  * Geist, self-hosted. Two variable woff2 files carry the whole product — the
  * marketing headline, the console body and the tabular figures in an
  * attendance sheet all draw from one 68 KB download. Self-hosted rather than
@@ -29,8 +46,6 @@
   --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
   --font-display: var(--font-sans);
 }
-
-@custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
  * Motion system. CSS's built-in easings are too weak to read as intentional, so
@@ -67,23 +82,16 @@
   --press-scale-sm: 0.98;
 }
 
-/* Modal scrim. A 10% black veil separates a dialog from a white page, but over
- * the near-black dark canvas it dims nothing at all and the dialog reads as
- * floating on the page rather than above it — so dark mode needs a much
- * heavier veil to do the same job. */
+/* Modal scrim. A 10% black veil is all a dialog needs to separate itself from
+ * a white page — enough to push the page back, not so much that the content
+ * behind it stops being legible context for the decision in front. */
 :root {
   --scrim: oklch(0 0 0 / 0.1);
 }
 
-.dark {
-  --scrim: oklch(0 0 0 / 0.55);
-}
-
 /* The top-nav pill highlighter. These were raw rgba() literals inside the
- * component, which is why the marketing header broke the moment dark mode was
- * switched on: a deep gold tuned for a white pill turns to mud on the dark
- * canvas, and its near-black active label became unreadable. The two palettes
- * the component already carried now live here and swap with the theme. */
+ * component; hoisting them into tokens is what lets the pill be re-tuned in one
+ * place rather than at the four call sites that had drifted apart. */
 :root {
   --nav-pill-bg: linear-gradient(
     135deg,
@@ -99,28 +107,13 @@
   --nav-pill-label: oklch(0.29 0.07 72);
 }
 
-.dark {
-  --nav-pill-bg: linear-gradient(
-    135deg,
-    rgba(180, 130, 20, 0.38) 0%,
-    rgba(244, 215, 140, 0.5) 35%,
-    rgba(255, 240, 180, 0.42) 55%,
-    rgba(180, 130, 20, 0.32) 100%
-  );
-  --nav-pill-border: rgba(244, 215, 140, 0.45);
-  --nav-pill-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 14px rgba(244, 215, 140, 0.22);
-  --nav-pill-shimmer: rgba(255, 240, 180, 0.55);
-  --nav-pill-label: oklch(0.25 0.06 74);
-}
-
 /* ---------------------------------------------------------------------------
  * Marketing surface. Only the public landing pulls these in; the app shell
  * never touches them. Every value resolves from the same primary/border/
  * foreground tokens the product uses, so the landing recolours with the theme
- * and there is no second palette to keep in sync. The dark values are not the
- * light ones dimmed — a hairline grid that reads at 5.5% on white disappears
- * entirely on near-black, and an emerald glow needs more chroma to survive it.
+ * and there is no second palette to keep in sync. The hairline grid sits at
+ * 5% and the glow at 18% — any stronger and the decoration starts competing
+ * with the headline it is meant to sit behind.
  * ------------------------------------------------------------------------- */
 :root {
   --hero-grid: oklch(0.16 0 0 / 0.05);
@@ -129,8 +122,8 @@
   --hero-halo: oklch(0.58 0.14 159 / 0.3);
   --hero-vignette: oklch(1 0 0);
   /* Device bezel + screen. A mock phone/browser is a physical object: it stays
-   * dark in both themes, the way a real one on a desk does. Only the screen
-   * inside follows the theme. */
+   * dark whatever the page around it does, the way a real one on a desk does.
+   * Only the screen inside it is page-coloured. */
   --bezel: oklch(0.24 0 0);
   --bezel-edge: oklch(0.42 0 0);
   --panel-shadow: 0 32px 80px -24px oklch(0.16 0 0 / 0.28), 0 4px 16px -4px oklch(0.16 0 0 / 0.1);
@@ -141,21 +134,10 @@
   --tl-green: oklch(0.75 0.17 145);
 }
 
-.dark {
-  --hero-grid: oklch(1 0 0 / 0.055);
-  --hero-glow: oklch(0.72 0.16 159 / 0.22);
-  --hero-glow-soft: oklch(0.72 0.16 159 / 0.1);
-  --hero-halo: oklch(0.72 0.16 159 / 0.38);
-  --hero-vignette: oklch(0.13 0 0);
-  --bezel: oklch(0.2 0 0);
-  --bezel-edge: oklch(0.38 0 0);
-  --panel-shadow: 0 32px 80px -24px oklch(0 0 0 / 0.7), 0 4px 16px -4px oklch(0 0 0 / 0.5);
-}
-
-/* WhatsApp's brand green. Fixed in both themes, like the device bezel above:
- * it is someone else's mark, not part of our palette, and a WhatsApp button
- * that is a different green in dark mode stops being recognisable as one —
- * which is the entire reason for using the brand colour at all. */
+/* WhatsApp's brand green. Someone else's mark rather than part of our palette,
+ * so it is stated exactly and never re-derived from the brand hue — a WhatsApp
+ * button in almost-WhatsApp-green stops being recognisable as one, which is
+ * the entire reason for using the brand colour at all. */
 :root {
   --whatsapp: oklch(0.76 0.185 150);
   --whatsapp-hover: oklch(0.71 0.18 150);
@@ -169,11 +151,10 @@
  * of the same sheet. The blooms are fixed, so they stay put while a long fee
  * table scrolls past instead of sliding up out of the window.
  *
- * Dark mode is not the light values dimmed. A bloom that reads at 6% on white
- * is invisible on near-black, so the dark ones carry far more chroma; and a
- * floating panel has to be *lighter* than its ground there, where the light one
- * is darker than its own. The hairlines invert for the same reason — a 8% black
- * line disappears on a dark canvas.
+ * The blooms are deliberately near-achromatic — 3% chroma, no more. At any
+ * real saturation they stop reading as light falling on a surface and start
+ * reading as a gradient somebody applied, which is the difference between a
+ * console that feels like paper and one that feels like a landing page.
  * ------------------------------------------------------------------------- */
 :root {
   --app-bg: oklch(0.966 0.002 265);
@@ -189,19 +170,6 @@
   /* Drives the sidebar column, the drawer and everything that reflows with
    * them, so collapsing to the icon rail is a single value change. */
   --rail-w: 16rem;
-}
-
-.dark {
-  --app-bg: oklch(0.115 0 0);
-  --app-bloom-1: oklch(0.46 0.11 275 / 0.34);
-  --app-bloom-2: oklch(0.48 0.1 55 / 0.24);
-  --app-bloom-3: oklch(0.47 0.11 159 / 0.3);
-  --app-line: oklch(1 0 0 / 0.1);
-  --app-line-soft: oklch(1 0 0 / 0.07);
-  --app-shadow-card: 0 1px 2px oklch(0 0 0 / 0.4),
-    0 10px 28px -14px oklch(0 0 0 / 0.6);
-  --app-shadow-raised: 0 2px 4px oklch(0 0 0 / 0.4),
-    0 20px 44px -20px oklch(0 0 0 / 0.7);
 }
 
 @theme inline {
@@ -270,9 +238,9 @@
  *
  * The raw brand green is kept as `--brand` for the mark and the Aronai band,
  * where it must be exactly the colour on the company's own stationery. The
- * `--primary` beside it is that hue pulled darker in light mode and lighter in
- * dark, because a button has to carry white text at 4.5:1 and the stationery
- * green does not. Same hue, two jobs. */
+ * `--primary` beside it is that same hue pulled darker, because a button has
+ * to carry white text at 4.5:1 and the stationery green does not. One hue,
+ * two jobs. */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.16 0 0);
@@ -302,9 +270,7 @@
   color-scheme: light;
   /* The sidebar is a panel that floats on the app ground, not a dark rail
    * welded to the edge of the window. `primary` is the fill of the item you
-   * are standing on and `accent` the wash under the pointer — they were the
-   * other way round when the rail was black, which is why every nav wrote
-   * `bg-sidebar-accent` for active and `/60` of the same colour for hover. */
+   * are standing on and `accent` the wash under the pointer. */
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.16 0 0);
   --sidebar-primary: oklch(0.16 0 0);
@@ -319,47 +285,6 @@
   --brand: oklch(0.65 0.144 159);
   --brand-ink: oklch(0.99 0 0);
   --aronai-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='10' viewBox='0 0 24 10'%3E%3Cpath fill='%23000' d='M0 5 5 0l5 5-5 5zM12 5l5-5 5 5-5 5z'/%3E%3Cpath fill='%23000' d='M5 5 7.5 2.5 10 5 7.5 7.5z' opacity='.5'/%3E%3C/svg%3E");
-}
-
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.13 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.17 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.17 0 0);
-  --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.72 0.16 159);
-  --primary-foreground: oklch(0.16 0.02 159);
-  --secondary: oklch(0.24 0 0);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.24 0 0);
-  --muted-foreground: oklch(0.68 0 0);
-  --accent: oklch(0.28 0.03 159);
-  --accent-foreground: oklch(0.96 0.02 159);
-  --destructive: oklch(0.7 0.19 22.2);
-  --destructive-foreground: oklch(0.16 0.02 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.72 0.15 159);
-  --chart-1: oklch(0.7 0.15 159);
-  --chart-2: oklch(0.7 0.15 245);
-  --chart-3: oklch(0.8 0.14 75);
-  --chart-4: oklch(0.68 0.17 300);
-  --chart-5: oklch(0.7 0.18 15);
-  /* Lighter than the ground it floats on, where the light panel was darker
-   * than its own. A floating surface catches the light in both themes; the
-   * old value (0.1) sat *below* the 0.13 canvas and read as a hole in it. */
-  --sidebar: oklch(0.19 0 0);
-  --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-primary: oklch(0.95 0 0);
-  --sidebar-primary-foreground: oklch(0.16 0 0);
-  --sidebar-accent: oklch(0.26 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(1 0 0 / 0.09);
-  --sidebar-ring: oklch(0.72 0.16 159);
-  --brand: oklch(0.72 0.15 159);
-  --brand-ink: oklch(0.16 0.02 159);
 }
 
 @layer base {
@@ -789,21 +714,16 @@
  * whole map is one third-party subtree, and this is where it is made to look
  * like the rest of the product.
  *
- * The tile filter is the important one. OpenStreetMap tiles are a light raster.
- * On the dark theme an un-filtered map is a blinding white rectangle in the
- * middle of a near-black page — which matters here more than in most products,
- * because the person most likely to open a map at 2 a.m. is a supervisor
- * checking why a gate is empty.
+ * Leaflet writes its own class names into the DOM at runtime, so there is
+ * nothing for a Tailwind utility to attach to — the whole map is one
+ * third-party subtree, and this is where it is made to look like the rest of
+ * the product rather than like a map someone embedded.
  * ------------------------------------------------------------------------- */
 .leaflet-container {
   font-family: var(--font-sans);
   background: var(--muted);
   outline: none;
   z-index: 0; /* keeps panes under dialogs and popovers */
-}
-
-.dark .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7);
 }
 
 .leaflet-bar,
@@ -893,6 +813,41 @@
   box-shadow: 0 0 0 1px var(--destructive), 0 2px 6px oklch(0 0 0 / 0.35);
 }
 
+/* ---------------------------------------------------------------------------
+ * The marketing header, while it is overlaid on the hero.
+ *
+ * On the landing page the island has no ground of its own until it sticks, so
+ * for the first viewport its contents sit directly on a near-black photograph.
+ * Left alone the wordmark renders in `foreground` — dark ink on a dark plate —
+ * and the brand is invisible on the most important screen of the site.
+ *
+ * Written here rather than as Tailwind variants because it is one condition
+ * governing five elements. As utilities it was five copies of
+ * `md:group-data-overlay/nav:group-not-data-stuck/nav:…`, which is both
+ * unreadable and a spelling nobody can verify at a glance.
+ *
+ * Desktop only: below `md` the island carries its own translucent background
+ * from the first frame (there is nowhere else for the nav to go on a phone),
+ * so its contents are already being read against a light surface.
+ * ------------------------------------------------------------------------- */
+@media (width >= 48rem) {
+  [data-nav-island][data-overlay]:not([data-stuck]) {
+    color: oklch(1 0 0);
+  }
+
+  /* The mark is a painted shield on its own dark ground, so it needs a plate
+   * to sit on rather than just lighter text around it. */
+  [data-nav-island][data-overlay]:not([data-stuck]) img {
+    background: oklch(1 0 0 / 0.92);
+    padding: 2px;
+    box-shadow: 0 0 0 1px oklch(1 0 0 / 0.3);
+  }
+
+  [data-nav-island][data-overlay]:not([data-stuck]) .nav-tagline {
+    color: oklch(1 0 0 / 0.7);
+  }
+}
+
 /* Global affordance: clickable elements get a pointer cursor (unlayered so it
    overrides framework defaults), disabled ones show not-allowed. */
 button:not(:disabled),
@@ -914,8 +869,9 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* Global thin, subtle scrollbars. The thumb uses currentColor at low opacity so
-   it stays light on the dark sidebar and dark on light surfaces automatically. */
+/* Global thin, subtle scrollbars. The thumb is currentColor at low opacity, so
+   it takes its weight from whatever it is scrolling rather than being a fixed
+   grey that is too heavy on one surface and invisible on another. */
 * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, currentColor 20%, transparent) transparent;

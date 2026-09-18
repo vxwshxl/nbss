@@ -387,6 +387,60 @@ const enquiryInbox: AiTool = {
   },
 };
 
+const mySite: AiTool = {
+  name: "my_site",
+  description:
+    "The signed-in client's own site: who is checked in there right now, the man-hours and overtime billed this month, and how many shifts were worked. Use this for any question a client asks about their own cover.",
+  parameters: z.object({}),
+  jsonSchema: empty,
+  roles: ["client"],
+  run: async () => {
+    const supabase = await supabaseServer();
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    // Which rows come back is decided by the client's row-level policy in
+    // Postgres, not by a filter written here — see rule 3 at the top of this
+    // file. A `WHERE` clause in a tool is a disclosure waiting for somebody to
+    // refactor it away.
+    const [live, month] = await Promise.all([
+      supabase
+        .from("attendance")
+        .select("id, check_in_at, profiles(full_name), sites(name)")
+        .is("check_out_at", null)
+        .order("check_in_at", { ascending: false }),
+      supabase
+        .from("attendance")
+        .select("worked_minutes, overtime_minutes")
+        .gte("check_in_at", monthStart.toISOString()),
+    ]);
+
+    const rows = month.data ?? [];
+
+    return {
+      onDutyNow: (live.data ?? []).map((r) => {
+        const guard = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+        const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
+        return {
+          // A first name and a site. A client is entitled to know their site is
+          // staffed; they are not entitled to a guard's employee code, their
+          // coordinates, or where else that person works.
+          guard: guard?.full_name ?? "unknown",
+          site: place?.name ?? "your site",
+          since: stamp(r.check_in_at),
+        };
+      }),
+      thisMonth: {
+        shifts: rows.length,
+        manHours: hours(rows.reduce((s, r) => s + (r.worked_minutes ?? 0), 0)),
+        overtime: hours(rows.reduce((s, r) => s + (r.overtime_minutes ?? 0), 0)),
+      },
+    };
+  },
+};
+
 const myShifts: AiTool = {
   name: "my_shifts",
   description:
@@ -444,6 +498,7 @@ const ALL_TOOLS: AiTool[] = [
   guardAttendance,
   enquiryInbox,
   myShifts,
+  mySite,
 ];
 
 /** The tools this caller is offered. The first of the two locks; see rule 2. */
@@ -468,6 +523,7 @@ const LABELS: Record<string, string> = {
   guard_attendance: "Read that guard's shifts",
   enquiry_inbox: "Checked the enquiry inbox",
   my_shifts: "Read your own shifts",
+  my_site: "Checked the cover at your site",
 };
 
 export function toolLabel(name: string): string {

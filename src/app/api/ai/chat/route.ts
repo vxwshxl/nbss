@@ -73,11 +73,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  // The assistant is an office tool. A guard's question is "am I checked in",
-  // which the duty screen answers in one look and a chat box answers worse.
-  if (ctx.role !== "admin" && ctx.role !== "supervisor") {
-    return NextResponse.json({ error: "Not available for this account." }, { status: 403 });
-  }
+  // Every signed-in role may ask. What differs is what can be answered: the
+  // tool catalogue is filtered by role in `lib/ai/tools`, and every tool runs
+  // on the request-scoped Supabase client, so a guard asking about another
+  // guard is refused by Postgres rather than by a check written here.
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

@@ -48,7 +48,7 @@ export function Reveal({
 
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) return;
+        if (!entry?.isIntersecting) return;
         el.dataset.shown = "";
         io.disconnect();
       },

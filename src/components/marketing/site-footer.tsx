@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Clock3, MapPin, Phone } from "lucide-react";
 
+import { BRANDS } from "@/components/brand-icons";
 import { AronaiBand, Mark } from "@/components/brand";
 import { services } from "@/content/services";
 import { site, tel } from "@/content/site";
+import { cn } from "@/lib/utils";
 
 const COMPANY = [
   { href: "/about", label: "About NBSS" },
@@ -47,20 +49,43 @@ export function SiteFooter() {
               {site.descriptor}
             </p>
 
+            {/* The glyph carries the meaning here, not the word: a row of
+                recognisable marks is read at a glance where a row of the words
+                "Facebook" and "WhatsApp" has to be read one at a time. Each
+                mark is its owner's own colour, washed back to a tint until
+                hovered so four brand colours do not shout over the footer.
+                The accessible name is still the full sentence. */}
             <ul className="mt-5 flex flex-wrap gap-2" aria-label="Social profiles">
-              {site.social.map((s) => (
-                <li key={s.label}>
-                  <a
-                    href={s.url}
-                    aria-label={`${site.name} on ${s.label}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="press inline-flex rounded-full border border-app-line-soft bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:border-app-line hover:text-primary"
-                  >
-                    {s.label}
-                  </a>
-                </li>
-              ))}
+              {site.social.map((profile) => {
+                const brand = BRANDS[profile.label];
+                const Icon = brand?.icon;
+                return (
+                  <li key={profile.label}>
+                    <a
+                      href={profile.url}
+                      aria-label={`${site.name} on ${profile.label}`}
+                      title={profile.label}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={brand ? ({ "--brand-social": brand.color } as React.CSSProperties) : undefined}
+                      className={cn(
+                        "press inline-flex items-center gap-2 rounded-full border border-app-line-soft bg-background px-3 py-2 text-xs font-medium transition-colors",
+                        "hover:border-(--brand-social)/40 hover:bg-(--brand-social)/8",
+                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                      )}
+                    >
+                      {Icon ? (
+                        <Icon className="size-4 text-(--brand-social)" />
+                      ) : (
+                        profile.label
+                      )}
+                      <span className={Icon ? "sr-only sm:not-sr-only" : undefined}>
+                        {profile.label}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 

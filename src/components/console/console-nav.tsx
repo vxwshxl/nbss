@@ -97,12 +97,17 @@ const groups: NavGroup[] = [
         icon: Inbox,
         roles: ["admin", "supervisor"],
       },
-      {
-        href: "/console/assistant",
-        label: "Assistant",
-        icon: Sparkles,
-        roles: ["admin", "supervisor"],
-      },
+    ],
+  },
+  {
+    label: "Ask",
+    items: [
+      // Every role, because every role has a different question and the same
+      // answer surface. A guard asks "how many hours did I work this week", a
+      // client asks "is anyone on my gate", an admin asks "which sites are
+      // empty" — and each of those is answered from tools that only that role
+      // is offered. See `lib/ai/tools`.
+      { href: "/console/assistant", label: "Assistant", icon: Sparkles },
     ],
   },
   {

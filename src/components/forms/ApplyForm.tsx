@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { submitApplication } from "@/app/actions";
 import { emptyFormState } from "@/lib/validate";
 import { educationOptions, type Vacancy } from "@/content/gallery";
-import { Eyebrow } from "@/components/blocks";
+import { Eyebrow } from "@/components/marketing/blocks";
 import { FormProvider } from "@/components/forms/FormContext";
 import {
   ConsentBox,
@@ -36,25 +36,25 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
 
   return (
     <FormProvider state={state} seed={{ vacancy_id: vacancy.id }}>
-      <form className="form form--boxed" action={action} noValidate>
+      <form className="relative flex flex-col gap-5 rounded-2xl border border-app-line-soft bg-card p-6 shadow-card sm:p-8" action={action} noValidate>
         <input type="hidden" name="vacancy_id" value={vacancy.id} />
 
-        <div className="form__head">
+        <div className="flex flex-col gap-1.5">
           <Eyebrow num="APP" text="Application" />
-          <h3 className="form__title">Apply for {vacancy.title}</h3>
-          <p className="form__lede">
+          <h3 className="font-display text-xl font-bold tracking-tight">Apply for {vacancy.title}</h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {vacancy.type} · {vacancy.location}
           </p>
         </div>
 
         <ErrorSummary />
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField name="name" label="Full name" required maxLength={80} autoComplete="name" />
           <TextField name="age" label="Age" required type="number" min={18} max={60} inputMode="numeric" />
         </div>
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             name="phone"
             label="Phone"
@@ -73,7 +73,7 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
           />
         </div>
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             name="district"
             label="Home district"
@@ -96,9 +96,9 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
 
         <Honeypot />
 
-        <div className="form__foot">
+        <div className="flex flex-col gap-3 border-t border-app-line-soft pt-5">
           <SubmitButton idle="Submit application" busy="Sending…" />
-          <p className="form__small">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Bring Aadhaar, address proof and two references to the verification interview.
           </p>
         </div>

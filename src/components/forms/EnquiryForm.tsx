@@ -36,15 +36,15 @@ export function EnquiryForm() {
 
   return (
     <FormProvider state={state}>
-      <form className="form" action={action} noValidate>
+      <form className="relative flex flex-col gap-5" action={action} noValidate>
         <ErrorSummary />
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField name="name" label="Your name" required maxLength={80} autoComplete="name" />
           <TextField name="company" label="Organisation" maxLength={120} autoComplete="organization" />
         </div>
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             name="phone"
             label="Phone"
@@ -78,9 +78,9 @@ export function EnquiryForm() {
 
         <Honeypot />
 
-        <div className="form__foot">
+        <div className="flex flex-col gap-3 border-t border-app-line-soft pt-5">
           <SubmitButton idle="Send the enquiry" busy="Sending…" />
-          <p className="form__small">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Answered within one working day. Urgent? Call the deployment desk on {site.phone}.
           </p>
         </div>

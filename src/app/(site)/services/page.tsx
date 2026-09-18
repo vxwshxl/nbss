@@ -1,16 +1,26 @@
 import type { Metadata } from "next";
 
-import { CtaBand, Eyebrow, PageHead, ServiceCards } from "@/components/blocks";
+import { CtaBand } from "@/components/marketing/cta-band";
+import { PageHead } from "@/components/marketing/page-head";
+import { Section, SectionHead } from "@/components/marketing/section";
+import { ServiceBento } from "@/components/marketing/service-bento";
+import { StepList, type Step } from "@/components/marketing/step-list";
 import { services } from "@/content/services";
-import { canonical } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo/page-metadata";
+import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
-export const metadata: Metadata = {
-  alternates: canonical("/services"),
+export const metadata: Metadata = pageMetadata({
   title: "Services — trained security personnel for every kind of site",
-  description: `Security guards supplied to ${services.length} kinds of site, from Kokrajhar across the Bodoland Territorial Council and lower Assam.`,
-};
+  description: `Security guards supplied to ${services.length} kinds of site — schools, hospitals, government offices, banks and ATMs, hotels, retail, industry, construction and events — from Kokrajhar across the Bodoland Territorial Region and lower Assam.`,
+  path: "/services",
+  keywords: [
+    "security guard services Kokrajhar",
+    "security agency services Assam",
+    ...services.map((s) => `${s.name} Assam`),
+  ],
+});
 
-const STEPS = [
+const STEPS: Step[] = [
   {
     n: "01",
     title: "You call or send the form",
@@ -36,39 +46,37 @@ const STEPS = [
 export default function ServicesPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd(
+          breadcrumbStructuredData([
+            { name: "Home", path: "/" },
+            { name: "Services", path: "/services" },
+          ]),
+        )}
+      />
+
       <PageHead
-        kicker={services.length}
-        sub="Our services"
+        eyebrow={`${services.length} services`}
         crumb="Services"
         title="We provide security personnel for these sites."
         lede="One thing, done properly: trained, disciplined and police-verified guards, posted where you need them and supervised after they get there."
         image="/img/nbss/guards-on-duty.jpg"
       />
 
-      <section className="section">
-        <div className="wrap">
-          <ServiceCards services={services} />
-        </div>
-      </section>
+      <Section>
+        <ServiceBento services={services} />
+      </Section>
 
-      <section className="section section--alt">
-        <div className="wrap">
-          <header className="sec-head">
-            <Eyebrow num="◆" text="How a contract starts" />
-            <h2 className="sec-h">Four steps, and a visit before any number.</h2>
-          </header>
-
-          <ol className="steps">
-            {STEPS.map((s, i) => (
-              <li className="step" key={s.n} style={{ "--i": i } as React.CSSProperties}>
-                <span className="step__n">{s.n}</span>
-                <h3 className="step__t">{s.title}</h3>
-                <p className="step__p">{s.body}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+      <Section alt>
+        <SectionHead
+          num="◆"
+          kicker="How a contract starts"
+          title="Four steps, and a visit before any number."
+          lede="Nobody is asked to sign anything before the site has been walked and the quotation has been read line by line."
+        />
+        <StepList steps={STEPS} />
+      </Section>
 
       <CtaBand />
     </>

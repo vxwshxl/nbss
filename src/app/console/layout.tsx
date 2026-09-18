@@ -13,7 +13,6 @@ import {
 } from "@/components/console/impersonation";
 import { UserMenu } from "@/components/console/user-menu";
 import { AppShell, RAIL_COOKIE } from "@/components/shell/app-shell";
-import { ThemeSwitch } from "@/components/theme-switch";
 import { currentSession, homeFor } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { site } from "@/content/site";
@@ -69,11 +68,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     <AppShell
       brand={site.shortName}
       brandHref={homeFor(profile.role)}
-      assistantHref={
-        profile.role === "admin" || profile.role === "supervisor"
-          ? "/console/assistant"
-          : undefined
-      }
+      assistantHref="/console/assistant"
       navIndex={navIndexFor(profile.role)}
       defaultCollapsed={railCollapsed}
       mark={<Wordmark secondary={ROLE_LABEL[profile.role]} size={32} priority />}
@@ -90,15 +85,12 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       topbarSecondary={
-        <>
-          {/* Only offered to an admin who is not already viewing as someone —
-              chaining impersonation is refused by the action anyway, and a
-              control that always fails is worse than no control. */}
-          {isAdmin && !impersonating && (
-            <ImpersonationPicker people={people} start={startImpersonation} />
-          )}
-          <ThemeSwitch />
-        </>
+        // Only offered to an admin who is not already viewing as someone —
+        // chaining impersonation is refused by the action anyway, and a control
+        // that always fails is worse than no control.
+        isAdmin && !impersonating ? (
+          <ImpersonationPicker people={people} start={startImpersonation} />
+        ) : undefined
       }
       topbarRight={
         <UserMenu

@@ -34,24 +34,3 @@ export async function getAiContext(): Promise<AiContext | null> {
     realUserId: session.realProfile.id,
   };
 }
-
-/**
- * Who the assistant thinks it is talking to.
- *
- * Only the two office roles reach the assistant at all — see the nav and the
- * route — so this is a short list on purpose rather than an unfinished one. A
- * guard's question is "am I checked in", which the duty screen answers in one
- * look and a chat box answers worse.
- */
-export function audienceFor(role: Role): string {
-  switch (role) {
-    case "admin":
-      return "an administrator of the agency, who can see every site, every guard and the audit log.";
-    case "supervisor":
-      return "a supervisor running deployments day to day.";
-    case "guard":
-      return "a guard, who may only be told about their own shifts.";
-    case "client":
-      return "a client, who may only be told about their own site.";
-  }
-}

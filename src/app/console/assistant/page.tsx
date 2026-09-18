@@ -2,39 +2,33 @@ import type { Metadata } from "next";
 
 import { Assistant } from "@/components/ai/assistant";
 import { isAssistantConfigured } from "@/lib/ai/assistant";
-import { requireRoleSession } from "@/lib/auth";
+import { personaFor } from "@/lib/ai/personas";
+import { requireSession } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Assistant" };
 export const dynamic = "force-dynamic";
 
 /**
- * Suggestions worth a tap.
+ * Every role has an assistant; they are not the same assistant.
  *
- * Each one is a question this product can genuinely answer from a lookup, and
- * each is phrased the way somebody at the desk would actually say it. A prompt
- * chip that produces "I don't have that" is worse than no chip: it teaches the
- * reader the whole feature is decorative.
+ * What differs is not the wording on this page but the tools the role is
+ * offered underneath it — an admin gets the duty board, the site register and
+ * the enquiry desk; a guard gets exactly one lookup, their own shifts; a client
+ * gets exactly one, the cover at their own site. So the greeting, the
+ * suggestions and the scope note all come from the same `personaFor` table the
+ * system prompt reads, and the tool catalogue is filtered by role in
+ * `lib/ai/tools`. A role cannot be shown a suggestion it has no way to answer.
  */
-const SUGGESTIONS = [
-  "Who is on duty right now?",
-  "Which sites have nobody in them?",
-  "How many hours were worked this week?",
-  "Is anything waiting for review?",
-  "What has come in on the enquiry forms?",
-  "How much overtime went out in the last 30 days?",
-];
-
 export default async function AssistantPage() {
-  // Office roles only — the same gate the route enforces, so a stale link
-  // lands somewhere sensible rather than on a screen that refuses every turn.
-  const { profile } = await requireRoleSession("admin", "supervisor");
+  const { profile } = await requireSession();
+  const persona = personaFor(profile.role);
 
   return (
     <Assistant
       greetingName={profile.full_name.split(" ")[0] ?? profile.full_name}
-      suggestions={SUGGESTIONS}
+      suggestions={persona.suggestions}
       configured={isAssistantConfigured()}
-      scopeNote="I read this console's own records — duty, sites, hours, the roster and the enquiry desk. I can't see anything the console can't, I don't change anything, and every figure I give you names the lookup it came from."
+      scopeNote={persona.scopeNote}
     />
   );
 }

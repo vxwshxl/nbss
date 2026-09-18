@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { LegalArticle } from "@/components/Legal";
+import { LegalArticle } from "@/components/marketing/legal-article";
 import { privacyPolicy, termsAndConditions } from "@/content/legal";
 import { canonical } from "@/lib/seo";
 

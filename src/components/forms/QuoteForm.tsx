@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useActionState, useEffect, useRef } from "react";
 
 import { submitQuote } from "@/app/actions";
@@ -7,7 +8,7 @@ import { emptyFormState } from "@/lib/validate";
 import { districtOptions } from "@/content/site";
 import { services } from "@/content/services";
 import { startWhenOptions } from "@/content/gallery";
-import { Eyebrow } from "@/components/blocks";
+import { Eyebrow } from "@/components/marketing/blocks";
 import { FormProvider } from "@/components/forms/FormContext";
 import {
   ConsentBox,
@@ -48,17 +49,17 @@ export function QuoteForm({
 
   return (
     <FormProvider state={state} seed={service ? { service } : undefined}>
-      <form className={`form${boxed ? " form--boxed" : ""}`} action={action} noValidate>
-        <div className="form__head">
+      <form className={cn("relative flex flex-col gap-5", boxed && "rounded-2xl border border-app-line-soft bg-card p-6 shadow-card sm:p-8")} action={action} noValidate>
+        <div className="flex flex-col gap-1.5">
           <Eyebrow num="RFQ" text="Request a quotation" />
-          <h3 className="form__title">
+          <h3 className="font-display text-xl font-bold tracking-tight">
             Tell us the site. We will survey it and cost it line by line.
           </h3>
         </div>
 
         <ErrorSummary />
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField name="name" label="Your name" required maxLength={80} autoComplete="name" />
           <TextField
             name="company"
@@ -69,7 +70,7 @@ export function QuoteForm({
           />
         </div>
 
-        <div className="form__row">
+        <div className="grid gap-5 sm:grid-cols-2">
           <TextField
             name="phone"
             label="Phone"
@@ -90,7 +91,7 @@ export function QuoteForm({
           placeholder="Choose a service…"
         />
 
-        <div className="form__row form__row--3">
+        <div className="grid gap-5 sm:grid-cols-3">
           <SelectField name="district" label="District" required options={districtOptions} />
           <TextField
             name="site_type"
@@ -124,9 +125,9 @@ export function QuoteForm({
 
         <Honeypot />
 
-        <div className="form__foot">
+        <div className="flex flex-col gap-3 border-t border-app-line-soft pt-5">
           <SubmitButton idle="Request the quotation" busy="Sending…" />
-          <p className="form__small">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             We visit the site before quoting a number. No obligation.
           </p>
         </div>
