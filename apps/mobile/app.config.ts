@@ -29,7 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "light",
 
   ios: {
-    bundleIdentifier: "in.co.nbss.ops",
+    bundleIdentifier: "com.nbss.okhrang",
     supportsTablet: false,
     infoPlist: {
       /**
@@ -61,7 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
 
   android: {
-    package: "in.co.nbss.ops",
+    package: "com.nbss.okhrang",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
