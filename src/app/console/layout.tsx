@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { signOut } from "@/app/console/actions";
 import { startImpersonation, stopImpersonation } from "@/app/console/impersonate";
 import { Wordmark } from "@/components/brand";
-import { ConsoleNav, navIndexFor } from "@/components/console/console-nav";
+import { ConsoleNav } from "@/components/console/console-nav";
+import { navIndexFor } from "@/components/console/nav-items";
 import {
   ImpersonationBanner,
   ImpersonationPicker,
