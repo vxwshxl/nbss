@@ -52,7 +52,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "clean": "rm -rf .expo dist tsconfig.tsbuildinfo",
-    "doctor": "npx expo-doctor"
+    "doctor": "npx expo-doctor",
+    "start:go": "expo start --go"
   },
   "private": true,
   "description": "The app guards, supervisors and clients carry. Live location, SOS, and the service book."

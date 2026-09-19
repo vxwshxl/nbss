@@ -22,6 +22,7 @@ import {
   type SiteProximity,
 } from "@/lib/duty";
 import { checkTracking, isTracking, openSettings, requestTracking, type PermissionState } from "@/lib/location";
+import { CAN_RECEIVE_PUSH, IS_EXPO_GO, runtimeLimitation } from "@/lib/runtime";
 import { color, space } from "@/theme/tokens";
 import { router } from "expo-router";
 
@@ -99,7 +100,20 @@ export function Duty() {
     const result = await punchIn(siteId);
     setBusy(null);
 
-    setMessage(result.ok ? { tone: "ok", text: result.message } : { tone: "bad", text: result.error });
+    setMessage(
+      result.ok
+        ? {
+            // The punch succeeded but nothing is being shared. Said plainly, because the
+            // phone looks identical either way and the consequence lands on somebody else
+            // — a supervisor watching a map that will never show this guard move.
+            tone: result.tracking === false ? "bad" : "ok",
+            text:
+              result.tracking === false
+                ? `${result.message} Your location is NOT being shared — tell your supervisor.`
+                : result.message,
+          }
+        : { tone: "bad", text: result.error },
+    );
     await load();
   };
 
@@ -193,6 +207,18 @@ export function Duty() {
           />
         )}
       </Card>
+
+      {/* ─────────────────── what this container cannot do, whatever the settings say */}
+      {IS_EXPO_GO && (
+        <Card tone="danger" title="This is a test build, not the real app">
+          <Text variant="body">{runtimeLimitation()}</Text>
+          <Text variant="caption" tone="muted">
+            {CAN_RECEIVE_PUSH
+              ? "Everything else works: checking in and out, raising an SOS, and the live feed while the app is open."
+              : "You can still raise an SOS from this phone and others will get it — this phone just will not receive one."}
+          </Text>
+        </Card>
+      )}
 
       {/* ──────────────────────────────────── the result of the last action */}
       {message && (

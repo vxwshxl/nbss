@@ -139,7 +139,17 @@ export async function nearbySites(sites: Site[]): Promise<{
 }
 
 export type PunchResult =
-  | { ok: true; message: string; distanceM: number }
+  | {
+      ok: true;
+      message: string;
+      distanceM: number;
+      /**
+       * Whether the background location stream actually started. False means the punch
+       * was recorded but the control room will not see this guard move — which the duty
+       * screen has to say out loud, because it is invisible from the phone otherwise.
+       */
+      tracking?: boolean;
+    }
   | { ok: false; error: string };
 
 export async function punchIn(siteId: string): Promise<PunchResult> {
@@ -174,11 +184,29 @@ export async function punchIn(siteId: string): Promise<PunchResult> {
    * Tracking starts only once the punch is recorded, and at the cadence the server
    * named — which may already be 'emergency' if a colleague raised an SOS while this
    * guard was walking to the gate.
+   *
+   * Deliberately not allowed to fail the check-in. By this line the punch is already
+   * committed in Postgres: the guard IS on duty, their hours have started, and the
+   * ledger says so. Letting an exception here surface as "check-in failed" would tell
+   * them the opposite of the truth and send them to press the button again — which
+   * `punch_in` would then refuse as a double check-in, leaving them convinced they are
+   * off duty while payroll says otherwise.
+   *
+   * It throws for real reasons: Expo Go has no background location service on either
+   * platform, and the background permission may have been declined. Both are reported
+   * as a separate `tracking` flag that the duty screen renders as its own warning.
    */
-  await startTracking(punch.mode ?? "on_duty");
+  let tracking = true;
+  try {
+    await startTracking(punch.mode ?? "on_duty");
+  } catch (err) {
+    tracking = false;
+    console.warn("[duty] checked in, but tracking did not start:", err);
+  }
 
   return {
     ok: true,
+    tracking,
     distanceM: punch.distance_m ?? 0,
     message:
       punch.status === "late"
@@ -202,9 +230,22 @@ export async function punchOut(): Promise<PunchResult> {
 
   if (error) return { ok: false, error: error.message };
 
-  // Stopped after the server has accepted the check-out, not before. If the RPC had
-  // failed, the guard is still on duty and must still be visible on the map.
-  await stopTracking();
+  /**
+   * Stopped after the server has accepted the check-out, not before: if the RPC had
+   * failed, the guard is still on duty and must still be visible on the map.
+   *
+   * And not allowed to fail the check-out either. `punch_out` has already deleted the
+   * guard_positions row and closed any open SOS, so the guard is off duty as far as
+   * every other screen is concerned; a local stream that refuses to stop is a battery
+   * problem, not a reason to tell them their shift did not end. The task stops itself
+   * on its next ping regardless — `record_position` returns `not_on_duty` and the task
+   * tears itself down.
+   */
+  try {
+    await stopTracking();
+  } catch (err) {
+    console.warn("[duty] checked out, but tracking did not stop cleanly:", err);
+  }
 
   const punch = (data ?? {}) as {
     site_name?: string;
@@ -253,8 +294,15 @@ export async function raiseSos(kind: SosKind = "other", note?: string): Promise<
 
   const alert = (data ?? {}) as { alert_id?: string; notified?: number; repeat?: boolean };
 
-  // Straight to the dense cadence, without waiting to be told by the next ping.
-  await restartTracking("emergency");
+  // Straight to the dense cadence, without waiting to be told by the next ping. Wrapped
+  // because by this point the alert is raised, the pushes are queued and colleagues'
+  // phones are already ringing — a tracking cadence that could not be changed is not a
+  // reason to tell the guard their SOS failed.
+  try {
+    await restartTracking("emergency");
+  } catch (err) {
+    console.warn("[sos] raised, but could not switch to emergency tracking:", err);
+  }
 
   return {
     ok: true,
@@ -293,8 +341,13 @@ export async function closeSos(
 
   if (error) return { ok: false, error: error.message };
 
-  // Back to the battery-friendly cadence now the emergency is over.
-  await restartTracking("on_duty");
+  // Back to the battery-friendly cadence now the emergency is over. Same reasoning: the
+  // alert is closed in the database either way.
+  try {
+    await restartTracking("on_duty");
+  } catch (err) {
+    console.warn("[sos] closed, but could not restore normal tracking:", err);
+  }
   return { ok: true };
 }
 
