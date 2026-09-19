@@ -1,32 +1,23 @@
 {
-  "name": "nbss",
+  "name": "@nbss/web",
   "version": "1.0.0",
   "private": true,
-  "description": "National Bodo Security Services — security, facility management and manpower agency, Kokrajhar, Bodoland Territorial Region",
-  "packageManager": "pnpm@10.26.2",
-  "engines": {
-    "node": ">=20.9.0"
-  },
+  "description": "The public site and the operations console.",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm lint",
-    "logo": "node scripts/generate-logo-assets.mjs",
-    "clean": "rm -rf .next out tsconfig.tsbuildinfo",
-    "clean:all": "pnpm clean && rm -rf node_modules",
-    "reinstall": "pnpm clean:all && pnpm install",
-    "db:migrate": "node scripts/migrate.mjs",
-    "db:status": "node scripts/migrate.mjs --status",
-    "db:types": "node scripts/gen-db-types.mjs",
+    "clean": "rm -rf .next .next-build out tsconfig.tsbuildinfo",
+    "logo": "node ../../scripts/generate-logo-assets.mjs",
     "build:safe": "NEXT_DIST_DIR=.next-build next build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1116.0",
     "@aws-sdk/s3-request-presigner": "^3.1116.0",
     "@gsap/react": "^2.1.2",
+    "@nbss/shared": "workspace:*",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "@tailwindcss/postcss": "^4.3.3",
@@ -53,19 +44,11 @@
     "@eslint/eslintrc": "^3.3.1",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^22.18.1",
-    "@types/pg": "^8.23.1",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "eslint": "^9.35.0",
     "eslint-config-next": "^15.5.4",
-    "pg": "^8.23.0",
     "sharp": "^0.35.3",
     "typescript": "^5.9.2"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "unrs-resolver"
-    ]
   }
 }

@@ -1,0 +1,36 @@
+{
+  "name": "nbss",
+  "version": "1.0.0",
+  "private": true,
+  "description": "National Bodo Security Services — security, facility management and manpower agency, Kokrajhar, Bodoland Territorial Region",
+  "packageManager": "pnpm@10.26.2",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @nbss/web dev",
+    "dev:mobile": "pnpm --filter @nbss/mobile start",
+    "build": "pnpm --filter @nbss/web build",
+    "start": "pnpm --filter @nbss/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "check": "pnpm typecheck && pnpm lint",
+    "clean": "pnpm -r clean && rm -rf node_modules/.cache",
+    "clean:all": "pnpm clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules",
+    "reinstall": "pnpm clean:all && pnpm install",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:status": "node scripts/migrate.mjs --status",
+    "db:types": "node scripts/gen-db-types.mjs",
+    "db:sql": "node scripts/sql.mjs",
+    "logo": "node scripts/generate-logo-assets.mjs",
+    "env:link": "node scripts/link-env.mjs",
+    "app:icons": "node scripts/generate-app-icons.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.1",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "sharp": "^0.35.3",
+    "typescript": "^5.9.2"
+  }
+}

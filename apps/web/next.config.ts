@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   /**
+   * `@nbss/shared` ships TypeScript source rather than a compiled `dist`, so
+   * both this app and the Expo app bundle it from the same files. A build step
+   * between them would only introduce a stale artefact to forget to rebuild.
+   */
+  transpilePackages: ["@nbss/shared"],
+
+  /**
    * `next build` and `next dev` share .next by default, so running a build
    * while the dev server is up deletes the manifests it is holding open — the
    * dev server then throws a stream of ENOENT for _buildManifest.js.tmp and

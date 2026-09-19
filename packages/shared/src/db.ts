@@ -8,7 +8,13 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Enums = {
   attendance_status: "present" | "late" | "absent" | "pending_review" | "rejected";
   punch_method: "geofence" | "supervisor_override" | "auto_close";
+  service_request_status: "new" | "reviewing" | "quoted" | "accepted" | "declined" | "withdrawn" | "converted";
   shift_status: "scheduled" | "in_progress" | "completed" | "missed" | "cancelled";
+  sos_audience: "on_duty_guard" | "staff" | "client";
+  sos_kind: "intruder" | "medical" | "fire" | "assault" | "other";
+  sos_response: "responding" | "on_scene" | "cannot_respond";
+  sos_status: "active" | "acknowledged" | "resolved" | "false_alarm";
+  tracking_mode: "on_duty" | "emergency";
   user_role: "admin" | "supervisor" | "guard" | "client";
 };
 
@@ -147,6 +153,156 @@ export type Database = {
         };
         Relationships: [];
       };
+      device_tokens: {
+        Row: {
+          id: string;
+          profile_id: string;
+          token: string;
+          platform: string;
+          device_name: string | null;
+          app_version: string | null;
+          last_seen_at: string;
+          disabled_at: string | null;
+          disabled_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          token: string;
+          platform: string;
+          device_name?: string | null;
+          app_version?: string | null;
+          last_seen_at?: string;
+          disabled_at?: string | null;
+          disabled_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          token?: string;
+          platform?: string;
+          device_name?: string | null;
+          app_version?: string | null;
+          last_seen_at?: string;
+          disabled_at?: string | null;
+          disabled_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      guard_location_history: {
+        Row: {
+          id: number;
+          guard_id: string;
+          site_id: string | null;
+          attendance_id: string | null;
+          lat: number;
+          lng: number;
+          accuracy_m: number;
+          heading: number | null;
+          speed_mps: number | null;
+          battery: number | null;
+          inside_fence: boolean | null;
+          distance_m: number | null;
+          mode: Enums["tracking_mode"];
+          recorded_at: string;
+          device_reported_at: string | null;
+          ping_reason: string | null;
+        };
+        Insert: {
+          id?: number;
+          guard_id: string;
+          site_id?: string | null;
+          attendance_id?: string | null;
+          lat: number;
+          lng: number;
+          accuracy_m: number;
+          heading?: number | null;
+          speed_mps?: number | null;
+          battery?: number | null;
+          inside_fence?: boolean | null;
+          distance_m?: number | null;
+          mode?: Enums["tracking_mode"];
+          recorded_at?: string;
+          device_reported_at?: string | null;
+          ping_reason?: string | null;
+        };
+        Update: {
+          id?: number;
+          guard_id?: string;
+          site_id?: string | null;
+          attendance_id?: string | null;
+          lat?: number;
+          lng?: number;
+          accuracy_m?: number;
+          heading?: number | null;
+          speed_mps?: number | null;
+          battery?: number | null;
+          inside_fence?: boolean | null;
+          distance_m?: number | null;
+          mode?: Enums["tracking_mode"];
+          recorded_at?: string;
+          device_reported_at?: string | null;
+          ping_reason?: string | null;
+        };
+        Relationships: [];
+      };
+      guard_positions: {
+        Row: {
+          guard_id: string;
+          site_id: string | null;
+          attendance_id: string | null;
+          lat: number;
+          lng: number;
+          accuracy_m: number;
+          heading: number | null;
+          speed_mps: number | null;
+          battery: number | null;
+          inside_fence: boolean | null;
+          distance_m: number | null;
+          mode: Enums["tracking_mode"];
+          recorded_at: string;
+          device_reported_at: string | null;
+          ping_reason: string | null;
+        };
+        Insert: {
+          guard_id: string;
+          site_id?: string | null;
+          attendance_id?: string | null;
+          lat: number;
+          lng: number;
+          accuracy_m: number;
+          heading?: number | null;
+          speed_mps?: number | null;
+          battery?: number | null;
+          inside_fence?: boolean | null;
+          distance_m?: number | null;
+          mode?: Enums["tracking_mode"];
+          recorded_at?: string;
+          device_reported_at?: string | null;
+          ping_reason?: string | null;
+        };
+        Update: {
+          guard_id?: string;
+          site_id?: string | null;
+          attendance_id?: string | null;
+          lat?: number;
+          lng?: number;
+          accuracy_m?: number;
+          heading?: number | null;
+          speed_mps?: number | null;
+          battery?: number | null;
+          inside_fence?: boolean | null;
+          distance_m?: number | null;
+          mode?: Enums["tracking_mode"];
+          recorded_at?: string;
+          device_reported_at?: string | null;
+          ping_reason?: string | null;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -167,7 +323,7 @@ export type Database = {
         Insert: {
           id: string;
           employee_code: string;
-          role?: Enums["user_role"];
+          role: Enums["user_role"];
           full_name: string;
           phone?: string | null;
           photo_key?: string | null;
@@ -195,6 +351,165 @@ export type Database = {
           pin_reset_at?: string | null;
           pin_reset_by?: string | null;
           last_seen_at?: string | null;
+        };
+        Relationships: [];
+      };
+      push_outbox: {
+        Row: {
+          id: number;
+          token: string;
+          profile_id: string | null;
+          alert_id: string | null;
+          title: string;
+          body: string;
+          data: Json | null;
+          priority: string;
+          channel_id: string | null;
+          sound: string | null;
+          ttl_seconds: number | null;
+          attempts: number;
+          request_id: number | null;
+          queued_at: string;
+          sent_at: string | null;
+          failed_at: string | null;
+          error: string | null;
+        };
+        Insert: {
+          id?: number;
+          token: string;
+          profile_id?: string | null;
+          alert_id?: string | null;
+          title: string;
+          body: string;
+          data?: Json | null;
+          priority?: string;
+          channel_id?: string | null;
+          sound?: string | null;
+          ttl_seconds?: number | null;
+          attempts?: number;
+          request_id?: number | null;
+          queued_at?: string;
+          sent_at?: string | null;
+          failed_at?: string | null;
+          error?: string | null;
+        };
+        Update: {
+          id?: number;
+          token?: string;
+          profile_id?: string | null;
+          alert_id?: string | null;
+          title?: string;
+          body?: string;
+          data?: Json | null;
+          priority?: string;
+          channel_id?: string | null;
+          sound?: string | null;
+          ttl_seconds?: number | null;
+          attempts?: number;
+          request_id?: number | null;
+          queued_at?: string;
+          sent_at?: string | null;
+          failed_at?: string | null;
+          error?: string | null;
+        };
+        Relationships: [];
+      };
+      service_requests: {
+        Row: {
+          id: string;
+          reference: string;
+          client_id: string | null;
+          contact_name: string;
+          organisation: string | null;
+          email: string | null;
+          phone: string;
+          service_type: string;
+          site_type: string | null;
+          district: string | null;
+          address: string | null;
+          lat: number | null;
+          lng: number | null;
+          guards_required: number | null;
+          armed: boolean;
+          shift_pattern: string | null;
+          start_date: string | null;
+          duration_months: number | null;
+          notes: string | null;
+          status: Enums["service_request_status"];
+          quoted_amount_paise: number | null;
+          quote_note: string | null;
+          handled_by: string | null;
+          handled_at: string | null;
+          site_id: string | null;
+          source: string;
+          user_agent: string | null;
+          ip: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reference: string;
+          client_id?: string | null;
+          contact_name: string;
+          organisation?: string | null;
+          email?: string | null;
+          phone: string;
+          service_type: string;
+          site_type?: string | null;
+          district?: string | null;
+          address?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          guards_required?: number | null;
+          armed?: boolean;
+          shift_pattern?: string | null;
+          start_date?: string | null;
+          duration_months?: number | null;
+          notes?: string | null;
+          status?: Enums["service_request_status"];
+          quoted_amount_paise?: number | null;
+          quote_note?: string | null;
+          handled_by?: string | null;
+          handled_at?: string | null;
+          site_id?: string | null;
+          source?: string;
+          user_agent?: string | null;
+          ip?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          reference?: string;
+          client_id?: string | null;
+          contact_name?: string;
+          organisation?: string | null;
+          email?: string | null;
+          phone?: string;
+          service_type?: string;
+          site_type?: string | null;
+          district?: string | null;
+          address?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          guards_required?: number | null;
+          armed?: boolean;
+          shift_pattern?: string | null;
+          start_date?: string | null;
+          duration_months?: number | null;
+          notes?: string | null;
+          status?: Enums["service_request_status"];
+          quoted_amount_paise?: number | null;
+          quote_note?: string | null;
+          handled_by?: string | null;
+          handled_at?: string | null;
+          site_id?: string | null;
+          source?: string;
+          user_agent?: string | null;
+          ip?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -256,6 +571,8 @@ export type Database = {
           active: boolean;
           created_at: string;
           updated_at: string;
+          client_id: string | null;
+          notify_client_on_sos: boolean;
         };
         Insert: {
           id?: string;
@@ -275,6 +592,8 @@ export type Database = {
           active?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_id?: string | null;
+          notify_client_on_sos?: boolean;
         };
         Update: {
           id?: string;
@@ -294,6 +613,128 @@ export type Database = {
           active?: boolean;
           created_at?: string;
           updated_at?: string;
+          client_id?: string | null;
+          notify_client_on_sos?: boolean;
+        };
+        Relationships: [];
+      };
+      sos_acknowledgements: {
+        Row: {
+          alert_id: string;
+          profile_id: string;
+          response: Enums["sos_response"];
+          lat: number | null;
+          lng: number | null;
+          distance_m: number | null;
+          at: string;
+        };
+        Insert: {
+          alert_id: string;
+          profile_id: string;
+          response: Enums["sos_response"];
+          lat?: number | null;
+          lng?: number | null;
+          distance_m?: number | null;
+          at?: string;
+        };
+        Update: {
+          alert_id?: string;
+          profile_id?: string;
+          response?: Enums["sos_response"];
+          lat?: number | null;
+          lng?: number | null;
+          distance_m?: number | null;
+          at?: string;
+        };
+        Relationships: [];
+      };
+      sos_alerts: {
+        Row: {
+          id: string;
+          site_id: string;
+          raised_by: string;
+          attendance_id: string | null;
+          kind: Enums["sos_kind"];
+          note: string | null;
+          lat: number | null;
+          lng: number | null;
+          accuracy_m: number | null;
+          inside_fence: boolean | null;
+          status: Enums["sos_status"];
+          raised_at: string;
+          acknowledged_at: string | null;
+          first_responder: string | null;
+          closed_at: string | null;
+          closed_by: string | null;
+          closing_note: string | null;
+          last_notified_at: string | null;
+          notify_count: number;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          raised_by: string;
+          attendance_id?: string | null;
+          kind?: Enums["sos_kind"];
+          note?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          accuracy_m?: number | null;
+          inside_fence?: boolean | null;
+          status?: Enums["sos_status"];
+          raised_at?: string;
+          acknowledged_at?: string | null;
+          first_responder?: string | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          closing_note?: string | null;
+          last_notified_at?: string | null;
+          notify_count?: number;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          raised_by?: string;
+          attendance_id?: string | null;
+          kind?: Enums["sos_kind"];
+          note?: string | null;
+          lat?: number | null;
+          lng?: number | null;
+          accuracy_m?: number | null;
+          inside_fence?: boolean | null;
+          status?: Enums["sos_status"];
+          raised_at?: string;
+          acknowledged_at?: string | null;
+          first_responder?: string | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          closing_note?: string | null;
+          last_notified_at?: string | null;
+          notify_count?: number;
+        };
+        Relationships: [];
+      };
+      sos_notifications: {
+        Row: {
+          id: number;
+          alert_id: string;
+          profile_id: string;
+          audience: Enums["sos_audience"];
+          at: string;
+        };
+        Insert: {
+          id?: number;
+          alert_id: string;
+          profile_id: string;
+          audience: Enums["sos_audience"];
+          at?: string;
+        };
+        Update: {
+          id?: number;
+          alert_id?: string;
+          profile_id?: string;
+          audience?: Enums["sos_audience"];
+          at?: string;
         };
         Relationships: [];
       };
@@ -373,8 +814,72 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: { [_ in never]: never };
+    Views: {
+      client_attendance: {
+        Row: {
+          id: string | null;
+          site_id: string | null;
+          site_name: string | null;
+          guard_id: string | null;
+          guard_name: string | null;
+          check_in_at: string | null;
+          check_out_at: string | null;
+          worked_minutes: number | null;
+          overtime_minutes: number | null;
+          status: Enums["attendance_status"] | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
+      acknowledge_sos: {
+        Args: {
+          p_alert_id: string;
+          p_response?: Enums["sos_response"];
+          p_lat?: number;
+          p_lng?: number;
+        };
+        Returns: Json;
+      };
+      broadcast_positions: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      client_owns_site: {
+        Args: {
+          p_site_id: string;
+        };
+        Returns: boolean;
+      };
+      close_sos: {
+        Args: {
+          p_alert_id: string;
+          p_status?: Enums["sos_status"];
+          p_note?: string;
+        };
+        Returns: Json;
+      };
+      collect_push_responses: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      drain_push_outbox: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: Json;
+      };
+      enqueue_sos_push: {
+        Args: {
+          p_alert_id: string;
+          p_repeat?: boolean;
+        };
+        Returns: number;
+      };
+      expire_stale_sos: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       geo_distance_m: {
         Args: {
           lat1: number;
@@ -384,6 +889,19 @@ export type Database = {
         };
         Returns: number;
       };
+      get_secret: {
+        Args: {
+          p_name: string;
+        };
+        Returns: string;
+      };
+      guard_rostered_to_site: {
+        Args: {
+          p_guard_id: string;
+          p_site_id: string;
+        };
+        Returns: boolean;
+      };
       is_admin: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
@@ -392,9 +910,23 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
+      may_read_site_channel: {
+        Args: {
+          p_topic: string;
+        };
+        Returns: boolean;
+      };
       my_role: {
         Args: Record<PropertyKey, never>;
         Returns: Enums["user_role"];
+      };
+      next_client_code: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      next_service_reference: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
       };
       point_in_ring: {
         Args: {
@@ -404,6 +936,87 @@ export type Database = {
         };
         Returns: boolean;
       };
+      prune_location_history: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      prune_push_outbox: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      punch_in: {
+        Args: {
+          p_site_id: string;
+          p_lat: number;
+          p_lng: number;
+          p_accuracy_m: number;
+          p_device_reported_at?: string;
+          p_photo_key?: string;
+          p_ip?: string;
+          p_user_agent?: string;
+        };
+        Returns: Json;
+      };
+      punch_out: {
+        Args: {
+          p_lat: number;
+          p_lng: number;
+          p_accuracy_m: number;
+          p_device_reported_at?: string;
+          p_photo_key?: string;
+          p_ip?: string;
+        };
+        Returns: Json;
+      };
+      raise_sos: {
+        Args: {
+          p_kind?: Enums["sos_kind"];
+          p_lat?: number;
+          p_lng?: number;
+          p_accuracy_m?: number;
+          p_note?: string;
+        };
+        Returns: Json;
+      };
+      record_position: {
+        Args: {
+          p_lat: number;
+          p_lng: number;
+          p_accuracy_m: number;
+          p_heading?: number;
+          p_speed_mps?: number;
+          p_battery?: number;
+          p_device_reported_at?: string;
+          p_ping_reason?: string;
+        };
+        Returns: Json;
+      };
+      register_device: {
+        Args: {
+          p_token: string;
+          p_platform: string;
+          p_device_name?: string;
+          p_app_version?: string;
+        };
+        Returns: Json;
+      };
+      release_device: {
+        Args: {
+          p_token: string;
+        };
+        Returns: Json;
+      };
+      renotify_unanswered_sos: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      set_secret: {
+        Args: {
+          p_name: string;
+          p_value: string;
+        };
+        Returns: string;
+      };
       site_fence_check: {
         Args: {
           p_site_id: string;
@@ -411,6 +1024,46 @@ export type Database = {
           p_lng: number;
         };
         Returns: { inside: boolean; distance_m: number }[];
+      };
+      sos_recipients: {
+        Args: {
+          p_alert_id: string;
+        };
+        Returns: { profile_id: string; audience: Enums["sos_audience"] }[];
+      };
+      submit_service_request: {
+        Args: {
+          p_service_type: string;
+          p_contact_name: string;
+          p_phone: string;
+          p_email?: string;
+          p_organisation?: string;
+          p_site_type?: string;
+          p_district?: string;
+          p_address?: string;
+          p_lat?: number;
+          p_lng?: number;
+          p_guards_required?: number;
+          p_armed?: boolean;
+          p_shift_pattern?: string;
+          p_start_date?: string;
+          p_duration_months?: number;
+          p_notes?: string;
+          p_source?: string;
+        };
+        Returns: Json;
+      };
+      tracking_mode_for: {
+        Args: {
+          p_site_id: string;
+        };
+        Returns: Enums["tracking_mode"];
+      };
+      withdraw_service_request: {
+        Args: {
+          p_id: string;
+        };
+        Returns: Json;
       };
     };
     Enums: Enums;
@@ -421,3 +1074,7 @@ export type Database = {
 /** Shorthand: `Row<"sites">` instead of the full path. */
 export type Row<T extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][T]["Row"];
+
+/** The same, for a view: `View<"client_attendance">`. */
+export type View<T extends keyof Database["public"]["Views"]> =
+  Database["public"]["Views"][T]["Row"];

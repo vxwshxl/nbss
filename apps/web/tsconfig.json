@@ -26,6 +26,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@nbss/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@nbss/shared/*": [
+        "../../packages/shared/src/*.ts"
       ]
     }
   },

@@ -1,0 +1,28 @@
+# The workspace. Three members, and the split is deliberate:
+#
+#   apps/web      the Next.js site and operations console
+#   apps/mobile   the Expo app guards and clients carry
+#   packages/*    code both of them must agree on — generated database types,
+#                 the employee-code identity rules, geofence maths, SOS shapes
+#
+# Anything that decides something (a fence verdict, a worked-minute total) lives
+# in Postgres, not here. `packages/shared` is for the vocabulary two clients
+# need in common, not for business rules that would then exist in two places.
+packages:
+  - apps/*
+  - packages/*
+
+# Expo's Metro bundler cannot follow pnpm's symlinked store for these, so they
+# are hoisted into a flat node_modules the way React Native expects.
+publicHoistPattern:
+  - "*eslint*"
+  - "*react-native*"
+  - "expo*"
+  - "@expo/*"
+  - "@react-native/*"
+  - "metro*"
+
+onlyBuiltDependencies:
+  - sharp
+  - unrs-resolver
+  - esbuild

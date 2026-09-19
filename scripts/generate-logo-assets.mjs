@@ -23,6 +23,15 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * Every path below is relative to the web app's `public/`, so the working
+ * directory is pinned here rather than depending on which package's script
+ * invoked this. Run it from the repository root or from apps/web; both work.
+ */
+process.chdir(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "apps", "web"));
 
 const SRC = "public/logo/NBSS.png";
 

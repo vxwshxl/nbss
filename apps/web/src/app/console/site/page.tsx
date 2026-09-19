@@ -54,9 +54,14 @@ function toRing(value: Json | null): [number, number][] | null {
  * accuracy readings, or their attendance anywhere else — so this page shows
  * presence and totals, and there is no evidence trail on it at all.
  *
- * Which rows reach here is decided by the guard's row-level policy in Postgres,
- * not by a filter written on this page. A `WHERE` clause in a page is a
- * disclosure waiting for someone to refactor it away.
+ * Which rows reach here is decided in Postgres, not by a filter written on this
+ * page — a `WHERE` clause in a page is a disclosure waiting for someone to
+ * refactor it away. But the mechanism is a view rather than a policy, and the
+ * difference matters: row level security filters rows, and an attendance row
+ * carries the guard's coordinates, accuracy readings and the object key of their
+ * check-in selfie. `client_attendance` (0004_client_scoping.sql) exposes only the
+ * ten columns above, filtered to `sites.client_id = auth.uid()`, and `attendance`
+ * itself stays closed to clients entirely.
  */
 export default async function ClientSitePage() {
   const profile = await requireRole("client");
@@ -68,12 +73,12 @@ export default async function ClientSitePage() {
 
   const [onDuty, month, sites] = await Promise.all([
     supabase
-      .from("attendance")
-      .select("id, site_id, check_in_at, profiles(full_name), sites(name)")
+      .from("client_attendance")
+      .select("id, site_id, site_name, guard_name, check_in_at")
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false }),
     supabase
-      .from("attendance")
+      .from("client_attendance")
       .select("worked_minutes, overtime_minutes, status")
       .gte("check_in_at", monthStart.toISOString()),
     supabase
@@ -90,6 +95,7 @@ export default async function ClientSitePage() {
 
   const onDutyBySite = new Map<string, number>();
   for (const row of live) {
+    if (!row.site_id) continue;
     onDutyBySite.set(row.site_id, (onDutyBySite.get(row.site_id) ?? 0) + 1);
   }
 
@@ -175,28 +181,24 @@ export default async function ClientSitePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {live.map((row) => {
-                  const guard = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-                  const place = Array.isArray(row.sites) ? row.sites[0] : row.sites;
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell>
-                        <span className="flex items-center gap-2.5">
-                          <Avatar className="size-8 border border-border">
-                            <AvatarFallback className="bg-muted text-[11px] font-semibold">
-                              {initials(guard?.full_name ?? "?")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{guard?.full_name ?? "—"}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell>{place?.name ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {row.check_in_at ? time(row.check_in_at) : "—"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {live.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      <span className="flex items-center gap-2.5">
+                        <Avatar className="size-8 border border-border">
+                          <AvatarFallback className="bg-muted text-[11px] font-semibold">
+                            {initials(row.guard_name ?? "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{row.guard_name ?? "—"}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell>{row.site_name ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.check_in_at ? time(row.check_in_at) : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
