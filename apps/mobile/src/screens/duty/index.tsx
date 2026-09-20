@@ -1,14 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
+import {
+  Clock3,
+  MapPin,
+  Phone,
+  Radio,
+  ShieldAlert,
+  ShieldCheck,
+  SatelliteDish,
+  TriangleAlert,
+} from "lucide-react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Linking, RefreshControl, StyleSheet, View } from "react-native";
 
+import { COMPANY, istTime, tel } from "@nbss/shared/company";
 import { formatDistance } from "@nbss/shared/geo";
 
 import { Button, LinkButton } from "@/components/button";
-import { Card } from "@/components/card";
 import { HoldButton } from "@/components/hold-button";
-import { Screen } from "@/components/screen";
-import { StatusPill } from "@/components/status-pill";
+import { PageHeader } from "@/components/page-header";
+import { Panel, PanelRow } from "@/components/panel";
+import { CardGrid, Screen } from "@/components/screen";
+import { StatCard } from "@/components/stat-card";
 import { Text } from "@/components/text";
+import { useLayout } from "@/hooks/use-breakpoint";
+import { useLoader } from "@/hooks/use-loader";
+import { useNow } from "@/hooks/use-now";
 import { useAuth } from "@/lib/auth";
 import {
   allSites,
@@ -18,84 +34,86 @@ import {
   punchOut,
   raiseSos,
   rosteredSites,
-  type OpenPunch,
   type SiteProximity,
 } from "@/lib/duty";
-import { checkTracking, isTracking, openSettings, requestTracking, type PermissionState } from "@/lib/location";
+import {
+  checkTracking,
+  isTracking,
+  openSettings,
+  requestTracking,
+  type PermissionState,
+} from "@/lib/location";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO, runtimeLimitation } from "@/lib/runtime";
 import { color, space } from "@/theme/tokens";
-import { router } from "expo-router";
 
 /**
- * The screen a guard actually uses.
+ * The screen a guard actually uses, laid out like the console's dashboards.
  *
- * It answers three questions in the order they are asked at a gate: am I on duty, can
- * I go on duty, and how do I get help. Everything else — the roster, the map, the
- * payslip — is a tab away, because at 6am in the rain this screen has one job.
+ * It answers three questions in the order they get asked at a gate: am I on duty, can I
+ * go on duty, and how do I get help. Everything else is a tab away, because at 6am in the
+ * rain this screen has one job.
  *
- * The permission banner is not boilerplate. On Android 11 and later, "Allow all the
- * time" cannot be requested from a dialog at all: the OS offers only "While using the
- * app", and background access has to be switched on by hand in Settings. A guard who
- * grants the first prompt and stops has an app that tracks them for as long as the
- * screen is on and then goes silent — which on the supervisor's map is
- * indistinguishable from a guard who went home. So the missing permission is stated
- * plainly, with the button that leads to the only place it can be granted.
+ * The permission Panel is not boilerplate. On Android 11 and later "Allow all the time"
+ * cannot be requested from a dialog at all — the OS offers only "While using the app",
+ * and background access has to be switched on by hand in Settings. A guard who grants the
+ * first prompt and stops has an app that tracks them while the screen is on and then goes
+ * silent, which on a supervisor's map is indistinguishable from a guard who went home.
  */
 export function Duty() {
   const { profile, signOut } = useAuth();
+  const { statColumns } = useLayout();
 
-  const [punch, setPunch] = useState<OpenPunch | null | undefined>(undefined);
-  const [proximity, setProximity] = useState<SiteProximity[]>([]);
-  const [fixAccuracy, setFixAccuracy] = useState<number | null>(null);
-  const [permission, setPermission] = useState<PermissionState | null>(null);
-  const [tracking, setTracking] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  /**
+   * Overrides the loaded permission state after a prompt, so the warning Panel disappears
+   * the instant the guard grants access rather than on the next reload.
+   */
+  const [askedPermission, setAskedPermission] = useState<PermissionState | null>(null);
 
   const load = useCallback(async () => {
-    const [current, permissionState, trackingNow] = await Promise.all([
+    const [punch, permission, tracking] = await Promise.all([
       openPunch(),
       checkTracking(),
       isTracking(),
     ]);
 
-    setPunch(current);
-    setPermission(permissionState);
-    setTracking(trackingNow);
+    // The site list is only needed when they are not already on duty, and reading a GPS
+    // fix costs battery — so it is skipped entirely for a guard mid-shift.
+    let proximity: SiteProximity[] = [];
+    let fixAccuracy: number | null = null;
 
-    // The site list is only needed when they are not already on duty, and reading a
-    // GPS fix costs battery — so it is skipped entirely for a guard mid-shift.
-    if (!current) {
+    if (!punch) {
       const rostered = await rosteredSites();
-      // A guard sent somewhere at short notice has no roster entry. Falling back to
-      // the whole register costs nothing, because the fence still decides.
       const sites = rostered.length > 0 ? rostered : await allSites();
       const near = await nearbySites(sites);
-      setProximity(near.proximity);
-      setFixAccuracy(near.fix?.accuracyM ?? null);
+      proximity = near.proximity;
+      fixAccuracy = near.fix?.accuracyM ?? null;
     }
+
+    return { punch, permission, tracking, proximity, fixAccuracy };
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, refreshing, reload } = useLoader(load);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }, [load]);
+  // Ticks, so "on shift for 7h 42m" counts up on its own instead of freezing at whatever
+  // it was when the screen mounted.
+  const now = useNow(30_000);
+
+  const punch = data?.punch;
+  const proximity = data?.proximity ?? [];
+  const fixAccuracy = data?.fixAccuracy ?? null;
+  const tracking = data?.tracking ?? false;
+  const permission = askedPermission ?? data?.permission ?? null;
 
   const doPunchIn = async (siteId: string) => {
     setBusy(siteId);
     setMessage(null);
 
-    // Permission is asked for here rather than on mount. A prompt that appears before
-    // anyone has pressed anything gets dismissed; one that appears when a guard is
-    // trying to start their shift has an obvious reason.
-    const granted = await requestTracking();
-    setPermission(granted);
+    // Asked here rather than on mount. A prompt that appears before anyone has pressed
+    // anything gets dismissed; one that appears when a guard is trying to start their
+    // shift has an obvious reason.
+    setAskedPermission(await requestTracking());
 
     const result = await punchIn(siteId);
     setBusy(null);
@@ -103,9 +121,6 @@ export function Duty() {
     setMessage(
       result.ok
         ? {
-            // The punch succeeded but nothing is being shared. Said plainly, because the
-            // phone looks identical either way and the consequence lands on somebody else
-            // — a supervisor watching a map that will never show this guard move.
             tone: result.tracking === false ? "bad" : "ok",
             text:
               result.tracking === false
@@ -114,7 +129,7 @@ export function Duty() {
           }
         : { tone: "bad", text: result.error },
     );
-    await load();
+    await reload();
   };
 
   const doPunchOut = async () => {
@@ -123,7 +138,7 @@ export function Duty() {
     const result = await punchOut();
     setBusy(null);
     setMessage(result.ok ? { tone: "ok", text: result.message } : { tone: "bad", text: result.error });
-    await load();
+    await reload();
   };
 
   const doRaiseSos = async () => {
@@ -132,14 +147,12 @@ export function Duty() {
       setMessage({ tone: "bad", text: result.error });
       return;
     }
-    // Straight onto the alarm screen, which is where the guard can see who has
-    // answered and can stand the alarm down when it is over.
     router.push(`/sos/${result.alertId}`);
   };
 
-  if (punch === undefined) {
+  if (data === undefined) {
     return (
-      <Screen scroll={false} style={styles.center}>
+      <Screen scroll={false} bottomInset={false} contentStyle={styles.center}>
         <ActivityIndicator color={color.primary} />
       </Screen>
     );
@@ -147,89 +160,80 @@ export function Duty() {
 
   const onDuty = Boolean(punch);
   const since = punch?.check_in_at ? new Date(punch.check_in_at) : null;
+  const elapsed = since ? Math.floor((now - since.getTime()) / 60000) : 0;
 
   return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.body}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} tintColor={color.primary} />}
+    <Screen
+      bottomInset={false}
+      contentStyle={styles.body}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.primary} />
+      }
     >
-      {/* ─────────────────────────────────────────────── who and where */}
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text variant="title" bold>
-            {profile?.full_name ?? "—"}
-          </Text>
-          <Text variant="caption" tone="muted">
-            {profile?.employee_code ?? "—"}
-          </Text>
-        </View>
-        <LinkButton label="Sign out" tone="muted" onPress={() => void signOut()} />
-      </View>
+      <PageHeader
+        eyebrow={onDuty ? "On duty" : "Off duty"}
+        title={profile?.full_name ?? "—"}
+        action={<LinkButton label="Sign out" tone="muted" onPress={() => void signOut()} />}
+      />
 
-      {/* ───────────────────────────────────────────────────── the state */}
-      <Card tone={onDuty ? "accent" : "default"}>
-        <View style={styles.stateRow}>
-          <View style={styles.stateText}>
-            <Text variant="caption" tone="muted" medium>
-              {onDuty ? "ON DUTY" : "OFF DUTY"}
-            </Text>
-            <Text variant="bodyLarge" semibold>
-              {onDuty ? (punch?.site_name ?? "Your site") : "Not checked in"}
-            </Text>
-            {since && (
-              <Text variant="caption" tone="muted" mono>
-                Since{" "}
-                {since.toLocaleTimeString("en-IN", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                  timeZone: "Asia/Kolkata",
-                })}{" "}
-                IST
-                {punch?.status === "late" ? " · marked late" : ""}
-              </Text>
-            )}
-          </View>
-          <StatusPill
-            tone={onDuty ? (tracking ? "live" : "stale") : "neutral"}
-            label={onDuty ? (tracking ? "Sharing location" : "Not sharing") : "Idle"}
-          />
-        </View>
-
-        {onDuty && (
-          <Button
-            label="Check out"
-            variant="secondary"
-            size="lg"
-            loading={busy === "out"}
-            onPress={() => void doPunchOut()}
-          />
-        )}
-      </Card>
+      {/* ───────────────────────────────────────── the figures, as on the console */}
+      <CardGrid columns={statColumns}>
+        <StatCard
+          label="Status"
+          value={onDuty ? "On duty" : "Off"}
+          hint={onDuty ? (punch?.site_name ?? "Your site") : "Not checked in"}
+          icon={onDuty ? ShieldCheck : ShieldAlert}
+          tone={onDuty ? "emerald" : "slate"}
+        />
+        <StatCard
+          label="On shift for"
+          value={onDuty ? `${Math.floor(elapsed / 60)}h ${String(elapsed % 60).padStart(2, "0")}m` : "—"}
+          hint={
+            since
+              ? `Since ${istTime(since)} IST`
+              : "Check in to start"
+          }
+          icon={Clock3}
+          tone="indigo"
+        />
+        <StatCard
+          label="Location"
+          value={onDuty ? (tracking ? "Sharing" : "Off") : "Idle"}
+          hint={onDuty ? (tracking ? "The control room can see you" : "Not being shared") : "Only while on duty"}
+          icon={SatelliteDish}
+          tone={onDuty ? (tracking ? "teal" : "rose") : "slate"}
+        />
+        <StatCard
+          label="Employee code"
+          value={profile?.employee_code ?? "—"}
+          hint={punch?.status === "late" ? "This shift marked late" : "Signed in"}
+          icon={Radio}
+          tone="violet"
+        />
+      </CardGrid>
 
       {/* ─────────────────── what this container cannot do, whatever the settings say */}
       {IS_EXPO_GO && (
-        <Card tone="danger" title="This is a test build, not the real app">
+        <Panel tone="amber" title="This is a test build, not the real app" icon={TriangleAlert}>
           <Text variant="body">{runtimeLimitation()}</Text>
           <Text variant="caption" tone="muted">
             {CAN_RECEIVE_PUSH
               ? "Everything else works: checking in and out, raising an SOS, and the live feed while the app is open."
               : "You can still raise an SOS from this phone and others will get it — this phone just will not receive one."}
           </Text>
-        </Card>
+        </Panel>
       )}
 
       {/* ──────────────────────────────────── the result of the last action */}
       {message && (
-        <Card tone={message.tone === "ok" ? "accent" : "danger"}>
+        <Panel tone={message.tone === "ok" ? "emerald" : "rose"}>
           <Text variant="body">{message.text}</Text>
-        </Card>
+        </Panel>
       )}
 
       {/* ─────────────────────────────── the permission that actually matters */}
       {onDuty && permission && !permission.ok && (
-        <Card tone="danger" title="Your location is not being shared">
+        <Panel tone="rose" title="Your location is not being shared" icon={TriangleAlert}>
           <Text variant="body">
             {permission.need === "services"
               ? "Location is switched off on this phone. Turn it on, or the control room cannot see that your site is covered."
@@ -244,36 +248,53 @@ export function Duty() {
           </Text>
           <Button
             label={permission.need === "services" ? "Open settings" : "Fix this"}
-            variant="danger"
+            variant="destructive"
             onPress={() => {
-              // A permission that can still be asked for is asked for; one that cannot
-              // — which is the Android background case — goes to Settings instead,
-              // because a prompt that silently does nothing is worse than no button.
-              if (permission.need !== "services" && permission.canAsk) void requestTracking().then(setPermission);
-              else openSettings();
+              // A permission that can still be asked for is asked for; one that cannot —
+              // the Android background case — goes to Settings, because a prompt that
+              // silently does nothing is worse than no button.
+              if (permission.need !== "services" && permission.canAsk) {
+                void requestTracking().then(setAskedPermission);
+              } else openSettings();
             }}
           />
-        </Card>
+        </Panel>
       )}
 
       {/* ────────────────────────────────────────────────── the panic button */}
       {onDuty && (
-        <View style={styles.sos}>
-          <HoldButton
-            label="Hold 3s for help"
-            onComplete={() => void doRaiseSos()}
-          />
-          <Text variant="micro" tone="muted" style={styles.sosNote}>
+        <Panel tone="rose" title="Emergency" icon={ShieldAlert}>
+          <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
+          <Text variant="caption" tone="muted" style={styles.centered}>
             Alerts every guard on this site, the control room, and the client. Standing one
             down afterwards is normal and nobody minds.
           </Text>
-        </View>
+        </Panel>
+      )}
+
+      {/* ─────────────────────────────────────────────────────── check out */}
+      {onDuty && (
+        <Panel tone="slate" title="End your shift" icon={Clock3}>
+          <Text variant="body" tone="muted">
+            Checking out stops your location being shared and closes the shift for payroll.
+          </Text>
+          <Button
+            label="Check out"
+            variant="outline"
+            size="lg"
+            fullWidth
+            loading={busy === "out"}
+            onPress={() => void doPunchOut()}
+          />
+        </Panel>
       )}
 
       {/* ─────────────────────────────────────────── where they can check in */}
       {!onDuty && (
-        <Card
+        <Panel
+          tone="emerald"
           title="Report for duty"
+          icon={MapPin}
           subtitle={
             fixAccuracy === null
               ? "Waiting for a GPS fix…"
@@ -283,7 +304,7 @@ export function Duty() {
         >
           {proximity.length === 0 ? (
             <View style={styles.empty}>
-              <Text variant="body" medium>
+              <Text variant="body" weight="medium">
                 No sites to show yet.
               </Text>
               <Text variant="caption" tone="muted" style={styles.centered}>
@@ -292,10 +313,10 @@ export function Duty() {
               </Text>
             </View>
           ) : (
-            proximity.map(({ site, inside, distanceM }) => (
-              <View key={site.id} style={styles.siteRow}>
+            proximity.map(({ site, inside, distanceM }, i) => (
+              <PanelRow key={site.id} first={i === 0}>
                 <View style={styles.siteText}>
-                  <Text variant="body" semibold>
+                  <Text variant="body" weight="semibold">
                     {site.name}
                   </Text>
                   <Text variant="caption" tone="muted">
@@ -309,43 +330,41 @@ export function Duty() {
                 </View>
                 <Button
                   label={inside ? "Check in" : "Too far"}
-                  // Not disabled when outside. The local calculation is a hint, and a
-                  // guard standing at a gate whose coordinates are slightly wrong must
-                  // still be able to try — the server gives the real answer, with the
-                  // real distance, which is what a supervisor then investigates.
-                  variant={inside ? "primary" : "secondary"}
+                  // Not disabled when outside: the local calculation is a hint, and a guard
+                  // standing at a gate whose stored coordinates are slightly wrong must
+                  // still be able to try. The server gives the real answer, with the real
+                  // distance, which is what a supervisor then investigates.
+                  variant={inside ? "default" : "secondary"}
+                  size="sm"
                   loading={busy === site.id}
                   onPress={() => void doPunchIn(site.id)}
                 />
-              </View>
+              </PanelRow>
             ))
           )}
-        </Card>
+        </Panel>
       )}
-    </ScrollView>
+
+      {/* ─────────────────────────────────────────────────── the desk, always */}
+      <Panel tone="sky" title="Anything not right?" icon={Phone}>
+        <Text variant="body" tone="muted">
+          The deployment desk is staffed {COMPANY.deskHours}.
+        </Text>
+        <Button
+          label={COMPANY.phone}
+          variant="outline"
+          icon={Phone}
+          onPress={() => void Linking.openURL(`tel:${tel(COMPANY.phone)}`)}
+        />
+      </Panel>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: color.appBg },
-  body: { padding: space[4], gap: space[4], paddingBottom: space[12] },
+  body: { gap: space[4] },
   center: { alignItems: "center", justifyContent: "center" },
-  header: { flexDirection: "row", alignItems: "flex-start", gap: space[3] },
-  headerText: { flex: 1, gap: 2 },
-  stateRow: { flexDirection: "row", alignItems: "flex-start", gap: space[3] },
-  stateText: { flex: 1, gap: 2 },
-  sos: { gap: space[2] },
-  sosNote: { textAlign: "center", paddingHorizontal: space[4] },
-  empty: { padding: space[6], gap: space[2], alignItems: "center" },
   centered: { textAlign: "center" },
-  siteRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space[3],
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
+  empty: { padding: space[6], gap: space[2], alignItems: "center" },
   siteText: { flex: 1, gap: 2 },
 });

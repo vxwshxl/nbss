@@ -34,7 +34,12 @@ import { Text } from "./text";
  *
  * The haptics have to be on the JS thread because `expo-haptics` is a native module
  * call, so they are driven by an interval that is started and cleared alongside the
- * animation. They escalate: light ticks that get closer together, then a heavy thud
+ * animation.
+ *
+ * Shared values are read and written with `.get()` / `.set()` rather than `.value`. That
+ * is not a style preference: this project has the React Compiler enabled, and a bare
+ * `.value =` assignment reads to the compiler as mutating state it believes it owns,
+ * which it rejects outright. They escalate: light ticks that get closer together, then a heavy thud
  * on release. Someone holding this is probably not looking at the screen, so the
  * feedback has to be something they can feel.
  */
@@ -74,8 +79,8 @@ export function HoldButton({
     // Reset so a second alert can be raised without leaving the screen. `raise_sos`
     // treats a repeat as a re-notification rather than a new incident, so pressing
     // again is a safe and useful thing to be able to do.
-    progress.value = 0;
-    holding.value = withTiming(0, { duration: 180 });
+    progress.set(0);
+    holding.set(withTiming(0, { duration: 180 }));
   }, [holding, onComplete, progress, stopTicking]);
 
   const begin = useCallback(() => {
@@ -93,15 +98,13 @@ export function HoldButton({
       );
     }, 300);
 
-    holding.value = withTiming(1, { duration: 140 });
-    progress.value = withTiming(
-      1,
-      { duration: durationMs, easing: Easing.linear },
-      (finished) => {
-        // `finished` is false when the animation was cancelled by a release. Without
-        // this check, letting go early would still raise the alarm.
+    holding.set(withTiming(1, { duration: 140 }));
+    progress.set(
+      withTiming(1, { duration: durationMs, easing: Easing.linear }, (finished) => {
+        // `finished` is false when the animation was cancelled by a release. Without this
+        // check, letting go early would still raise the alarm.
         if (finished) runOnJS(fire)();
-      },
+      }),
     );
   }, [durationMs, fire, holding, progress, stopTicking]);
 
@@ -110,16 +113,16 @@ export function HoldButton({
     cancelAnimation(progress);
     // Snaps back rather than easing, so an accidental brush reads unmistakably as
     // "that did not count".
-    progress.value = withTiming(0, { duration: 200 });
-    holding.value = withTiming(0, { duration: 180 });
+    progress.set(withTiming(0, { duration: 200 }));
+    holding.set(withTiming(0, { duration: 180 }));
   }, [holding, progress, stopTicking]);
 
   const fillStyle = useAnimatedStyle(() => ({
-    width: `${progress.value * 100}%`,
+    width: `${progress.get() * 100}%`,
   }));
 
   const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + holding.value * 0.015 }],
+    transform: [{ scale: 1 + holding.get() * 0.015 }],
   }));
 
   return (
@@ -138,10 +141,10 @@ export function HoldButton({
             prettier; a bar is legible at a glance from an arm's length away. */}
         <Animated.View style={[styles.fill, fillStyle]} pointerEvents="none" />
         <View style={styles.labelWrap} pointerEvents="none">
-          <Text variant="title" tone="inverse" bold>
+          <Text weight="bold" variant="title" tone="inverse">
             SOS
           </Text>
-          <Text variant="caption" tone="inverse" medium style={styles.sub}>
+          <Text weight="medium" variant="caption" tone="inverse" style={styles.sub}>
             {label}
           </Text>
         </View>

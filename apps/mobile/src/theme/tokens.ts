@@ -1,33 +1,37 @@
+import { Platform } from "react-native";
+
 /**
- * The design tokens, converted from the web console's oklch values.
+ * The design tokens, ported from apps/web/src/app/globals.css.
  *
- * Two deliberate decisions carried over from apps/web/src/app/globals.css:
+ * The goal is that the app and the console read as one product — the same green, the
+ * same Geist, the same 20px card radius — so somebody who uses the browser at a desk
+ * and the app at a gate is not learning two interfaces.
  *
- *   LIGHT ONLY. The web console disarms Tailwind's dark variant rather than
- *   shipping a half-finished dark theme (`@custom-variant dark
- *   (&:is(.nbss-never-dark *))`), so the app is light too and `userInterfaceStyle`
- *   is pinned in app.config.ts. A guard's phone set to dark mode gets the same
- *   screen as a supervisor's browser, which is what makes a support call over the
- *   phone possible at all.
+ * Three decisions carried over from the web deliberately:
  *
- *   THE VALUES ARE HEX, NOT oklch. React Native has no oklch parser. These were
- *   converted once from the authored values rather than eyeballed, so the green on
- *   a check-in button is the same green as on the console.
+ *   LIGHT ONLY. The console disarms Tailwind's dark variant (`@custom-variant dark
+ *   (&:is(.nbss-never-dark *))`) rather than ship a half-finished dark theme, so the app
+ *   pins `userInterfaceStyle: "light"` to match.
  *
- * The exception to "match the web" is `sos`: the console has no panic button, and
- * `destructive` — used on delete confirmations — is not loud enough for a screen
- * that has to be understood in half a second at 3am.
+ *   HEX, NOT oklch. React Native has no oklch parser. These were converted once from the
+ *   authored values rather than eyeballed.
+ *
+ *   THE WEB'S SCALE, NOT A MOBILE ONE. The type sizes and radii below are the console's
+ *   computed values, so a Panel here is the same shape as a Panel there. The exception
+ *   is hit targets, which are a physical constraint rather than a visual one.
  */
 
 export const color = {
   background: "#ffffff",
+  /** `--app-bg`: the very slightly cool grey the console's cards float on. */
   appBg: "#f3f4f5",
   foreground: "#0d0d0d",
 
   card: "#ffffff",
   border: "#e1e1e1",
-  line: "#0d0d0d14",
-  lineSoft: "#0d0d0d0d",
+  /** `--app-line` / `--app-line-soft`, flattened. Panels use the soft one. */
+  line: "#ebebeb",
+  lineSoft: "#f1f1f1",
 
   primary: "#00925b",
   primaryForeground: "#fcfcfc",
@@ -45,7 +49,7 @@ export const color = {
   destructive: "#cc2826",
   destructiveForeground: "#fcfcfc",
 
-  /** The panic button, and the alarm screen it opens. Nothing else uses these. */
+  /** The panic button and the alarm screen. Nothing else uses these. */
   sos: "#c90019",
   sosDeep: "#940000",
 
@@ -58,13 +62,67 @@ export const color = {
 } as const;
 
 /**
- * A 4px grid. Named by step rather than by use, because a scale that says `md`
- * invites an argument about what is medium; a scale that says `3` does not.
+ * Geist, the same family the website serves from `public/fonts`.
+ *
+ * The web loads a variable woff2; React Native cannot use woff2 or variable axes, so the
+ * static weights come from `@expo-google-fonts/geist` and each weight is its own family
+ * name. That is why weight is set with `fontFamily` below rather than `fontWeight` —
+ * setting `fontWeight` on a static font either does nothing or makes the platform
+ * synthesise a fake bold, which looks visibly wrong next to the real thing.
  */
+export const font = {
+  regular: "Geist_400Regular",
+  medium: "Geist_500Medium",
+  semibold: "Geist_600SemiBold",
+  bold: "Geist_700Bold",
+  mono: "GeistMono_400Regular",
+  monoMedium: "GeistMono_500Medium",
+} as const;
+
+/** Tailwind's scale, which is what the console's classes resolve to. */
+export const size = {
+  xs: 12,
+  sm: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  "2xl": 24,
+  "3xl": 30,
+  "4xl": 36,
+  "5xl": 48,
+} as const;
+
+/**
+ * Named styles matching the console's own usages, so a screen says `variant="statValue"`
+ * rather than restating `text-4xl font-semibold tracking-tight tabular-nums` each time.
+ */
+export const text = {
+  /** PageHeader's eyebrow: `text-[11px] font-bold tracking-[0.16em] uppercase`. */
+  eyebrow: { fontSize: 11, lineHeight: 14, letterSpacing: 1.76 },
+  /** PageHeader's title: `text-3xl font-semibold tracking-tight`. */
+  pageTitle: { fontSize: size["3xl"], lineHeight: 36, letterSpacing: -0.6 },
+  /** Panel header strip: `text-sm font-bold sm:text-base`. */
+  panelTitle: { fontSize: size.base, lineHeight: 22, letterSpacing: -0.2 },
+  /** StatCard's figure: `text-4xl font-semibold tracking-tight tabular-nums`. */
+  statValue: { fontSize: size["4xl"], lineHeight: 40, letterSpacing: -0.9 },
+  /** The biggest number on a screen — the on-duty count, the clock. */
+  hero: { fontSize: size["5xl"], lineHeight: 52, letterSpacing: -1.4 },
+
+  micro: { fontSize: 11, lineHeight: 14, letterSpacing: 0.4 },
+  caption: { fontSize: size.xs, lineHeight: 16 },
+  label: { fontSize: size.sm, lineHeight: 20 },
+  body: { fontSize: size.base, lineHeight: 24 },
+  bodyLarge: { fontSize: size.lg, lineHeight: 28 },
+  title: { fontSize: size.xl, lineHeight: 28, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: size["2xl"], lineHeight: 32, letterSpacing: -0.5 },
+} as const;
+
+/** A 4px grid, matching Tailwind's spacing steps. */
 export const space = {
   0: 0,
   1: 4,
   2: 8,
+  2.5: 10,
   3: 12,
   4: 16,
   5: 20,
@@ -75,63 +133,51 @@ export const space = {
   16: 64,
 } as const;
 
-/** `--radius: 0.7rem` on the web, which is 11.2px. Rounded to whole pixels here. */
+/**
+ * `--radius: 0.7rem`, with the console's multipliers applied. A Panel is `rounded-2xl`,
+ * which resolves to 0.7 × 1.8 = 1.26rem ≈ 20px — not Tailwind's stock 16px.
+ */
 export const radius = {
   sm: 7,
   md: 9,
   lg: 11,
   xl: 16,
   "2xl": 20,
+  "3xl": 25,
   full: 999,
 } as const;
 
 /**
- * Sizes are a little larger than the web's equivalents on purpose. The console is
- * read at a desk; this is read at arm's length, outdoors, often by someone in their
- * fifties who does not have their glasses on.
- */
-export const text = {
-  micro: { fontSize: 11, lineHeight: 14, letterSpacing: 0.4 },
-  caption: { fontSize: 13, lineHeight: 18 },
-  body: { fontSize: 16, lineHeight: 22 },
-  bodyLarge: { fontSize: 18, lineHeight: 25 },
-  title: { fontSize: 22, lineHeight: 28, letterSpacing: -0.3 },
-  display: { fontSize: 30, lineHeight: 36, letterSpacing: -0.6 },
-  /** Big enough to read across a room — the clock, and the count on the duty screen. */
-  hero: { fontSize: 44, lineHeight: 48, letterSpacing: -1.2 },
-} as const;
-
-export const weight = {
-  regular: "400",
-  medium: "500",
-  semibold: "600",
-  bold: "700",
-} as const;
-
-/**
- * Android draws elevation, iOS draws a shadow, and passing both to one style leaves
- * a grey box on Android. `shadow.card` gives each platform the one it understands.
+ * `shadow-card` and `shadow-raised`.
+ *
+ * Android draws `elevation`, iOS draws the shadow properties, and handing one style both
+ * leaves a grey box on Android — so each platform gets only what it understands.
  */
 export const shadow = {
-  card: {
-    shadowColor: "#0d0d0d",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  raised: {
-    shadowColor: "#0d0d0d",
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
+  card: Platform.select({
+    ios: {
+      shadowColor: "#0d0d0d",
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    default: { elevation: 1 },
+  }),
+  raised: Platform.select({
+    ios: {
+      shadowColor: "#0d0d0d",
+      shadowOpacity: 0.09,
+      shadowRadius: 20,
+      shadowOffset: { width: 0, height: 8 },
+    },
+    default: { elevation: 5 },
+  }),
 } as const;
 
 /**
- * The minimum a finger can reliably hit. 48 rather than Apple's 44, because the
- * people using this are frequently wearing gloves.
+ * The minimum a finger can reliably hit — 48 rather than Apple's 44, because the people
+ * using this are frequently wearing gloves. This is the one place the app deliberately
+ * departs from the console's sizing: a mouse is precise and a wet thumb is not.
  */
 export const HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 } as const;
 export const TOUCH_MIN = 48;

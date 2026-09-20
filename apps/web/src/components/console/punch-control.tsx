@@ -39,7 +39,6 @@ export type PunchSite = {
 type Fix = { lat: number; lng: number; accuracy: number; at: number };
 
 type FixState =
-  | { kind: "idle" }
   | { kind: "locating" }
   | { kind: "ready"; fix: Fix }
   | { kind: "denied" }
@@ -121,7 +120,14 @@ export function PunchControl({
   sites: PunchSite[];
   openPunch: { siteId: string; siteName: string; since: string } | null;
 }) {
-  const [state, setState] = useState<FixState>({ kind: "idle" });
+  /**
+   * Starts at "locating", not at an "idle" placeholder the effect then immediately
+   * replaced. That extra state was never rendered differently and cost a second render
+   * pass on every mount — which is what `react-hooks/set-state-in-effect` was pointing at.
+   * "Locating" is also simply truthful: the effect below starts a watch on mount, so from
+   * the very first paint that is what is happening.
+   */
+  const [state, setState] = useState<FixState>({ kind: "locating" });
   const [siteId, setSiteId] = useState(openPunch?.siteId ?? sites[0]?.id ?? "");
   const watchId = useRef<number | null>(null);
 
@@ -133,11 +139,20 @@ export function PunchControl({
 
   useEffect(() => {
     if (!("geolocation" in navigator)) {
+      /**
+       * The one synchronous set left, and it cannot be lifted into the initial state:
+       * this is a client component that Next also renders on the server, where `navigator`
+       * does not exist — deciding it in `useState` would make the server and the client
+       * disagree on the first paint and produce a hydration mismatch.
+       *
+       * It fires only on a device with no geolocation at all, where the very next thing
+       * that happens is a permanent error screen, so the extra render pass it costs is
+       * one, once, on a device that cannot use this page anyway.
+       */
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ kind: "failed", reason: "This device cannot report its location." });
       return;
     }
-
-    setState({ kind: "locating" });
 
     watchId.current = navigator.geolocation.watchPosition(
       (pos) =>

@@ -11,11 +11,12 @@
     "./geo": "./src/geo.ts",
     "./location": "./src/location.ts",
     "./sos": "./src/sos.ts",
-    "./realtime": "./src/realtime.ts"
+    "./realtime": "./src/realtime.ts",
+    "./company": "./src/company.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"(no lint config — typecheck covers this package)\"",
+    "lint": "echo \"(no lint config \u2014 typecheck covers this package)\"",
     "clean": "rm -rf tsconfig.tsbuildinfo"
   },
   "devDependencies": {

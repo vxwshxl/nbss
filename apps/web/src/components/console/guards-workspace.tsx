@@ -10,11 +10,19 @@ import {
   Power,
   PowerOff,
   ShieldUser,
+  Trash2,
   TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { addGuard, changeRole, resetPin, setAccountActive } from "@/app/console/guards/actions";
+import {
+  accountFootprint,
+  addGuard,
+  changeRole,
+  deleteAccount,
+  resetPin,
+  setAccountActive,
+} from "@/app/console/guards/actions";
 import { emptyGuardForm } from "@/app/console/guards/guard-state";
 import { startImpersonation } from "@/app/console/impersonate";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -170,8 +178,17 @@ export function GuardsWorkspace({
   const [adding, setAdding] = useState(false);
   const [detail, setDetail] = useState<PersonRow | null>(null);
   const [confirm, setConfirm] = useState<
-    null | { kind: "deactivate" | "reset"; row: PersonRow }
+    null | { kind: "deactivate" | "reset" | "delete"; row: PersonRow }
   >(null);
+  /**
+   * What deleting the person in `confirm` would destroy, read from the server when the
+   * button is pressed. Null while it is still loading, so the dialog can say so rather
+   * than flash "0 shifts" and then correct itself — which is the one number here that
+   * must never be wrong.
+   */
+  const [footprint, setFootprint] = useState<Awaited<ReturnType<typeof accountFootprint>> | null>(
+    null,
+  );
   const [issued, setIssued] = useState<null | { pin: string; who: string }>(null);
 
   const [addState, addAction] = useActionState(addGuard, emptyGuardForm);
@@ -202,6 +219,41 @@ export function GuardsWorkspace({
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not change the account.");
       }
+    });
+  }
+
+  /** Opens the delete confirmation, fetching the footprint before it can be confirmed. */
+  function askDelete(row: PersonRow) {
+    setFootprint(null);
+    setConfirm({ kind: "delete", row });
+    start(async () => {
+      try {
+        setFootprint(await accountFootprint(row.id));
+      } catch {
+        // Left null. The dialog then refuses to enable its confirm button, which is the
+        // right way to fail: never offer an irreversible action whose consequences could
+        // not be read.
+      }
+    });
+  }
+
+  /**
+   * Async and allowed to throw, unlike the other runners here.
+   *
+   * The others fire a transition and return immediately, which lets ConfirmDialog close
+   * itself straight away — fine for a reversible deactivation. A delete can be refused
+   * by the server for two reasons the operator has to act on (their own account, the
+   * last active administrator), so the rejection is left to propagate: ConfirmDialog
+   * awaits it, reports the real message, and leaves the dialog open beside the button
+   * that produced it.
+   */
+  async function runDelete(row: PersonRow) {
+    await deleteAccount(row.id);
+    setConfirm(null);
+    setFootprint(null);
+    setDetail(null);
+    toast.success("Account deleted", {
+      description: `${row.full_name} · ${row.employee_code}`,
     });
   }
 
@@ -603,6 +655,20 @@ export function GuardsWorkspace({
                         </>
                       )}
                     </Button>
+                    {/* Separated from the rest: deactivating is reversible and this is
+                        not, so it does not sit in the same row of equal-looking
+                        buttons. Ghost rather than filled — a destructive action should
+                        be reachable, not inviting. */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={pending || detail.id === selfId}
+                      onClick={() => askDelete(detail)}
+                    >
+                      <Trash2 data-icon="inline-start" />
+                      Delete
+                    </Button>
                   </div>
                 </SheetFooter>
               )}
@@ -625,6 +691,68 @@ export function GuardsWorkspace({
           confirm
             ? `${confirm.row.full_name} will not be able to sign in. Every shift and punch already recorded for them is kept — nothing is deleted, and they can be reactivated at any time.`
             : ""
+        }
+      />
+
+      {/* ------------------------------------------------------- delete ---- */}
+      <ConfirmDialog
+        open={confirm?.kind === "delete"}
+        onOpenChange={(o) => {
+          if (!o) {
+            setConfirm(null);
+            setFootprint(null);
+          }
+        }}
+        onConfirm={() => (confirm ? runDelete(confirm.row) : undefined)}
+        destructive
+        hold
+        // Nothing can be confirmed until the footprint has arrived. Agreeing to destroy
+        // an unknown number of attendance records is not consent.
+        confirmDisabled={!footprint}
+        title="Delete this account permanently?"
+        confirmLabel="Delete for good"
+        description={
+          confirm ? (
+            <span className="block space-y-2">
+              <span className="block">
+                <span className="font-medium text-foreground">{confirm.row.full_name}</span>{" "}
+                <span className="font-mono text-xs">{confirm.row.employee_code}</span> will be
+                erased, along with everything below. This cannot be undone.
+              </span>
+
+              {!footprint ? (
+                <span className="block text-xs">Working out what this would delete…</span>
+              ) : (
+                <>
+                  <span className="block rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs">
+                    <span className="block font-medium text-destructive">
+                      Destroyed with the account
+                    </span>
+                    <span className="mt-1 block tabular-nums">
+                      {footprint.attendance} attendance record
+                      {footprint.attendance === 1 ? "" : "s"} · {footprint.shifts} rostered shift
+                      {footprint.shifts === 1 ? "" : "s"} · {footprint.sosAlerts} SOS alert
+                      {footprint.sosAlerts === 1 ? "" : "s"} · {footprint.positions} location point
+                      {footprint.positions === 1 ? "" : "s"}
+                    </span>
+                  </span>
+
+                  {footprint.attendance > 0 && (
+                    // The reason this dialog exists rather than a plain "are you sure?".
+                    // Attendance is what payroll and client invoices are computed from,
+                    // and an admin deleting a duplicate typo account has no idea they
+                    // might be deleting a month of somebody's wages.
+                    <span className="block text-xs font-medium text-destructive">
+                      Payroll and client billing are computed from those attendance records.
+                      Deactivating instead keeps them and still stops the sign-in.
+                    </span>
+                  )}
+                </>
+              )}
+            </span>
+          ) : (
+            ""
+          )
         }
       />
 

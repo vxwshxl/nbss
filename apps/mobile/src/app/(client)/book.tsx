@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "rea
 import { isValidPhone } from "@nbss/shared/identity";
 
 import { Button } from "@/components/button";
-import { Card } from "@/components/card";
+import { Panel } from "@/components/panel";
 import { Field } from "@/components/field";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
@@ -95,15 +95,15 @@ export default function BookRoute() {
   if (reference) {
     return (
       <Screen style={styles.body} bottomInset={false}>
-        <Card tone="accent" title="We have it">
-          <Text variant="display" bold mono>
+        <Panel tone="emerald" title="We have it">
+          <Text weight="bold" variant="pageTitle" mono>
             {reference}
           </Text>
           <Text variant="body">
             Quote that reference when you call. The deployment desk is staffed around the
             clock and will come back to you with a quote.
           </Text>
-        </Card>
+        </Panel>
         <Button
           label="Make another request"
           variant="secondary"
@@ -121,7 +121,7 @@ export default function BookRoute() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Screen style={styles.body} bottomInset={false}>
-        <Card title="What do you need?" subtitle="Pick the closest — we will sort out the detail on the phone.">
+        <Panel title="What do you need?" subtitle="Pick the closest — we will sort out the detail on the phone.">
           <View style={styles.chips}>
             {SERVICES.map((option) => (
               <Chip
@@ -132,9 +132,9 @@ export default function BookRoute() {
               />
             ))}
           </View>
-        </Card>
+        </Panel>
 
-        <Card title="Where and how many">
+        <Panel title="Where and how many">
           <Field label="District" placeholder="Kokrajhar" value={district} onChangeText={setDistrict} autoCapitalize="words" />
           <Field
             label="Address or landmark"
@@ -161,9 +161,9 @@ export default function BookRoute() {
               />
             ))}
           </View>
-        </Card>
+        </Panel>
 
-        <Card title="How we reach you">
+        <Panel title="How we reach you">
           <Field label="Contact name" value={contact} onChangeText={setContact} autoCapitalize="words" />
           <Field label="Mobile" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <Field
@@ -175,7 +175,7 @@ export default function BookRoute() {
             numberOfLines={3}
             error={error ?? undefined}
           />
-        </Card>
+        </Panel>
 
         <Button label="Send request" size="lg" loading={busy} onPress={() => void submit()} />
       </Screen>
@@ -192,7 +192,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
       onPress={onPress}
       style={({ pressed }) => [styles.chip, selected && styles.chipOn, pressed && styles.chipPressed]}
     >
-      <Text variant="caption" semibold tone={selected ? "inverse" : "default"}>
+      <Text weight="semibold" variant="caption" tone={selected ? "inverse" : "default"}>
         {label}
       </Text>
     </Pressable>

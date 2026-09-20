@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 
 import { Button } from "@/components/button";
-import { Card } from "@/components/card";
+import { Panel } from "@/components/panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
 import { useAuth } from "@/lib/auth";
@@ -19,14 +19,14 @@ export default function ProfileRoute() {
 
   return (
     <Screen style={styles.body} bottomInset={false}>
-      <Card title="You">
+      <Panel title="You">
         <Row label="Name" value={profile?.full_name ?? "—"} />
         <Row label="Employee code" value={profile?.employee_code ?? "—"} />
         <Row label="Role" value={profile ? ROLE_LABEL[profile.role] : "—"} />
         <Row label="Phone" value={profile?.phone ?? "—"} />
-      </Card>
+      </Panel>
 
-      <Card title="Your location">
+      <Panel title="Your location">
         <Text variant="body">
           Your position is shared with the control room only while you are checked in. It
           stops the moment you check out, and nothing is recorded in between.
@@ -40,7 +40,7 @@ export default function ProfileRoute() {
           The trail is kept at full detail for thirty days, so a question about a particular
           shift can be answered, and then thinned out.
         </Text>
-      </Card>
+      </Panel>
 
       <Button label="Sign out" variant="secondary" loading={loading} onPress={() => void signOut()} />
     </Screen>
@@ -53,7 +53,7 @@ function Row({ label, value }: { label: string; value: string }) {
       <Text variant="caption" tone="muted">
         {label}
       </Text>
-      <Text variant="body" medium>
+      <Text weight="medium" variant="body">
         {value}
       </Text>
     </View>

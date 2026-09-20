@@ -4,8 +4,17 @@
 // would not exist yet. See src/lib/location-task.ts.
 import "@/lib/location-task";
 
+import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+  useFonts,
+} from "@expo-google-fonts/geist";
+import { GeistMono_400Regular, GeistMono_500Medium } from "@expo-google-fonts/geist-mono";
 import * as Notifications from "expo-notifications";
 import { Stack, router } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -13,7 +22,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
 import { asSosPush, ensureChannels } from "@/lib/push";
-import { color } from "@/theme/tokens";
+import { color, font } from "@/theme/tokens";
+
+// Held until Geist has loaded, so the first frame is not system-font text that then
+// reflows into Geist — a jump the eye catches on every cold start.
+void SplashScreen.preventAutoHideAsync();
 
 /**
  * The root.
@@ -30,6 +43,29 @@ import { color } from "@/theme/tokens";
  *   not a message to be read at leisure.
  */
 export default function RootLayout() {
+  /**
+   * Geist, the same family the website serves.
+   *
+   * Loaded as separate static weights because React Native cannot use the variable woff2
+   * the web loads; `theme/tokens.ts` maps each weight to its own family name for the same
+   * reason.
+   */
+  const [fontsLoaded, fontError] = useFonts({
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    GeistMono_400Regular,
+    GeistMono_500Medium,
+  });
+
+  useEffect(() => {
+    // Hidden on an error too, deliberately. A missing font means the app falls back to
+    // the system one, which is a cosmetic problem; holding the splash forever over it
+    // would be a guard who cannot check in.
+    if (fontsLoaded || fontError) void SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError]);
+
   useEffect(() => {
     void ensureChannels();
   }, []);
@@ -61,6 +97,8 @@ export default function RootLayout() {
     };
   }, []);
 
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -70,7 +108,7 @@ export default function RootLayout() {
             screenOptions={{
               headerStyle: { backgroundColor: color.background },
               headerTintColor: color.foreground,
-              headerTitleStyle: { fontWeight: "600" },
+              headerTitleStyle: { fontFamily: font.semibold },
               headerShadowVisible: false,
               contentStyle: { backgroundColor: color.appBg },
             }}

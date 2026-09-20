@@ -3,6 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/geist": "^0.4.2",
+    "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo/ui": "~57.0.19",
     "@maplibre/maplibre-react-native": "^11.4.0",
     "@nbss/shared": "workspace:*",
@@ -18,6 +20,7 @@
     "expo-glass-effect": "~57.0.3",
     "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
+    "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.10",
     "expo-location": "~57.0.19",
     "expo-notifications": "~57.0.20",
@@ -29,6 +32,7 @@
     "expo-system-ui": "~57.0.4",
     "expo-task-manager": "~57.0.19",
     "expo-web-browser": "~57.0.3",
+    "lucide-react-native": "^1.47.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -36,12 +40,14 @@
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
     "react-native-url-polyfill": "^4.0.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "^5.9.2"
   },
   "scripts": {

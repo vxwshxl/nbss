@@ -17,6 +17,7 @@ import { siteChannel, EVENTS } from "@nbss/shared/realtime";
 
 import { Button } from "@/components/button";
 import { Text } from "@/components/text";
+import { useLoader } from "@/hooks/use-loader";
 import { useAuth } from "@/lib/auth";
 import { acknowledgeSos, closeSos } from "@/lib/duty";
 import { currentFix } from "@/lib/location";
@@ -56,8 +57,6 @@ export function SosAlarm({ alertId }: { alertId: string }) {
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const [alert, setAlert] = useState<Alert | null | undefined>(undefined);
-  const [responders, setResponders] = useState<Responder[]>([]);
   const [myDistance, setMyDistance] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -71,10 +70,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
       .eq("id", alertId)
       .maybeSingle();
 
-    if (!data) {
-      setAlert(null);
-      return;
-    }
+    if (!data) return { alert: null, responders: [] as Responder[] };
 
     const { profiles, sites, ...row } = data as typeof data & {
       profiles?: { full_name: string } | { full_name: string }[] | null;
@@ -83,19 +79,18 @@ export function SosAlarm({ alertId }: { alertId: string }) {
     const raiser = Array.isArray(profiles) ? profiles[0] : profiles;
     const site = Array.isArray(sites) ? sites[0] : sites;
 
-    setAlert({
-      ...(row as Omit<Alert, "raiser_name" | "site_name">),
-      raiser_name: raiser?.full_name ?? null,
-      site_name: site?.name ?? null,
-    });
-
     const { data: acks } = await supabase
       .from("sos_acknowledgements")
       .select("response, distance_m, profiles(full_name)")
       .eq("alert_id", alertId);
 
-    setResponders(
-      (acks ?? []).map((ack) => {
+    return {
+      alert: {
+        ...(row as Omit<Alert, "raiser_name" | "site_name">),
+        raiser_name: raiser?.full_name ?? null,
+        site_name: site?.name ?? null,
+      } as Alert,
+      responders: (acks ?? []).map((ack) => {
         const who = Array.isArray(ack.profiles) ? ack.profiles[0] : ack.profiles;
         return {
           name: who?.full_name ?? "Someone",
@@ -103,12 +98,14 @@ export function SosAlarm({ alertId }: { alertId: string }) {
           distanceM: ack.distance_m,
         };
       }),
-    );
+    };
   }, [alertId]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, reload } = useLoader(load);
+  // `undefined` while the first read is in flight, `null` once it has come back empty.
+  // The screen shows a spinner for the first and "not available" for the second.
+  const alert = data === undefined ? undefined : data.alert;
+  const responders = data?.responders ?? [];
 
   /**
    * Live updates, over the site's own channel.
@@ -124,14 +121,14 @@ export function SosAlarm({ alertId }: { alertId: string }) {
     const channel = supabase
       .channel(siteChannel(alert.site_id), { config: { private: true } })
       .on("broadcast", { event: EVENTS.sos }, () => {
-        void load();
+        void reload();
       })
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [alert?.site_id, load]);
+  }, [alert?.site_id, reload]);
 
   /** How far this phone is from the alert, so the responder list can be honest. */
   useEffect(() => {
@@ -153,13 +150,11 @@ export function SosAlarm({ alertId }: { alertId: string }) {
 
   useEffect(() => {
     if (!live) {
-      pulse.value = withTiming(0, { duration: 300 });
+      pulse.set(withTiming(0, { duration: 300 }));
       return;
     }
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
+    pulse.set(
+      withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true),
     );
   }, [live, pulse]);
 
@@ -173,7 +168,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
   }, [live]);
 
   const backgroundStyle = useAnimatedStyle(() => ({
-    backgroundColor: pulse.value > 0.5 ? color.sos : color.sosDeep,
+    backgroundColor: pulse.get() > 0.5 ? color.sos : color.sosDeep,
     opacity: 1,
   }));
 
@@ -188,7 +183,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
   if (alert === null) {
     return (
       <View style={[styles.root, styles.center, { backgroundColor: color.appBg, paddingTop: insets.top }]}>
-        <Text variant="bodyLarge" semibold>
+        <Text weight="semibold" variant="bodyLarge">
           That alert is not available.
         </Text>
         <Text variant="caption" tone="muted" style={styles.centered}>
@@ -206,15 +201,15 @@ export function SosAlarm({ alertId }: { alertId: string }) {
     <Animated.View style={[styles.root, live ? backgroundStyle : styles.closed]}>
       <View style={[styles.content, { paddingTop: insets.top + space[8], paddingBottom: insets.bottom + space[6] }]}>
         <View style={styles.top}>
-          <Text variant="micro" tone="inverse" bold style={styles.eyebrow}>
+          <Text weight="bold" variant="micro" tone="inverse" style={styles.eyebrow}>
             {live ? "EMERGENCY" : SOS_STATUS_LABEL[alert.status].toUpperCase()}
           </Text>
 
-          <Text variant="hero" tone="inverse" bold>
+          <Text weight="bold" variant="hero" tone="inverse">
             {SOS_KIND_LABEL[alert.kind]}
           </Text>
 
-          <Text variant="bodyLarge" tone="inverse" semibold>
+          <Text weight="semibold" variant="bodyLarge" tone="inverse">
             {mine ? "You raised this" : (alert.raiser_name ?? "A guard")}
           </Text>
           <Text variant="body" tone="inverse">
@@ -244,11 +239,11 @@ export function SosAlarm({ alertId }: { alertId: string }) {
 
         {/* ───────────────────────────────────────────── who is coming */}
         <View style={styles.responders}>
-          <Text variant="micro" tone="inverse" bold style={styles.eyebrow}>
+          <Text weight="bold" variant="micro" tone="inverse" style={styles.eyebrow}>
             {responders.length === 0 ? "NOBODY HAS ANSWERED YET" : "RESPONDING"}
           </Text>
           {responders.map((responder) => (
-            <Text key={responder.name} variant="body" tone="inverse" medium>
+            <Text weight="medium" key={responder.name} variant="body" tone="inverse">
               {responder.name}
               {responder.distanceM !== null ? ` · ${formatDistance(responder.distanceM)} away` : ""}
               {responder.response === "cannot_respond" ? " · cannot come" : ""}
@@ -268,7 +263,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
                   setBusy("ack");
                   await acknowledgeSos(alertId, "responding");
                   setBusy(null);
-                  await load();
+                  await reload();
                 }}
               />
               <Button
@@ -282,7 +277,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
                   // one of the people arriving.
                   await acknowledgeSos(alertId, "cannot_respond");
                   setBusy(null);
-                  await load();
+                  await reload();
                 }}
               />
             </>
@@ -298,7 +293,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
                   setBusy("resolved");
                   await closeSos(alertId, "resolved");
                   setBusy(null);
-                  await load();
+                  await reload();
                 }}
               />
               <Button
@@ -309,7 +304,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
                   setBusy("false");
                   await closeSos(alertId, "false_alarm");
                   setBusy(null);
-                  await load();
+                  await reload();
                 }}
               />
             </>

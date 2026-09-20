@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { isValidPhone } from "@nbss/shared/identity";
 
 import { Button } from "@/components/button";
-import { Card } from "@/components/card";
+import { Panel } from "@/components/panel";
 import { Field, SecretField } from "@/components/field";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
@@ -67,12 +67,12 @@ export function Register() {
   if (sent) {
     return (
       <Screen style={styles.body}>
-        <Card tone="accent" title="Check your email">
+        <Panel tone="emerald" title="Check your email">
           <Text variant="body">
             We have sent a confirmation link to {email.trim()}. Open it and then sign in —
             you will be able to request guards straight away.
           </Text>
-        </Card>
+        </Panel>
         <Button label="Back to sign in" variant="secondary" onPress={() => router.replace("/(auth)/sign-in")} />
       </Screen>
     );

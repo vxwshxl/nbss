@@ -67,7 +67,20 @@ export function FenceMap({
   const latest = useRef(value);
   const [ready, setReady] = useState(false);
 
-  latest.current = value;
+  /**
+   * The newest `value`, reachable from Leaflet's own event handlers.
+   *
+   * Those handlers are registered once when the map is created and then live outside
+   * React entirely, so they cannot close over a `value` that changes — hence the ref.
+   *
+   * Synced in an effect rather than assigned during render. A render can be discarded and
+   * re-run, so a write during one is not guaranteed to have happened exactly once, which
+   * is why `react-hooks/refs` rejects it. `useRef(value)` already holds the first value,
+   * and this effect runs before any user interaction can reach a handler.
+   */
+  useEffect(() => {
+    latest.current = value;
+  }, [value]);
 
   // ------------------------------------------------------------- create map
   useEffect(() => {

@@ -30,7 +30,7 @@ export function Field({
 
   return (
     <View style={styles.wrap}>
-      <Text variant="caption" medium tone="muted">
+      <Text weight="medium" variant="caption" tone="muted">
         {label}
       </Text>
 
@@ -89,7 +89,7 @@ export function SecretField({
           onPress={() => setShown((v) => !v)}
           style={styles.reveal}
         >
-          <Text variant="caption" semibold tone="primary">
+          <Text weight="semibold" variant="caption" tone="primary">
             {shown ? "Hide" : "Show"}
           </Text>
         </Pressable>

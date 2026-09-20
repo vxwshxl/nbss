@@ -1,7 +1,9 @@
 import { Redirect, Tabs } from "expo-router";
+import { ClipboardList, ShieldCheck } from "lucide-react-native";
+import { StyleSheet } from "react-native";
 
 import { useAuth } from "@/lib/auth";
-import { color } from "@/theme/tokens";
+import { color, font } from "@/theme/tokens";
 
 export default function ClientLayout() {
   const { session, role } = useAuth();
@@ -12,17 +14,35 @@ export default function ClientLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: color.background },
-        headerShadowVisible: false,
+        headerShown: false,
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
-        tabBarStyle: { backgroundColor: color.background, borderTopColor: color.border },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+        tabBarStyle: {
+          backgroundColor: color.card,
+          borderTopColor: color.lineSoft,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        // Geist, so the tab bar does not betray the system font under a screen full of it.
+        tabBarLabelStyle: { fontFamily: font.medium, fontSize: 12 },
         sceneStyle: { backgroundColor: color.appBg },
       }}
     >
-      <Tabs.Screen name="site" options={{ title: "My sites" }} />
-      <Tabs.Screen name="book" options={{ title: "Book guards" }} />
+      <Tabs.Screen
+        name="site"
+        options={{
+          title: "My sites",
+          tabBarIcon: ({ color: c, size }) => <ShieldCheck size={size} color={c} strokeWidth={2} />,
+        }}
+      />
+      <Tabs.Screen
+        name="book"
+        options={{
+          title: "Book guards",
+          tabBarIcon: ({ color: c, size }) => (
+            <ClipboardList size={size} color={c} strokeWidth={2} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

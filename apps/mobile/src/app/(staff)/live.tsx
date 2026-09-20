@@ -1,16 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { RefreshControl, StyleSheet, View } from "react-native";
 
+import { istTime } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
 import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
+import { Radio, ShieldAlert, SatelliteDish, WifiOff } from "lucide-react-native";
 
 import { Button } from "@/components/button";
-import { Card } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { Panel, PanelRow } from "@/components/panel";
+import { CardGrid, Screen } from "@/components/screen";
+import { StatCard } from "@/components/stat-card";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
+import { useLayout } from "@/hooks/use-breakpoint";
+import { useLoader } from "@/hooks/use-loader";
+import { useNow } from "@/hooks/use-now";
 import { useAuth } from "@/lib/auth";
-import { liveAlerts, type LiveAlert } from "@/lib/duty";
+import { liveAlerts } from "@/lib/duty";
 import { supabase } from "@/lib/supabase";
 import { color, space } from "@/theme/tokens";
 import { router } from "expo-router";
@@ -30,18 +38,15 @@ import { router } from "expo-router";
  */
 export default function LiveRoute() {
   const { profile } = useAuth();
+  const { statColumns } = useLayout();
 
   const [batch, setBatch] = useState<PositionBatch | null>(null);
-  const [alerts, setAlerts] = useState<LiveAlert[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setAlerts(await liveAlerts());
-  }, []);
+  const { data: alerts = [], refreshing, reload } = useLoader(liveAlerts);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Ticks on its own, so a guard whose phone died goes amber without waiting for a batch
+  // that is never coming. See the comment in use-now.ts.
+  const now = useNow();
 
   useEffect(() => {
     const channel = supabase
@@ -50,69 +55,96 @@ export default function LiveRoute() {
         setBatch(payload as PositionBatch);
       })
       .on("broadcast", { event: EVENTS.sos }, () => {
-        void load();
+        void reload();
       })
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [load]);
+  }, [reload]);
 
-  const now = Date.now();
   const positions = batch?.positions ?? [];
 
   return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.body}
+    <Screen
+      bottomInset={false}
+      contentStyle={styles.body}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           tintColor={color.primary}
-          onRefresh={() => {
-            setRefreshing(true);
-            void load().finally(() => setRefreshing(false));
-          }}
+          onRefresh={() => void reload()}
         />
       }
     >
+      <PageHeader eyebrow="Operations" title="Live" />
+
+      <CardGrid columns={statColumns}>
+        <StatCard
+          label="On duty"
+          value={String(positions.length)}
+          hint={batch ? `As at ${istTime(batch.at)}` : "Connecting…"}
+          icon={Radio}
+          tone={positions.length ? "emerald" : "slate"}
+        />
+        <StatCard
+          label="Live alerts"
+          value={String(alerts.length)}
+          hint={alerts.length ? "Needs answering" : "Nothing outstanding"}
+          icon={ShieldAlert}
+          tone={alerts.length ? "rose" : "slate"}
+        />
+        <StatCard
+          label="Inside boundary"
+          value={String(positions.filter((p) => p.inside_fence).length)}
+          hint="Of those reporting"
+          icon={SatelliteDish}
+          tone="teal"
+        />
+        <StatCard
+          label="Out of contact"
+          value={String(
+            positions.filter((p) => freshness(new Date(p.recorded_at).getTime(), now) !== "live")
+              .length,
+          )}
+          hint="No recent ping"
+          icon={WifiOff}
+          tone="amber"
+        />
+      </CardGrid>
       {alerts.length > 0 && (
-        <Card tone="danger" title={`${alerts.length} live alert${alerts.length > 1 ? "s" : ""}`}>
+        <Panel tone="rose" title={`${alerts.length} live alert${alerts.length > 1 ? "s" : ""}`} icon={ShieldAlert}>
           {alerts.map((alert) => (
             <View key={alert.id} style={styles.alert}>
               <View style={styles.alertText}>
-                <Text variant="body" semibold tone="danger">
+                <Text weight="semibold" variant="body" tone="danger">
                   {SOS_KIND_LABEL[alert.kind]} · {alert.site_name ?? "Unknown site"}
                 </Text>
                 <Text variant="caption" tone="muted">
                   {alert.raiser_name ?? "A guard"} ·{" "}
-                  {new Date(alert.raised_at).toLocaleTimeString("en-IN", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                    timeZone: "Asia/Kolkata",
-                  })}
+                  {istTime(alert.raised_at)}
+
                 </Text>
               </View>
-              <Button label="Open" variant="danger" onPress={() => router.push(`/sos/${alert.id}`)} />
+              <Button label="Open" variant="destructive" onPress={() => router.push(`/sos/${alert.id}`)} />
             </View>
           ))}
-        </Card>
+        </Panel>
       )}
 
-      <Card
+      <Panel
+        tone="indigo"
+        icon={SatelliteDish}
         title={`${positions.length} on duty`}
         subtitle={
-          batch
-            ? `Updated ${new Date(batch.at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}`
-            : "Waiting for the next position batch…"
+          batch ? `Updated ${istTime(batch.at)}` : "Waiting for the next position batch…"
         }
         bare
       >
         {positions.length === 0 ? (
           <View style={styles.empty}>
-            <Text variant="body" medium>
+            <Text weight="medium" variant="body">
               {batch ? "Nobody is on duty." : "Connecting…"}
             </Text>
             <Text variant="caption" tone="muted" style={styles.centered}>
@@ -123,9 +155,9 @@ export default function LiveRoute() {
           positions.map((position) => {
             const age = freshness(new Date(position.recorded_at).getTime(), now);
             return (
-              <View key={position.guard_id} style={styles.row}>
+              <PanelRow key={position.guard_id}>
                 <View style={styles.rowText}>
-                  <Text variant="body" semibold>
+                  <Text weight="semibold" variant="body">
                     {position.guard_id.slice(0, 8)}
                   </Text>
                   <Text variant="caption" tone="muted" mono>
@@ -137,34 +169,26 @@ export default function LiveRoute() {
                   tone={age}
                   label={age === "live" ? "Live" : age === "stale" ? "No signal" : "Out of contact"}
                 />
-              </View>
+              </PanelRow>
             );
           })
         )}
-      </Card>
+      </Panel>
 
-      <Card title="Signed in as">
+      <Panel tone="slate" title="Signed in as" icon={Radio}>
         <Text variant="body">{profile?.full_name ?? "—"}</Text>
-      </Card>
-    </ScrollView>
+      </Panel>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: color.appBg },
-  body: { padding: space[4], gap: space[4] },
+  // No padding here: <Screen> owns the gutter, and it grows on a tablet. A padding of its
+  // own would double up and stop the layout being responsive.
+  body: { gap: space[4] },
   alert: { flexDirection: "row", alignItems: "center", gap: space[3] },
   alertText: { flex: 1, gap: 2 },
   empty: { padding: space[6], gap: space[2], alignItems: "center" },
   centered: { textAlign: "center" },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space[3],
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
   rowText: { flex: 1, gap: 2 },
 });

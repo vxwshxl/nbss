@@ -185,3 +185,130 @@ export async function changeRole(profileId: string, role: Role): Promise<void> {
 
   revalidatePath("/console/guards");
 }
+
+/**
+ * What a hard delete would take with it.
+ *
+ * Read before the confirmation is shown, so the dialog can name real numbers instead of
+ * a vague warning. `profiles.id` is the target of eight ON DELETE CASCADE foreign keys,
+ * and `attendance` is one of them — which means deleting a guard destroys the record
+ * that payroll and client billing are both computed from. An administrator is entitled
+ * to do that; they are not entitled to do it without being told.
+ */
+export async function accountFootprint(profileId: string): Promise<{
+  attendance: number;
+  shifts: number;
+  sosAlerts: number;
+  positions: number;
+  isLastAdmin: boolean;
+}> {
+  await requireRoleSession("admin");
+  const admin = supabaseAdmin();
+
+  // `head: true` with an exact count reads the count without transferring the rows.
+  const [attendance, shifts, sos, positions, admins] = await Promise.all([
+    admin.from("attendance").select("id", { count: "exact", head: true }).eq("guard_id", profileId),
+    admin.from("shifts").select("id", { count: "exact", head: true }).eq("guard_id", profileId),
+    admin.from("sos_alerts").select("id", { count: "exact", head: true }).eq("raised_by", profileId),
+    admin
+      .from("guard_location_history")
+      .select("id", { count: "exact", head: true })
+      .eq("guard_id", profileId),
+    admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("active", true),
+  ]);
+
+  return {
+    attendance: attendance.count ?? 0,
+    shifts: shifts.count ?? 0,
+    sosAlerts: sos.count ?? 0,
+    positions: positions.count ?? 0,
+    isLastAdmin: (admins.count ?? 0) <= 1,
+  };
+}
+
+/**
+ * Deletes an account outright, and everything that cascades from it.
+ *
+ * Deactivating is almost always the right action — it stops the sign-in and keeps the
+ * ledger — and it stays the default the UI offers. This exists for the cases
+ * deactivating does not cover: a duplicate created by a typo, a test account, someone
+ * entered who never actually joined. For those, an inactive row cluttering the roster
+ * forever is the wrong answer.
+ *
+ * The auth user is deleted rather than the profile row. `profiles.id` references
+ * `auth.users(id) ON DELETE CASCADE`, so removing the login removes the profile, and
+ * removing the profile cascades onward. Deleting the profile directly would leave an
+ * orphaned auth user that could still authenticate and then find no profile — which
+ * `currentProfile` reads as "no access", so it would fail closed, but it would also
+ * silently hold the email address and block the code being reused.
+ *
+ * Two refusals, and both are about not locking anybody out:
+ * deleting your own account, and deleting the last active administrator.
+ */
+export async function deleteAccount(profileId: string): Promise<void> {
+  const session = await requireRoleSession("admin");
+
+  if (profileId === session.realProfile.id) {
+    throw new Error("You cannot delete the account you are signed in with.");
+  }
+
+  const admin = supabaseAdmin();
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("employee_code, full_name, role")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (!target) throw new Error("That account no longer exists.");
+
+  if (target.role === "admin") {
+    const { count } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("active", true);
+
+    // Deleting the only administrator leaves a system nobody can manage — no way to
+    // add a guard, move a fence, or create another admin.
+    if ((count ?? 0) <= 1) {
+      throw new Error(
+        "This is the last active administrator. Promote somebody else to administrator first.",
+      );
+    }
+  }
+
+  // Counted before the delete, because afterwards there is nothing left to count. This
+  // is the only surviving record of what was destroyed: `audit_log.actor_id` is
+  // ON DELETE SET NULL, so the log outlives the account, and `actor_code` is why the
+  // entries this person made as an actor remain attributable.
+  const footprint = await accountFootprint(profileId);
+
+  await audit({
+    actor: session.realProfile,
+    action: "account_deleted",
+    entity: "profiles",
+    entityId: profileId,
+    detail: {
+      employee_code: target.employee_code,
+      full_name: target.full_name,
+      role: target.role,
+      destroyed: {
+        attendance: footprint.attendance,
+        shifts: footprint.shifts,
+        sos_alerts: footprint.sosAlerts,
+        positions: footprint.positions,
+      },
+    },
+    ip: await clientIp(),
+  });
+
+  const { error } = await admin.auth.admin.deleteUser(profileId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/console/guards");
+}

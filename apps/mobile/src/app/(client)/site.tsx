@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { CalendarCheck, Clock3, Phone, Radio, ShieldCheck, Timer } from "lucide-react-native";
+import { useCallback } from "react";
+import { Linking, RefreshControl, StyleSheet, View } from "react-native";
 
+import { COMPANY, istTime, tel } from "@nbss/shared/company";
 import type { View as DbView } from "@nbss/shared/db";
 
-import { Card } from "@/components/card";
+import { Button } from "@/components/button";
+import { PageHeader } from "@/components/page-header";
+import { Panel, PanelRow } from "@/components/panel";
+import { CardGrid, Screen } from "@/components/screen";
+import { StatCard } from "@/components/stat-card";
 import { Text } from "@/components/text";
+import { useLayout } from "@/hooks/use-breakpoint";
+import { useLoader } from "@/hooks/use-loader";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { color, space } from "@/theme/tokens";
@@ -13,19 +21,19 @@ type Presence = DbView<"client_attendance">;
 
 /**
  * What a client sees: that their site is staffed, and the man-hours behind the invoice.
+ * The same four figures and the same "on duty now" table as the console's client page, so
+ * a customer who has seen one recognises the other.
  *
  * Read from `client_attendance`, not from `attendance`. The underlying rows carry each
  * guard's coordinates, accuracy readings and the object key of their check-in photograph,
- * and row level security filters rows rather than columns — so the view (0004) exposes
- * the ten columns a client may have and the table itself stays closed to them. A client
- * is entitled to know their premises are covered; following an individual employee around
- * a compound minute by minute is not theirs to do.
+ * and row level security filters rows rather than columns — so the view (0004) exposes the
+ * ten columns a client may have and the table itself stays closed to them. A client is
+ * entitled to know their premises are covered; following an individual employee around a
+ * compound minute by minute is not theirs to do.
  */
 export default function ClientSiteRoute() {
   const { profile } = useAuth();
-  const [onDuty, setOnDuty] = useState<Presence[]>([]);
-  const [monthMinutes, setMonthMinutes] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
+  const { statColumns } = useLayout();
 
   const load = useCallback(async () => {
     const monthStart = new Date();
@@ -40,61 +48,92 @@ export default function ClientSiteRoute() {
         .order("check_in_at", { ascending: false }),
       supabase
         .from("client_attendance")
-        .select("worked_minutes")
+        .select("worked_minutes, overtime_minutes")
         .gte("check_in_at", monthStart.toISOString()),
     ]);
 
-    setOnDuty(live.data ?? []);
-    setMonthMinutes((month.data ?? []).reduce((sum, row) => sum + (row.worked_minutes ?? 0), 0));
+    const rows = month.data ?? [];
+    return {
+      onDuty: (live.data ?? []) as Presence[],
+      monthMinutes: rows.reduce((sum, r) => sum + (r.worked_minutes ?? 0), 0),
+      overtime: rows.reduce((sum, r) => sum + (r.overtime_minutes ?? 0), 0),
+      shifts: rows.length,
+    };
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, refreshing, reload } = useLoader(load);
+  const onDuty = data?.onDuty ?? [];
+  const monthMinutes = data?.monthMinutes ?? 0;
+  const overtime = data?.overtime ?? 0;
+  const shifts = data?.shifts ?? 0;
+
+  const hours = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m ? `${h}h ${String(m).padStart(2, "0")}m` : `${h}h`;
+  };
 
   return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.body}
+    <Screen
+      bottomInset={false}
+      contentStyle={styles.body}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           tintColor={color.primary}
-          onRefresh={() => {
-            setRefreshing(true);
-            void load().finally(() => setRefreshing(false));
-          }}
+          onRefresh={() => void reload()}
         />
       }
     >
-      <Card tone="accent">
-        <Text variant="caption" tone="muted" medium>
-          ON DUTY NOW
-        </Text>
-        <Text variant="hero" bold mono>
-          {onDuty.length}
-        </Text>
-        <Text variant="caption" tone="muted">
-          {Math.floor(monthMinutes / 60)} man-hours this month
-        </Text>
-      </Card>
+      <PageHeader eyebrow="My site" title="Deployment" />
 
-      <Card title="Who is on site" bare>
+      <CardGrid columns={statColumns}>
+        <StatCard
+          label="On duty now"
+          value={String(onDuty.length)}
+          hint={onDuty.length ? "Verified at the boundary" : "Nobody is checked in"}
+          icon={Radio}
+          tone={onDuty.length ? "emerald" : "slate"}
+        />
+        <StatCard
+          label="Man-hours"
+          value={hours(monthMinutes)}
+          hint="This month"
+          icon={Clock3}
+          tone="indigo"
+        />
+        <StatCard
+          label="Of which overtime"
+          value={hours(overtime)}
+          hint="This month"
+          icon={Timer}
+          tone="violet"
+        />
+        <StatCard
+          label="Shifts"
+          value={String(shifts)}
+          hint="This month"
+          icon={CalendarCheck}
+          tone="sky"
+        />
+      </CardGrid>
+
+      <Panel tone="emerald" title="On duty now" icon={ShieldCheck} bare>
         {onDuty.length === 0 ? (
           <View style={styles.empty}>
-            <Text variant="body" medium>
+            <Text variant="body" weight="medium">
               Nobody is checked in.
             </Text>
-            <Text variant="caption" tone="muted" style={styles.centered}>
-              Guards appear here from the moment they arrive and mark themselves present at
-              the boundary.
+            <Text variant="caption" tone="muted" style={styles.centred}>
+              Guards appear here from the moment they arrive on site and mark themselves
+              present at the boundary.
             </Text>
           </View>
         ) : (
-          onDuty.map((row) => (
-            <View key={row.id} style={styles.row}>
+          onDuty.map((row, i) => (
+            <PanelRow key={row.id} first={i === 0}>
               <View style={styles.rowText}>
-                <Text variant="body" semibold>
+                <Text variant="body" weight="semibold">
                   {row.guard_name ?? "—"}
                 </Text>
                 <Text variant="caption" tone="muted">
@@ -102,43 +141,32 @@ export default function ClientSiteRoute() {
                 </Text>
               </View>
               <Text variant="caption" tone="muted" mono>
-                {row.check_in_at
-                  ? new Date(row.check_in_at).toLocaleTimeString("en-IN", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                      timeZone: "Asia/Kolkata",
-                    })
-                  : "—"}
+                {row.check_in_at ? `${istTime(row.check_in_at)} IST` : "—"}
               </Text>
-            </View>
+            </PanelRow>
           ))
         )}
-      </Card>
+      </Panel>
 
-      <Card title="Signed in as">
-        <Text variant="body">{profile?.full_name ?? "—"}</Text>
-        <Text variant="caption" tone="muted">
-          {profile?.employee_code ?? "—"}
+      <Panel tone="slate" title="Anything not right?" icon={Phone}>
+        <Text variant="body" tone="muted">
+          Man-hours are computed from the times guards checked in and out at your site, each
+          one verified against its boundary. The deployment desk is staffed{" "}
+          {COMPANY.deskHours}. Signed in as {profile?.full_name ?? "—"}.
         </Text>
-      </Card>
-    </ScrollView>
+        <Button
+          label={COMPANY.phone}
+          icon={Phone}
+          onPress={() => void Linking.openURL(`tel:${tel(COMPANY.phone)}`)}
+        />
+      </Panel>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: color.appBg },
-  body: { padding: space[4], gap: space[4] },
+  body: { gap: space[4] },
   empty: { padding: space[6], gap: space[2], alignItems: "center" },
-  centered: { textAlign: "center" },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space[3],
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.border,
-  },
+  centred: { textAlign: "center" },
   rowText: { flex: 1, gap: 2 },
 });

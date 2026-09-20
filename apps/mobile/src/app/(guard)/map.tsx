@@ -1,4 +1,4 @@
-import { Card } from "@/components/card";
+import { Panel } from "@/components/panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
 
@@ -14,7 +14,7 @@ import { Text } from "@/components/text";
 export default function MapRoute() {
   return (
     <Screen bottomInset={false}>
-      <Card title="Site map">
+      <Panel title="Site map">
         <Text variant="body">
           Not built yet — this is where you will see your site&apos;s boundary and the other
           guards on it.
@@ -23,7 +23,7 @@ export default function MapRoute() {
           The live position feed and the map library are both wired up; what is left is the
           map style itself.
         </Text>
-      </Card>
+      </Panel>
     </Screen>
   );
 }

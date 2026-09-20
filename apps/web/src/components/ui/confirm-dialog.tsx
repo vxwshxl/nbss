@@ -30,13 +30,15 @@ export function ConfirmDialog({
   destructive = false,
   hold = false,
   successMessage,
+  confirmDisabled = false,
   onConfirm,
   open: controlledOpen,
   onOpenChange,
 }: {
   trigger?: React.ReactNode;
   title?: string;
-  description?: string;
+  /** A node, not just a string, so a caller can spell out consequences as a list. */
+  description?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
@@ -47,6 +49,13 @@ export function ConfirmDialog({
    */
   hold?: boolean;
   successMessage?: string;
+  /**
+   * Holds the confirm button closed while the caller is still working out what the
+   * action would do. For an irreversible action whose consequences are fetched — how
+   * many attendance rows a delete would destroy, say — the button must not be pressable
+   * before that answer arrives, or the dialog is asking someone to agree to a blank.
+   */
+  confirmDisabled?: boolean;
   onConfirm: () => void | Promise<void>;
   // Optional controlled state, e.g. to open from a dropdown menu item.
   open?: boolean;
@@ -63,8 +72,19 @@ export function ConfirmDialog({
         await onConfirm();
         if (successMessage) toast.success(successMessage);
         setOpen(false);
-      } catch {
-        toast.error("Something went wrong.");
+      } catch (e) {
+        /**
+         * The real message, not "something went wrong". The refusals this dialog
+         * triggers are things the operator has to act on — "this is the last active
+         * administrator" tells them what to do next; a shrug does not.
+         *
+         * Not rethrown: this runs inside `startTransition`, where an escaping rejection
+         * is an unhandled one. `setOpen(false)` sits after the await in the try, so a
+         * throwing `onConfirm` already leaves the dialog open on its own — which is the
+         * behaviour wanted, so long as `onConfirm` actually returns a promise that
+         * rejects rather than swallowing the error itself.
+         */
+        toast.error(e instanceof Error ? e.message : "Something went wrong.");
       }
     });
   }
@@ -75,7 +95,13 @@ export function ConfirmDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description && (
+            // `asChild` is not used, so a caller passing elements would otherwise nest
+            // them inside a <p>. Rendered as a div to keep the markup valid.
+            <DialogDescription asChild>
+              <div className="text-sm text-muted-foreground">{description}</div>
+            </DialogDescription>
+          )}
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
@@ -86,7 +112,7 @@ export function ConfirmDialog({
           {hold && destructive ? (
             <HoldButton
               className="h-7 px-2.5 text-[0.8rem]"
-              disabled={pending}
+              disabled={pending || confirmDisabled}
               onHold={handleConfirm}
               hint={`Hold to ${confirmLabel.toLowerCase()}`}
             >
@@ -105,7 +131,7 @@ export function ConfirmDialog({
             <Button
               size="sm"
               variant={destructive ? "destructive" : "default"}
-              disabled={pending}
+              disabled={pending || confirmDisabled}
               onClick={handleConfirm}
             >
               <Swap

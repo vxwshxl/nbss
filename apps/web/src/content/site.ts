@@ -13,6 +13,8 @@
  * copy problem. Add them here as the client confirms them.
  */
 
+import { COMPANY } from "@nbss/shared/company";
+
 export type Link = { label: string; url: string };
 
 export type Credential = {
@@ -22,12 +24,16 @@ export type Credential = {
 };
 
 export const site = {
-  name: "National Bodo Security Service",
-  shortName: "NBSS",
-  tagline: "Your Safety, Our Responsibility.",
+  /**
+   * Identity, timezone and the phone number come from `@nbss/shared/company` so the
+   * Expo app quotes the same ones. Everything below them is website-only.
+   */
+  name: COMPANY.name,
+  shortName: COMPANY.shortName,
+  tagline: COMPANY.tagline,
   descriptor:
     "A trusted and professionally managed security service provider headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained and disciplined security personnel to government, corporate, institutional and commercial clients.",
-  phone: "+91 70020 71628",
+  phone: COMPANY.phone,
   address: {
     label: "Registered Office",
     /** Rendered line by line wherever the address appears. */
@@ -60,7 +66,7 @@ export const site = {
     "Supervision & deployment desk — 24 × 7",
   ],
   /** IANA zone for every date the site formats. */
-  timeZone: "Asia/Kolkata",
+  timeZone: COMPANY.timeZone,
   /**
    * Only profiles the client has actually confirmed. Instagram and YouTube are
    * absent rather than pointing at "#", for the same reason the licence numbers
@@ -107,10 +113,11 @@ export const site = {
   ] satisfies Credential[],
 } as const;
 
-/** Strips a phone number down to something a `tel:` href accepts. */
-export function tel(value: string): string {
-  return value.replace(/[\s\-()]/g, "");
-}
+/**
+ * Strips a phone number down to something a `tel:` href accepts.
+ * Re-exported from the shared package, where the app needs it too.
+ */
+export { tel } from "@nbss/shared/company";
 
 export type Stat = {
   value: string;

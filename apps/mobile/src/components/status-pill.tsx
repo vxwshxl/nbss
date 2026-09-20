@@ -26,7 +26,7 @@ export function StatusPill({ tone, label }: { tone: Tone; label: string }) {
   return (
     <View style={styles.pill}>
       <View style={[styles.dot, { backgroundColor: dotColor[tone] }]} />
-      <Text variant="micro" semibold tone="muted" style={styles.label}>
+      <Text weight="semibold" variant="micro" tone="muted" style={styles.label}>
         {label.toUpperCase()}
       </Text>
     </View>

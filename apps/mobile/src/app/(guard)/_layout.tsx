@@ -1,9 +1,11 @@
 import { Redirect, Tabs } from "expo-router";
+import { CircleUserRound, Map, ShieldCheck } from "lucide-react-native";
 import { useEffect } from "react";
+import { StyleSheet } from "react-native";
 
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
-import { color } from "@/theme/tokens";
+import { color, font } from "@/theme/tokens";
 
 /**
  * A guard's app.
@@ -37,19 +39,44 @@ export default function GuardLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: color.background },
-        headerShadowVisible: false,
+        headerShown: false,
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
-        tabBarStyle: { backgroundColor: color.background, borderTopColor: color.border },
-        // Larger than the default: this is read at arm's length, outdoors.
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+        tabBarStyle: {
+          backgroundColor: color.card,
+          borderTopColor: color.lineSoft,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        // Geist, so the tab bar does not betray the system font under a screen full of it.
+        tabBarLabelStyle: { fontFamily: font.medium, fontSize: 12 },
         sceneStyle: { backgroundColor: color.appBg },
       }}
     >
-      <Tabs.Screen name="duty" options={{ title: "Duty" }} />
-      <Tabs.Screen name="map" options={{ title: "Site" }} />
-      <Tabs.Screen name="profile" options={{ title: "You" }} />
+      {/* The same lucide icons the console's nav uses, from lucide-react-native — the
+          packages are pinned to the same version, so these are the identical glyphs. */}
+      <Tabs.Screen
+        name="duty"
+        options={{
+          title: "Duty",
+          tabBarIcon: ({ color: c, size }) => <ShieldCheck size={size} color={c} strokeWidth={2} />,
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: "Site",
+          tabBarIcon: ({ color: c, size }) => <Map size={size} color={c} strokeWidth={2} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "You",
+          tabBarIcon: ({ color: c, size }) => (
+            <CircleUserRound size={size} color={c} strokeWidth={2} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
