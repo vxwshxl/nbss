@@ -6,6 +6,7 @@ import { COMPANY, istTime, tel } from "@nbss/shared/company";
 import type { View as DbView } from "@nbss/shared/db";
 
 import { Button } from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
@@ -75,6 +76,7 @@ export default function ClientSiteRoute() {
 
   return (
     <Screen
+      topInset={false}
       bottomInset={false}
       contentStyle={styles.body}
       refreshControl={
@@ -120,15 +122,11 @@ export default function ClientSiteRoute() {
 
       <Panel tone="emerald" title="On duty now" icon={ShieldCheck} bare>
         {onDuty.length === 0 ? (
-          <View style={styles.empty}>
-            <Text variant="body" weight="medium">
-              Nobody is checked in.
-            </Text>
-            <Text variant="caption" tone="muted" style={styles.centred}>
-              Guards appear here from the moment they arrive on site and mark themselves
-              present at the boundary.
-            </Text>
-          </View>
+          <EmptyState
+            icon={Radio}
+            title="Nobody is checked in."
+            body="Guards appear here from the moment they arrive on site and mark themselves present at the boundary."
+          />
         ) : (
           onDuty.map((row, i) => (
             <PanelRow key={row.id} first={i === 0}>
@@ -165,8 +163,6 @@ export default function ClientSiteRoute() {
 }
 
 const styles = StyleSheet.create({
-  body: { gap: space[4] },
-  empty: { padding: space[6], gap: space[2], alignItems: "center" },
-  centred: { textAlign: "center" },
+  body: { gap: space[6] },
   rowText: { flex: 1, gap: 2 },
 });

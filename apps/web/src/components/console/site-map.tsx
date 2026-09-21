@@ -77,8 +77,15 @@ export function SiteMap({
   // The data the draw effect reads. Held in a ref as well as a dep so the map
   // itself is only ever created once — recreating it on every data change
   // would reset the reader's pan and zoom on every refresh.
+  //
+  // Synced in an effect rather than assigned during render: a render can be discarded
+  // and re-run, so a write during one is not guaranteed to have happened exactly once,
+  // which is what `react-hooks/refs` objects to. `useRef` already holds the first value
+  // and this effect commits before the draw effect below can read it.
   const data = useRef({ sites, punches, focus });
-  data.current = { sites, punches, focus };
+  useEffect(() => {
+    data.current = { sites, punches, focus };
+  }, [sites, punches, focus]);
 
   useEffect(() => {
     let cancelled = false;

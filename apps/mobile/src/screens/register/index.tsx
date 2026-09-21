@@ -66,7 +66,7 @@ export function Register() {
 
   if (sent) {
     return (
-      <Screen style={styles.body}>
+      <Screen contentStyle={styles.body} topInset={false}>
         <Panel tone="emerald" title="Check your email">
           <Text variant="body">
             We have sent a confirmation link to {email.trim()}. Open it and then sign in —
@@ -83,7 +83,7 @@ export function Register() {
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Screen style={styles.body}>
+      <Screen contentStyle={styles.body} topInset={false}>
         <Text variant="caption" tone="muted">
           For organisations who want to book security. Guards and supervisors are issued
           a code and PIN by the office — this is not that.
@@ -151,6 +151,6 @@ export function Register() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: color.appBg },
-  body: { gap: space[5] },
+  body: { gap: space[6] },
   form: { gap: space[4] },
 });

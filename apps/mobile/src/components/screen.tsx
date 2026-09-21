@@ -24,6 +24,7 @@ export function Screen({
   children,
   scroll = true,
   padded = true,
+  topInset = true,
   bottomInset = true,
   refreshControl,
   style,
@@ -32,6 +33,15 @@ export function Screen({
 }: ViewProps & {
   scroll?: boolean;
   padded?: boolean;
+  /**
+   * Reserve the status-bar inset.
+   *
+   * On by default, and this is the bug it fixes: the tab screens are declared
+   * `headerShown: false`, so nothing above them was reserving that space and the first
+   * line of every screen rendered underneath the clock and the battery icon. A navigation
+   * header does reserve it, so a screen pushed onto a Stack that has one passes `false`.
+   */
+  topInset?: boolean;
   /** Off for a screen inside the tab bar, which already reserves the bottom inset. */
   bottomInset?: boolean;
   refreshControl?: React.ComponentProps<typeof ScrollView>["refreshControl"];
@@ -45,8 +55,10 @@ export function Screen({
     maxWidth: contentMaxWidth,
     alignSelf: "center" as const,
     paddingHorizontal: padded ? gutter : 0,
-    paddingTop: padded ? gutter : 0,
-    paddingBottom: (padded ? space[8] : 0) + (bottomInset ? insets.bottom : 0),
+    paddingTop: (padded ? gutter : 0) + (topInset ? insets.top : 0),
+    // The console ends a page with `space-y-6` worth of air; a phone needs more, because
+    // the last card would otherwise sit flush against the tab bar with nothing under it.
+    paddingBottom: (padded ? space[10] : 0) + (bottomInset ? insets.bottom : 0),
   };
 
   if (!scroll) {

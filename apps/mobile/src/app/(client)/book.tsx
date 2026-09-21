@@ -94,7 +94,7 @@ export default function BookRoute() {
 
   if (reference) {
     return (
-      <Screen style={styles.body} bottomInset={false}>
+      <Screen contentStyle={styles.body} topInset={false} bottomInset={false}>
         <Panel tone="emerald" title="We have it">
           <Text weight="bold" variant="pageTitle" mono>
             {reference}
@@ -120,7 +120,7 @@ export default function BookRoute() {
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <Screen style={styles.body} bottomInset={false}>
+      <Screen contentStyle={styles.body} topInset={false} bottomInset={false}>
         <Panel title="What do you need?" subtitle="Pick the closest — we will sort out the detail on the phone.">
           <View style={styles.chips}>
             {SERVICES.map((option) => (
@@ -201,7 +201,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: color.appBg },
-  body: { gap: space[4] },
+  body: { gap: space[6] },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
   chip: {
     paddingHorizontal: space[3],

@@ -99,3 +99,20 @@ export function normalisePhone(phone: string): string {
 export function isValidPhone(phone: string): boolean {
   return /^[6-9]\d{9}$/.test(normalisePhone(phone));
 }
+
+/**
+ * The one or two letters an avatar falls back to when there is no photo.
+ * "Diyan Brahma" → "DB", "Ripun" → "RI", "" → "?".
+ *
+ * Lived as a private copy in four components on the web before it was centralised; the
+ * Expo app would have made a fifth, so it moved here instead. Keep new avatars on this one
+ * so a name renders the same in the browser and on a phone.
+ */
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  if (!first || !last) return "?";
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
+  return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase() || "?";
+}

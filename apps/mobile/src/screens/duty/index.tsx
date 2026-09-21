@@ -17,6 +17,8 @@ import { formatDistance } from "@nbss/shared/geo";
 
 import { Button, LinkButton } from "@/components/button";
 import { HoldButton } from "@/components/hold-button";
+import { InfoButton } from "@/components/info";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
@@ -152,7 +154,7 @@ export function Duty() {
 
   if (data === undefined) {
     return (
-      <Screen scroll={false} bottomInset={false} contentStyle={styles.center}>
+      <Screen scroll={false} topInset={false} bottomInset={false} contentStyle={styles.center}>
         <ActivityIndicator color={color.primary} />
       </Screen>
     );
@@ -164,6 +166,7 @@ export function Duty() {
 
   return (
     <Screen
+      topInset={false}
       bottomInset={false}
       contentStyle={styles.body}
       refreshControl={
@@ -214,12 +217,24 @@ export function Duty() {
 
       {/* ─────────────────── what this container cannot do, whatever the settings say */}
       {IS_EXPO_GO && (
-        <Panel tone="amber" title="This is a test build, not the real app" icon={TriangleAlert}>
-          <Text variant="body">{runtimeLimitation()}</Text>
-          <Text variant="caption" tone="muted">
-            {CAN_RECEIVE_PUSH
-              ? "Everything else works: checking in and out, raising an SOS, and the live feed while the app is open."
-              : "You can still raise an SOS from this phone and others will get it — this phone just will not receive one."}
+        <Panel
+          tone="amber"
+          title="Test build"
+          icon={TriangleAlert}
+          action={
+            <InfoButton title="What does not work in a test build">
+              {[
+                runtimeLimitation() ?? "",
+                CAN_RECEIVE_PUSH
+                  ? "Everything else works normally: checking in and out, raising an SOS, and the live feed while the app is open."
+                  : "You can still raise an SOS from this phone and everyone else will get it. This phone is the one that will not receive one.",
+                "A development build fixes all of it. Nothing here is a fault with the app itself.",
+              ]}
+            </InfoButton>
+          }
+        >
+          <Text variant="body" tone="muted">
+            Background location and some alerts are switched off in this build.
           </Text>
         </Panel>
       )}
@@ -233,18 +248,31 @@ export function Duty() {
 
       {/* ─────────────────────────────── the permission that actually matters */}
       {onDuty && permission && !permission.ok && (
-        <Panel tone="rose" title="Your location is not being shared" icon={TriangleAlert}>
-          <Text variant="body">
+        <Panel
+          tone="rose"
+          title="Location is not being shared"
+          icon={TriangleAlert}
+          action={
+            <InfoButton title="Why this matters">
+              {[
+                permission.need === "services"
+                  ? "Location is switched off on this phone entirely, so nothing can read your position — not this app and not the control room."
+                  : permission.need === "foreground"
+                    ? "This app has not been allowed to read your location at all, so your check-in cannot be verified against the site boundary."
+                    : "This app can only read your location while the screen is on. The moment the phone locks, the control room stops seeing you — which on their map looks the same as a guard who has gone home.",
+                permission.need === "background"
+                  ? "Open Permissions → Location and choose “Allow all the time”. Android does not let an app ask for this in a dialog, so it has to be done in Settings."
+                  : "It takes a moment to grant, and it stops again the second you check out. You are never tracked off duty.",
+              ]}
+            </InfoButton>
+          }
+        >
+          <Text variant="body" tone="muted">
             {permission.need === "services"
-              ? "Location is switched off on this phone. Turn it on, or the control room cannot see that your site is covered."
-              : permission.need === "foreground"
-                ? "This app has not been allowed to read your location."
-                : "This app can only read your location while the screen is on. The control room will lose you as soon as the phone locks."}
-          </Text>
-          <Text variant="caption" tone="muted">
-            {permission.need === "background"
-              ? "Open Permissions → Location and choose “Allow all the time”. Android will not let the app ask for this itself."
-              : "It takes a moment, and it stops again the second you check out."}
+              ? "Turn location on to be seen by the control room."
+              : permission.need === "background"
+                ? "Allowed only while the screen is on."
+                : "Not allowed to read your location."}
           </Text>
           <Button
             label={permission.need === "services" ? "Open settings" : "Fix this"}
@@ -274,10 +302,19 @@ export function Duty() {
 
       {/* ─────────────────────────────────────────────────────── check out */}
       {onDuty && (
-        <Panel tone="slate" title="End your shift" icon={Clock3}>
-          <Text variant="body" tone="muted">
-            Checking out stops your location being shared and closes the shift for payroll.
-          </Text>
+        <Panel
+          tone="slate"
+          title="End your shift"
+          icon={Clock3}
+          action={
+            <InfoButton title="Checking out">
+              {[
+                "Your location stops being shared the moment you check out, and nothing is recorded until your next shift.",
+                "The hours between your check-in and check-out are what payroll and the client's invoice are both computed from, so check out before you leave rather than afterwards.",
+              ]}
+            </InfoButton>
+          }
+        >
           <Button
             label="Check out"
             variant="outline"
@@ -303,15 +340,11 @@ export function Duty() {
           bare
         >
           {proximity.length === 0 ? (
-            <View style={styles.empty}>
-              <Text variant="body" weight="medium">
-                No sites to show yet.
-              </Text>
-              <Text variant="caption" tone="muted" style={styles.centered}>
-                Pull down to try again. If GPS is off, switch it on first — the check-in is
-                refused without a position.
-              </Text>
-            </View>
+            <EmptyState
+              icon={MapPin}
+              title="No sites to show yet."
+              body="Pull down to try again. If GPS is switched off, turn it on first — a check-in is refused without a position."
+            />
           ) : (
             proximity.map(({ site, inside, distanceM }, i) => (
               <PanelRow key={site.id} first={i === 0}>
@@ -348,7 +381,7 @@ export function Duty() {
       {/* ─────────────────────────────────────────────────── the desk, always */}
       <Panel tone="sky" title="Anything not right?" icon={Phone}>
         <Text variant="body" tone="muted">
-          The deployment desk is staffed {COMPANY.deskHours}.
+          Staffed {COMPANY.deskHours}.
         </Text>
         <Button
           label={COMPANY.phone}
@@ -362,9 +395,9 @@ export function Duty() {
 }
 
 const styles = StyleSheet.create({
-  body: { gap: space[4] },
+  // `space-y-6` on the console. 16 was too tight once the Panels gained header strips.
+  body: { gap: space[6] },
   center: { alignItems: "center", justifyContent: "center" },
   centered: { textAlign: "center" },
-  empty: { padding: space[6], gap: space[2], alignItems: "center" },
   siteText: { flex: 1, gap: 2 },
 });

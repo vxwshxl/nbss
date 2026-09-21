@@ -3,6 +3,7 @@ import { CircleUserRound, Map, ShieldCheck } from "lucide-react-native";
 import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 
+import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
@@ -19,7 +20,7 @@ import { color, font } from "@/theme/tokens";
  * signed in now, which is exactly what `register_device`'s upsert-on-token does.
  */
 export default function GuardLayout() {
-  const { session, role } = useAuth();
+  const { session, role, profile } = useAuth();
 
   useEffect(() => {
     if (!session) return;
@@ -39,7 +40,15 @@ export default function GuardLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        /**
+         * The console's topbar, as the real navigation header rather than something each
+         * screen draws for itself. Two reasons: it persists across a tab change instead of
+         * unmounting and remounting, and it owns the status-bar inset in one place — which
+         * is why every screen underneath passes `topInset={false}` to <Screen>.
+         */
+        header: () => (
+          <TopBar role={role ?? "guard"} name={profile?.full_name ?? "—"} />
+        ),
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
         tabBarStyle: {

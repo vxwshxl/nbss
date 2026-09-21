@@ -8,6 +8,7 @@ import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 import { Radio, ShieldAlert, SatelliteDish, WifiOff } from "lucide-react-native";
 
 import { Button } from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
@@ -68,6 +69,7 @@ export default function LiveRoute() {
 
   return (
     <Screen
+      topInset={false}
       bottomInset={false}
       contentStyle={styles.body}
       refreshControl={
@@ -143,14 +145,11 @@ export default function LiveRoute() {
         bare
       >
         {positions.length === 0 ? (
-          <View style={styles.empty}>
-            <Text weight="medium" variant="body">
-              {batch ? "Nobody is on duty." : "Connecting…"}
-            </Text>
-            <Text variant="caption" tone="muted" style={styles.centered}>
-              Positions arrive every fifteen seconds while guards are checked in.
-            </Text>
-          </View>
+          <EmptyState
+            icon={SatelliteDish}
+            title={batch ? "Nobody is on duty." : "Connecting…"}
+            body="Positions arrive every fifteen seconds while guards are checked in."
+          />
         ) : (
           positions.map((position) => {
             const age = freshness(new Date(position.recorded_at).getTime(), now);
@@ -185,10 +184,8 @@ export default function LiveRoute() {
 const styles = StyleSheet.create({
   // No padding here: <Screen> owns the gutter, and it grows on a tablet. A padding of its
   // own would double up and stop the layout being responsive.
-  body: { gap: space[4] },
+  body: { gap: space[6] },
   alert: { flexDirection: "row", alignItems: "center", gap: space[3] },
   alertText: { flex: 1, gap: 2 },
-  empty: { padding: space[6], gap: space[2], alignItems: "center" },
-  centered: { textAlign: "center" },
   rowText: { flex: 1, gap: 2 },
 });

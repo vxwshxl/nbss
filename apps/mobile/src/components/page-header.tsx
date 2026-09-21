@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: space[4],
+    // `mb-6` on the console. The title needs air under it or it crowds the first card.
     marginBottom: space[2],
   },
   text: { flex: 1, minWidth: 0 },

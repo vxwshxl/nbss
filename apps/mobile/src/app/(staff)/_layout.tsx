@@ -1,6 +1,7 @@
 import { Redirect, Stack } from "expo-router";
 import { useEffect } from "react";
 
+import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
 import { color } from "@/theme/tokens";
@@ -14,7 +15,7 @@ import { color } from "@/theme/tokens";
  * alarm.
  */
 export default function StaffLayout() {
-  const { session, role } = useAuth();
+  const { session, role, profile } = useAuth();
 
   useEffect(() => {
     if (!session) return;
@@ -27,12 +28,13 @@ export default function StaffLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: color.background },
-        headerShadowVisible: false,
+        // The same topbar the guard and client tabs carry, so all three roles get the
+        // console's chrome rather than two of them getting it and one a plain title bar.
+        header: () => <TopBar role={role ?? "supervisor"} name={profile?.full_name ?? "—"} />,
         contentStyle: { backgroundColor: color.appBg },
       }}
     >
-      <Stack.Screen name="live" options={{ title: "Live" }} />
+      <Stack.Screen name="live" />
     </Stack>
   );
 }

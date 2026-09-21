@@ -72,7 +72,17 @@ export function SliderNav({
     // pill is driven locally so a tap moves it before the route resolves; this
     // is what puts it back where the URL says when the move came from
     // somewhere else.
-    useEffect(() => { setSelectedIndex(safeActive); }, [safeActive]);
+    //
+    // Adjusted during render rather than in an effect — React's own recipe for deriving
+    // state from a changing prop. An effect would paint the pill in its old position
+    // first and correct it on the next frame, which is a visible flicker on every
+    // back-button press; setting during render re-runs this component before anything
+    // reaches the screen. (https://react.dev/learn/you-might-not-need-an-effect)
+    const [syncedActive, setSyncedActive] = useState(safeActive);
+    if (syncedActive !== safeActive) {
+      setSyncedActive(safeActive);
+      setSelectedIndex(safeActive);
+    }
 
     const storeKey = items.map((item) => item.href).join("|");
     const x = useMotionValue(lastPill.get(storeKey)?.x ?? 0);
