@@ -1,9 +1,10 @@
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
+import type * as NotificationsModule from "expo-notifications";
 import { Platform } from "react-native";
 
 import { APP_VERSION } from "./config";
+import { CAN_RECEIVE_PUSH } from "./runtime";
 import { supabase } from "./supabase";
 
 /**
@@ -20,6 +21,21 @@ import { supabase } from "./supabase";
 export const SOS_CHANNEL = "sos";
 
 /**
+ * The notifications module, or null where it cannot work.
+ *
+ * Required lazily rather than imported, because Expo Go on Android throws from the
+ * module's own top level — not from a call into it. A static import therefore takes down
+ * every route that reaches this file, and Expo Router reports each of them as "missing
+ * the required default export" before the root layout's ErrorBoundary lookup crashes.
+ * The web has no module to load either. Everything below goes through this and treats
+ * null as "push is unsupported here".
+ */
+export const Notifications: typeof NotificationsModule | null = CAN_RECEIVE_PUSH
+  ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("expo-notifications") as typeof NotificationsModule)
+  : null;
+
+/**
  * How a notification behaves when it lands while the app is open.
  *
  * An SOS is shown and sounded even in the foreground, which is unusual — the normal
@@ -27,22 +43,24 @@ export const SOS_CHANNEL = "sos";
  * phone may be looking at a completely different screen, and a silent banner is
  * exactly what gets missed.
  */
-Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
-    const isSos = (notification.request.content.data as { type?: string } | null)?.type === "sos";
-    return {
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: isSos,
-      shouldSetBadge: false,
-      // iOS: lifts it above a Focus mode. Paired with the time-sensitive entitlement
-      // in app.config.ts and `interruptionLevel` on the sending side in 0006.
-      priority: isSos
-        ? Notifications.AndroidNotificationPriority.MAX
-        : Notifications.AndroidNotificationPriority.DEFAULT,
-    };
-  },
-});
+if (Notifications) {
+  Notifications.setNotificationHandler({
+    handleNotification: async (notification) => {
+      const isSos = (notification.request.content.data as { type?: string } | null)?.type === "sos";
+      return {
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: isSos,
+        shouldSetBadge: false,
+        // iOS: lifts it above a Focus mode. Paired with the time-sensitive entitlement
+        // in app.config.ts and `interruptionLevel` on the sending side in 0006.
+        priority: isSos
+          ? Notifications.AndroidNotificationPriority.MAX
+          : Notifications.AndroidNotificationPriority.DEFAULT,
+      };
+    },
+  });
+}
 
 /**
  * The Android channel an SOS arrives on.
@@ -53,7 +71,7 @@ Notifications.setNotificationHandler({
  * first time a build reaches a device.
  */
 export async function ensureChannels(): Promise<void> {
-  if (Platform.OS !== "android") return;
+  if (!Notifications || Platform.OS !== "android") return;
 
   await Notifications.setNotificationChannelAsync(SOS_CHANNEL, {
     name: "SOS alerts",
@@ -82,7 +100,11 @@ export async function ensureChannels(): Promise<void> {
 
 export type PushRegistration =
   | { ok: true; token: string }
-  | { ok: false; reason: "simulator" | "denied" | "no_project_id" | "error"; detail?: string };
+  | {
+      ok: false;
+      reason: "simulator" | "denied" | "no_project_id" | "error" | "unsupported";
+      detail?: string;
+    };
 
 /**
  * Registers this installation for push, and tells the database about it.
@@ -93,6 +115,9 @@ export type PushRegistration =
  * from the JWT.
  */
 export async function registerForPush(): Promise<PushRegistration> {
+  // The web preview, and Expo Go on Android.
+  if (!Notifications) return { ok: false, reason: "unsupported" };
+
   // A simulator cannot receive a push, and asking produces a confusing failure rather
   // than a clear one.
   if (!Device.isDevice) return { ok: false, reason: "simulator" };
@@ -151,7 +176,7 @@ export async function registerForPush(): Promise<PushRegistration> {
  * and, worse, the incoming guard's phone silently not being in the fan-out.
  */
 export async function releasePush(): Promise<void> {
-  if (!Device.isDevice) return;
+  if (!Notifications || !Device.isDevice) return;
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (!projectId) return;

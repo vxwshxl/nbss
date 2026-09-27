@@ -27,13 +27,30 @@ import { Platform } from "react-native";
  *   whenever it is built. It is only a config plugin today and nothing imports it, which
  *   is why the app boots in Expo Go at all.
  */
+/**
+ * react-native-web has no expo-notifications at all — the module's methods throw
+ * "not available on web" rather than no-opping. The app ships as a native binary, but it
+ * is also run through react-native-web to preview layouts in a desktop browser, and an
+ * uncaught throw in the root layout makes every screen a red error page.
+ */
+export const IS_WEB = Platform.OS === "web";
+
 export const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 /** True where a real, OS-scheduled background location stream is possible. */
-export const CAN_TRACK_IN_BACKGROUND = !IS_EXPO_GO;
+/**
+ * True where a real, OS-scheduled background location stream is possible.
+ *
+ * False on the web deliberately, and it is worth stating why, because it is the single
+ * fact that decides this product's iOS story: there is no background geolocation on the
+ * web platform. `watchPosition` stops when the screen locks, on every browser, by design.
+ * A guard therefore cannot be tracked from a PWA — which is why guards need the native
+ * app and clients and supervisors do not.
+ */
+export const CAN_TRACK_IN_BACKGROUND = !IS_WEB && !IS_EXPO_GO;
 
 /** True where a push sent by `drain_push_outbox` can actually be delivered. */
-export const CAN_RECEIVE_PUSH = !(IS_EXPO_GO && Platform.OS === "android");
+export const CAN_RECEIVE_PUSH = !IS_WEB && !(IS_EXPO_GO && Platform.OS === "android");
 
 /**
  * The sentence shown on the duty screen when something important is switched off by the

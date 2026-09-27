@@ -2,6 +2,7 @@ import { ArrowRight, type LucideIcon } from "lucide-react-native";
 import { Link, type Href } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { useLayout } from "@/hooks/use-breakpoint";
 import { TONES, toneFor, type Tone } from "@/theme/tones";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
@@ -39,22 +40,52 @@ export function StatCard({
   tone?: Tone;
 }) {
   const t = TONES[tone ?? toneFor(label)];
+  const { isTablet } = useLayout();
+
+  /**
+   * The console's figure is `text-4xl` because it has a quarter of a wide screen to put
+   * it in. Two cards side by side on a 390pt phone gives each about 170 points, so the
+   * base size steps down — and then steps down again for a long value.
+   *
+   * The length check is doing real work, not guarding an edge case. `adjustsFontSizeToFit`
+   * is iOS-only: on Android and web it is silently ignored, so "UITEST-G1" at 26px simply
+   * ran out past the edge of its card. Sizing from the string is the only thing that
+   * actually holds on every platform.
+   */
+  const base = isTablet ? 36 : 26;
+  const valueSize =
+    value.length > 12 ? Math.round(base * 0.58)
+    : value.length > 8 ? Math.round(base * 0.72)
+    : value.length > 5 ? Math.round(base * 0.85)
+    : base;
 
   const body = (
     <>
-      <View style={[styles.chip, { backgroundColor: t.chip }]}>
-        <Icon size={20} strokeWidth={1.9} color={t.chipText} />
+      <View style={styles.head}>
+        <View style={[styles.chip, { backgroundColor: t.chip }]}>
+          <Icon size={18} strokeWidth={1.9} color={t.chipText} />
+        </View>
+        <Text variant="caption" weight="medium" tone="muted" numberOfLines={1} style={styles.label}>
+          {label}
+        </Text>
       </View>
 
       <View style={styles.text}>
-        <Text variant="label" weight="medium" tone="muted">
-          {label}
-        </Text>
-        <Text variant="statValue" weight="semibold" style={styles.value}>
+        <Text
+          weight="semibold"
+          numberOfLines={1}
+          // An em-dash at full size reads as a thick black bar rather than as "no value",
+          // so a missing figure is rendered at the hint's size instead of the figure's.
+          style={
+            value === "—"
+              ? styles.absent
+              : { fontSize: valueSize, lineHeight: Math.round(valueSize * 1.15) }
+          }
+        >
           {value}
         </Text>
         {hint && (
-          <Text variant="caption" tone="muted" style={styles.hint}>
+          <Text variant="caption" tone="muted" numberOfLines={2} style={styles.hint}>
             {hint}
           </Text>
         )}
@@ -93,26 +124,29 @@ export function StatCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    // A floor rather than a fixed height: two cards side by side on a tablet should
-    // match even when one has a hint and the other does not.
-    minHeight: 148,
+    // A floor rather than a fixed height, so two cards side by side match even when one
+    // has a hint and the other does not. 108 rather than 148: the chip moved up beside
+    // the label instead of sitting on its own line above it.
+    minHeight: 108,
     backgroundColor: color.card,
     borderRadius: radius["2xl"],
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: color.lineSoft,
-    padding: space[5],
+    padding: space[4],
     ...shadow.card,
   },
   pressed: { opacity: 0.85 },
+  head: { flexDirection: "row", alignItems: "center", gap: space[2] },
   chip: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.xl,
+    width: 30,
+    height: 30,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  text: { marginTop: space[4], flex: 1 },
-  value: { marginTop: 2 },
+  label: { flex: 1 },
+  text: { marginTop: space[3], flex: 1, justifyContent: "flex-end" },
+  absent: { fontSize: 20, lineHeight: 24, color: color.mutedForeground },
   hint: { marginTop: space[1] },
   cta: { flexDirection: "row", alignItems: "center", gap: space[1.5 as 2], marginTop: space[4] },
 });

@@ -13,6 +13,11 @@ import { color } from "@/theme/tokens";
  * radial and a wide linear wash is not perceptible; what carries is that the background
  * has a faint colour temperature rather than being dead grey.
  *
+ * The tints are deliberately almost invisible — a couple of percent off the base grey.
+ * The first version of this was far stronger and the result looked like a cheap gradient
+ * wallpaper rather than paper: it competed with the cards instead of sitting behind them,
+ * which is the opposite of the job. If you can see where the gradient starts, it is wrong.
+ *
  * `pointerEvents="none"` throughout: this sits behind the content and must never
  * intercept a tap meant for a card, which on the duty screen could be the SOS button.
  */
@@ -22,7 +27,7 @@ export function AppBackground({ children }: { children: React.ReactNode }) {
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {/* --app-bloom-1, the cool violet, from the top left. */}
         <LinearGradient
-          colors={["#e7e3f7", "#f3f4f500"]}
+          colors={["#eeeff7", "#f3f4f500"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0.85, y: 0.6 }}
           style={StyleSheet.absoluteFill}
@@ -30,7 +35,7 @@ export function AppBackground({ children }: { children: React.ReactNode }) {
         {/* --app-bloom-3, the brand green, from the bottom right — so the page picks up
             the same hue as the buttons rather than reading as neutral grey. */}
         <LinearGradient
-          colors={["#f3f4f500", "#e2f3ea"]}
+          colors={["#f3f4f500", "#edf4f0"]}
           start={{ x: 0.3, y: 0.45 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}

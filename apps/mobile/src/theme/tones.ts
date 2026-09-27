@@ -200,6 +200,17 @@ export const CHART_TONES: Tone[] = [
   "slate",
 ];
 
+/**
+ * schoolerp's own chart ramp, for the first three series.
+ *
+ * The twelve `TONES` above stay as they are — they are Tailwind's palette and they carry
+ * the pastel surfaces. What schoolerp fixes by name is the chart sequence, so those three
+ * are used directly rather than derived from a tone.
+ */
+export const SCHOOLERP_CHART: readonly string[] = ["#009164", "#34d399", "#00a896"];
+
 export function chartColor(i: number): string {
+  const named = SCHOOLERP_CHART[i];
+  if (named) return named;
   return TONES[CHART_TONES[i % CHART_TONES.length] ?? "slate"].hex;
 }

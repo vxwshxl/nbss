@@ -85,4 +85,19 @@ async function silhouette(size, file) {
 await silhouette(96, "notification-icon.png");
 await silhouette(1024, "android-icon-monochrome.png");
 
+/**
+ * The in-app mark: the logo as it appears in the topbar and on the sign-in screen, where
+ * a generic shield glyph used to sit.
+ *
+ * Rendered at 128 rather than reusing icon.png at 1024. A 1.4 MB PNG scaled down to 34
+ * points is decoded at full size on every mount, which on a low-end Android is a visible
+ * hitch on a screen that should already be showing. Trimmed of its transparent margin
+ * first so the mark fills the space it is given rather than floating in its own padding.
+ */
+await sharp(SRC)
+  .trim()
+  .resize(128, 128, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .png({ compressionLevel: 9 })
+  .toFile(path.join(OUT, "mark.png"));
+
 console.log("wrote apps/mobile/assets/images: icon, splash-icon, android-icon-{foreground,background,monochrome}, notification-icon");

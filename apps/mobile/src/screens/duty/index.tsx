@@ -275,8 +275,12 @@ export function Duty() {
                 : "Not allowed to read your location."}
           </Text>
           <Button
-            label={permission.need === "services" ? "Open settings" : "Fix this"}
-            variant="destructive"
+            label={permission.need === "services" ? "Open settings" : "Allow location"}
+            // Solid, not the soft destructive tint. This is a "do this" action, not a
+            // destructive one, and a pale pink button sitting inside an already-pink panel
+            // was the least visible thing on the most urgent card.
+            variant="default"
+            fullWidth
             onPress={() => {
               // A permission that can still be asked for is asked for; one that cannot —
               // the Android background case — goes to Settings, because a prompt that
@@ -291,12 +295,22 @@ export function Duty() {
 
       {/* ────────────────────────────────────────────────── the panic button */}
       {onDuty && (
-        <Panel tone="rose" title="Emergency" icon={ShieldAlert}>
+        <Panel
+          tone="rose"
+          title="Emergency"
+          icon={ShieldAlert}
+          action={
+            <InfoButton title="What happens when you press it">
+              {[
+                "Every guard checked in at this site is alerted, along with every admin and supervisor, and the client who owns the premises.",
+                "They see where you are and can say they are on the way, so you know help is coming.",
+                "Hold it for three seconds. That is deliberate — a tap could happen in your pocket, and three seconds is short enough to manage when you are frightened.",
+                "Standing one down afterwards is normal and nobody minds. False alarms are expected; a panic button people are afraid to press is worse than useless.",
+              ]}
+            </InfoButton>
+          }
+        >
           <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
-          <Text variant="caption" tone="muted" style={styles.centered}>
-            Alerts every guard on this site, the control room, and the client. Standing one
-            down afterwards is normal and nobody minds.
-          </Text>
         </Panel>
       )}
 

@@ -1,4 +1,3 @@
-import { ShieldCheck } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -6,9 +5,10 @@ import { COMPANY } from "@nbss/shared/company";
 import { ROLE_LABEL, type Role } from "@nbss/shared/identity";
 
 import { useLayout } from "@/hooks/use-breakpoint";
-import { color, radius, space } from "@/theme/tokens";
+import { color, space } from "@/theme/tokens";
 
 import { Avatar } from "./avatar";
+import { BrandMark } from "./brand-mark";
 import { Text } from "./text";
 
 /**
@@ -45,9 +45,7 @@ export function TopBar({
           { paddingHorizontal: gutter, maxWidth: contentMaxWidth, alignSelf: "center", width: "100%" },
         ]}
       >
-        <View style={styles.mark}>
-          <ShieldCheck size={18} strokeWidth={2.2} color={color.primary} />
-        </View>
+        <BrandMark size={34} />
 
         <View style={styles.brandText}>
           <Text variant="label" weight="bold">
@@ -91,15 +89,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space[3],
     paddingVertical: space[2],
-  },
-  mark: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    // `bg-primary/12`, flattened.
-    backgroundColor: "#e0f0e8",
   },
   brandText: { flex: 1, gap: 0 },
   pressed: { opacity: 0.6 },

@@ -12,7 +12,6 @@ import {
   useFonts,
 } from "@expo-google-fonts/geist";
 import { GeistMono_400Regular, GeistMono_500Medium } from "@expo-google-fonts/geist-mono";
-import * as Notifications from "expo-notifications";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -21,7 +20,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
-import { asSosPush, ensureChannels } from "@/lib/push";
+import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 
 // Held until Geist has loaded, so the first frame is not system-font text that then
@@ -71,6 +70,10 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    // Nothing to listen to in a browser or in Expo Go on Android, where every call
+    // below throws rather than returning empty. See `Notifications` in lib/push.ts.
+    if (!Notifications) return;
+
     let cancelled = false;
 
     // Cold start from a tapped notification.

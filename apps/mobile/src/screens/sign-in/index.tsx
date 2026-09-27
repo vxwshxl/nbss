@@ -1,5 +1,5 @@
 import { Link } from "expo-router";
-import { AlertCircle, ShieldCheck } from "lucide-react-native";
+import { AlertCircle } from "lucide-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COMPANY } from "@nbss/shared/company";
 
 import { AppBackground } from "@/components/app-background";
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/button";
 import { Field, SecretField } from "@/components/field";
 import { Text } from "@/components/text";
@@ -51,11 +52,7 @@ export function SignIn() {
     <View style={styles.formColumn}>
       <View style={[styles.intro, !isTablet && styles.introCentred]}>
         {/* The web shows this only below `lg`, in place of the brand panel. */}
-        {!isTablet && (
-          <View style={styles.shield}>
-            <ShieldCheck size={26} strokeWidth={1.9} color={color.primary} />
-          </View>
-        )}
+        {!isTablet && <BrandMark size={72} style={styles.shield} />}
         <Text variant="pageTitle" weight="bold">
           Sign in
         </Text>
@@ -138,9 +135,7 @@ export function SignIn() {
   const brand = (
     <View style={[styles.brand, { paddingTop: insets.top + space[10] }]}>
       <View style={styles.brandTop}>
-        <View style={styles.mark}>
-          <ShieldCheck size={22} strokeWidth={2} color={color.primary} />
-        </View>
+        <BrandMark size={44} style={styles.mark} />
         <Text variant="bodyLarge" weight="bold" tone="inherit" style={styles.brandInk}>
           {COMPANY.shortName}
         </Text>
@@ -204,16 +199,7 @@ const styles = StyleSheet.create({
   intro: { gap: space[2] },
   introCentred: { alignItems: "center" },
   centred: { textAlign: "center" },
-  shield: {
-    width: 48,
-    height: 48,
-    borderRadius: radius["2xl"],
-    alignItems: "center",
-    justifyContent: "center",
-    // `bg-primary/12`, flattened.
-    backgroundColor: "#e0f0e8",
-    marginBottom: space[3],
-  },
+  shield: { marginBottom: space[3] },
 
   form: { gap: space[5] },
   alert: {
@@ -242,14 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brandTop: { flexDirection: "row", alignItems: "center", gap: space[3] },
-  mark: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffff14",
-  },
+  mark: {},
   brandInk: { color: color.background },
   brandMiddle: { maxWidth: 420, gap: space[5] },
   tagline: { lineHeight: 52 },

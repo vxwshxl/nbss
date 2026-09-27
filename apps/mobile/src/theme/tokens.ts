@@ -33,15 +33,26 @@ export const color = {
   line: "#ebebeb",
   lineSoft: "#f1f1f1",
 
-  primary: "#00925b",
-  primaryForeground: "#fcfcfc",
-  brand: "#19a96e",
+  /**
+   * The brand green, taken verbatim from schoolerp's palette so the two products read as
+   * one company. These are hex there and hex here — a round trip through oklch would
+   * drift by a digit and the apps would stop matching.
+   */
+  primary: "#009164",
+  primaryForeground: "#ffffff",
+  /** Darker green for text on white, where #009164 does not quite carry the contrast. */
+  primaryInk: "#047857",
+  brand: "#009164",
+  /** The deep end of schoolerp's brand gradient. */
+  brandDeep: "#006b4a",
+  /** Focus ring — deliberately lighter than the fill, as it is on schoolerp. */
+  ring: "#10b981",
 
   muted: "#f3f3f3",
   mutedForeground: "#5d5d5d",
 
-  accent: "#e7f4ec",
-  accentForeground: "#113c27",
+  accent: "#e9f8f1",
+  accentForeground: "#065f46",
 
   secondary: "#f3f3f3",
   secondaryForeground: "#0f0f0f",

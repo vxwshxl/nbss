@@ -12,13 +12,45 @@ import type { NextConfig } from "next";
  */
 const isDev = process.env.NODE_ENV === "development";
 
+/**
+ * The Supabase origin the browser is allowed to reach.
+ *
+ * `connect-src 'self'` was correct while every query ran on the server. It stops being
+ * correct the moment the console subscribes to anything: the realtime channel is a
+ * WebSocket to `wss://<ref>.supabase.co/realtime/v1`, and a strict policy blocks it
+ * silently — the socket simply never opens and the map never updates, with nothing in the
+ * server logs to explain why.
+ *
+ * Derived from the env var rather than hard-coded, so pointing the app at a different
+ * project (or at a self-hosted instance) does not need this file edited too. Both schemes
+ * are listed because the REST calls are https and the realtime channel is wss.
+ */
+const supabaseOrigin = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").origin;
+  } catch {
+    // No URL configured — the app throws at startup anyway (see lib/supabase/env.ts).
+    // Returning nothing here keeps the policy strict rather than accidentally wide.
+    return "";
+  }
+})();
+
+const supabaseConnect = supabaseOrigin
+  ? ` ${supabaseOrigin} ${supabaseOrigin.replace(/^https/, "wss")}`
+  : "";
+
 const csp = [
   "default-src 'self'",
   "img-src 'self' data: blob:",
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "font-src 'self'",
-  "connect-src 'self'" + (isDev ? " ws: wss:" : ""),
+  `connect-src 'self'${supabaseConnect}` + (isDev ? " ws: wss:" : ""),
+  // The service worker that makes this installable. Same-origin only — it would fall back
+  // to script-src anyway, but a worker is the one thing that keeps running after the page
+  // is closed, so its policy is worth stating rather than inheriting.
+  "worker-src 'self'",
+  "manifest-src 'self'",
   "form-action 'self'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
@@ -71,6 +103,21 @@ const nextConfig: NextConfig = {
              */
             value: "camera=(self), microphone=(), geolocation=(self), interest-cohort=()",
           },
+        ],
+      },
+      {
+        /**
+         * The service worker, never cached.
+         *
+         * A cached `sw.js` is how a PWA gets permanently stuck on an old build: the
+         * browser checks for an update by fetching this file, and if a CDN hands back
+         * yesterday's copy there is no update to find. `no-store` is the one header that
+         * matters on a PWA.
+         */
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
         ],
       },
       {

@@ -117,9 +117,9 @@
  * ------------------------------------------------------------------------- */
 :root {
   --hero-grid: oklch(0.16 0 0 / 0.05);
-  --hero-glow: oklch(0.58 0.14 159 / 0.18);
-  --hero-glow-soft: oklch(0.58 0.14 159 / 0.06);
-  --hero-halo: oklch(0.58 0.14 159 / 0.3);
+  --hero-glow: oklch(0.58 0.14 165 / 0.18);
+  --hero-glow-soft: oklch(0.58 0.14 165 / 0.06);
+  --hero-halo: oklch(0.58 0.14 165 / 0.3);
   --hero-vignette: oklch(1 0 0);
   /* Device bezel + screen. A mock phone/browser is a physical object: it stays
    * dark whatever the page around it does, the way a real one on a desk does.
@@ -160,7 +160,7 @@
   --app-bg: oklch(0.966 0.002 265);
   --app-bloom-1: oklch(0.93 0.032 275 / 0.85);
   --app-bloom-2: oklch(0.95 0.032 55 / 0.8);
-  --app-bloom-3: oklch(0.945 0.035 159 / 0.75);
+  --app-bloom-3: oklch(0.945 0.035 165 / 0.75);
   --app-line: oklch(0.16 0 0 / 0.08);
   --app-line-soft: oklch(0.16 0 0 / 0.05);
   --app-shadow-card: 0 1px 2px oklch(0.22 0.03 265 / 0.04),
@@ -248,24 +248,27 @@
   --card-foreground: oklch(0.16 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.16 0 0);
-  --primary: oklch(0.58 0.14 159);
-  --primary-foreground: oklch(0.99 0 0);
+  /* schoolerp's brand green, adopted verbatim so the two products read as one
+   * company. Hex rather than oklch because that is how it is authored there, and a
+   * converted value would drift by a digit on the next round trip. */
+  --primary: #009164;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.965 0 0);
   --secondary-foreground: oklch(0.17 0 0);
   --muted: oklch(0.965 0 0);
   --muted-foreground: oklch(0.48 0 0);
-  --accent: oklch(0.955 0.018 159);
-  --accent-foreground: oklch(0.32 0.06 159);
+  --accent: #e9f8f1;
+  --accent-foreground: #065f46;
   --destructive: oklch(0.55 0.2 27.3);
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.91 0 0);
   --input: oklch(0.91 0 0);
-  --ring: oklch(0.58 0.14 159);
-  --chart-1: oklch(0.62 0.15 159);
-  --chart-2: oklch(0.62 0.16 245);
-  --chart-3: oklch(0.76 0.15 75);
+  --ring: #10b981;
+  --chart-1: #009164;
+  --chart-2: #34d399;
+  --chart-3: #00a896;
   --chart-4: oklch(0.6 0.18 300);
-  --chart-5: oklch(0.63 0.2 15);
+  --chart-5: oklch(0.62 0.16 245);
   --radius: 0.7rem;
   color-scheme: light;
   /* The sidebar is a panel that floats on the app ground, not a dark rail
@@ -278,11 +281,15 @@
   --sidebar-accent: oklch(0.96 0 0);
   --sidebar-accent-foreground: oklch(0.16 0 0);
   --sidebar-border: oklch(0.16 0 0 / 0.06);
-  --sidebar-ring: oklch(0.58 0.14 159);
+  --sidebar-ring: #10b981;
 
   /* The stationery green, unmodified. Only the mark, the Aronai band and the
    * duotone photo treatment use it; everything interactive uses --primary. */
-  --brand: oklch(0.65 0.144 159);
+  --brand: #009164;
+  /* The darker end of schoolerp's brand gradient, and the ink used where brand-green
+   * text sits on white and #009164 would not quite carry the contrast. */
+  --brand-accent-2: #006b4a;
+  --primary-ink: #047857;
   --brand-ink: oklch(0.99 0 0);
   --aronai-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='10' viewBox='0 0 24 10'%3E%3Cpath fill='%23000' d='M0 5 5 0l5 5-5 5zM12 5l5-5 5 5-5 5z'/%3E%3Cpath fill='%23000' d='M5 5 7.5 2.5 10 5 7.5 7.5z' opacity='.5'/%3E%3C/svg%3E");
 }

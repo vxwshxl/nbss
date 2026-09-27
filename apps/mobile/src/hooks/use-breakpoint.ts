@@ -54,7 +54,16 @@ export function useLayout(): Layout {
     isWide,
     isTablet,
     landscape: width > height,
-    statColumns: isLarge ? 4 : isTablet ? 3 : isWide ? 2 : 1,
+    /**
+     * Two columns even on the narrowest phone.
+     *
+     * One column was the obvious choice and it was wrong: a full-width stat card is about
+     * 400 points tall, so the four on the duty screen filled three screenfuls and pushed
+     * the check-in button — the entire reason the screen exists — below two scrolls of
+     * dashboard furniture. Two up makes the set readable at a glance, which is what a
+     * row of figures is for.
+     */
+    statColumns: isLarge ? 4 : isTablet ? 3 : 2,
     // 820 is about 75 characters of Geist at 16px — the point past which a paragraph
     // becomes hard to track back to the start of.
     contentMaxWidth: isLarge ? 980 : isTablet ? 820 : width,

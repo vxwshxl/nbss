@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { Linking, Platform } from "react-native";
+import { Linking } from "react-native";
 
 import { policyFor, type TrackingMode } from "@nbss/shared/location";
 
@@ -104,7 +104,7 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
       notificationTitle: "On duty — location shared",
       notificationBody:
         "The control room can see you are on site. This stops when you check out.",
-      notificationColor: "#00925b",
+      notificationColor: "#009164",
       // The service is not torn down when the activity is destroyed, which is what
       // "swiped the app away but is still on shift" looks like.
       killServiceOnDestroy: false,
@@ -153,16 +153,30 @@ wireTaskControls({ restart: restartTracking, stop: stopTracking });
 
 export { readMode };
 
-/** One-off fix, for the check-in screen — which needs a position now, not on a stream. */
+/**
+ * One-off fix, for the check-in screen — which needs a position now, not on a stream.
+ *
+ * Wrapped in a hard timeout, which is not defensive padding: `getCurrentPositionAsync`
+ * has no timeout of its own and will wait indefinitely for a fix that may never come.
+ * A guard indoors, or with location services switched off, got a duty screen that span
+ * forever with nothing to tap and no explanation — the screen could not even render the
+ * "switch GPS on" message, because it was still waiting to find out.
+ *
+ * Twelve seconds is long enough for a cold GPS lock outdoors and short enough that
+ * somebody standing at a gate does not conclude the app has crashed. Returning null is a
+ * real answer the caller can act on; hanging is not.
+ */
+const FIX_TIMEOUT_MS = 12_000;
+
 export async function currentFix(): Promise<Location.LocationObject | null> {
   try {
-    return await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-      // A cached position is fine if it is seconds old; a punch must not be allowed
-      // on a fix from the last site the guard stood at.
-      ...(Platform.OS === "android" ? {} : {}),
-    });
+    return await Promise.race([
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), FIX_TIMEOUT_MS)),
+    ]);
   } catch {
+    // Permission refused, location services off, or no provider at all. All of them mean
+    // the same thing to the caller: there is no position to punch with.
     return null;
   }
 }

@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 
-import { space } from "@/theme/tokens";
+import { useLayout } from "@/hooks/use-breakpoint";
+import { size, space } from "@/theme/tokens";
 
 import { Eyebrow, Text } from "./text";
 
@@ -21,11 +22,21 @@ export function PageHeader({
   eyebrow?: string;
   action?: React.ReactNode;
 }) {
+  const { isTablet } = useLayout();
+
   return (
     <View style={styles.header}>
       <View style={styles.text}>
         {eyebrow && <Eyebrow style={styles.eyebrow}>{eyebrow}</Eyebrow>}
-        <Text variant="pageTitle" weight="semibold" numberOfLines={2}>
+        <Text
+          variant="pageTitle"
+          weight="semibold"
+          numberOfLines={2}
+          // 30px is the console's size and it is too wide for a 390pt phone that also has
+          // to fit an action on the same line — a long name shouldered "Sign out" off the
+          // row entirely.
+          style={!isTablet && { fontSize: size["2xl"], lineHeight: 30 }}
+        >
           {title}
         </Text>
       </View>

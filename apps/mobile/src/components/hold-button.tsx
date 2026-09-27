@@ -45,13 +45,11 @@ import { Text } from "./text";
  */
 export function HoldButton({
   label = "Hold for SOS",
-  holdingLabel = "Keep holding…",
   onComplete,
   disabled,
   durationMs = SOS_HOLD_MS,
 }: {
   label?: string;
-  holdingLabel?: string;
   onComplete: () => void;
   disabled?: boolean;
   durationMs?: number;
@@ -149,11 +147,16 @@ export function HoldButton({
           </Text>
         </View>
       </Pressable>
-      {/* Rendered always, not conditionally, so the layout does not jump when the
-          hold begins. */}
-      <Text variant="micro" tone="muted" style={styles.legal}>
-        {holdingLabel.toUpperCase()}
-      </Text>
+      {/*
+        A plain spacer, not invisible text.
+        
+        This was a `<Text>` at `opacity: 0`, rendered unconditionally so the layout would
+        not jump when the hold began. Invisible to the eye and fully present to a screen
+        reader, which announced "KEEP HOLDING…" on a button nobody was holding. Reserving
+        the height with an empty view keeps the layout stable and puts nothing in the
+        accessibility tree at all.
+      */}
+      <View style={styles.legalSpacer} />
     </Animated.View>
   );
 }
@@ -177,10 +180,5 @@ const styles = StyleSheet.create({
   },
   labelWrap: { alignItems: "center", gap: 2 },
   sub: { opacity: 0.9 },
-  legal: {
-    textAlign: "center",
-    marginTop: space[2],
-    letterSpacing: 0.6,
-    opacity: 0,
-  },
+  legalSpacer: { height: space[2] },
 });

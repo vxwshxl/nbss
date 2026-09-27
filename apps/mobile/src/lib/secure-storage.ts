@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 /**
  * Where the Supabase session is kept.
@@ -19,6 +20,42 @@ import * as SecureStore from "expo-secure-store";
 
 const CHUNK_SIZE = 1800;
 
+/**
+ * The web fallback.
+ *
+ * `expo-secure-store` has no web implementation — there is no browser equivalent of the
+ * iOS keychain. The app is shipped as a native binary, so this path is only reached when
+ * it is run through react-native-web, which is done to preview and screenshot layouts on
+ * a desktop browser.
+ *
+ * `localStorage` is plainly not secure storage, and that is acceptable only because this
+ * path never reaches a guard's phone. It is guarded on `Platform.OS === "web"` rather
+ * than on a build flag so there is no way for it to be the native path by accident.
+ */
+const webStorage = {
+  getItem: (key: string) => {
+    try {
+      return globalThis.localStorage?.getItem(key) ?? null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      globalThis.localStorage?.setItem(key, value);
+    } catch {
+      /* private window, blocked storage */
+    }
+  },
+  removeItem: (key: string) => {
+    try {
+      globalThis.localStorage?.removeItem(key);
+    } catch {
+      /* as above */
+    }
+  },
+};
+
 function chunkKey(key: string, index: number): string {
   return `${key}__${index}`;
 }
@@ -34,6 +71,8 @@ function safeKey(key: string): string {
 
 export const secureStorage = {
   async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === "web") return webStorage.getItem(key);
+
     const base = safeKey(key);
     try {
       const header = await SecureStore.getItemAsync(base);
@@ -61,6 +100,8 @@ export const secureStorage = {
   },
 
   async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === "web") return webStorage.setItem(key, value);
+
     const base = safeKey(key);
     // Cleared first, so shrinking a value cannot leave a longer previous one's
     // tail behind to be read back as part of the new one.
@@ -81,6 +122,8 @@ export const secureStorage = {
   },
 
   async removeItem(key: string): Promise<void> {
+    if (Platform.OS === "web") return webStorage.removeItem(key);
+
     const base = safeKey(key);
     const header = await SecureStore.getItemAsync(base).catch(() => null);
     const count = Number(header);

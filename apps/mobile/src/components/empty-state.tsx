@@ -44,13 +44,16 @@ export function EmptyState({
 }
 
 const styles = StyleSheet.create({
-  // `px-6 py-14` on the console — generous, because an empty state that hugs its edges
-  // reads as an error rather than a resting state.
+  /**
+   * `px-6 py-14` on the console — generous, because an empty state that hugs its edges
+   * reads as an error rather than a resting state. Trimmed vertically here: 48 points of
+   * air inside a phone card left a white block taller than the content around it.
+   */
   wrap: {
     alignItems: "center",
     gap: space[2],
-    paddingHorizontal: space[6],
-    paddingVertical: space[12],
+    paddingHorizontal: space[5],
+    paddingVertical: space[8],
   },
   chip: {
     width: 44,
