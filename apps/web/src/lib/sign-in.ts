@@ -176,3 +176,48 @@ export function clearFailures(...keys: string[]): void {
 }
 
 export const THROTTLED = "Too many attempts. Wait ten minutes and try again.";
+
+/**
+ * Starts a client account: mails a sign-in code and, if the address has no
+ * account yet, creates one on the spot. The profile is made by the database
+ * trigger from 0007/0009 — which hardcodes the role 'client' and never reads it
+ * from what was sent — so this cannot be used to mint staff.
+ *
+ * An address that already has an account simply gets a sign-in code, and the
+ * name and organisation typed here are ignored rather than overwriting theirs.
+ */
+export async function startClientSignup(
+  input: { email: string; fullName: string; phone: string; organisation: string },
+  client: Client,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await client.auth.signInWithOtp({
+    email: input.email,
+    options: {
+      shouldCreateUser: true,
+      data: {
+        signup: "client",
+        full_name: input.fullName,
+        phone: input.phone,
+        organisation: input.organisation || undefined,
+      },
+    },
+  });
+  if (error) {
+    return {
+      ok: false,
+      error: /rate|seconds/i.test(error.message)
+        ? "A code was sent a moment ago. Wait half a minute and try again."
+        : "We could not send a code to that address. Check it and try again.",
+    };
+  }
+  return { ok: true };
+}
+
+/** Verifies a code sent to an email address directly (registration has no code). */
+export async function verifyEmailCode(email: string, code: string, client: Client): Promise<SignInResult> {
+  const token = code.replace(/\D/g, "");
+  if (token.length !== 6) return { ok: false, error: BAD_CODE };
+  const { data, error } = await client.auth.verifyOtp({ email, token, type: "email" });
+  if (error) return { ok: false, error: BAD_CODE };
+  return finish(client, data.user?.id);
+}

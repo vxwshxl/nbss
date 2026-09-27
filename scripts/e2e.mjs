@@ -73,7 +73,7 @@ async function sessionFor(person) {
   return c;
 }
 
-const created = { users: [], sites: [] };
+const created = { users: [], sites: [], bookings: [] };
 
 async function setup() {
   for (const p of Object.values(people)) {
@@ -120,6 +120,7 @@ async function setup() {
 }
 
 async function teardown() {
+  for (const id of created.bookings) await admin.from("service_requests").delete().eq("id", id);
   // Attendance and shifts cascade from the sites and the profiles.
   for (const id of created.sites) await admin.from("sites").delete().eq("id", id);
   for (const id of created.users) await admin.auth.admin.deleteUser(id);
@@ -335,6 +336,76 @@ async function run() {
     assert(heard.client[0].payload?.site_id === people.site, "wrong site");
   });
   for (const ch of [sup, g2, cli]) await ch.unsubscribe();
+
+  // ── Bookings (client → desk) ----------------------------------------------
+  console.log("Bookings");
+  let booking;
+  await check("a client books guards and gets a reference", async () => {
+    const { data, error } = await s.client.rpc("submit_service_request", {
+      p_service_type: "hospital-security",
+      p_contact_name: "E2E Client",
+      p_phone: "9864012345",
+      p_district: "Kokrajhar",
+      p_site_type: "Nursing home, 2 gates",
+      p_guards_required: 4,
+      p_shift_pattern: "24x7",
+      p_source: "web",
+    });
+    if (error) throw error;
+    assert(/^SR-\d{4}-\d{4}$/.test(data.reference), `reference ${data.reference}`);
+    booking = data;
+    created.bookings = [data.id];
+  });
+  await check("the client sees their own booking; another client does not", async () => {
+    const own = await s.client.from("service_requests").select("id").eq("id", booking.id);
+    const other = await (await sessionFor(people.otherClient)).from("service_requests").select("id").eq("id", booking.id);
+    assert(own.data.length === 1, `own ${own.data.length}`);
+    assert(other.data.length === 0, `other client saw ${other.data.length}`);
+  });
+  await check("guards cannot see bookings", async () => {
+    const { data } = await s.guard.from("service_requests").select("id").eq("id", booking.id);
+    assert(data.length === 0, `guard saw ${data.length}`);
+  });
+  await check("staff see it and can quote it; the client sees the quote", async () => {
+    const { error } = await s.supervisor
+      .from("service_requests")
+      .update({ status: "quoted", quoted_amount_paise: 8400000, quote_note: "4 guards 24x7" })
+      .eq("id", booking.id);
+    if (error) throw error;
+    const { data } = await s.client.from("service_requests").select("status, quoted_amount_paise").eq("id", booking.id).single();
+    assert(data.status === "quoted" && data.quoted_amount_paise === 8400000, JSON.stringify(data));
+  });
+  await check("a client cannot change a booking's status directly", async () => {
+    await s.client.from("service_requests").update({ status: "accepted" }).eq("id", booking.id);
+    const { data } = await admin.from("service_requests").select("status").eq("id", booking.id).single();
+    assert(data.status === "quoted", `status became ${data.status}`);
+  });
+  await check("the client can withdraw a quoted booking", async () => {
+    const { error } = await s.client.rpc("withdraw_service_request", { p_id: booking.id });
+    if (error) throw error;
+    const { data } = await admin.from("service_requests").select("status").eq("id", booking.id).single();
+    assert(data.status === "withdrawn", data.status);
+  });
+  await check("anonymous visitors cannot book", async () => {
+    const { error } = await fresh().rpc("submit_service_request", { p_service_type: "x", p_contact_name: "x", p_phone: "1" });
+    assert(error, "anonymous booking was accepted");
+  });
+
+  // ── Self-registration --------------------------------------------------
+  console.log("Registration");
+  await check("a self-registered account is always a client, whatever it asks for", async () => {
+    const email = `e2e-selfreg-${tag}@example.com`;
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { signup: "client", full_name: "Self Reg", phone: "9864000000", role: "admin" },
+    });
+    if (error) throw error;
+    created.users.push(data.user.id);
+    const { data: p } = await admin.from("profiles").select("role, email, employee_code").eq("id", data.user.id).single();
+    assert(p.role === "client", `role ${p.role}`);
+    assert(p.email === email && /^CL-\d{6}$/.test(p.employee_code), JSON.stringify(p));
+  });
 }
 
 try {

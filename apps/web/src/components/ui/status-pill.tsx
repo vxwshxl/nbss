@@ -45,6 +45,12 @@ const SEMANTIC: Record<string, { label: string; tone: Tone }> = {
   won: { label: "Won", tone: "emerald" },
   // sites
   archived: { label: "Archived", tone: "slate" },
+  // bookings (service_requests)
+  reviewing: { label: "Site survey", tone: "amber" },
+  quoted: { label: "Quoted", tone: "violet" },
+  declined: { label: "Declined", tone: "rose" },
+  withdrawn: { label: "Withdrawn", tone: "slate" },
+  converted: { label: "Guards deployed", tone: "emerald" },
   // settlements / misc
   settled: { label: "Settled", tone: "emerald" },
   due: { label: "Due", tone: "amber" },

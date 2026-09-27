@@ -6,7 +6,6 @@ import {
   codeToEmail,
   isValidCode,
   isValidEmail,
-  isValidSecret,
   normaliseCode,
   type Role,
 } from "@nbss/shared/identity";
@@ -30,10 +29,10 @@ type AuthState = {
   signIn: (identifier: string, secret: string) => Promise<{ error?: string }>;
   signUpClient: (input: {
     email: string;
-    password: string;
     fullName: string;
     phone?: string;
-  }) => Promise<{ error?: string; needsConfirmation?: boolean }>;
+    organisation?: string;
+  }) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -207,39 +206,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /**
+   * Starts a client account: mails a code and creates the login if the address is
+   * new. `signup: 'client'` is what the trigger in 0007/0009 looks for; the role
+   * itself is NOT sent — the trigger hardcodes 'client' and never reads metadata
+   * for it, so a modified app asking for 'admin' still gets a client account.
+   * The code is then checked with `verifyCode`, exactly as at sign-in.
+   */
   const signUpClient = useCallback(
-    async (input: { email: string; password: string; fullName: string; phone?: string }) => {
+    async (input: { email: string; fullName: string; phone?: string; organisation?: string }) => {
       if (!isValidEmail(input.email)) return { error: "Enter a valid email address." };
-      if (!isValidSecret(input.password, "client")) {
-        return { error: "Choose a password of at least 8 characters." };
-      }
       if (input.fullName.trim().length < 2) return { error: "Enter your name." };
 
       setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email: input.email.trim().toLowerCase(),
-        password: input.password,
         options: {
-          /**
-           * `signup: 'client'` is what the trigger in 0007 looks for. The role itself is
-           * NOT sent: the trigger hardcodes 'client' and never reads metadata for it, so
-           * a modified app asking for 'admin' here gets a client account anyway.
-           */
+          shouldCreateUser: true,
           data: {
             signup: "client",
             full_name: input.fullName.trim(),
             ...(input.phone?.trim() ? { phone: input.phone.trim() } : {}),
+            ...(input.organisation?.trim() ? { organisation: input.organisation.trim() } : {}),
           },
         },
       });
       setLoading(false);
 
-      if (error) return { error: error.message };
-
-      // Supabase returns a user with no session when email confirmation is on. The
-      // screen has to say "check your email" rather than waiting for a session that
-      // is not coming.
-      return { needsConfirmation: !data.session };
+      if (error) {
+        return {
+          error: /rate|seconds/i.test(error.message)
+            ? "A code was sent a moment ago. Wait half a minute and try again."
+            : "We could not send a code to that address. Check it and try again.",
+        };
+      }
+      return {};
     },
     [],
   );

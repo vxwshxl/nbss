@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, ArrowLeft, ArrowRight, KeyRound, Loader2, Mail } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, ArrowLeft, ArrowRight, Building2, KeyRound, Loader2, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -239,6 +240,29 @@ export function SignInForm({ from }: { from: string }) {
           </Button>
         )}
       </div>
+
+      {step === "identify" && (
+        // The door for people who do not work here yet: a business that wants
+        // guards. Every "Book guards" button on the website lands on this page,
+        // so the way in for a first-time client has to be impossible to miss.
+        <div className="mt-8 rounded-2xl border border-app-line bg-brand-gradient-soft p-4">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-primary-ink shadow-xs">
+              <Building2 className="size-5" strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-accent-foreground">New client?</p>
+              <p className="text-xs text-accent-foreground/80">Book trained guards for your site.</p>
+            </div>
+          </div>
+          <Button asChild className="mt-3 h-10 w-full rounded-xl text-sm font-semibold">
+            <Link href={`/register${from ? `?from=${encodeURIComponent(from)}` : "?from=/console/book"}`}>
+              Create a client account
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {step !== "identify" && (
         <button

@@ -10,7 +10,7 @@ import { ArrowRight, MapPin, Phone, ShieldCheck } from "lucide-react";
 
 import { Marquee } from "@/components/marketing/marquee";
 import { Button } from "@/components/ui/button";
-import { coverage, site, tel } from "@/content/site";
+import { coverage, site, tel, BOOK_HREF } from "@/content/site";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -165,8 +165,8 @@ export function Hero() {
 
             <div className="hero-rise mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-11 px-5 text-base">
-                <Link href="/contact#quote">
-                  Request a quotation
+                <Link href={BOOK_HREF}>
+                  Book guards
                   <ArrowRight data-icon="inline-end" />
                 </Link>
               </Button>

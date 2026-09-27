@@ -53,10 +53,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (pathname === LOGIN_PATH || pathname === "/console/login") {
-    // Nothing to ask someone who is already through the door. Where they land
-    // depends on their role, which the page itself resolves.
-    return user ? NextResponse.redirect(new URL("/console", request.url)) : response;
+  // The sign-in pages decide for themselves whether to send someone onward:
+  // they check for an *active profile*, not just an auth user. Redirecting here
+  // on the auth user alone looped forever for a deactivated account — the
+  // console bounced it to /login for having no profile, and this bounced it
+  // straight back for having a session.
+  if (pathname === LOGIN_PATH || pathname === "/register" || pathname === "/console/login") {
+    return response;
   }
 
   if (user) return response;
@@ -67,5 +70,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/console/:path*", "/login"],
+  matcher: ["/console/:path*", "/login", "/register"],
 };

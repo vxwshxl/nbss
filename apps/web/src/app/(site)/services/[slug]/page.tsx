@@ -8,7 +8,7 @@ import { Eyebrow, Panel, TickList } from "@/components/marketing/blocks";
 import { PageHead } from "@/components/marketing/page-head";
 import { Section, SectionHead } from "@/components/marketing/section";
 import { ServiceBento } from "@/components/marketing/service-bento";
-import { QuoteForm } from "@/components/forms/QuoteForm";
+import { BookingCard } from "@/components/marketing/booking-card";
 import { Button } from "@/components/ui/button";
 import { relatedServices, serviceBySlug, services } from "@/content/services";
 import { site, tel } from "@/content/site";
@@ -99,7 +99,7 @@ export default async function ServiceDetailPage({ params }: Params) {
         action={
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg" className="h-11 px-5">
-              <Link href="#quote">Get a quote for this</Link>
+              <Link href={`/login?from=${encodeURIComponent(`/console/book?service=${service.slug}`)}`}>Book this service</Link>
             </Button>
             <Button
               asChild
@@ -169,14 +169,14 @@ export default async function ServiceDetailPage({ params }: Params) {
           <div className="mb-8 text-center">
             <Eyebrow num="◆" text="Costed for your site" className="justify-center" />
             <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
-              Four details, then a field officer calls.
+              Sign in, book, and a field officer calls.
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground">
-              The service is already selected. Give us the district and the site type,
-              and we will arrange the survey.
+              The service is already selected on the booking page. Add the district and
+              the site, and we will arrange the survey.
             </p>
           </div>
-          <QuoteForm service={service.slug} />
+          <BookingCard service={service.slug} />
         </div>
       </Section>
 

@@ -7,8 +7,7 @@ import { FaqBand } from "@/components/marketing/faq-band";
 import { PageHead } from "@/components/marketing/page-head";
 import { Reveal } from "@/components/marketing/reveal";
 import { Section, SectionHead } from "@/components/marketing/section";
-import { EnquiryForm } from "@/components/forms/EnquiryForm";
-import { QuoteForm } from "@/components/forms/QuoteForm";
+import { BookingCard } from "@/components/marketing/booking-card";
 import { faqs, site, tel } from "@/content/site";
 import { pageMetadata } from "@/lib/seo/page-metadata";
 import {
@@ -123,12 +122,12 @@ export default function ContactPage() {
           <Reveal>
             <Eyebrow num="01" text="Request a booking" />
             <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
-              Four details, then a field officer calls.
+              Sign in, book, and a field officer calls.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-muted-foreground">
               Give us the district, the site type and roughly how many people you have in
               mind. If you are not sure about the headcount, leave it blank — working that
-              out is what the site visit is for.
+              out is what the site visit is for. Anything else, ring the desk.
             </p>
             <TickList
               className="mt-7"
@@ -143,45 +142,14 @@ export default function ContactPage() {
           </Reveal>
 
           <Reveal delay={80}>
-            <QuoteForm boxed />
-          </Reveal>
-        </div>
-      </Section>
-
-      <Section>
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-start">
-          <Reveal>
-            <EnquiryForm />
-          </Reveal>
-
-          <Reveal delay={80}>
-            <Eyebrow num="02" text="General enquiry" />
-            <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
-              Something else on your mind?
-            </h2>
-            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-              Compliance documents, a tender query, a complaint about one of our guards, a
-              request to see our registration papers — this form reaches the same desk, and
-              a complaint reaches it faster.
-            </p>
-            <ul className="mt-6 flex flex-col gap-2.5">
-              {site.hours.map((h) => (
-                <li key={h} className="flex items-start gap-2.5 text-sm">
-                  <Clock3
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    strokeWidth={1.9}
-                  />
-                  {h}
-                </li>
-              ))}
-            </ul>
+            <BookingCard />
           </Reveal>
         </div>
       </Section>
 
       <Section alt>
         <SectionHead
-          num="03"
+          num="02"
           kicker="Before you ask"
           title="The questions we get first."
           className="text-center [&>div]:justify-center [&_p]:mx-auto"

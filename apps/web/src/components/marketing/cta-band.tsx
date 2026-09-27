@@ -4,7 +4,7 @@ import { ArrowRight, Building2, Phone, ShieldUser } from "lucide-react";
 import { AronaiBand } from "@/components/brand";
 import { Reveal } from "@/components/marketing/reveal";
 import { Button } from "@/components/ui/button";
-import { site, tel } from "@/content/site";
+import { site, tel, BOOK_HREF } from "@/content/site";
 
 /**
  * The close.
@@ -44,7 +44,7 @@ export function CtaBand() {
 
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" className="h-12 px-6 text-base">
-              <Link href="/contact#quote">
+              <Link href={BOOK_HREF}>
                 Book guards
                 <ArrowRight data-icon="inline-end" />
               </Link>

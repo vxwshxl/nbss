@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Eyebrow } from "@/components/marketing/blocks";
 import { Section } from "@/components/marketing/section";
 import { Button } from "@/components/ui/button";
+import { BOOK_HREF } from "@/content/site";
 
 export default function NotFound() {
   return (
@@ -31,7 +32,7 @@ export default function NotFound() {
             <Link href="/services">Browse services</Link>
           </Button>
           <Button asChild size="lg" variant="ghost" className="h-11 px-5 text-base">
-            <Link href="/contact">Book guards</Link>
+            <Link href={BOOK_HREF}>Book guards</Link>
           </Button>
         </div>
       </div>

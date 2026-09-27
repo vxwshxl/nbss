@@ -274,3 +274,12 @@ export const faqs: FAQ[] = [
     a: "Pricing is competitive and transparent. The quotation sets out the wage, the applicable statutory heads and the agency service charge separately, so there is nothing bundled or hidden. Call 7002071628 to arrange a site visit and a quotation.",
   },
 ];
+
+/**
+ * Where every "book guards" / "request a quotation" button on the public site
+ * goes. There is no anonymous form any more: a client signs in (or creates an
+ * account) and books from the console, where they can then follow the request
+ * and, once it is accepted, watch the guards on their gate.
+ */
+export const BOOK_HREF = "/login?from=/console/book";
+export const REGISTER_HREF = "/register?from=/console/book";

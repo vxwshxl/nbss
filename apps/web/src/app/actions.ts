@@ -3,14 +3,15 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { districtOptions, site } from "@/content/site";
-import { serviceBySlug } from "@/content/services";
-import { educationOptions, startWhenOptions, vacancyById } from "@/content/gallery";
+import { site } from "@/content/site";
+import { educationOptions, vacancyById } from "@/content/gallery";
 import { addSubmission, setStatus, type NewSubmission, type Status } from "@/lib/store";
 import { Validator, type FormState } from "@/lib/validate";
 
 /**
- * Server actions behind the three public forms.
+ * Server actions behind the public careers form, and the desk's triage of it.
+ * Quote and enquiry requests are no longer anonymous forms: clients book from
+ * the console (app/console/book) after signing in.
  *
  * Each is wired to a `<form action={...}>` via `useActionState`, so the forms
  * submit and validate perfectly well before React hydrates — the JavaScript
@@ -33,110 +34,6 @@ async function requestMeta(): Promise<Pick<NewSubmission, "userAgent" | "remoteI
  */
 function silentlyAccepted(title: string, body: string): FormState {
   return { ok: true, errors: {}, values: {}, success: { reference: "NBSS-00000", title, body } };
-}
-
-// --------------------------------------------------------------- enquiry
-
-export async function submitEnquiry(_prev: FormState, data: FormData): Promise<FormState> {
-  const f = new Validator(data);
-
-  if (f.isBot) {
-    return silentlyAccepted(
-      "Thank you — your message is with us.",
-      "Our deployment desk will call you back on the number you gave.",
-    );
-  }
-
-  f.required("name", "Your name").length("name", "Your name", 2, 80);
-  f.required("phone", "A phone number").phone("phone");
-  f.email("email");
-  f.length("company", "Organisation", 0, 120);
-  f.required("subject", "A subject").length("subject", "Subject", 3, 120);
-  f.required("message", "A message").length("message", "Message", 10, 2000);
-  f.consent("consent", "Please confirm we may contact you about this enquiry.");
-
-  if (!f.valid) return f.toFailure();
-
-  const saved = await addSubmission({
-    kind: "enquiry",
-    name: f.get("name"),
-    email: f.get("email") || undefined,
-    phone: f.get("phone"),
-    company: f.get("company") || undefined,
-    subject: f.get("subject"),
-    message: f.get("message"),
-    ...(await requestMeta()),
-  });
-
-  revalidatePath("/console/submissions");
-
-  return {
-    ok: true,
-    errors: {},
-    values: {},
-    success: {
-      reference: saved.id,
-      title: `Message received — reference ${saved.id}`,
-      body: `The deployment desk answers enquiries within one working day. If it is urgent, call ${site.phone} and quote your reference.`,
-    },
-  };
-}
-
-// ----------------------------------------------------------------- quote
-
-export async function submitQuote(_prev: FormState, data: FormData): Promise<FormState> {
-  const f = new Validator(data);
-
-  if (f.isBot) return silentlyAccepted("Thank you.", "We will be in touch.");
-
-  f.required("name", "Your name").length("name", "Your name", 2, 80);
-  f.required("phone", "A phone number").phone("phone");
-  f.email("email");
-  f.required("company", "Your organisation").length("company", "Organisation", 2, 120);
-  f.required("service", "A service");
-  f.required("district", "A district").oneOf("district", districtOptions);
-  f.required("site_type", "A site type").length("site_type", "Site type", 2, 120);
-  f.intRange("headcount", "Number of personnel", 1, 2000);
-  f.oneOf("start_when", startWhenOptions);
-  f.length("message", "Notes", 0, 2000);
-  f.consent("consent", "Please confirm we may contact you about this requirement.");
-
-  // The select is populated from the catalogue, so anything else was crafted by
-  // hand and is rejected rather than stored.
-  const service = serviceBySlug(f.get("service"));
-  if (f.get("service") && !service) {
-    f.reject("service", "Please choose a service from the list.");
-  }
-
-  if (!f.valid) return f.toFailure();
-
-  const saved = await addSubmission({
-    kind: "quote",
-    name: f.get("name"),
-    email: f.get("email") || undefined,
-    phone: f.get("phone"),
-    company: f.get("company"),
-    service: service?.name,
-    siteType: f.get("site_type"),
-    district: f.get("district"),
-    headcount: f.get("headcount") || undefined,
-    startWhen: f.get("start_when") || undefined,
-    message: f.get("message") || undefined,
-    ...(await requestMeta()),
-  });
-
-  revalidatePath("/console/submissions");
-
-  return {
-    ok: true,
-    errors: {},
-    values: {},
-    success: {
-      reference: saved.id,
-      title: `Quotation request logged — ${saved.id}`,
-      body: "A field officer will call to arrange a visit to the site, and you will get a costed proposal with the wage, the applicable statutory heads and our service charge shown separately.",
-    },
-  };
 }
 
 // ----------------------------------------------------------- application

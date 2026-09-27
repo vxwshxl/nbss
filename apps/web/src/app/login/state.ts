@@ -13,3 +13,8 @@ export type SignInState = {
 };
 
 export const initialSignInState: SignInState = { step: "identify", identifier: "" };
+
+/** A `from` we are willing to send someone back to: inside the console only. */
+export function safeFrom(from: string | undefined | null): string {
+  return from && from.startsWith("/console/") && !from.startsWith("//") ? from : "";
+}

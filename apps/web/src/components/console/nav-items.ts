@@ -1,6 +1,8 @@
 import {
   Building2,
   CalendarCheck,
+  CalendarPlus,
+  ClipboardList,
   ExternalLink,
   Inbox,
   LayoutDashboard,
@@ -75,6 +77,7 @@ export const groups: NavGroup[] = [
       // than inside a section of one.
       { href: "/console/duty", label: "Today's duty", icon: Timer, roles: ["guard"] },
       { href: "/console/site", label: "My site", icon: Building2, roles: ["client"] },
+      { href: "/console/book", label: "Book guards", icon: CalendarPlus, roles: ["client"] },
     ],
   },
   {
@@ -103,6 +106,12 @@ export const groups: NavGroup[] = [
   {
     label: "Desk",
     items: [
+      {
+        href: "/console/bookings",
+        label: "Bookings",
+        icon: ClipboardList,
+        roles: ["admin", "supervisor"],
+      },
       {
         href: "/console/submissions",
         label: "Enquiries",
