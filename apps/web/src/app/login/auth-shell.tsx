@@ -37,14 +37,16 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
       <aside className="relative hidden p-3 lg:block" aria-hidden>
         <div className="sticky top-3 h-[calc(100dvh-1.5rem)] overflow-hidden rounded-3xl bg-[#062b20]">
-          <Image
-            src="/img/ops-parade.jpg"
-            alt=""
-            fill
-            priority
-            sizes="55vw"
-            className="object-cover opacity-55"
-          />
+          <div className="absolute inset-0">
+            <Image
+              src="/img/ops-parade.jpg"
+              alt=""
+              fill
+              priority
+              sizes="55vw"
+              className="object-cover opacity-55"
+            />
+          </div>
           <div className="absolute inset-0 bg-[linear-gradient(160deg,rgb(0_145_100/0.55)_0%,rgb(0_60_42/0.75)_55%,rgb(3_22_16/0.95)_100%)]" />
           <div className="absolute inset-x-0 bottom-0 p-12 text-white">
             <div className="mb-6 h-1 w-16 rounded-full bg-brand-gradient" />

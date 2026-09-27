@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import { CalendarCheck, Clock3, Phone, Radio, ShieldCheck, Timer } from "lucide-react";
 
+import { ClientDutyTable } from "@/components/console/client-duty-table";
 import { PageHeader } from "@/components/console/page-header";
 import { SiteMap, type MapSite } from "@/components/console/site-map";
 import { StatCard } from "@/components/console/stat-card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { site as company, tel } from "@/content/site";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import { initials } from "@/lib/ui/initials";
-import type { Json } from "@/lib/supabase/types";
+import { toRing } from "@/lib/fence";
 
 export const metadata: Metadata = { title: "My site" };
 export const dynamic = "force-dynamic";
@@ -32,16 +30,11 @@ function hours(minutes: number): string {
   return m ? `${h}h ${String(m).padStart(2, "0")}m` : `${h}h`;
 }
 
-function toRing(value: Json | null): [number, number][] | null {
-  if (!Array.isArray(value)) return null;
-  const ring: [number, number][] = [];
-  for (const point of value) {
-    if (!Array.isArray(point) || point.length < 2) return null;
-    const [lng, lat] = point;
-    if (typeof lng !== "number" || typeof lat !== "number") return null;
-    ring.push([lng, lat]);
-  }
-  return ring.length >= 3 ? ring : null;
+/** How long someone has been at the gate, from their check-in stamp. */
+function elapsed(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  const h = Math.floor(mins / 60);
+  return h ? `${h}h ${String(mins % 60).padStart(2, "0")}m` : `${mins}m`;
 }
 
 /**
@@ -171,37 +164,16 @@ export default async function ClientSitePage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Guard</TableHead>
-                  <TableHead>Site</TableHead>
-                  <TableHead className="text-right">On duty since</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {live.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <span className="flex items-center gap-2.5">
-                        <Avatar className="size-8 border border-border">
-                          <AvatarFallback className="bg-muted text-[11px] font-semibold">
-                            {initials(row.guard_name ?? "?")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{row.guard_name ?? "—"}</span>
-                      </span>
-                    </TableCell>
-                    <TableCell>{row.site_name ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.check_in_at ? time(row.check_in_at) : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <ClientDutyTable
+            deskPhone={company.phone}
+            rows={live.map((row, i) => ({
+              id: row.id ?? String(i),
+              guardName: row.guard_name ?? "—",
+              siteName: row.site_name ?? "—",
+              since: row.check_in_at ? time(row.check_in_at) : "—",
+              forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "—",
+            }))}
+          />
         )}
       </Panel>
 

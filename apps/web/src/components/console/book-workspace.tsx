@@ -2,11 +2,33 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarPlus, CheckCircle2, ClipboardList, Loader2, Send, Undo2 } from "lucide-react";
+import {
+  Building2,
+  CalendarPlus,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  Loader2,
+  MapPin,
+  Phone,
+  Send,
+  Undo2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { submitBooking, withdrawBooking } from "@/app/console/book/actions";
 import { emptyBookingState } from "@/app/console/book/state";
+import {
+  Field,
+  FieldGrid,
+  HeroPill,
+  PreviewActions,
+  PreviewBody,
+  PreviewDialog,
+  PreviewHero,
+  rowProps,
+} from "@/components/console/preview-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +36,7 @@ import { Panel } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Textarea } from "@/components/ui/textarea";
-import { districtOptions } from "@/content/site";
+import { districtOptions, site as company, tel } from "@/content/site";
 import {
   BOOKING_STATUS_LABEL,
   BOOKING_STATUS_NOTE,
@@ -31,9 +53,12 @@ export type BookingRow = {
   service_type: string;
   site_type: string | null;
   district: string | null;
+  address: string | null;
   guards_required: number | null;
   shift_pattern: string | null;
   start_date: string | null;
+  duration_months: number | null;
+  notes: string | null;
   status: BookingStatus;
   quote_note: string | null;
   quoted_amount_paise: number | null;
@@ -112,6 +137,18 @@ export function BookWorkspace({
   const [state, action] = useActionState(submitBooking, emptyBookingState);
   const [formKey, setFormKey] = useState(0);
   const [pending, start] = useTransition();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const openRow = rows.find((r) => r.id === openId) ?? null;
+
+  function withdraw(r: BookingRow) {
+    start(async () => {
+      const res = await withdrawBooking(r.id);
+      if (res.ok) {
+        toast.success(`${r.reference} withdrawn`);
+        setOpenId(null);
+      } else toast.error(res.error ?? "Could not withdraw.");
+    });
+  }
 
   // A fresh, empty form once a request has gone through — keyed rather than
   // reset by hand, so every Radix select goes back to its placeholder too.
@@ -219,7 +256,11 @@ export function BookWorkspace({
         ) : (
           <ul className="flex flex-col gap-2.5">
             {rows.map((r) => (
-              <li key={r.id} className="rounded-xl border border-app-line-soft p-3.5">
+              <li
+                key={r.id}
+                {...rowProps(() => setOpenId(r.id))}
+                className="cursor-pointer rounded-xl border border-app-line-soft p-3.5 transition-colors hover:border-primary/30 hover:bg-accent/40"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-xs text-muted-foreground">{r.reference}</p>
@@ -246,13 +287,10 @@ export function BookWorkspace({
                       variant="ghost"
                       size="sm"
                       disabled={pending}
-                      onClick={() =>
-                        start(async () => {
-                          const res = await withdrawBooking(r.id);
-                          if (res.ok) toast.success(`${r.reference} withdrawn`);
-                          else toast.error(res.error ?? "Could not withdraw.");
-                        })
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        withdraw(r);
+                      }}
                       className="text-muted-foreground"
                     >
                       <Undo2 data-icon="inline-start" />
@@ -265,6 +303,75 @@ export function BookWorkspace({
           </ul>
         )}
       </Panel>
+
+      <PreviewDialog open={!!openRow} onClose={() => setOpenId(null)} label="Booking request">
+        {openRow && (
+          <>
+            <PreviewHero
+              icon={ClipboardList}
+              title={serviceName(openRow.service_type)}
+              meta={
+                <>
+                  <span className="font-mono">{openRow.reference}</span>
+                  <span aria-hidden>·</span>
+                  <span>sent {when(openRow.created_at)}</span>
+                </>
+              }
+              badge={<HeroPill>{BOOKING_STATUS_LABEL[openRow.status]}</HeroPill>}
+            />
+            <PreviewBody>
+              <p className="rounded-xl bg-accent px-3.5 py-3 text-sm text-accent-foreground">
+                {BOOKING_STATUS_NOTE[openRow.status]}
+              </p>
+              {openRow.quoted_amount_paise != null && (
+                <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-violet-900">
+                  <p className="text-xs font-semibold tracking-wide uppercase">Quotation</p>
+                  <p className="mt-0.5 text-2xl font-bold">
+                    {rupees(openRow.quoted_amount_paise)} <span className="text-sm font-medium">/ month</span>
+                  </p>
+                  {openRow.quote_note && <p className="mt-1 text-sm">{openRow.quote_note}</p>}
+                </div>
+              )}
+              <FieldGrid>
+                <Field icon={Building2} label="Site" value={openRow.site_type} />
+                <Field icon={MapPin} label="Where" value={[openRow.address, openRow.district].filter(Boolean).join(", ")} />
+                <Field icon={Users} label="Guards" value={openRow.guards_required ? String(openRow.guards_required) : "To be advised"} />
+                <Field
+                  icon={Clock}
+                  label="Shift"
+                  value={SHIFT_PATTERNS.find((p) => p.value === openRow.shift_pattern)?.label}
+                />
+                <Field
+                  icon={CalendarPlus}
+                  label="From"
+                  value={
+                    [openRow.start_date ? when(openRow.start_date) : null, openRow.duration_months ? `${openRow.duration_months} months` : null]
+                      .filter(Boolean)
+                      .join(" · ")
+                  }
+                />
+              </FieldGrid>
+              {openRow.notes && (
+                <p className="rounded-xl bg-muted/60 px-3.5 py-3 text-sm whitespace-pre-wrap">{openRow.notes}</p>
+              )}
+            </PreviewBody>
+            <PreviewActions>
+              {withdrawable(openRow.status) && (
+                <Button variant="outline" size="sm" disabled={pending} onClick={() => withdraw(openRow)}>
+                  <Undo2 data-icon="inline-start" />
+                  Withdraw request
+                </Button>
+              )}
+              <Button asChild size="sm">
+                <a href={`tel:${tel(company.phone)}`}>
+                  <Phone data-icon="inline-start" />
+                  Call the desk
+                </a>
+              </Button>
+            </PreviewActions>
+          </>
+        )}
+      </PreviewDialog>
     </div>
   );
 }

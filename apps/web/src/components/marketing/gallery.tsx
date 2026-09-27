@@ -11,10 +11,8 @@ import { cn } from "@/lib/utils";
 /**
  * The gallery mosaic plus its full-view lightbox.
  *
- * The frames carry the same duotone grade as `PhotoStrip`, lifting to full
- * colour on hover — the source photographs are a mix of the agency's own and
- * licensed stock, and one treatment across all of them turns that
- * inconsistency into an intent.
+ * The frames are shown in full colour with the same hover zoom as
+ * `PhotoStrip`.
  *
  * The open photograph is addressed by index rather than by object, because
  * every control on the panel is really "move the index": the arrows, the
@@ -130,9 +128,8 @@ export function GalleryMosaic({
               sizes={sizes}
               loading="lazy"
               className={cn(
-                "object-cover transition-[filter,scale] duration-700 ease-out-strong",
-                "grayscale-[0.55] sepia-[0.15] hue-rotate-[80deg] saturate-[0.85] contrast-[1.05]",
-                "group-hover/shot:scale-[1.04] group-hover/shot:grayscale-0 group-hover/shot:sepia-0 group-hover/shot:hue-rotate-0 group-hover/shot:saturate-100",
+                "object-cover transition-[scale] duration-700 ease-out-strong",
+                "group-hover/shot:scale-[1.04]",
                 "motion-reduce:transition-none motion-reduce:group-hover/shot:scale-100",
               )}
             />

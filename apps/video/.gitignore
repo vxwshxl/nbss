@@ -1,0 +1,4 @@
+out/
+public/capture/
+public/audio/
+.demo-state.json

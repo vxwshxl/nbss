@@ -126,124 +126,131 @@ export function Hero() {
         />
       </div>
 
-      {/* Two veils, not one. A flat scrim at the strength the headline needs
-          would bury the photograph; a gradient keeps the top of the frame open
-          and puts the density where the text actually sits. */}
+      {/* Three veils. The copy sits on the left, so the density goes there and
+          at the foot of the frame; the right of the photograph — the parade —
+          stays open. A flat scrim strong enough for body text would bury it. */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-t from-black/90 via-black/60 to-black/25"
+        className="absolute inset-0 -z-10 bg-gradient-to-r from-black/90 via-black/65 to-black/15"
       />
-      <div aria-hidden className="bg-grid absolute inset-0 -z-10 opacity-[0.06]" />
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/20 to-black/40"
+      />
+      <div aria-hidden className="bg-grid absolute inset-0 -z-10 opacity-[0.05]" />
 
-      <div className="mx-auto w-full max-w-6xl px-5 pt-32 pb-10">
-        <div className="hero-fade grid gap-10 lg:grid-cols-[1.35fr_1fr] lg:items-end">
-          <div className="min-w-0">
-            <p className="hero-rise mb-5 flex flex-wrap items-center gap-2.5 text-[11px] font-bold tracking-[0.18em] text-background/60 uppercase">
-              <span className="text-primary">{site.shortName}</span>
-              <span aria-hidden className="h-px w-8 bg-background/25" />
-              {site.address.city} · {site.address.region}
-            </p>
+      <div className="mx-auto w-full max-w-6xl px-5 pt-44 pb-12 lg:pt-36">
+        <div className="hero-fade">
+          <p className="hero-rise mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-white/90 uppercase backdrop-blur-sm sm:px-3.5 sm:text-[11px] sm:tracking-[0.14em]">
+            <span className="size-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400" />
+            {site.address.city} · Bodoland Territorial Region
+          </p>
 
-            <h1 className="hero-rise font-display text-[clamp(2.5rem,7vw,4.75rem)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
-              Your Safety,
-              <br />
-              <span className="relative inline-block">
-                <span className="text-brand-gradient">Our Responsibility.</span>
-                <span
-                  aria-hidden
-                  className="glow-rule absolute -bottom-1 left-0 h-[3px] w-full rounded-full"
-                />
+          <h1 className="hero-rise font-display text-[clamp(2.6rem,6.4vw,4.6rem)] leading-[1.02] font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_30px_rgb(0_0_0/0.45)]">
+            Your Safety,{" "}
+            <span className="relative inline-block whitespace-nowrap">
+              <span className="bg-gradient-to-r from-emerald-300 via-emerald-200 to-teal-200 bg-clip-text text-transparent">
+                Our Responsibility.
               </span>
-            </h1>
+              <span
+                aria-hidden
+                className="glow-rule absolute -bottom-1 left-0 h-[3px] w-full rounded-full"
+              />
+            </span>
+          </h1>
 
-            <p className="hero-rise mt-7 max-w-2xl text-base leading-relaxed text-background/75 sm:text-lg">
-              {site.name} supplies trained, disciplined and police-verified security
-              personnel to government departments, corporate offices, educational
-              institutions, hospitals, banks, industry and commercial establishments
-              across the Bodoland Territorial Region.
-            </p>
+          <div className="mt-9 grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+            <div className="min-w-0">
+              <p className="hero-rise max-w-xl text-[17px] leading-relaxed text-white/90 sm:text-lg">
+                Trained, uniformed and police-verified security guards for government
+                offices, hospitals, banks, schools, industry and events — posted where you
+                need them and supervised around the clock.
+              </p>
 
-            <div className="hero-rise mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-11 px-5 text-base">
-                <Link href={BOOK_HREF}>
-                  Book guards
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="h-11 border-background/25 bg-background/8 px-5 text-base text-background backdrop-blur-sm hover:bg-background/15 hover:text-background"
-              >
-                <Link href="/services">See what we guard</Link>
-              </Button>
+              <div className="hero-rise mt-8 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="h-12 px-6 text-base shadow-lg shadow-emerald-900/40">
+                  <Link href={BOOK_HREF}>
+                    Book guards
+                    <ArrowRight data-icon="inline-end" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="h-12 border-white bg-white px-6 text-base text-foreground hover:bg-white/90 hover:text-foreground"
+                >
+                  <Link href="/services">See what we guard</Link>
+                </Button>
+              </div>
+
+              <ul className="hero-rise mt-8 grid max-w-xl gap-2 sm:grid-cols-2">
+                {BADGES.map((badge) => (
+                  <li
+                    key={badge}
+                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-[13px] font-medium text-white backdrop-blur-sm"
+                  >
+                    <ShieldCheck className="size-4 shrink-0 text-emerald-400" strokeWidth={2} />
+                    {badge}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <ul className="hero-rise mt-8 flex flex-wrap gap-2">
-              {BADGES.map((badge) => (
-                <li
-                  key={badge}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-background/15 bg-background/8 px-3 py-1.5 text-xs font-medium text-background/75 backdrop-blur-sm"
-                >
-                  <ShieldCheck className="size-3.5 text-primary" strokeWidth={2} />
-                  {badge}
-                </li>
-              ))}
-            </ul>
+            {/* The deployment desk. A card rather than a second column of prose:
+                the single most likely next action from this page is a phone call,
+                and it should not be something the reader has to go looking for. */}
+            <aside className="hero-rise rounded-2xl border border-white/15 bg-black/55 p-6 text-white shadow-2xl backdrop-blur-md">
+              <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-300 uppercase">
+                Deployment desk · 24 × 7
+              </p>
+              <a
+                href={`tel:${tel(site.phone)}`}
+                className="mt-2 flex items-center gap-2.5 font-display text-[26px] font-bold tracking-tight text-white transition-colors hover:text-emerald-300"
+              >
+                <span className="flex size-9 items-center justify-center rounded-full bg-emerald-500/20">
+                  <Phone className="size-4.5 text-emerald-300" strokeWidth={2.2} />
+                </span>
+                {site.phone}
+              </a>
+
+              <dl className="mt-5 flex flex-col gap-3 text-sm">
+                <div className="flex items-start justify-between gap-4 border-t border-white/15 pt-3">
+                  <dt className="text-white/70">Head office</dt>
+                  <dd className="text-right font-medium">
+                    {site.address.city}, {site.address.state}
+                  </dd>
+                </div>
+                <div className="flex items-start justify-between gap-4 border-t border-white/15 pt-3">
+                  <dt className="text-white/70">Districts served</dt>
+                  <dd className="text-right font-medium tabular-nums">{coverage.length} and nearby</dd>
+                </div>
+                <div className="flex items-start justify-between gap-4 border-t border-white/15 pt-3">
+                  <dt className="text-white/70">Supervision</dt>
+                  <dd className="text-right font-medium">Round the clock</dd>
+                </div>
+              </dl>
+
+              <Link
+                href="/contact"
+                className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-300 hover:text-emerald-200 hover:underline"
+              >
+                <MapPin className="size-4" strokeWidth={2} />
+                Talk to us
+              </Link>
+            </aside>
           </div>
-
-          {/* The deployment desk. A card rather than a second column of prose:
-              the single most likely next action from this page is a phone call,
-              and it should not be something the reader has to go looking for. */}
-          <aside className="hero-rise rounded-2xl border border-background/15 bg-background/8 p-6 backdrop-blur-md">
-            <p className="text-[11px] font-bold tracking-[0.16em] text-background/55 uppercase">
-              Deployment desk
-            </p>
-            <a
-              href={`tel:${tel(site.phone)}`}
-              className="mt-2 flex items-center gap-2 font-display text-2xl font-bold tracking-tight transition-colors hover:text-primary"
-            >
-              <Phone className="size-5 text-primary" strokeWidth={2} />
-              {site.phone}
-            </a>
-
-            <dl className="mt-5 flex flex-col gap-3 text-sm">
-              <div className="flex items-start justify-between gap-4 border-t border-background/12 pt-3">
-                <dt className="text-background/55">Head office</dt>
-                <dd className="text-right">
-                  {site.address.city}, {site.address.state}
-                </dd>
-              </div>
-              <div className="flex items-start justify-between gap-4 border-t border-background/12 pt-3">
-                <dt className="text-background/55">Districts served</dt>
-                <dd className="text-right tabular-nums">{coverage.length} and nearby</dd>
-              </div>
-              <div className="flex items-start justify-between gap-4 border-t border-background/12 pt-3">
-                <dt className="text-background/55">Supervision</dt>
-                <dd className="text-right">24 × 7</dd>
-              </div>
-            </dl>
-
-            <Link
-              href="/contact"
-              className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-            >
-              <MapPin className="size-4" strokeWidth={2} />
-              Talk to us
-            </Link>
-          </aside>
         </div>
       </div>
 
       {/* The districts, running. Decorative and aria-hidden — the same list is
           set out properly further down the page, where it can be read. */}
-      <div className="relative border-t border-background/12 bg-black/35 py-3 backdrop-blur-sm">
+      <div className="relative border-t border-white/12 bg-black/60 py-3 backdrop-blur-sm">
         <Marquee
           items={coverage.map((d) => d.name)}
           duration={48}
           className="mask-fade-x"
-          itemClassName="text-xs font-semibold tracking-[0.14em] uppercase text-background/60"
+          itemClassName="text-xs font-semibold tracking-[0.14em] uppercase text-white/80"
         />
       </div>
     </section>

@@ -11,13 +11,17 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
+import {
+  LiveSosPanel,
+  OnDutyTable,
+  type LiveSos,
+  type OnDutyRow,
+} from "@/components/console/dashboard-tables";
 import { PageHeader } from "@/components/console/page-header";
 import { StatCard } from "@/components/console/stat-card";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
-import { StatusPill } from "@/components/ui/status-pill";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { requireRole } from "@/lib/auth";
+import { requireRoleSession } from "@/lib/auth";
 import { site } from "@/content/site";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -52,13 +56,14 @@ function elapsed(iso: string): string {
 }
 
 export default async function ConsoleDashboard() {
-  const profile = await requireRole("admin", "supervisor");
+  const session = await requireRoleSession("admin", "supervisor");
+  const profile = session.profile;
   const supabase = await supabaseServer();
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [guards, sites, onDuty, todayPunches] = await Promise.all([
+  const [guards, sites, onDuty, todayPunches, liveSos] = await Promise.all([
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -76,6 +81,11 @@ export default async function ConsoleDashboard() {
       .from("attendance")
       .select("id, worked_minutes, overtime_minutes, status")
       .gte("check_in_at", startOfToday.toISOString()),
+    supabase
+      .from("sos_alerts")
+      .select("id, status, kind, raised_at, guard:profiles!sos_alerts_raised_by_fkey(full_name, phone), sites(name)")
+      .in("status", ["active", "acknowledged"])
+      .order("raised_at", { ascending: false }),
   ]);
 
   const live = onDuty.data ?? [];
@@ -86,6 +96,37 @@ export default async function ConsoleDashboard() {
   const needsReview = punches.filter((p) => p.status === "pending_review").length;
 
   const noSites = (sites.count ?? 0) === 0;
+
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+  const alerts: LiveSos[] = (liveSos.data ?? []).map((a) => {
+    const g = one(a.guard as unknown as { full_name: string; phone: string | null } | null);
+    return {
+      id: a.id,
+      status: a.status,
+      kind: a.kind,
+      guardName: g?.full_name ?? "A guard",
+      guardPhone: g?.phone ?? null,
+      siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "a site",
+      raised: time(a.raised_at),
+    };
+  });
+
+  const onDutyRows: OnDutyRow[] = live.map((row) => {
+    // An embedded to-one relationship comes back as an object, but PostgREST's
+    // generated types describe the general case — so both shapes are handled.
+    const guard = one(row.profiles as unknown as { full_name: string; employee_code: string } | null);
+    const place = one(row.sites as unknown as { name: string; district: string | null } | null);
+    return {
+      id: row.id,
+      guardName: guard?.full_name ?? "—",
+      guardCode: guard?.employee_code ?? "",
+      siteName: place?.name ?? "—",
+      district: place?.district ?? null,
+      since: row.check_in_at ? time(row.check_in_at) : "—",
+      forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "—",
+      late: row.status === "late",
+    };
+  });
   const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;
 
   return (
@@ -101,6 +142,8 @@ export default async function ConsoleDashboard() {
           </Button>
         }
       />
+
+      {alerts.length > 0 && <LiveSosPanel alerts={alerts} />}
 
       {/* Six figures, and the order is the order someone actually scans them:
           what is happening right now, then the standing establishment, then the
@@ -208,55 +251,7 @@ export default async function ConsoleDashboard() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Guard</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Site</TableHead>
-                  <TableHead>Checked in</TableHead>
-                  <TableHead className="text-right">On duty for</TableHead>
-                  <TableHead className="text-right">State</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {live.map((row) => {
-                  // An embedded to-one relationship comes back as an object,
-                  // but PostgREST's generated types describe the general case —
-                  // so both shapes are handled rather than cast away.
-                  const guard = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-                  const place = Array.isArray(row.sites) ? row.sites[0] : row.sites;
-
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{guard?.full_name ?? "—"}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {guard?.employee_code ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <span className="block">{place?.name ?? "—"}</span>
-                        {place?.district && (
-                          <span className="block text-xs text-muted-foreground">
-                            {place.district}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {row.check_in_at ? time(row.check_in_at) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {row.check_in_at ? elapsed(row.check_in_at) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <StatusPill status={row.status === "late" ? "late" : "on_duty"} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <OnDutyTable rows={onDutyRows} canReview={!session.impersonating} />
         )}
       </Panel>
     </div>

@@ -14,11 +14,7 @@ import { cn } from "@/lib/utils";
  * arrived looking for, and a grid of nine identical tiles makes the reader do
  * the sorting. The rest run at one column each.
  *
- * Every photograph is duotoned to the brand green and lifts to full colour on
- * hover. The source images are freely-licensed and vary wildly in exposure and
- * white balance; putting them all through one treatment turns that
- * inconsistency into an intent, which is the only honest way to use a stock
- * photograph next to a real one.
+ * Every photograph is shown in full colour; hovering a card zooms it slightly.
  */
 export function ServiceBento({
   services,
@@ -60,9 +56,8 @@ export function ServiceBento({
                       : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   }
                   className={cn(
-                    "object-cover transition-[filter,scale] duration-700 ease-out-strong",
-                    "grayscale-[0.55] sepia-[0.15] hue-rotate-[80deg] saturate-[0.85] contrast-[1.05]",
-                    "group-hover/card:scale-[1.04] group-hover/card:grayscale-0 group-hover/card:sepia-0 group-hover/card:hue-rotate-0 group-hover/card:saturate-100",
+                    "object-cover transition-[scale] duration-700 ease-out-strong",
+                    "group-hover/card:scale-[1.04]",
                     "motion-reduce:transition-none motion-reduce:group-hover/card:scale-100",
                   )}
                 />

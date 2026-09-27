@@ -1,23 +1,17 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { Building2, MapPinned, PowerOff, Power, Radio, Shapes } from "lucide-react";
 import { toast } from "sonner";
 
 import { setSiteActive } from "@/app/console/sites/actions";
 import { SiteMap, type MapSite } from "@/components/console/site-map";
+import { SitePreviewDialog } from "@/components/console/site-preview";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Panel } from "@/components/ui/panel";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { StatusPill } from "@/components/ui/status-pill";
 
 export type SiteRow = {
@@ -54,21 +48,6 @@ function clock(value: string | null): string {
   return `${twelve}:${m ?? "00"} ${suffix}`;
 }
 
-function shiftHours(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
-}
-
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-app-line-soft py-2 last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-right text-sm">{value}</span>
-    </div>
-  );
-}
-
 /**
  * Sites, as a map first and a table second.
  *
@@ -79,18 +58,24 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
  * things a map genuinely cannot show — grace windows, required accuracy, the
  * shift clock.
  *
- * Selecting a row focuses the map on that fence as well as opening its panel,
- * so the two halves of the screen stay talking to each other.
+ * Selecting a row focuses the map on that fence as well as opening its popup
+ * (`SitePreviewDialog`); `?site=<id>` in the address opens one directly.
  */
 export function SitesWorkspace({
   rows,
   canManage,
+  canReview = false,
 }: {
   rows: SiteRow[];
   canManage: boolean;
+  canReview?: boolean;
 }) {
   const [pending, start] = useTransition();
-  const [detail, setDetail] = useState<SiteRow | null>(null);
+  const params = useSearchParams();
+  const [detailId, setDetailId] = useState<string | null>(params.get("site"));
+  // Looked up by id so the open popup follows live updates to its row.
+  const detail = rows.find((r) => r.id === detailId) ?? null;
+  const setDetail = (r: SiteRow | null) => setDetailId(r?.id ?? null);
   const [confirming, setConfirming] = useState(false);
 
   // Only live sites are drawn. A decommissioned fence on the map is a fence
@@ -266,103 +251,33 @@ export function SitesWorkspace({
         />
       </Panel>
 
-      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-lg">
-          {detail && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  {detail.name}
-                  <StatusPill status={detail.active ? "active" : "inactive"} />
-                </SheetTitle>
-                <SheetDescription>
-                  {detail.client_name ?? "No client recorded"}
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="flex-1 space-y-5 overflow-y-auto px-4 pb-4">
-                {detail.active && (
-                  <SiteMap sites={mapSites} focus={detail.id} height={200} />
-                )}
-
-                <section>
-                  <h3 className="mb-1 text-sm font-semibold">Where</h3>
-                  <Fact label="Address" value={detail.address ?? "—"} />
-                  <Fact label="District" value={detail.district ?? "—"} />
-                  <Fact
-                    label="Centre"
-                    value={
-                      <span className="font-mono tabular-nums">
-                        {detail.lat.toFixed(6)}, {detail.lng.toFixed(6)}
-                      </span>
-                    }
-                  />
-                  <Fact
-                    label="Boundary"
-                    value={
-                      detail.ring
-                        ? `Drawn area, ${detail.ring.length} points`
-                        : `Circle, ${detail.geofence_radius_m} m radius`
-                    }
-                  />
-                  <Fact
-                    label="Required accuracy"
-                    value={<span className="font-mono">±{detail.max_accuracy_m} m</span>}
-                  />
-                </section>
-
-                <section>
-                  <h3 className="mb-1 text-sm font-semibold">The shift</h3>
-                  <Fact
-                    label="Window"
-                    value={
-                      detail.shift_start
-                        ? `${clock(detail.shift_start)} – ${clock(detail.shift_end)}`
-                        : "Not set"
-                    }
-                  />
-                  <Fact label="Grace" value={`${detail.grace_minutes} min`} />
-                  <Fact
-                    label="Standard shift"
-                    value={shiftHours(detail.standard_shift_minutes)}
-                  />
-                  <Fact label="On duty now" value={String(detail.onDuty)} />
-                </section>
-
-                <p className="text-xs text-muted-foreground">
-                  A guard checking in here must be inside this boundary with a fix no
-                  looser than ±{detail.max_accuracy_m} m. Anything beyond{" "}
-                  {shiftHours(detail.standard_shift_minutes)} counts as overtime.
-                </p>
-              </div>
-
-              {canManage && (
-                <SheetFooter>
-                  <Button
-                    variant={detail.active ? "destructive" : "default"}
-                    disabled={pending}
-                    onClick={() =>
-                      detail.active ? setConfirming(true) : toggle(detail, true)
-                    }
-                  >
-                    {detail.active ? (
-                      <>
-                        <PowerOff data-icon="inline-start" />
-                        Take out of service
-                      </>
-                    ) : (
-                      <>
-                        <Power data-icon="inline-start" />
-                        Put back in service
-                      </>
-                    )}
-                  </Button>
-                </SheetFooter>
+      <SitePreviewDialog
+        site={detail}
+        onClose={() => setDetail(null)}
+        canReview={canReview}
+        actions={
+          canManage && detail ? (
+            <Button
+              size="sm"
+              variant={detail.active ? "destructive" : "default"}
+              disabled={pending}
+              onClick={() => (detail.active ? setConfirming(true) : toggle(detail, true))}
+            >
+              {detail.active ? (
+                <>
+                  <PowerOff data-icon="inline-start" />
+                  Take out of service
+                </>
+              ) : (
+                <>
+                  <Power data-icon="inline-start" />
+                  Put back in service
+                </>
               )}
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+            </Button>
+          ) : null
+        }
+      />
 
       <ConfirmDialog
         open={confirming}

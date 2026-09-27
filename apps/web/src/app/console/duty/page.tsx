@@ -13,7 +13,7 @@ import { Panel } from "@/components/ui/panel";
 import { site } from "@/content/site";
 import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Json } from "@/lib/supabase/types";
+import { toRing } from "@/lib/fence";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -32,18 +32,6 @@ function hours(minutes: number | null): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
-}
-
-function toRing(value: Json | null): [number, number][] | null {
-  if (!Array.isArray(value)) return null;
-  const ring: [number, number][] = [];
-  for (const point of value) {
-    if (!Array.isArray(point) || point.length < 2) return null;
-    const [lng, lat] = point;
-    if (typeof lng !== "number" || typeof lat !== "number") return null;
-    ring.push([lng, lat]);
-  }
-  return ring.length >= 3 ? ring : null;
 }
 
 /**

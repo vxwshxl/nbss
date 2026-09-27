@@ -3,7 +3,6 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { site } from "@/content/site";
 import { educationOptions, vacancyById } from "@/content/gallery";
 import { addSubmission, setStatus, type NewSubmission, type Status } from "@/lib/store";
 import { Validator, type FormState } from "@/lib/validate";

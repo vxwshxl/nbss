@@ -5,28 +5,10 @@ import { SiteForm } from "@/components/console/site-form";
 import { SitesWorkspace, type SiteRow } from "@/components/console/sites-workspace";
 import { requireRoleSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Json } from "@/lib/supabase/types";
+import { toRing } from "@/lib/fence";
 
 export const metadata: Metadata = { title: "Sites" };
 export const dynamic = "force-dynamic";
-
-/**
- * A polygon column is `Json`, so it is narrowed here rather than cast in the
- * client. Anything that is not a list of `[lng, lat]` pairs is treated as no
- * polygon at all, because a fence drawn from malformed data is worse than no
- * fence — it looks authoritative.
- */
-function toRing(value: Json | null): [number, number][] | null {
-  if (!Array.isArray(value)) return null;
-  const ring: [number, number][] = [];
-  for (const point of value) {
-    if (!Array.isArray(point) || point.length < 2) return null;
-    const [lng, lat] = point;
-    if (typeof lng !== "number" || typeof lat !== "number") return null;
-    ring.push([lng, lat]);
-  }
-  return ring.length >= 3 ? ring : null;
-}
 
 export default async function SitesPage() {
   const session = await requireRoleSession("admin", "supervisor");
@@ -97,7 +79,7 @@ export default async function SitesPage() {
         action={canManage ? <SiteForm /> : undefined}
       />
 
-      <SitesWorkspace rows={rows} canManage={canManage} />
+      <SitesWorkspace rows={rows} canManage={canManage} canReview={!session.impersonating} />
 
       <p className="text-xs text-muted-foreground">
         Boundaries are drawn on a map rather than typed. Tiles are served from

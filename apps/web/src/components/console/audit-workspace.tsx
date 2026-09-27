@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Database, ExternalLink, Globe, KeyRound, ScrollText, UserRound } from "lucide-react";
 
-import { DataTable, type Column } from "@/components/ui/data-table";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Field,
+  FieldGrid,
+  PreviewActions,
+  PreviewBody,
+  PreviewDialog,
+  PreviewHero,
+  Section,
+} from "@/components/console/preview-kit";
+import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusPill } from "@/components/ui/status-pill";
 import type { Tone } from "@/lib/ui/tones";
 
@@ -60,6 +65,25 @@ const ACTION_LABEL: Record<string, string> = {
   attendance_force_closed: "Closed a shift manually",
   impersonation_started: "Started viewing as someone",
   impersonation_stopped: "Stopped viewing as someone",
+  sos_acknowledged: "Answered an SOS",
+  sos_closed: "Closed an SOS",
+};
+
+/** Where each kind of record lives, so an entry can open the thing it is about. */
+const ENTITY_HREF: Record<string, (id: string) => string> = {
+  profiles: (id) => `/console/users?person=${id}`,
+  sites: (id) => `/console/sites?site=${id}`,
+  attendance: (id) => `/console/attendance?record=${id}`,
+  service_requests: (id) => `/console/bookings?open=${id}`,
+  sos_alerts: (id) => `/console/sos?alert=${id}`,
+};
+
+const ENTITY_LABEL: Record<string, string> = {
+  profiles: "person",
+  sites: "site",
+  attendance: "punch",
+  service_requests: "booking",
+  sos_alerts: "alert",
 };
 
 /**
@@ -145,67 +169,58 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
         emptyMessage="Nothing recorded yet."
       />
 
-      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-lg">
-          {detail && (
-            <>
-              <SheetHeader>
-                <SheetTitle>{ACTION_LABEL[detail.action] ?? detail.action}</SheetTitle>
-                <SheetDescription>
-                  {dateTime(detail.created_at)}
-                  {detail.actor_code ? ` · ${detail.actor_code}` : ""}
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <div>
-                    <dt className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                      Action key
-                    </dt>
-                    <dd className="mt-0.5 font-mono text-sm">{detail.action}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                      Entity
-                    </dt>
-                    <dd className="mt-0.5 font-mono text-sm">{detail.entity ?? "—"}</dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                      Entity ID
-                    </dt>
-                    <dd className="mt-0.5 font-mono text-xs break-all">
-                      {detail.entity_id ?? "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                      From
-                    </dt>
-                    <dd className="mt-0.5 font-mono text-sm">{detail.ip ?? "—"}</dd>
-                  </div>
-                </dl>
-
-                <div>
-                  <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                    Recorded detail
-                  </p>
-                  {/* The raw payload, verbatim. Mono earns its place here —
-                      this is data being read for exactness, not prose — and it
-                      is deliberately not prettied into a field list, because
-                      the shape of the payload is itself part of the record. */}
-                  <pre className="overflow-x-auto rounded-lg border border-app-line-soft bg-muted/50 p-3 font-mono text-xs leading-relaxed">
-                    {detail.detail
-                      ? JSON.stringify(detail.detail, null, 2)
-                      : "No additional detail was recorded."}
-                  </pre>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <PreviewDialog open={!!detail} onClose={() => setDetail(null)} label="Audit entry">
+        {detail && (
+          <>
+            <PreviewHero
+              icon={ScrollText}
+              tone={toneFor(detail.action) === "rose" ? "rose" : toneFor(detail.action) === "amber" ? "amber" : "brand"}
+              title={ACTION_LABEL[detail.action] ?? detail.action}
+              meta={
+                <>
+                  <span>{dateTime(detail.created_at)}</span>
+                  {detail.actor_code && <span aria-hidden>·</span>}
+                  {detail.actor_code && <span className="font-mono">{detail.actor_code}</span>}
+                </>
+              }
+            />
+            <PreviewBody>
+              <FieldGrid>
+                <Field icon={UserRound} label="Who" mono value={detail.actor_code} />
+                <Field icon={Globe} label="From" mono value={detail.ip} />
+                <Field icon={KeyRound} label="Action key" mono value={detail.action} />
+                <Field icon={Database} label="Record" mono value={detail.entity} />
+              </FieldGrid>
+              {detail.entity_id && (
+                <p className="rounded-lg bg-muted/50 px-3 py-2 font-mono text-xs break-all text-muted-foreground">
+                  {detail.entity_id}
+                </p>
+              )}
+              <Section title="Recorded detail">
+                {/* The raw payload, verbatim. Mono earns its place here —
+                    this is data being read for exactness, not prose — and it
+                    is deliberately not prettied into a field list, because
+                    the shape of the payload is itself part of the record. */}
+                <pre className="overflow-x-auto rounded-lg border border-app-line-soft bg-muted/50 p-3 font-mono text-xs leading-relaxed">
+                  {detail.detail
+                    ? JSON.stringify(detail.detail, null, 2)
+                    : "No additional detail was recorded."}
+                </pre>
+              </Section>
+            </PreviewBody>
+            {detail.entity && detail.entity_id && ENTITY_HREF[detail.entity] && (
+              <PreviewActions>
+                <Button asChild size="sm">
+                  <Link href={ENTITY_HREF[detail.entity]!(detail.entity_id)}>
+                    <ExternalLink data-icon="inline-start" />
+                    Open this {ENTITY_LABEL[detail.entity] ?? "record"}
+                  </Link>
+                </Button>
+              </PreviewActions>
+            )}
+          </>
+        )}
+      </PreviewDialog>
     </>
   );
 }

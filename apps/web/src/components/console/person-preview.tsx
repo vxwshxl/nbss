@@ -16,6 +16,7 @@ import {
 
 import { personPreview, type DayMark, type PersonPreview } from "@/app/console/guards/preview";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Field, PhoneLink, Stat } from "@/components/console/preview-kit";
 import { StatusPill } from "@/components/ui/status-pill";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
@@ -53,27 +54,6 @@ function ago(iso: string | null): string {
   return when(iso);
 }
 
-function Stat({
-  icon: Icon,
-  label,
-  children,
-  tone = "text-foreground",
-}: {
-  icon: typeof Clock;
-  label: string;
-  children: React.ReactNode;
-  tone?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-app-line-soft bg-card p-3">
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5" /> {label}
-      </p>
-      <div className={cn("mt-1 truncate text-lg font-bold tabular-nums", tone)}>{children}</div>
-    </div>
-  );
-}
-
 const DAY_TONE: Record<DayMark["state"], string> = {
   present: "bg-primary",
   late: "bg-amber-400",
@@ -92,20 +72,6 @@ function DayStrip({ days }: { days: DayMark[] }) {
           className={cn("h-7 flex-1 rounded-md", DAY_TONE[d.state])}
         />
       ))}
-    </div>
-  );
-}
-
-function Field({ icon: Icon, label, value }: { icon: typeof Mail; label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex min-w-0 items-start gap-2.5">
-      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon className="size-3.5" />
-      </span>
-      <div className="min-w-0">
-        <dt className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{label}</dt>
-        <dd className="mt-0.5 text-sm break-words">{value || "—"}</dd>
-      </div>
     </div>
   );
 }
@@ -198,7 +164,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
 
         <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
           <Field icon={Mail} label="Email" value={p.email} />
-          <Field icon={Phone} label="Phone" value={p.phone ? <span className="font-mono">{p.phone}</span> : null} />
+          <Field icon={Phone} label="Phone" value={<PhoneLink phone={p.phone} />} />
           <Field icon={CalendarCheck} label="Joined" value={when(p.joined)} />
           <Field icon={Clock} label="Last seen" value={ago(p.lastSeen)} />
         </dl>

@@ -7,10 +7,8 @@ import { cn } from "@/lib/utils";
 /**
  * A row of the agency's own photographs.
  *
- * Duotoned to the brand green and lifting to full colour on hover, the same
- * treatment the service cards use — so a real photograph from a Kokrajhar
- * parade ground and a licensed stock frame of a hospital corridor sit in the
- * same page without one of them looking borrowed.
+ * Shown in full colour, with a slow zoom on hover — the same treatment the
+ * service cards use.
  *
  * `sizes` is not a guess here: these render six-up on a wide screen and two-up
  * on a phone, so a browser told `100vw` would download six full-width images
@@ -34,9 +32,8 @@ export function PhotoStrip({
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
               className={cn(
-                "object-cover transition-[filter,scale] duration-700 ease-out-strong",
-                "grayscale-[0.55] sepia-[0.15] hue-rotate-[80deg] saturate-[0.85] contrast-[1.05]",
-                "group-hover/shot:scale-[1.06] group-hover/shot:grayscale-0 group-hover/shot:sepia-0 group-hover/shot:hue-rotate-0 group-hover/shot:saturate-100",
+                "object-cover transition-[scale] duration-700 ease-out-strong",
+                "group-hover/shot:scale-[1.06]",
                 "motion-reduce:transition-none motion-reduce:group-hover/shot:scale-100",
               )}
             />

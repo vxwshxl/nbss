@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Check,
   Copy,
@@ -180,7 +181,10 @@ export function GuardsWorkspace({
   const [pending, start] = useTransition();
 
   const [adding, setAdding] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  // `?person=<id>` opens someone directly — how a punch, a site or an SOS
+  // links to the person in it.
+  const params = useSearchParams();
+  const [detailId, setDetailId] = useState<string | null>(params.get("person"));
   const [version, setVersion] = useState(0);
   const [tab, setTab] = useState<Role | "all">("all");
   const [editing, setEditing] = useState(false);

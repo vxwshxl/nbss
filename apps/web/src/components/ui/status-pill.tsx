@@ -51,6 +51,11 @@ const SEMANTIC: Record<string, { label: string; tone: Tone }> = {
   declined: { label: "Declined", tone: "rose" },
   withdrawn: { label: "Withdrawn", tone: "slate" },
   converted: { label: "Guards deployed", tone: "emerald" },
+  // SOS — prefixed where the bare word already means something else here
+  sos_active: { label: "Live SOS", tone: "rose" },
+  acknowledged: { label: "Help on the way", tone: "amber" },
+  resolved: { label: "Resolved", tone: "emerald" },
+  false_alarm: { label: "False alarm", tone: "slate" },
   // settlements / misc
   settled: { label: "Settled", tone: "emerald" },
   due: { label: "Due", tone: "amber" },

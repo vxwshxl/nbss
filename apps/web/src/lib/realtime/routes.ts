@@ -13,7 +13,8 @@ const ROUTES: [prefix: string, tables: RouteRealtime][] = [
   ["/console/profile", "off"],
   ["/console/sites/", "off"], // editing one site's fence
   ["/console/attendance", ["attendance", "shifts"]],
-  ["/console/sites", ["sites", "attendance"]],
+  ["/console/sites", ["sites", "attendance", "sos_alerts"]],
+  ["/console/sos", ["sos_alerts", "attendance"]],
   ["/console/guards", ["profiles", "attendance"]],
   ["/console/users", ["profiles"]],
   ["/console/submissions", ["submissions"]],

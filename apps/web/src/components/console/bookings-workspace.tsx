@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { Building2, CalendarDays, ClipboardList, Mail, MapPin, Phone, ShieldUser, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -89,7 +90,9 @@ export function BookingsWorkspace({
   canDeploy: boolean;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["value"]>("open");
-  const [openId, setOpenId] = useState<string | null>(null);
+  // `?open=<id>` opens a booking directly — how a site links to its booking.
+  const params = useSearchParams();
+  const [openId, setOpenId] = useState<string | null>(params.get("open"));
   const [mode, setMode] = useState<"idle" | "quote" | "deploy">("idle");
   const [siteId, setSiteId] = useState("");
   const [pending, start] = useTransition();
