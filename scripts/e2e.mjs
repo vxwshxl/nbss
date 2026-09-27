@@ -234,6 +234,40 @@ async function run() {
     people.guard2.email = next;
   });
 
+  // ── Sites & geofences --------------------------------------------------
+  console.log("Sites");
+  await check("an admin can register a site with a geofence", async () => {
+    const { data, error } = await s.admin
+      .from("sites")
+      .insert({ name: `E2E Admin Site ${tag}`, lat: FENCE.lat, lng: FENCE.lng, geofence_radius_m: 120 })
+      .select("id, geofence_radius_m")
+      .single();
+    if (error) throw error;
+    created.sites.push(data.id);
+    assert(data.geofence_radius_m === 120, "radius not stored");
+  });
+  await check("supervisors, guards and clients cannot create a site", async () => {
+    for (const k of ["supervisor", "guard", "client"]) {
+      const { error } = await s[k].from("sites").insert({ name: `nope ${k}`, lat: 1, lng: 1 });
+      assert(error, `${k} created a site`);
+    }
+  });
+  await check("nobody but an admin can move a fence", async () => {
+    for (const k of ["supervisor", "guard", "client"]) {
+      await s[k].from("sites").update({ lat: 0, lng: 0 }).eq("id", people.site);
+    }
+    const { data } = await admin.from("sites").select("lat").eq("id", people.site).single();
+    assert(data.lat === FENCE.lat, `fence moved to ${data.lat}`);
+  });
+  await check("an impossible fence is rejected by the database", async () => {
+    const { error } = await s.admin.from("sites").insert({ name: "bad", lat: 26.4, lng: 90.2, geofence_radius_m: 5 });
+    assert(error, "a 5 m radius was accepted");
+  });
+  await check("guards can read the site list (to know where to report)", async () => {
+    const { data } = await s.guard.from("sites").select("id").in("id", created.sites);
+    assert(data.length >= 2, `guard saw ${data.length}`);
+  });
+
   // ── Attendance + geofence ------------------------------------------------
   console.log("Attendance & geofence");
   const punchIn = (c, at, accuracy = 15, site = people.site) =>
@@ -316,6 +350,12 @@ async function run() {
       .single();
     assert(data.check_out_at && data.check_out_distance_m > FENCE.radius, "not recorded");
     assert(typeof data.worked_minutes === "number", "worked minutes not computed");
+  });
+  await check("a deactivated site refuses check-in", async () => {
+    await admin.from("sites").update({ active: false }).eq("id", people.otherSite);
+    const { error } = await punchIn(s.guard2, INSIDE, 15, people.otherSite);
+    await admin.from("sites").update({ active: true }).eq("id", people.otherSite);
+    assert(error && /not in service/.test(error.message), error?.message ?? "was allowed");
   });
   await check("checking out twice is refused", async () => {
     const { error } = await punchOut(s.guard, INSIDE);

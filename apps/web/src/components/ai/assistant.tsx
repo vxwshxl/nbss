@@ -134,6 +134,9 @@ export function Assistant({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    // Scrollable only once the text outgrows the cap; below it the box is
+    // exactly as tall as its text, and a scrollbar there is just noise.
+    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
   }, []);
 
   // The height has to be recomputed when the box gets narrower, not only when
@@ -536,7 +539,7 @@ export function Assistant({
               : "Not connected — add an API key on the server to enable this."
           }
           aria-label="Message the assistant"
-          className="max-h-50 min-h-11 w-full resize-none rounded-xl border border-app-line bg-background px-3.5 py-2.5 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60"
+          className="scrollbar-none max-h-50 min-h-11 w-full resize-none overflow-y-hidden rounded-xl border border-app-line bg-background px-3.5 py-2.5 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60"
         />
 
         <div className="flex items-center gap-3">

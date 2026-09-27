@@ -24,6 +24,7 @@ export function NavLink({
   active,
   tone,
   badge,
+  onNavigate,
 }: {
   href: string;
   label: string;
@@ -32,6 +33,8 @@ export function NavLink({
   tone?: Tone;
   /** Pending/unseen count. Becomes a dot when the sidebar is a rail. */
   badge?: number;
+  /** Called on a plain click, so the nav can show the row as active at once. */
+  onNavigate?: () => void;
 }) {
   const t = TONES[tone ?? toneFor(href)];
   return (
@@ -43,6 +46,10 @@ export function NavLink({
       // identifying the row; leaving it on at full width would put a native
       // tooltip over text that is already legible.
       title={label}
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        onNavigate?.();
+      }}
       className={cn(
         "relative flex items-center gap-2.5 rounded-lg p-2 text-sm font-medium outline-none transition-colors duration-100 lg:p-1.5",
         "focus-visible:ring-2 focus-visible:ring-sidebar-ring/60",

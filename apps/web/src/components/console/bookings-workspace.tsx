@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Panel } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
-import { SHIFT_PATTERNS, serviceName, type BookingStatus } from "@/lib/bookings";
+import { BOOKING_STATUS_LABEL, SHIFT_PATTERNS, serviceName, type BookingStatus } from "@/lib/bookings";
 import { cn } from "@/lib/utils";
 
 export type BookingInboxRow = {
@@ -152,7 +152,7 @@ export function BookingsWorkspace({
       header: "Status",
       className: "text-right",
       headClassName: "text-right",
-      cell: (r) => <StatusPill status={r.status} />,
+      cell: (r) => <StatusPill status={r.status} label={BOOKING_STATUS_LABEL[r.status]} />,
       sortValue: (r) => r.status,
       printCell: (r) => r.status,
     },
@@ -233,7 +233,7 @@ export function BookingsWorkspace({
 
               <div className="space-y-6 p-6">
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill status={open.status} />
+                  <StatusPill status={open.status} label={BOOKING_STATUS_LABEL[open.status]} />
                   {open.quoted_amount_paise != null && (
                     <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-800">
                       Quoted ₹{(open.quoted_amount_paise / 100).toLocaleString("en-IN")} / month

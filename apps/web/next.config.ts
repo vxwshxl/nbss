@@ -67,6 +67,19 @@ const nextConfig: NextConfig = {
    */
   transpilePackages: ["@nbss/shared"],
 
+  experimental: {
+    // Keep console pages you have just visited in the browser's router cache
+    // for a minute, so going back to one is instant rather than a fresh server
+    // round trip. They never go stale on screen: RealtimeRefresher re-reads a
+    // cached page on arrival if its data changed while you were away.
+    staleTimes: { dynamic: 60, static: 300 },
+    // The radix-ui umbrella package re-exports every primitive; load only the
+    // modules a page imports (lucide-react is optimised by default). Production
+    // only: in Turbopack's dev server the rewrite leaves open tabs holding
+    // chunks whose module factory no longer exists (seen on schoolerp).
+    ...(process.env.NODE_ENV === "production" ? { optimizePackageImports: ["radix-ui"] } : {}),
+  },
+
   /**
    * `next build` and `next dev` share .next by default, so running a build
    * while the dev server is up deletes the manifests it is holding open — the

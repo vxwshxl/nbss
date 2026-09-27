@@ -171,7 +171,13 @@ export function SignInForm({ from }: { from: string }) {
               placeholder="••••••"
               onChange={(e) => {
                 e.currentTarget.value = e.currentTarget.value.replace(/\D/g, "").slice(0, 6);
-                if (e.currentTarget.value.length === 6) e.currentTarget.form?.requestSubmit();
+                if (e.currentTarget.value.length === 6) {
+                  // Through the Verify button, so `intent=verify` is posted —
+                  // a bare requestSubmit() sends no submitter and the server
+                  // would read it as "send the code again".
+                  const form = e.currentTarget.form;
+                  form?.requestSubmit(form.querySelector<HTMLButtonElement>('button[value="verify"]'));
+                }
               }}
               className="h-14 rounded-xl text-center font-mono text-2xl font-semibold tracking-[0.5em] placeholder:tracking-[0.5em]"
             />

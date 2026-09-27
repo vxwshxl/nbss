@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { groups } from "@/components/console/nav-items";
@@ -22,6 +23,11 @@ export function ConsoleNav({
   badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
+  // The row that was just clicked lights up at once, before the new page has
+  // arrived — the click is answered in the same frame, and the skeleton below
+  // fills in behind it. Cleared the moment the path actually changes.
+  const [pending, setPending] = useState<{ href: string; from: string } | null>(null);
+  const target = pending && pending.from === pathname ? pending.href : null;
 
   return (
     <nav className="flex flex-col gap-3">
@@ -40,10 +46,13 @@ export function ConsoleNav({
                 active={
                   item.away
                     ? false
-                    : item.exact
-                      ? pathname === item.href
-                      : pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    : target
+                      ? target === item.href
+                      : item.exact
+                        ? pathname === item.href
+                        : pathname === item.href || pathname.startsWith(`${item.href}/`)
                 }
+                onNavigate={item.away ? undefined : () => setPending({ href: item.href, from: pathname })}
                 badge={badges[item.href]}
               />
             ))}

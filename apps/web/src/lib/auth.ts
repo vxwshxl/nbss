@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { impersonatedId, type Session } from "@/lib/impersonation";
@@ -62,20 +63,24 @@ export function isValidPin(pin: string): boolean {
 /**
  * The signed-in person's profile, or null.
  *
- * `getUser()` rather than `getSession()`: the session is read from a cookie the
- * browser controls, while `getUser()` revalidates it against Supabase. For a
- * system where the difference is "may this person mark themselves present",
- * that round trip is worth it.
+ * `getClaims()` verifies the session JWT locally against the project's ES256
+ * signing key (fetched once and cached), so this costs no round trip to the
+ * Auth server — `getUser()` did, and the layout, the page and the middleware
+ * each paid it on every navigation. A token is still refused once it expires
+ * (an hour at most), and the profile row below is read on every request, so
+ * deactivating someone takes effect on their next click.
+ *
+ * Wrapped in React's `cache()` so the layout and the page share one lookup per
+ * request instead of repeating it.
  */
-export async function currentProfile(): Promise<Profile | null> {
+export const currentProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await supabaseServer();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+  if (!userId) return null;
 
-  const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
 
   // A profile row that is missing or deactivated means no access, even though
   // the auth user still exists — deactivating a guard should not require
@@ -83,7 +88,7 @@ export async function currentProfile(): Promise<Profile | null> {
   if (!data || !data.active) return null;
 
   return data;
-}
+});
 
 /**
  * The real account, plus whoever the console is currently being viewed as.
@@ -92,7 +97,7 @@ export async function currentProfile(): Promise<Profile | null> {
  * admin, checked here on every request rather than trusted from the cookie —
  * so forging it gains nothing.
  */
-export async function currentSession(): Promise<Session | null> {
+export const currentSession = cache(async (): Promise<Session | null> => {
   const realProfile = await currentProfile();
   if (!realProfile) return null;
 
@@ -109,7 +114,7 @@ export async function currentSession(): Promise<Session | null> {
   if (!data || !data.active) return { profile: realProfile, realProfile, impersonating: false };
 
   return { profile: data, realProfile, impersonating: true };
-}
+});
 
 /** Redirects to sign-in when nobody is signed in. */
 export async function requireProfile(): Promise<Profile> {

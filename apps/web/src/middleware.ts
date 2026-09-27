@@ -47,19 +47,29 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // getUser() rather than getSession(): it revalidates the token with Supabase
-  // instead of trusting a cookie the browser controls.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() rather than getSession(): it verifies the token's signature
+  // (ES256, against the project's cached public key) instead of trusting a
+  // cookie the browser controls — and, unlike getUser(), it does so without a
+  // network round trip, which every console navigation used to wait on. It
+  // still refreshes an expired session and rotates the cookies below.
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims?.sub ? { id: claims.claims.sub } : null;
 
   // The sign-in pages decide for themselves whether to send someone onward:
   // they check for an *active profile*, not just an auth user. Redirecting here
   // on the auth user alone looped forever for a deactivated account — the
   // console bounced it to /login for having no profile, and this bounced it
   // straight back for having a session.
-  if (pathname === LOGIN_PATH || pathname === "/register" || pathname === "/console/login") {
+  if (pathname === LOGIN_PATH || pathname === "/register") {
     return response;
+  }
+
+  // The old sign-in address. Redirected here rather than by its page: pages
+  // under /console stream behind a loading skeleton, and a redirect thrown
+  // mid-stream reaches the browser as a 200 plus a client-side hop, which old
+  // bookmarks and the app should not have to follow.
+  if (pathname === "/console/login") {
+    return NextResponse.redirect(new URL(`${LOGIN_PATH}${search}`, request.url));
   }
 
   if (user) return response;

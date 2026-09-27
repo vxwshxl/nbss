@@ -16,6 +16,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { Textarea } from "@/components/ui/textarea";
 import { districtOptions } from "@/content/site";
 import {
+  BOOKING_STATUS_LABEL,
   BOOKING_STATUS_NOTE,
   SERVICE_OPTIONS,
   SHIFT_PATTERNS,
@@ -229,7 +230,7 @@ export function BookWorkspace({
                         .join(" · ")}
                     </p>
                   </div>
-                  <StatusPill status={r.status} />
+                  <StatusPill status={r.status} label={BOOKING_STATUS_LABEL[r.status]} />
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">{BOOKING_STATUS_NOTE[r.status]}</p>
                 {r.status === "quoted" && r.quoted_amount_paise != null && (

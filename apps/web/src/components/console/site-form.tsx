@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, MapPinPlus, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import { createSite } from "@/app/console/sites/actions";
 import { emptySiteForm } from "@/app/console/sites/site-form-state";
@@ -79,6 +80,20 @@ export function SiteForm() {
     lng: 0,
     radius: 150,
   });
+
+  // A save closes the dialog and says so. Before, the form emptied itself and
+  // stayed open, which read as "nothing happened" and invited a duplicate.
+  const [seen, setSeen] = useState(state);
+  if (seen !== state) {
+    setSeen(state);
+    if (state.ok && state.created) {
+      setOpen(false);
+      setFence({ mode: "radius", lat: 0, lng: 0, radius: 150 });
+    }
+  }
+  useEffect(() => {
+    if (state.ok && state.created) toast.success("Site registered", { description: state.created });
+  }, [state]);
 
   const placed =
     fence.mode === "radius" ? !!(fence.lat || fence.lng) : fence.ring.length >= 3;
