@@ -148,7 +148,7 @@ export function Hero() {
               Your Safety,
               <br />
               <span className="relative inline-block">
-                Our Responsibility.
+                <span className="text-brand-gradient">Our Responsibility.</span>
                 <span
                   aria-hidden
                   className="glow-rule absolute -bottom-1 left-0 h-[3px] w-full rounded-full"

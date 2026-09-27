@@ -52,7 +52,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
           href={m[3]}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary underline underline-offset-2"
+          className="text-primary-ink underline underline-offset-2"
         >
           {m[2]}
         </a>,

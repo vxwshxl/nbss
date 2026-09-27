@@ -68,7 +68,7 @@ export default async function ConsoleDashboard() {
     supabase
       .from("attendance")
       .select(
-        "id, guard_id, site_id, check_in_at, status, profiles(full_name, employee_code), sites(name, district)",
+        "id, guard_id, site_id, check_in_at, status, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name, district)",
       )
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false }),

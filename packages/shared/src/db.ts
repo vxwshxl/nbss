@@ -319,6 +319,7 @@ export type Database = {
           pin_reset_at: string | null;
           pin_reset_by: string | null;
           last_seen_at: string | null;
+          email: string | null;
         };
         Insert: {
           id: string;
@@ -335,6 +336,7 @@ export type Database = {
           pin_reset_at?: string | null;
           pin_reset_by?: string | null;
           last_seen_at?: string | null;
+          email?: string | null;
         };
         Update: {
           id?: string;
@@ -351,6 +353,7 @@ export type Database = {
           pin_reset_at?: string | null;
           pin_reset_by?: string | null;
           last_seen_at?: string | null;
+          email?: string | null;
         };
         Relationships: [];
       };

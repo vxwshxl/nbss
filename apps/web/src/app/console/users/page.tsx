@@ -5,10 +5,11 @@ import { PageHeader } from "@/components/console/page-header";
 import { requireRoleSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Guards" };
+export const metadata: Metadata = { title: "Users" };
 export const dynamic = "force-dynamic";
 
-export default async function GuardsPage() {
+/** Every account in the console — staff, guards and clients — split by role. */
+export default async function UsersPage() {
   const session = await requireRoleSession("admin", "supervisor");
   const supabase = await supabaseServer();
 
@@ -17,19 +18,17 @@ export default async function GuardsPage() {
     .select(
       "id, employee_code, full_name, role, phone, email, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
     )
-    .eq("role", "guard")
-    .order("employee_code");
+    .order("full_name");
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="People" title="Guards" />
-
+      <PageHeader eyebrow="People" title="Users" />
       <GuardsWorkspace
         rows={(data ?? []) as PersonRow[]}
-        // An admin viewing as someone else must not be able to create accounts
-        // or reset PINs in that person's name.
         canManage={session.profile.role === "admin" && !session.impersonating}
         selfId={session.realProfile.id}
+        showRoleTabs
+        defaultRole="client"
       />
     </div>
   );

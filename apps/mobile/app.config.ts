@@ -17,6 +17,13 @@ import type { ExpoConfig, ConfigContext } from "expo/config";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+/**
+ * The website, for the sign-in endpoints that need the server (turning an
+ * employee code into its login). `EXPO_PUBLIC_WEB_URL` overrides it in
+ * development, where the phone reaches the laptop by LAN address, not
+ * localhost.
+ */
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? "";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -156,6 +163,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     supabaseUrl: SUPABASE_URL,
     supabasePublishableKey: SUPABASE_PUBLISHABLE_KEY,
+    webUrl: WEB_URL,
     // Filled in by `eas init`. Left absent rather than guessed, because a wrong
     // projectId makes push tokens silently belong to somebody else's project.
     eas: (config.extra as { eas?: unknown } | undefined)?.eas,

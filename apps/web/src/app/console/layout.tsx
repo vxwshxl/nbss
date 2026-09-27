@@ -13,7 +13,12 @@ import {
   type Person,
 } from "@/components/console/impersonation";
 import { UserMenu } from "@/components/console/user-menu";
-import { AppShell, RAIL_COOKIE } from "@/components/shell/app-shell";
+import { Assistant } from "@/components/ai/assistant";
+import { RealtimeRefresher } from "@/components/realtime-refresher";
+import { AppShell, AssistantButton, RAIL_COOKIE } from "@/components/shell/app-shell";
+import { isAssistantConfigured } from "@/lib/ai/assistant";
+import { personaFor } from "@/lib/ai/personas";
+import { CONSOLE_REALTIME_TABLES } from "@/lib/realtime/routes";
 import { currentSession, homeFor } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { site } from "@/content/site";
@@ -47,6 +52,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (!session) return <>{children}</>;
 
   const { profile, realProfile, impersonating } = session;
+  const persona = personaFor(profile.role);
   const railCollapsed = jar.get(RAIL_COOKIE)?.value === "1";
   const isAdmin = realProfile.role === "admin";
 
@@ -70,6 +76,14 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       brand={site.shortName}
       brandHref={homeFor(profile.role)}
       assistantHref="/console/assistant"
+      assistant={
+        <Assistant
+          greetingName={profile.full_name.split(" ")[0] ?? profile.full_name}
+          suggestions={persona.suggestions}
+          configured={isAssistantConfigured()}
+          scopeNote={persona.scopeNote}
+        />
+      }
       navIndex={navIndexFor(profile.role)}
       defaultCollapsed={railCollapsed}
       mark={<Wordmark secondary={ROLE_LABEL[profile.role]} size={32} priority />}
@@ -94,14 +108,21 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       topbarRight={
+        <>
+        <AssistantButton />
         <UserMenu
           name={profile.full_name}
           code={profile.employee_code}
           roleLabel={ROLE_LABEL[profile.role]}
           signOut={signOut}
         />
+        </>
       }
     >
+      <RealtimeRefresher
+        tables={CONSOLE_REALTIME_TABLES}
+        clientTopic={profile.role === "client" ? `client:${profile.id}` : undefined}
+      />
       {children}
     </AppShell>
   );

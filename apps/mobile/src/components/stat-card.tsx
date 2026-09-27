@@ -99,7 +99,7 @@ export function StatCard({
           <Text variant="label" weight="semibold" tone="primary">
             {cta ?? "View"}
           </Text>
-          <ArrowRight size={16} strokeWidth={2} color={color.primary} />
+          <ArrowRight size={16} strokeWidth={2} color={color.primaryInk} />
         </View>
       )}
     </>

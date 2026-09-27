@@ -47,6 +47,10 @@ export const color = {
   brandDeep: "#006b4a",
   /** Focus ring — deliberately lighter than the fill, as it is on schoolerp. */
   ring: "#10b981",
+  /** The light start of schoolerp's brand gradient (its `--gold`, which is green). */
+  gold: "#34d399",
+  /** schoolerp's secondary accent. */
+  teal: "#00a896",
 
   muted: "#f3f3f3",
   mutedForeground: "#5d5d5d",
@@ -81,6 +85,22 @@ export const color = {
  * setting `fontWeight` on a static font either does nothing or makes the platform
  * synthesise a fake bold, which looks visibly wrong next to the real thing.
  */
+/**
+ * schoolerp's one brand gradient, as colour stops for expo-linear-gradient.
+ *
+ *   strong  every fill that carries white text — the primary button, the
+ *           active tab — the accent deepening into brandDeep.
+ *   bright  decoration with nothing on it: bars, rules, progress.
+ *
+ * Both run at 100° on the web; `start`/`end` below are that angle.
+ */
+export const gradient = {
+  strong: [color.primary, color.brandDeep] as const,
+  bright: [color.gold, color.primary] as const,
+  start: { x: 0.1, y: 0.4 },
+  end: { x: 0.9, y: 0.6 },
+} as const;
+
 export const font = {
   regular: "Geist_400Regular",
   medium: "Geist_500Medium",

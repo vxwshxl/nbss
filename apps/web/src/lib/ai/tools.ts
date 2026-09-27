@@ -94,7 +94,7 @@ const whoIsOnDuty: AiTool = {
     const supabase = await supabaseServer();
     const { data } = await supabase
       .from("attendance")
-      .select("id, check_in_at, status, profiles(full_name, employee_code), sites(name, district)")
+      .select("id, check_in_at, status, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name, district)")
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false });
 
@@ -250,7 +250,7 @@ const punchesNeedingReview: AiTool = {
     const { data } = await supabase
       .from("attendance")
       .select(
-        "id, check_in_at, check_in_distance_m, check_in_accuracy_m, check_in_method, status, profiles(full_name, employee_code), sites(name)",
+        "id, check_in_at, check_in_distance_m, check_in_accuracy_m, check_in_method, status, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)",
       )
       .eq("status", "pending_review")
       .order("check_in_at", { ascending: false })
@@ -401,18 +401,18 @@ const mySite: AiTool = {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    // Which rows come back is decided by the client's row-level policy in
-    // Postgres, not by a filter written here — see rule 3 at the top of this
-    // file. A `WHERE` clause in a tool is a disclosure waiting for somebody to
-    // refactor it away.
+    // Read through `client_attendance`, which Postgres filters to this
+    // client's own sites and which carries no coordinates, IPs or review notes.
+    // Clients have no read policy on `attendance` itself, so querying the table
+    // directly returned nothing and reported every site as unstaffed.
     const [live, month] = await Promise.all([
       supabase
-        .from("attendance")
-        .select("id, check_in_at, profiles(full_name), sites(name)")
+        .from("client_attendance")
+        .select("id, check_in_at, guard_name, site_name")
         .is("check_out_at", null)
         .order("check_in_at", { ascending: false }),
       supabase
-        .from("attendance")
+        .from("client_attendance")
         .select("worked_minutes, overtime_minutes")
         .gte("check_in_at", monthStart.toISOString()),
     ]);
@@ -420,18 +420,14 @@ const mySite: AiTool = {
     const rows = month.data ?? [];
 
     return {
-      onDutyNow: (live.data ?? []).map((r) => {
-        const guard = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
-        const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
-        return {
-          // A first name and a site. A client is entitled to know their site is
-          // staffed; they are not entitled to a guard's employee code, their
-          // coordinates, or where else that person works.
-          guard: guard?.full_name ?? "unknown",
-          site: place?.name ?? "your site",
-          since: stamp(r.check_in_at),
-        };
-      }),
+      onDutyNow: (live.data ?? []).map((r) => ({
+        // A name and a site. A client is entitled to know their site is
+        // staffed; they are not entitled to a guard's employee code, their
+        // coordinates, or where else that person works.
+        guard: r.guard_name ?? "unknown",
+        site: r.site_name ?? "your site",
+        since: stamp(r.check_in_at),
+      })),
       thisMonth: {
         shifts: rows.length,
         manHours: hours(rows.reduce((s, r) => s + (r.worked_minutes ?? 0), 0)),

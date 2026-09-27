@@ -33,6 +33,18 @@ const Body = z.object({
     )
     .min(1)
     .max(24),
+  /**
+   * The page the question was asked from. A path picks our own page notes and
+   * the text is what is already on this person's screen — neither grants a
+   * lookup. Capped so a long register cannot crowd out the conversation.
+   */
+  page: z
+    .object({
+      path: z.string().startsWith("/").max(300),
+      title: z.string().max(200).optional(),
+      text: z.string().max(12000).optional(),
+    })
+    .optional(),
 });
 
 type Event =
@@ -126,6 +138,7 @@ export async function POST(req: Request) {
             onText: (delta) => send({ type: "text", delta }),
           },
           req.signal,
+          parsed.data.page,
         );
         toolsUsed = reply.toolsUsed;
         send({ type: "done" });
@@ -154,6 +167,8 @@ export async function POST(req: Request) {
           entityId: ctx.realUserId,
           detail: {
             role: ctx.role,
+            // Where it was asked from, not what the screen said.
+            page: parsed.data.page?.path ?? null,
             viewing_as: ctx.viewingAs,
             tools: toolsUsed,
             aborted: req.signal.aborted,

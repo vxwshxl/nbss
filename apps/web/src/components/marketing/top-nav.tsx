@@ -2,33 +2,55 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Phone } from "lucide-react";
+import { LayoutDashboard, LogIn } from "lucide-react";
 
 import { Mark } from "@/components/brand";
 import { SliderNav, type SliderNavItem } from "@/components/ui/slider-nav";
-import { site, tel } from "@/content/site";
+import { site } from "@/content/site";
 import { cn } from "@/lib/utils";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * `flex-auto` overrides SliderNav's fluid `flex-1` for this nav only. Equal
- * sevenths of a 390px bar gives "Training" 55px for 58px of text, so it
- * truncates while "Home" has room to spare. Sizing from content lets the short
- * labels give their slack to the long ones.
+ * Four destinations. Training and Gallery live in the footer — the header is
+ * for what most visitors came for, and four labels fit a 390px bar without
+ * any of them truncating. `flex-auto` sizes each from its own text.
  */
 const ITEMS: SliderNavItem[] = [
   { href: "/", label: "Home", className: "flex-auto" },
   { href: "/services", label: "Services", className: "flex-auto" },
-  { href: "/training", label: "Training", className: "flex-auto" },
   { href: "/about", label: "About", className: "flex-auto" },
   { href: "/careers", label: "Careers", className: "flex-auto" },
-  { href: "/gallery", label: "Gallery", className: "flex-auto" },
 ];
+
+/**
+ * Whether this browser already holds a session, and where it lands.
+ *
+ * The marketing pages are static, so they cannot read the session themselves.
+ * Only a browser carrying a Supabase auth cookie asks — an anonymous visitor
+ * never makes the request.
+ */
+function useConsoleHome(): string | null {
+  const [home, setHome] = useState<string | null>(null);
+  useEffect(() => {
+    if (!/(?:^|; )sb-[^=]*-auth-token/.test(document.cookie)) return;
+    let cancelled = false;
+    fetch("/api/session", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { signedIn: boolean; home?: string }) => {
+        if (!cancelled && d.signedIn && d.home) setHome(d.home);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return home;
+}
 
 /** Space kept between the bottom of the island and the footer's top edge. */
 const FOOTER_GAP = 12;
@@ -62,6 +84,7 @@ export function TopNav() {
   const island = useRef<HTMLDivElement>(null);
   const header = useRef<HTMLElement>(null);
   const pathname = usePathname();
+  const consoleHome = useConsoleHome();
 
   const activeIndex = ITEMS.findIndex((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
@@ -178,7 +201,7 @@ export function TopNav() {
             </span>
           </Link>
 
-          {/* Below md the nav drops to its own full-width row. Six text labels
+          {/* Below md the nav drops to its own full-width row. Four text labels
               plus a wordmark plus the controls cannot share 390px without one
               of them being cut off, and the one that gets cut is always the
               last link. A second row costs 40px and keeps every item
@@ -197,17 +220,24 @@ export function TopNav() {
           </div>
 
           <div className="order-2 ml-auto flex shrink-0 items-center gap-2 md:order-3 md:ml-0">
-            {/* The phone number is the call to action on this site, not a
-                sign-up. Most of the people who reach this page want a guard at
-                a gate next week and would rather say so out loud. On a phone it
-                collapses to the icon — where it is also, literally, a phone. */}
-            <a
-              href={`tel:${tel(site.phone)}`}
-              className="press inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring max-md:w-9 max-md:justify-center max-md:px-0"
+            {/* One door for everybody — admin, supervisor, guard or client.
+                The profile decides where each person lands. */}
+            <Link
+              href={consoleHome ?? "/login"}
+              className="press inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              <Phone className="size-4" strokeWidth={2} aria-hidden />
-              <span className="max-md:sr-only">{site.phone}</span>
-            </a>
+              {consoleHome ? (
+                <>
+                  <LayoutDashboard className="size-4" strokeWidth={2} aria-hidden />
+                  Dashboard
+                </>
+              ) : (
+                <>
+                  <LogIn className="size-4" strokeWidth={2} aria-hidden />
+                  Sign in
+                </>
+              )}
+            </Link>
           </div>
         </div>
       </header>

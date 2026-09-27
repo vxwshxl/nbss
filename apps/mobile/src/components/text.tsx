@@ -72,7 +72,7 @@ export function Eyebrow({ children, style, ...rest }: TextProps) {
 const tones = StyleSheet.create({
   default: { color: color.foreground },
   muted: { color: color.mutedForeground },
-  primary: { color: color.primary },
+  primary: { color: color.primaryInk },
   danger: { color: color.destructive },
   inverse: { color: color.primaryForeground },
   inherit: {},

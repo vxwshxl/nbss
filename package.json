@@ -22,6 +22,8 @@
     "db:status": "node scripts/migrate.mjs --status",
     "db:types": "node scripts/gen-db-types.mjs",
     "db:sql": "node scripts/sql.mjs",
+    "db:auth": "node scripts/configure-auth.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
     "logo": "node scripts/generate-logo-assets.mjs",
     "env:link": "node scripts/link-env.mjs",
     "app:icons": "node scripts/generate-app-icons.mjs"

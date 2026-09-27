@@ -38,3 +38,11 @@ export const SUPABASE_PUBLISHABLE_KEY = required(
 export function secretKey(): string {
   return required("SUPABASE_SECRET_KEY", process.env.SUPABASE_SECRET_KEY);
 }
+
+/**
+ * How long the session cookie lives: a year. A guard should sign in once on
+ * their phone and stay signed in until they sign out or clear the browser's
+ * data — the refresh token behind it does not expire on its own (Auth has no
+ * session timebox or inactivity timeout; see scripts/configure-auth.mjs).
+ */
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 365;

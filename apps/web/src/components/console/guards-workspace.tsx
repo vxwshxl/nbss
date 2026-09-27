@@ -6,12 +6,15 @@ import {
   Copy,
   Eye,
   KeyRound,
+  Mail,
+  Pencil,
   Plus,
   Power,
   PowerOff,
   ShieldUser,
   Trash2,
   TriangleAlert,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,6 +25,7 @@ import {
   deleteAccount,
   resetPin,
   setAccountActive,
+  updateContact,
 } from "@/app/console/guards/actions";
 import { emptyGuardForm } from "@/app/console/guards/guard-state";
 import { startImpersonation } from "@/app/console/impersonate";
@@ -47,16 +51,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { StatusPill } from "@/components/ui/status-pill";
 import { initials } from "@/lib/ui/initials";
+import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/auth";
 
 export type PersonRow = {
@@ -65,6 +63,7 @@ export type PersonRow = {
   full_name: string;
   role: Role;
   phone: string | null;
+  email: string | null;
   active: boolean;
   joined_at: string | null;
   created_at: string;
@@ -87,12 +86,20 @@ const ROLE_LABEL: Record<Role, string> = {
   client: "Client",
 };
 
-const ROLE_TONE: Record<Role, "indigo" | "violet" | "rose" | "slate"> = {
-  guard: "indigo",
+const ROLE_TONE: Record<Role, "emerald" | "violet" | "rose" | "sky"> = {
+  guard: "emerald",
   supervisor: "violet",
   admin: "rose",
-  client: "slate",
+  client: "sky",
 };
+
+const TABS: { value: Role | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "admin", label: "Admins" },
+  { value: "supervisor", label: "Supervisors" },
+  { value: "guard", label: "Guards" },
+  { value: "client", label: "Clients" },
+];
 
 /**
  * Next signals a redirect by throwing. The error carries a `digest` beginning
@@ -155,28 +162,34 @@ function Secret({ value }: { value: string }) {
   );
 }
 
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-app-line-soft py-2 last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-right text-sm">{value}</span>
-    </div>
-  );
-}
-
 export function GuardsWorkspace({
   rows,
   canManage,
   selfId,
+  showRoleTabs = false,
+  defaultRole = "guard",
 }: {
   rows: PersonRow[];
   canManage: boolean;
   selfId: string;
+  /** The Users page: every account, split by role. */
+  showRoleTabs?: boolean;
+  /** What "Add person" starts on. */
+  defaultRole?: Role;
 }) {
   const [pending, start] = useTransition();
 
   const [adding, setAdding] = useState(false);
-  const [detail, setDetail] = useState<PersonRow | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
+  const [tab, setTab] = useState<Role | "all">("all");
+  const [editing, setEditing] = useState(false);
+  const detail = rows.find((r) => r.id === detailId) ?? null;
+  const setDetail = (row: PersonRow | null) => {
+    setEditing(false);
+    setDetailId(row?.id ?? null);
+  };
+  const visible = tab === "all" ? rows : rows.filter((r) => r.role === tab);
   const [confirm, setConfirm] = useState<
     null | { kind: "deactivate" | "reset" | "delete"; row: PersonRow }
   >(null);
@@ -192,7 +205,24 @@ export function GuardsWorkspace({
   const [issued, setIssued] = useState<null | { pin: string; who: string }>(null);
 
   const [addState, addAction] = useActionState(addGuard, emptyGuardForm);
-  const [role, setRole] = useState<Role>("guard");
+  const [role, setRole] = useState<Role>(defaultRole);
+  const emailRequired = role === "guard" || role === "client";
+
+  function runContact(row: PersonRow, form: FormData) {
+    start(async () => {
+      const result = await updateContact(row.id, {
+        email: String(form.get("email") ?? ""),
+        phone: String(form.get("phone") ?? ""),
+      });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setEditing(false);
+      setVersion((v) => v + 1);
+      toast.success("Contact details saved", { description: row.full_name });
+    });
+  }
 
   function runReset(row: PersonRow) {
     start(async () => {
@@ -261,7 +291,7 @@ export function GuardsWorkspace({
     start(async () => {
       try {
         await changeRole(row.id, next);
-        setDetail({ ...row, role: next });
+        setVersion((v) => v + 1);
         toast.success(`${row.full_name} is now ${ROLE_LABEL[next].toLowerCase()}.`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not change the role.");
@@ -308,7 +338,7 @@ export function GuardsWorkspace({
         </span>
       ),
       sortValue: (r) => r.employee_code,
-      searchValue: (r) => `${r.full_name} ${r.employee_code} ${r.phone ?? ""}`,
+      searchValue: (r) => `${r.full_name} ${r.employee_code} ${r.phone ?? ""} ${r.email ?? ""}`,
       printCell: (r) => `${r.full_name} (${r.employee_code})`,
     },
     {
@@ -319,9 +349,17 @@ export function GuardsWorkspace({
       printCell: (r) => ROLE_LABEL[r.role],
     },
     {
-      header: "Phone",
-      cell: (r) => <span className="font-mono text-sm">{r.phone ?? "—"}</span>,
-      printCell: (r) => r.phone ?? "—",
+      header: "Contact",
+      cell: (r) => (
+        <span className="block min-w-0">
+          <span className={cn("block max-w-[16rem] truncate text-sm", !r.email && "text-muted-foreground")}>
+            {r.email ?? (r.role === "guard" || r.role === "client" ? "No email yet" : "—")}
+          </span>
+          {r.phone && <span className="block font-mono text-xs text-muted-foreground">{r.phone}</span>}
+        </span>
+      ),
+      sortValue: (r) => r.email ?? "",
+      printCell: (r) => [r.email, r.phone].filter(Boolean).join(" · ") || "—",
     },
     {
       header: "Joined",
@@ -343,13 +381,47 @@ export function GuardsWorkspace({
 
   // Shown once, after a create or a reset, and never again.
   const secret = issued?.pin ?? addState.created?.pin ?? null;
+  const createdShown = !!issued || !!addState.created;
 
   return (
     <>
+      {showRoleTabs && (
+        <div className="scrollbar-none -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1">
+          {TABS.map((t) => {
+            const count = t.value === "all" ? rows.length : rows.filter((r) => r.role === t.value).length;
+            const active = tab === t.value;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setTab(t.value)}
+                aria-pressed={active}
+                className={cn(
+                  "press flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-transparent bg-brand-gradient-strong text-white shadow-sm"
+                    : "border-app-line bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t.label}
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 text-xs tabular-nums",
+                    active ? "bg-white/20" : "bg-muted",
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <Panel
-        tone="indigo"
-        title={`${rows.length} ${rows.length === 1 ? "account" : "accounts"}`}
-        icon={ShieldUser}
+        tone="emerald"
+        title={`${visible.length} ${visible.length === 1 ? "account" : "accounts"}`}
+        icon={showRoleTabs ? Users : ShieldUser}
         bodyClassName="p-3 sm:p-4"
         action={
           canManage ? (
@@ -362,13 +434,13 @@ export function GuardsWorkspace({
       >
         <DataTable
           columns={columns}
-          data={rows}
+          data={visible}
           getRowKey={(r) => r.id}
           interactiveRows
           rowPreview={false}
           onRowClick={setDetail}
           printTitle="People"
-          searchPlaceholder="Search by name, code or phone…"
+          searchPlaceholder="Search by name, code, email or phone…"
           emptyMessage={
             canManage ? "No accounts yet. Add the first person to get started." : "Nothing to show."
           }
@@ -382,7 +454,7 @@ export function GuardsWorkspace({
           <DialogHeader>
             <DialogTitle>Add a person</DialogTitle>
             <DialogDescription>
-              They sign in with the employee code and the PIN issued here.
+              They sign in with a code sent to their email.
             </DialogDescription>
           </DialogHeader>
 
@@ -429,6 +501,23 @@ export function GuardsWorkspace({
             </div>
 
             <div className="flex flex-col gap-2">
+              <Label htmlFor="email">
+                Email {emailRequired && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                defaultValue={addState.values?.email}
+                placeholder="name@example.com"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                required={emailRequired}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
               <Label htmlFor="phone">Phone</Label>
               <Input
                 id="phone"
@@ -458,19 +547,16 @@ export function GuardsWorkspace({
                 </SelectContent>
               </Select>
               <input type="hidden" name="role" value={role} />
-              <p className="text-xs text-muted-foreground">
-                A guard only ever sees their own shifts.
-              </p>
+
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="pin">PIN or passphrase</Label>
-              <Input id="pin" name="pin" placeholder="Leave blank to generate one" />
-              <p className="text-xs text-muted-foreground">
-                {role === "guard"
-                  ? "Six digits. Left blank, one is generated and shown once."
-                  : "At least 8 characters. Required for this role."}
-              </p>
+              <Label htmlFor="pin">{role === "guard" ? "PIN" : "Passphrase"} <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input
+                id="pin"
+                name="pin"
+                placeholder={role === "guard" ? "Leave blank to generate one" : "Leave blank to sign in by email code"}
+              />
             </div>
           </form>
 
@@ -487,7 +573,7 @@ export function GuardsWorkspace({
 
       {/* ------------------------------------------------- the one showing -- */}
       <Dialog
-        open={!!secret}
+        open={createdShown}
         onOpenChange={(o) => {
           if (o) return;
           setIssued(null);
@@ -505,17 +591,26 @@ export function GuardsWorkspace({
               {issued
                 ? `Give this to ${issued.who}. It cannot be shown again.`
                 : addState.created
-                  ? `${addState.created.fullName} can sign in with ${addState.created.employeeCode}.`
+                  ? addState.created.email
+                    ? `${addState.created.fullName} signs in with ${addState.created.email} — a code is emailed each time.`
+                    : `${addState.created.fullName} can sign in with ${addState.created.employeeCode}.`
                   : ""}
             </DialogDescription>
           </DialogHeader>
 
-          <Secret value={secret ?? ""} />
-
-          <p className="text-xs text-muted-foreground">
-            Written down now or not at all — it is stored hashed and cannot be read
-            back. If it is lost, issue another.
-          </p>
+          {secret ? (
+            <>
+              <p className="text-sm font-medium">{issued ? "PIN" : "Backup PIN"}</p>
+              <Secret value={secret} />
+              <p className="text-xs text-muted-foreground">
+                Shown once — it is stored hashed and cannot be read back.
+              </p>
+            </>
+          ) : (
+            <p className="flex items-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm text-accent-foreground">
+              <Mail className="size-4" /> No PIN needed — sign-in is by emailed code.
+            </p>
+          )}
 
           <DialogFooter>
             <Button
@@ -532,150 +627,124 @@ export function GuardsWorkspace({
       </Dialog>
 
       {/* ------------------------------------------------------- detail ---- */}
-      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-md">
-          {detail && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2.5">
-                  <Avatar className="size-9 border border-border">
-                    <AvatarFallback className="bg-muted text-xs font-semibold">
-                      {initials(detail.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {detail.full_name}
-                </SheetTitle>
-                <SheetDescription>
-                  <span className="font-mono">{detail.employee_code}</span> ·{" "}
-                  {ROLE_LABEL[detail.role]}
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="flex-1 space-y-5 overflow-y-auto px-4 pb-4">
-                <section>
-                  <Fact
-                    label="Employee code"
-                    value={<span className="font-mono">{detail.employee_code}</span>}
-                  />
-                  <Fact
-                    label="Phone"
-                    value={<span className="font-mono">{detail.phone ?? "—"}</span>}
-                  />
-                  <Fact label="Joined" value={dateOnly(detail.joined_at ?? detail.created_at)} />
-                  <Fact
-                    label="State"
-                    value={<StatusPill status={detail.active ? "active" : "inactive"} />}
-                  />
-                  <Fact
-                    label="PIN"
-                    value={
-                      <span className="block max-w-[15rem]">
-                        {detail.must_change_pin
-                          ? "Temporary — they choose their own on next sign-in"
-                          : "Set by the account holder"}
-                        {detail.pin_reset_at && (
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                            Last reset {dateOnly(detail.pin_reset_at)}
-                          </span>
-                        )}
-                      </span>
-                    }
-                  />
-                </section>
-
-                {canManage && detail.id !== selfId && (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="change-role">Change role</Label>
-                    <Select
-                      value={detail.role}
-                      onValueChange={(v) => runRole(detail, v as Role)}
-                      disabled={pending}
-                    >
-                      <SelectTrigger id="change-role" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLES.map((r) => (
-                          <SelectItem key={r.value} value={r.value}>
-                            {r.label}
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {r.note}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Takes effect the next time they load a page.
-                    </p>
+      <PersonPreviewDialog personId={detailId} onClose={() => setDetail(null)} version={version}>
+        {(p) =>
+          detail && canManage ? (
+            <div className="space-y-5 border-t border-border pt-5">
+              {editing ? (
+                <form
+                  className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                  action={(form) => runContact(detail, form)}
+                >
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input id="edit-email" name="email" type="email" defaultValue={p.email ?? ""} autoFocus />
                   </div>
-                )}
-              </div>
-
-              {canManage && (
-                <SheetFooter className="gap-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pending || detail.id === selfId || !detail.active}
-                      onClick={() => runViewAs(detail)}
-                    >
-                      <Eye data-icon="inline-start" />
-                      View as
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Input id="edit-phone" name="phone" inputMode="tel" defaultValue={p.phone ?? ""} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="lg" onClick={() => setEditing(false)}>
+                      Cancel
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pending}
-                      onClick={() => setConfirm({ kind: "reset", row: detail })}
-                    >
-                      <KeyRound data-icon="inline-start" />
-                      Reset PIN
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={detail.active ? "destructive" : "default"}
-                      disabled={pending || detail.id === selfId}
-                      onClick={() =>
-                        detail.active
-                          ? setConfirm({ kind: "deactivate", row: detail })
-                          : runActive(detail, true)
-                      }
-                    >
-                      {detail.active ? (
-                        <>
-                          <PowerOff data-icon="inline-start" />
-                          Deactivate
-                        </>
-                      ) : (
-                        <>
-                          <Power data-icon="inline-start" />
-                          Reactivate
-                        </>
-                      )}
-                    </Button>
-                    {/* Separated from the rest: deactivating is reversible and this is
-                        not, so it does not sit in the same row of equal-looking
-                        buttons. Ghost rather than filled — a destructive action should
-                        be reachable, not inviting. */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      disabled={pending || detail.id === selfId}
-                      onClick={() => askDelete(detail)}
-                    >
-                      <Trash2 data-icon="inline-start" />
-                      Delete
+                    <Button type="submit" size="lg" disabled={pending}>
+                      Save
                     </Button>
                   </div>
-                </SheetFooter>
+                </form>
+              ) : null}
+
+              {detail.id !== selfId && (
+                <div className="flex flex-col gap-2 sm:max-w-xs">
+                  <Label htmlFor="change-role">Role</Label>
+                  <Select
+                    value={p.role}
+                    onValueChange={(v) => runRole(detail, v as Role)}
+                    disabled={pending}
+                  >
+                    <SelectTrigger id="change-role" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                          <span className="ml-2 text-xs text-muted-foreground">{r.note}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+
+              <div className="flex flex-wrap gap-2">
+                {!editing && (
+                  <Button variant="outline" size="sm" disabled={pending} onClick={() => setEditing(true)}>
+                    <Pencil data-icon="inline-start" />
+                    Edit contact
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending || detail.id === selfId || !detail.active}
+                  onClick={() => runViewAs(detail)}
+                >
+                  <Eye data-icon="inline-start" />
+                  View as
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => setConfirm({ kind: "reset", row: detail })}
+                >
+                  <KeyRound data-icon="inline-start" />
+                  {p.role === "guard" ? "Reset PIN" : "Reset passphrase"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={detail.active ? "destructive" : "default"}
+                  disabled={pending || detail.id === selfId}
+                  onClick={() =>
+                    detail.active
+                      ? setConfirm({ kind: "deactivate", row: detail })
+                      : runActive(detail, true)
+                  }
+                >
+                  {detail.active ? (
+                    <>
+                      <PowerOff data-icon="inline-start" />
+                      Deactivate
+                    </>
+                  ) : (
+                    <>
+                      <Power data-icon="inline-start" />
+                      Reactivate
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={pending || detail.id === selfId}
+                  onClick={() => askDelete(detail)}
+                >
+                  <Trash2 data-icon="inline-start" />
+                  Delete
+                </Button>
+              </div>
+              {p.mustChangePin && (
+                <p className="flex items-center gap-1.5 text-xs text-amber-700">
+                  <TriangleAlert className="size-3.5" /> Using a temporary PIN issued by the office.
+                </p>
+              )}
+            </div>
+          ) : null
+        }
+      </PersonPreviewDialog>
 
       <ConfirmDialog
         open={confirm?.kind === "deactivate"}

@@ -1,8 +1,9 @@
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import type { LucideIcon } from "lucide-react-native";
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from "react-native";
 
-import { HIT_SLOP, TOUCH_MIN, color, font, radius, size, space } from "@/theme/tokens";
+import { HIT_SLOP, TOUCH_MIN, color, font, gradient, radius, size, space } from "@/theme/tokens";
 
 import { Text } from "./text";
 
@@ -77,6 +78,15 @@ export function Button({
       ]}
       {...rest}
     >
+      {variant === "default" && (
+        // The web paints `bg-primary` as the deep brand gradient; so does this.
+        <LinearGradient
+          colors={gradient.strong}
+          start={gradient.start}
+          end={gradient.end}
+          style={[StyleSheet.absoluteFill, styles.fill]}
+        />
+      )}
       <View style={[styles.row, iconEnd && styles.rowReverse]}>
         {loading ? (
           <ActivityIndicator size="small" color={ink} />
@@ -104,11 +114,11 @@ const INK: Record<Variant, string> = {
   secondary: color.secondaryForeground,
   ghost: color.foreground,
   destructive: color.destructive,
-  link: color.primary,
+  link: color.primaryInk,
 };
 
 const VARIANTS = StyleSheet.create({
-  default: { backgroundColor: color.primary },
+  default: { backgroundColor: color.primary, overflow: "hidden" },
   outline: {
     backgroundColor: color.background,
     borderWidth: StyleSheet.hairlineWidth,
@@ -136,6 +146,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   fullWidth: { alignSelf: "stretch", width: "100%" },
+  fill: { borderRadius: radius.lg },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
   rowReverse: { flexDirection: "row-reverse" },
   pressed: { opacity: 0.82 },

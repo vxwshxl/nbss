@@ -49,7 +49,7 @@ export default async function AttendancePage() {
     supabase
       .from("attendance")
       .select(
-        "id, site_id, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, status, device_reported_at, ip, review_note, reviewed_at, profiles(full_name, employee_code), sites(name)",
+        "id, site_id, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, status, device_reported_at, ip, review_note, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)",
       )
       .order("check_in_at", { ascending: false })
       .limit(1000),

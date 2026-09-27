@@ -11,6 +11,7 @@ import {
   Sparkles,
   Timer,
   UserRound,
+  Users,
 } from "lucide-react";
 
 import type { NavIndexItem } from "@/components/shell/nav-index";
@@ -124,6 +125,7 @@ export const groups: NavGroup[] = [
   {
     label: "Administration",
     items: [
+      { href: "/console/users", label: "Users", icon: Users, roles: ["admin", "supervisor"] },
       { href: "/console/audit", label: "Audit log", icon: ScrollText, roles: ["admin"] },
     ],
   },

@@ -25,5 +25,8 @@ export const SUPABASE_PUBLISHABLE_KEY = required(
   extra.supabasePublishableKey,
 );
 
+/** The website, for the sign-in endpoints. Empty when not configured. */
+export const WEB_URL = typeof extra.webUrl === "string" ? extra.webUrl.replace(/\/+$/, "") : "";
+
 /** Used as the User-Agent-ish marker on a position, so a trail can name its source. */
 export const APP_VERSION = Constants.expoConfig?.version ?? "0.0.0";

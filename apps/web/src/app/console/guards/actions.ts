@@ -1,10 +1,14 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+import { isValidEmail } from "@nbss/shared/identity";
+
 import {
   audit,
+  codeToEmail,
   createStaffAccount,
   isValidSecret,
   normaliseCode,
@@ -25,52 +29,71 @@ function generatePin(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+/** Clients and guards sign in with a code mailed to them, so they must have an address. */
+function needsEmail(role: Role): boolean {
+  return role === "guard" || role === "client";
+}
+
+/** An unguessable password for an account that signs in by emailed code only. */
+function unusablePassword(): string {
+  return randomBytes(24).toString("base64url");
+}
+
 export async function addGuard(_prev: GuardFormState, data: FormData): Promise<GuardFormState> {
   const session = await requireRoleSession("admin");
 
   const employeeCode = normaliseCode(String(data.get("employee_code") ?? ""));
   const fullName = String(data.get("full_name") ?? "").trim();
   const phone = String(data.get("phone") ?? "").trim();
+  const email = String(data.get("email") ?? "").trim().toLowerCase();
   const role = String(data.get("role") ?? "guard") as Role;
   const supplied = String(data.get("pin") ?? "").trim();
 
-  const values = { employee_code: employeeCode, full_name: fullName, phone, role, pin: "" };
+  const values = { employee_code: employeeCode, full_name: fullName, phone, email, role, pin: "" };
 
   if (!["admin", "supervisor", "guard", "client"].includes(role)) {
     return { ok: false, values, error: "Choose a role." };
   }
   if (!fullName) return { ok: false, values, error: "Enter the person's full name." };
+  if (email && !isValidEmail(email)) {
+    return { ok: false, values, error: "That email address does not look right." };
+  }
+  if (needsEmail(role) && !email) {
+    return { ok: false, values, error: "An email address is required — sign-in codes are sent there." };
+  }
 
-  // An admin creating a guard usually has no PIN in mind; one is generated and
-  // shown once. A supplied value still has to satisfy the rule for the role.
+  // A guard gets a PIN as well as their email, for the days the mail is slow
+  // at a gate. Anyone else with an address signs in by code alone unless the
+  // admin sets a passphrase; without an address a passphrase is the only way in.
   const secret = supplied || (role === "guard" ? generatePin() : "");
 
-  if (!secret) {
-    return { ok: false, values, error: "Set a passphrase of at least 8 characters for this role." };
+  if (!secret && !email) {
+    return { ok: false, values, error: "Add an email address, or set a passphrase of at least 8 characters." };
   }
-  if (!isValidSecret(secret, role)) {
+  if (secret && !isValidSecret(secret, role)) {
     return {
       ok: false,
       values,
       error:
         role === "guard"
           ? "A guard's PIN must be 6–12 digits."
-          : "A staff passphrase must be at least 8 characters.",
+          : "A passphrase must be at least 8 characters.",
     };
   }
 
   const created = await createStaffAccount({
     employeeCode,
-    pin: secret,
+    pin: secret || unusablePassword(),
     fullName,
     role,
     phone: phone || undefined,
+    email: email || undefined,
   });
 
   if ("error" in created) return { ok: false, values, error: created.error };
 
   // Anyone given a secret they did not choose is asked to replace it.
-  if (!supplied) {
+  if (secret && !supplied) {
     await supabaseAdmin().from("profiles").update({ must_change_pin: true }).eq("id", created.id);
   }
 
@@ -79,17 +102,88 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     action: "account_created",
     entity: "profiles",
     entityId: created.id,
-    detail: { employee_code: employeeCode, role, generated_pin: !supplied },
+    detail: { employee_code: employeeCode, role, generated_pin: !!secret && !supplied, email: !!email },
     ip: await clientIp(),
   });
 
   revalidatePath("/console/guards");
+  revalidatePath("/console/users");
 
   return {
     ok: true,
     values: null,
-    created: { employeeCode, fullName, pin: secret, generated: !supplied },
+    created: {
+      employeeCode,
+      fullName,
+      email: email || null,
+      pin: secret || null,
+      generated: !!secret && !supplied,
+    },
   };
+}
+
+/**
+ * Changes how someone is reached, and — for the email — how they sign in.
+ *
+ * The address is changed on the auth user, confirmed on the spot (the office
+ * is vouching for it), and the trigger from 0009 copies it onto the profile.
+ */
+export async function updateContact(
+  profileId: string,
+  input: { email: string; phone: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireRoleSession("admin");
+  const admin = supabaseAdmin();
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("id, role, email, phone, employee_code")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "That account no longer exists." };
+
+  const email = input.email.trim().toLowerCase();
+  const phone = input.phone.trim();
+
+  if (email && !isValidEmail(email)) return { ok: false, error: "That email address does not look right." };
+  if (!email && needsEmail(target.role)) {
+    return { ok: false, error: "Guards and clients need an email address to sign in." };
+  }
+
+  if (email !== (target.email ?? "")) {
+    if (email) {
+      const { data: taken } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .neq("id", profileId)
+        .maybeSingle();
+      if (taken) return { ok: false, error: `${email} already belongs to another account.` };
+    }
+    const { error } = await admin.auth.admin.updateUserById(profileId, {
+      email: email || codeToEmail(target.employee_code),
+      email_confirm: true,
+    });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (phone !== (target.phone ?? "")) {
+    const { error } = await admin.from("profiles").update({ phone: phone || null }).eq("id", profileId);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  await audit({
+    actor: session.realProfile,
+    action: "contact_updated",
+    entity: "profiles",
+    entityId: profileId,
+    detail: { email_changed: email !== (target.email ?? ""), phone_changed: phone !== (target.phone ?? "") },
+    ip: await clientIp(),
+  });
+
+  revalidatePath("/console/guards");
+  revalidatePath("/console/users");
+  return { ok: true };
 }
 
 /**
@@ -136,6 +230,7 @@ export async function resetPin(profileId: string): Promise<PinResetResult> {
   });
 
   revalidatePath("/console/guards");
+  revalidatePath("/console/users");
 
   return { ok: true, pin, employeeCode: target.employee_code, fullName: target.full_name };
 }
@@ -161,6 +256,7 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
   });
 
   revalidatePath("/console/guards");
+  revalidatePath("/console/users");
 }
 
 export async function changeRole(profileId: string, role: Role): Promise<void> {
@@ -184,6 +280,7 @@ export async function changeRole(profileId: string, role: Role): Promise<void> {
   });
 
   revalidatePath("/console/guards");
+  revalidatePath("/console/users");
 }
 
 /**
@@ -311,4 +408,5 @@ export async function deleteAccount(profileId: string): Promise<void> {
   if (error) throw new Error(error.message);
 
   revalidatePath("/console/guards");
+  revalidatePath("/console/users");
 }

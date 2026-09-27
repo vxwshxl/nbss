@@ -89,22 +89,15 @@
   --scrim: oklch(0 0 0 / 0.1);
 }
 
-/* The top-nav pill highlighter. These were raw rgba() literals inside the
- * component; hoisting them into tokens is what lets the pill be re-tuned in one
- * place rather than at the four call sites that had drifted apart. */
+/* The top-nav pill highlighter — schoolerp's light variant: a soft green tint
+ * with dark-green text, like a "now open" badge. */
 :root {
-  --nav-pill-bg: linear-gradient(
-    135deg,
-    rgba(146, 98, 8, 0.32) 0%,
-    rgba(202, 142, 28, 0.46) 35%,
-    rgba(230, 176, 58, 0.42) 55%,
-    rgba(150, 100, 10, 0.34) 100%
-  );
-  --nav-pill-border: rgba(168, 116, 18, 0.55);
-  --nav-pill-shadow: inset 0 1px 0 rgba(255, 244, 210, 0.35),
-    0 1px 12px rgba(176, 120, 20, 0.28);
-  --nav-pill-shimmer: rgba(255, 228, 150, 0.65);
-  --nav-pill-label: oklch(0.29 0.07 72);
+  --nav-pill-bg: linear-gradient(100deg, rgba(52, 211, 153, 0.2) 10%, rgba(0, 145, 100, 0.12) 90%);
+  --nav-pill-border: rgba(0, 145, 100, 0.4);
+  --nav-pill-shadow: inset 0 1px 0 rgba(236, 253, 245, 0.7),
+    0 1px 10px rgba(0, 145, 100, 0.16);
+  --nav-pill-shimmer: rgba(167, 243, 208, 0.6);
+  --nav-pill-label: #065f46;
 }
 
 /* ---------------------------------------------------------------------------
@@ -117,9 +110,9 @@
  * ------------------------------------------------------------------------- */
 :root {
   --hero-grid: oklch(0.16 0 0 / 0.05);
-  --hero-glow: oklch(0.58 0.14 165 / 0.18);
-  --hero-glow-soft: oklch(0.58 0.14 165 / 0.06);
-  --hero-halo: oklch(0.58 0.14 165 / 0.3);
+  --hero-glow: color-mix(in oklab, #34d399 20%, transparent);
+  --hero-glow-soft: color-mix(in oklab, #009164 7%, transparent);
+  --hero-halo: color-mix(in oklab, #34d399 34%, transparent);
   --hero-vignette: oklch(1 0 0);
   /* Device bezel + screen. A mock phone/browser is a physical object: it stays
    * dark whatever the page around it does, the way a real one on a desk does.
@@ -205,6 +198,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-teal: var(--teal);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -276,10 +271,13 @@
    * are standing on and `accent` the wash under the pointer. */
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.16 0 0);
-  --sidebar-primary: oklch(0.16 0 0);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.96 0 0);
-  --sidebar-accent-foreground: oklch(0.16 0 0);
+  /* The page you're on: the deep brand gradient with white text (drawn by
+   * nav-link's active pill; this is its solid fallback). */
+  --sidebar-primary: #009164;
+  --sidebar-primary-foreground: #ffffff;
+  /* Hover wash on a sidebar row: a light brand-green tint, dark text. */
+  --sidebar-accent: #e9f8f1;
+  --sidebar-accent-foreground: #064e3b;
   --sidebar-border: oklch(0.16 0 0 / 0.06);
   --sidebar-ring: #10b981;
 
@@ -291,6 +289,26 @@
   --brand-accent-2: #006b4a;
   --primary-ink: #047857;
   --brand-ink: oklch(0.99 0 0);
+
+  /* schoolerp's ONE brand gradient: light emerald fading into the brand
+   * emerald. `--gold` is the gradient's light start (green; the name is
+   * schoolerp's). Teal is the secondary accent.
+   *   --brand-gradient         decoration with no text on it, and big
+   *                            highlighted words (`text-brand-gradient`)
+   *   --brand-gradient-strong  every text-bearing fill — buttons, the active
+   *                            nav pill — with WHITE text
+   *   --primary-ink            brand colour as small text on white */
+  --gold: #34d399;
+  --brand-accent: #009164;
+  --teal: #00a896;
+  --teal-2: #007566;
+  --brand-gradient: linear-gradient(100deg, var(--gold) 10%, var(--brand-accent) 90%);
+  --brand-gradient-strong: linear-gradient(100deg, var(--brand-accent) 10%, var(--brand-accent-2) 90%);
+  --brand-gradient-soft: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--gold) 24%, white) 10%,
+    color-mix(in oklab, var(--brand-accent) 18%, white) 90%
+  );
   --aronai-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='10' viewBox='0 0 24 10'%3E%3Cpath fill='%23000' d='M0 5 5 0l5 5-5 5zM12 5l5-5 5 5-5 5z'/%3E%3Cpath fill='%23000' d='M5 5 7.5 2.5 10 5 7.5 7.5z' opacity='.5'/%3E%3C/svg%3E");
 }
 
@@ -378,6 +396,14 @@
     }
   }
 
+  /* Docked only where the page keeps ~900px beside it; narrower, the assistant
+   * floats over the page instead (see app-shell.tsx) and takes no column. */
+  @media (width >= 90rem) {
+    .app-shell[data-assistant="open"] {
+      grid-template-columns: var(--rail-w) minmax(0, 1fr) 26rem;
+    }
+  }
+
   /* ---- The collapsed rail ------------------------------------------------
    * Wide layout only, for the reason above. Everything here is CSS rather than
    * a `collapsed` prop threaded down because the shell is handed its nav as an
@@ -394,6 +420,17 @@
     .app-shell[data-rail="collapsed"] [data-rail-compact] {
       justify-content: center;
       padding-inline: 0.5rem;
+    }
+
+    /* The sidebar header, collapsed: whatever sits beside the mark stacks
+     * under it rather than landing on it. */
+    .app-shell[data-rail="collapsed"] [data-rail-stack] {
+      flex-direction: column;
+      padding-inline: 0;
+    }
+    .app-shell[data-rail="collapsed"] [data-rail-stack] > * {
+      margin-inline: 0;
+      max-width: 100%;
     }
 
     /* A count has nowhere to sit on a 76px rail, but "there is something here"
@@ -575,12 +612,7 @@
    * without the text inheriting the transform. */
   .glow-rule {
     transform-origin: left center;
-    background: linear-gradient(
-      to right,
-      var(--color-primary) 0%,
-      var(--color-primary) 70%,
-      transparent 100%
-    );
+    background: linear-gradient(to right, var(--gold) 0%, var(--brand-accent) 75%, transparent 100%);
     box-shadow: 0 0 24px 2px var(--hero-halo);
   }
 
@@ -992,4 +1024,44 @@ button:disabled,
   .sheet-print tr {
     break-inside: avoid;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * The brand gradient (light emerald → emerald), where the palette asks for it.
+ * `bg-primary` keeps its solid colour as a fallback and paints the deep
+ * gradient over it, so every existing solid brand fill — buttons, badges,
+ * progress bars — carries it without touching the call sites. Tints
+ * (`bg-primary/10` …) are separate classes and stay flat.
+ * ------------------------------------------------------------------------- */
+@layer utilities {
+  .bg-primary {
+    background-image: var(--brand-gradient-strong);
+  }
+}
+
+/* Decorative fills with no text on them (bars, rules): the bright fade. */
+@utility bg-brand-gradient {
+  background-color: #10b981;
+  background-image: var(--brand-gradient);
+}
+
+/* Fills that hold text: the deep fade, for white text. */
+@utility bg-brand-gradient-strong {
+  background-color: var(--primary);
+  background-image: var(--brand-gradient-strong);
+}
+
+@utility bg-brand-gradient-soft {
+  background-color: var(--accent);
+  background-image: var(--brand-gradient-soft);
+}
+
+/* Big highlighted words, like a hero heading's accent. Not for small text —
+ * use text-primary-ink there. */
+@utility text-brand-gradient {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }

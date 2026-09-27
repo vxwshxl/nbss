@@ -11,6 +11,7 @@ import {
   type Role,
 } from "@nbss/shared/identity";
 
+import { WEB_URL } from "./config";
 import { releasePush } from "./push";
 import { stopTracking } from "./location";
 import { supabase } from "./supabase";
@@ -23,6 +24,9 @@ type AuthState = {
   profile: Profile | null;
   role: Role | null;
   loading: boolean;
+  /** Mails a six-digit code. Always "succeeds" — see sendCode below. */
+  sendCode: (identifier: string) => Promise<{ error?: string }>;
+  verifyCode: (identifier: string, code: string) => Promise<{ error?: string }>;
   signIn: (identifier: string, secret: string) => Promise<{ error?: string }>;
   signUpClient: (input: {
     email: string;
@@ -37,31 +41,52 @@ type AuthState = {
 const AuthContext = createContext<AuthState | null>(null);
 
 /**
- * Turning what someone typed into the address their login is registered under.
+ * One sign-in for every role, with the website's rules.
  *
- * The web console does this on the server, where it can look the employee code up
- * with the secret key. The app has no secret key and must not have one, and an RPC
- * that answered "which address does code NBSS-004 belong to" would be an employee-code
- * enumeration endpoint open to the internet.
+ * What someone types is an email address or an employee code:
  *
- * So the app reads the shape of what was typed instead:
+ *   an email      → Supabase Auth directly. The code is mailed by Auth itself
+ *                   (through the ZeptoMail relay it is configured with) and
+ *                   verified here, so this path needs nothing but Supabase.
+ *   an employee   → the website's /api/auth endpoints, because turning a code
+ *   code            into its login needs the server's secret key, which this app
+ *                   must never hold. They hand back the session's tokens.
  *
- *   contains an '@'  → an email, used as-is. Clients register with their own address,
- *                      and office staff created with one keep it.
- *   otherwise        → an employee code, converted by the same deterministic rule the
- *                      server used when the account was made.
- *
- * This is complete for guards, who are the overwhelming majority of app users and
- * always have a synthesized address. A staff account created *with* a real email has
- * to sign in with that email rather than their code — which is worth knowing, and is
- * why the field is labelled "Employee code or email".
+ * Where each person lands afterwards is decided by their profile (app/index.tsx),
+ * never by anything typed here.
  */
-function toLoginEmail(identifier: string): string | null {
-  const trimmed = identifier.trim();
-  if (trimmed.includes("@")) return isValidEmail(trimmed) ? trimmed.toLowerCase() : null;
+const REFUSED = "Those details were not accepted.";
+const BAD_CODE = "That code is invalid or has expired.";
 
-  const code = normaliseCode(trimmed);
-  return isValidCode(code) ? codeToEmail(code) : null;
+function isEmail(identifier: string): boolean {
+  return identifier.includes("@");
+}
+
+async function viaServer(
+  step: "code" | "verify" | "password",
+  body: Record<string, string>,
+): Promise<{ error?: string }> {
+  if (!WEB_URL) {
+    return { error: "Sign in with your email address — the office can tell you which one is on file." };
+  }
+  try {
+    const res = await fetch(`${WEB_URL}/api/auth/${step}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = (await res.json().catch(() => null)) as
+      | { error?: string; session?: { access_token: string; refresh_token: string } }
+      | null;
+    if (!res.ok) return { error: data?.error ?? REFUSED };
+    if (data?.session) {
+      const { error } = await supabase.auth.setSession(data.session);
+      if (error) return { error: REFUSED };
+    }
+    return {};
+  } catch {
+    return { error: "Could not reach NBSS. Check your connection and try again." };
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -108,27 +133,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [loadProfile]);
 
-  const signIn = useCallback(async (identifier: string, secret: string) => {
-    const email = toLoginEmail(identifier);
-    if (!email) {
-      return { error: "That does not look like an employee code or an email address." };
+  const sendCode = useCallback(async (raw: string) => {
+    const identifier = raw.trim();
+    if (!identifier) return { error: "Enter your email or employee code." };
+    setLoading(true);
+    try {
+      if (isEmail(identifier)) {
+        if (!isValidEmail(identifier)) return { error: "That email address does not look right." };
+        // Errors are swallowed on purpose: an unknown address must look exactly
+        // like a known one, or this screen would say who works here.
+        await supabase.auth.signInWithOtp({
+          email: identifier.toLowerCase(),
+          options: { shouldCreateUser: false },
+        });
+        return {};
+      }
+      if (!isValidCode(normaliseCode(identifier))) {
+        return { error: "That does not look like an employee code or an email address." };
+      }
+      return await viaServer("code", { identifier });
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    // Checked before the round trip, and deliberately against the looser of the two
-    // rules: the app does not know the role until after sign-in, so it cannot enforce
-    // "six digits for a guard" here without locking out a client with a short password.
+  const verifyCode = useCallback(async (raw: string, code: string) => {
+    const identifier = raw.trim();
+    const token = code.replace(/\D/g, "");
+    if (token.length !== 6) return { error: "Enter the 6-digit code from your email." };
+    setLoading(true);
+    try {
+      if (isEmail(identifier)) {
+        const { error } = await supabase.auth.verifyOtp({
+          email: identifier.toLowerCase(),
+          token,
+          type: "email",
+        });
+        return error ? { error: BAD_CODE } : {};
+      }
+      return await viaServer("verify", { identifier, code: token });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const signIn = useCallback(async (raw: string, secret: string) => {
+    const identifier = raw.trim();
+    if (!identifier) return { error: "Enter your email or employee code." };
     if (secret.length < 4) return { error: "Enter your PIN or password." };
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: secret });
-    setLoading(false);
-
-    if (error) {
-      // One message for a wrong code and a wrong PIN both, so the form cannot be used
-      // to discover which employee codes exist.
-      return { error: "That employee code and PIN do not match. Check both and try again." };
+    try {
+      if (isEmail(identifier)) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: identifier.toLowerCase(),
+          password: secret,
+        });
+        // One message for every failure, so the form cannot be used to discover
+        // which accounts exist.
+        return error ? { error: REFUSED } : {};
+      }
+      const code = normaliseCode(identifier);
+      if (!isValidCode(code)) {
+        return { error: "That does not look like an employee code or an email address." };
+      }
+      // Older logins still sit under their synthesized address, so that is
+      // tried first; it needs no server. Otherwise the server resolves the code.
+      const legacy = await supabase.auth.signInWithPassword({ email: codeToEmail(code), password: secret });
+      if (!legacy.error) return {};
+      return await viaServer("password", { identifier: code, secret });
+    } finally {
+      setLoading(false);
     }
-    return {};
   }, []);
 
   const signUpClient = useCallback(
@@ -196,12 +272,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       role: profile?.role ?? null,
       loading,
+      sendCode,
+      verifyCode,
       signIn,
       signUpClient,
       signOut,
       refresh,
     }),
-    [session, profile, loading, signIn, signUpClient, signOut, refresh],
+    [session, profile, loading, sendCode, verifyCode, signIn, signUpClient, signOut, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

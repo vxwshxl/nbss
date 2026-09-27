@@ -1,6 +1,6 @@
 import { Link } from "expo-router";
-import { AlertCircle } from "lucide-react-native";
-import { useState } from "react";
+import { AlertCircle, ArrowRight, KeyRound, Mail } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -8,7 +8,7 @@ import { COMPANY } from "@nbss/shared/company";
 
 import { AppBackground } from "@/components/app-background";
 import { BrandMark } from "@/components/brand-mark";
-import { Button } from "@/components/button";
+import { Button, LinkButton } from "@/components/button";
 import { Field, SecretField } from "@/components/field";
 import { Text } from "@/components/text";
 import { useLayout } from "@/hooks/use-breakpoint";
@@ -16,49 +16,83 @@ import { useAuth } from "@/lib/auth";
 import { color, radius, space } from "@/theme/tokens";
 
 /**
- * Sign in, laid out like the console's own login page.
+ * The one sign-in for every role — administrators, supervisors, guards and
+ * clients — laid out like the website's /login.
  *
- * The web version is `grid lg:grid-cols-2`: a dark brand panel beside the form, collapsing
- * to form-only below the large breakpoint. That maps exactly onto this app's two shapes —
- * a tablet gets the split, a phone gets the stacked version with the primary-tinted shield
- * the web shows in place of the panel (`lg:hidden`). So the responsive behaviour is not
- * invented for mobile; it is the same rule the console already follows, at a smaller
- * breakpoint.
- *
- * One field for identity, labelled "Employee code or email", because three kinds of person
- * arrive here and they do not hold the same thing. The app cannot ask the server which of
- * those a string is — an endpoint answering "does employee code NBSS-004 exist" would be an
- * enumeration hole open to the internet — so it reads the shape instead, and the label tells
- * the truth about that. See `toLoginEmail` in src/lib/auth.tsx.
+ * Step one asks who: an email or an employee code. Step two proves it, with a
+ * six-digit code mailed to them or with the password / PIN they already hold.
+ * Nobody picks a role; the profile decides where they land (app/index.tsx).
  */
+type Step = "identify" | "code" | "password";
+
+const RESEND_SECONDS = 30;
+
 export function SignIn() {
-  const { signIn, loading } = useAuth();
+  const { sendCode, verifyCode, signIn, loading } = useAuth();
   const { isTablet } = useLayout();
   const insets = useSafeAreaInsets();
 
+  const [step, setStep] = useState<Step>("identify");
   const [identifier, setIdentifier] = useState("");
+  const [code, setCode] = useState("");
   const [secret, setSecret] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [sentAt, setSentAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
-  const submit = async () => {
+  useEffect(() => {
+    if (step !== "code") return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [step]);
+
+  const resendIn = Math.max(0, RESEND_SECONDS - Math.floor((now - sentAt) / 1000));
+
+  const requestCode = async (again = false) => {
     setError(null);
-    const result = await signIn(identifier, secret);
-    // On success the auth listener swaps the route out from under this screen, so there is
-    // nothing to navigate to here.
+    setNotice(null);
+    const result = await sendCode(identifier);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setCode("");
+    setSentAt(Date.now());
+    setNow(Date.now());
+    setStep("code");
+    if (again) setNotice("A new code is on its way.");
+  };
+
+  const submitCode = async (value = code) => {
+    setError(null);
+    // On success the auth listener swaps the route out from under this screen.
+    const result = await verifyCode(identifier, value);
     if (result.error) setError(result.error);
   };
+
+  const submitPassword = async () => {
+    setError(null);
+    const result = await signIn(identifier, secret);
+    if (result.error) setError(result.error);
+  };
+
+  const heading =
+    step === "code"
+      ? { title: "Check your email", sub: "Enter the 6-digit code we sent you." }
+      : step === "password"
+        ? { title: "Enter your password", sub: "Your password or PIN." }
+        : { title: "Sign in", sub: "Continue with your email or employee code." };
 
   const form = (
     <View style={styles.formColumn}>
       <View style={[styles.intro, !isTablet && styles.introCentred]}>
-        {/* The web shows this only below `lg`, in place of the brand panel. */}
         {!isTablet && <BrandMark size={72} style={styles.shield} />}
         <Text variant="pageTitle" weight="bold">
-          Sign in
+          {heading.title}
         </Text>
         <Text variant="label" tone="muted" style={!isTablet && styles.centred}>
-          Use the employee code printed on your identity card. If you have forgotten your PIN,
-          your supervisor can reset it.
+          {heading.sub}
         </Text>
       </View>
 
@@ -71,62 +105,164 @@ export function SignIn() {
             </Text>
           </View>
         )}
+        {!error && notice && (
+          <View style={styles.notice}>
+            <Text variant="label" style={styles.noticeText}>
+              {notice}
+            </Text>
+          </View>
+        )}
 
-        <Field
-          label="Employee code or email"
-          placeholder="NBSS-041"
-          value={identifier}
-          onChangeText={(value) => {
-            setIdentifier(value);
-            setError(null);
-          }}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          spellCheck={false}
-          autoComplete="username"
-          // `characters` suits a code and fights an email address; switched the moment an
-          // '@' appears.
-          keyboardType={identifier.includes("@") ? "email-address" : "default"}
-          returnKeyType="next"
-          hint="Guards: the code on your card. Clients: the email you registered with."
-        />
+        {step === "identify" ? (
+          <Field
+            label="Email or employee code"
+            placeholder="you@example.com"
+            value={identifier}
+            onChangeText={(value) => {
+              setIdentifier(value);
+              setError(null);
+            }}
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            autoComplete="username"
+            keyboardType="email-address"
+            returnKeyType="go"
+            onSubmitEditing={() => void requestCode()}
+          />
+        ) : (
+          <View style={styles.who}>
+            <Text variant="label" weight="medium" numberOfLines={1} style={styles.whoText}>
+              {identifier.trim()}
+            </Text>
+            <LinkButton
+              label="Change"
+              onPress={() => {
+                setStep("identify");
+                setError(null);
+              }}
+            />
+          </View>
+        )}
 
-        <SecretField
-          label="PIN or password"
-          placeholder="••••••"
-          value={secret}
-          onChangeText={(value) => {
-            setSecret(value);
-            setError(null);
-          }}
-          keyboardType={identifier.includes("@") ? "default" : "number-pad"}
-          returnKeyType="go"
-          onSubmitEditing={() => void submit()}
-        />
+        {step === "code" && (
+          <View style={styles.codeBlock}>
+            <Field
+              label="Verification code"
+              placeholder="••••••"
+              value={code}
+              onChangeText={(value) => {
+                const digits = value.replace(/\D/g, "").slice(0, 6);
+                setCode(digits);
+                setError(null);
+                if (digits.length === 6) void submitCode(digits);
+              }}
+              keyboardType="number-pad"
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
+              maxLength={6}
+              autoFocus
+              style={styles.codeInput}
+            />
+            <View style={styles.resendRow}>
+              <Text variant="caption" tone="muted">
+                Didn&apos;t get it?
+              </Text>
+              {resendIn > 0 ? (
+                <Text variant="caption" tone="muted">
+                  Resend in {resendIn}s
+                </Text>
+              ) : (
+                <LinkButton label="Resend code" onPress={() => void requestCode(true)} />
+              )}
+            </View>
+          </View>
+        )}
 
-        <Button
-          label="Sign in"
-          size="lg"
-          fullWidth
-          loading={loading}
-          disabled={!identifier.trim() || !secret}
-          onPress={() => void submit()}
-        />
+        {step === "password" && (
+          <SecretField
+            label="Password or PIN"
+            placeholder="••••••"
+            value={secret}
+            onChangeText={(value) => {
+              setSecret(value);
+              setError(null);
+            }}
+            autoFocus
+            returnKeyType="go"
+            onSubmitEditing={() => void submitPassword()}
+          />
+        )}
+
+        {step === "identify" && (
+          <Button
+            label="Continue"
+            size="lg"
+            fullWidth
+            icon={ArrowRight}
+            iconEnd
+            loading={loading}
+            disabled={!identifier.trim()}
+            onPress={() => void requestCode()}
+          />
+        )}
+        {step === "code" && (
+          <Button
+            label="Verify and sign in"
+            size="lg"
+            fullWidth
+            loading={loading}
+            disabled={code.length !== 6}
+            onPress={() => void submitCode()}
+          />
+        )}
+        {step === "password" && (
+          <Button
+            label="Sign in"
+            size="lg"
+            fullWidth
+            loading={loading}
+            disabled={!secret}
+            onPress={() => void submitPassword()}
+          />
+        )}
       </View>
 
       <View style={styles.footer}>
-        <Text variant="caption" tone="muted" style={styles.centred}>
-          Need security for your premises?
-        </Text>
-        {/* The only route into account creation, and it says who it is for. Guard
-            credentials are issued by an administrator — there is no self-registration for
-            them, and this line is what stops a guard trying. */}
-        <Link href="/(auth)/register" asChild>
-          <Button label="Create a client account" variant="outline" fullWidth />
-        </Link>
-        <Text variant="micro" tone="muted" style={styles.centred}>
-          Guards and supervisors are issued a code and PIN by the office.
-        </Text>
+        <View style={styles.orRow}>
+          <View style={styles.rule} />
+          <Text variant="caption" tone="muted">
+            or
+          </Text>
+          <View style={styles.rule} />
+        </View>
+        {step === "password" ? (
+          <Button
+            label="Email me a code instead"
+            variant="outline"
+            icon={Mail}
+            fullWidth
+            disabled={loading}
+            onPress={() => void requestCode()}
+          />
+        ) : (
+          <Button
+            label="Use password or PIN"
+            variant="outline"
+            icon={KeyRound}
+            fullWidth
+            disabled={!identifier.trim()}
+            onPress={() => {
+              setError(null);
+              setStep("password");
+            }}
+          />
+        )}
+        {step === "identify" && (
+          <Link href="/(auth)/register" asChild>
+            <Button label="Create a client account" variant="ghost" fullWidth />
+          </Link>
+        )}
       </View>
     </View>
   );
@@ -144,10 +280,6 @@ export function SignIn() {
       <View style={styles.brandMiddle}>
         <Text variant="hero" weight="bold" tone="inherit" style={[styles.brandInk, styles.tagline]}>
           {COMPANY.tagline}
-        </Text>
-        <Text variant="label" tone="inherit" style={styles.brandBody}>
-          Attendance here is recorded against a geofence at the site itself, not against a
-          signature in a register. What this console shows is where people actually were.
         </Text>
       </View>
 
@@ -217,6 +349,31 @@ const styles = StyleSheet.create({
   alertText: { flex: 1 },
 
   footer: { gap: space[3] },
+  orRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  rule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: color.border },
+  who: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space[3],
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    backgroundColor: color.muted,
+    paddingHorizontal: space[4],
+    paddingVertical: space[3],
+  },
+  whoText: { flex: 1 },
+  codeBlock: { gap: space[2] },
+  codeInput: { textAlign: "center", fontSize: 26, letterSpacing: 10 },
+  resendRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  notice: {
+    borderRadius: radius.lg,
+    backgroundColor: color.accent,
+    paddingHorizontal: space[3],
+    paddingVertical: space[2.5],
+  },
+  noticeText: { color: color.accentForeground },
 
   // ── the brand panel
   brand: {

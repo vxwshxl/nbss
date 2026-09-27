@@ -46,11 +46,11 @@ export function NavLink({
       className={cn(
         "relative flex items-center gap-2.5 rounded-lg p-2 text-sm font-medium outline-none transition-colors duration-100 lg:p-1.5",
         "focus-visible:ring-2 focus-visible:ring-sidebar-ring/60",
-        "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+        "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         // The hover pair is repeated for the active row on purpose: `hover:` is
         // emitted after `data-active:`, so without `data-active:hover:text-…`
-        // hovering the filled ink pill turned its label ink too — invisible.
-        "data-active:bg-sidebar-primary data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary data-active:hover:text-sidebar-primary-foreground",
+        // hovering the filled pill turned its label dark too — invisible.
+        "data-active:bg-brand-gradient-strong data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:shadow-sm data-active:hover:bg-brand-gradient-strong data-active:hover:brightness-110 data-active:hover:text-sidebar-primary-foreground",
       )}
     >
       <span

@@ -114,14 +114,14 @@ export async function currentSession(): Promise<Session | null> {
 /** Redirects to sign-in when nobody is signed in. */
 export async function requireProfile(): Promise<Profile> {
   const session = await currentSession();
-  if (!session) redirect("/console/login");
+  if (!session) redirect("/login");
   return session.profile;
 }
 
 /** Like requireProfile, but keeps hold of who is really signed in. */
 export async function requireSession(): Promise<Session> {
   const session = await currentSession();
-  if (!session) redirect("/console/login");
+  if (!session) redirect("/login");
   return session;
 }
 
@@ -195,8 +195,18 @@ export async function createStaffAccount(input: {
     .maybeSingle();
   if (taken) return { error: `Employee code ${code} is already in use.` };
 
+  const email = input.email?.trim().toLowerCase() || null;
+  if (email) {
+    const { data: emailTaken } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (emailTaken) return { error: `${email} already belongs to another account.` };
+  }
+
   const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email: input.email?.trim() || codeToEmail(code),
+    email: email ?? codeToEmail(code),
     password: input.pin,
     // Marked confirmed on creation, so Supabase never tries to deliver a
     // verification mail to an address that does not receive any.
@@ -214,6 +224,7 @@ export async function createStaffAccount(input: {
     role: input.role,
     full_name: input.fullName.trim(),
     phone: input.phone?.trim() || null,
+    email,
   });
 
   if (profileError) {

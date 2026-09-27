@@ -185,7 +185,10 @@ export function PunchControl({
     };
   }, []);
 
-  const site = sites.find((s) => s.id === siteId) ?? sites[0];
+  // On duty, the fence that matters is the one they checked in at — whatever
+  // the picker happened to be left on.
+  const activeSiteId = openPunch?.siteId ?? siteId;
+  const site = sites.find((s) => s.id === activeSiteId) ?? sites[0];
   const fix = state.kind === "ready" ? state.fix : null;
 
   const distance =

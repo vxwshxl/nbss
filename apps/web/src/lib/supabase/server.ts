@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, secretKey } from "./env";
+import { SESSION_MAX_AGE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, secretKey } from "./env";
 import type { Database } from "./types";
 
 /**
@@ -27,6 +27,7 @@ export async function supabaseServer() {
   const store = await cookies();
 
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    cookieOptions: { maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
     cookies: {
       getAll() {
         return store.getAll();

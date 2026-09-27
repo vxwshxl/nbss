@@ -72,7 +72,7 @@ export function CtaBand() {
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Link
-              href="/console/login"
+              href="/login"
               className="group/panel press flex items-start gap-3.5 rounded-2xl border border-background/15 bg-background/8 p-5 text-left backdrop-blur-sm transition-colors hover:border-background/30 hover:bg-background/12"
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
@@ -95,7 +95,7 @@ export function CtaBand() {
             </Link>
 
             <Link
-              href="/console/login"
+              href="/login"
               className="group/panel press flex items-start gap-3.5 rounded-2xl border border-background/15 bg-background/8 p-5 text-left backdrop-blur-sm transition-colors hover:border-background/30 hover:bg-background/12"
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">

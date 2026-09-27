@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
+import { SESSION_MAX_AGE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 import type { Database } from "./types";
 
 /**
@@ -19,6 +19,8 @@ import type { Database } from "./types";
 let cached: ReturnType<typeof createBrowserClient<Database>> | null = null;
 
 export function supabaseBrowser() {
-  cached ??= createBrowserClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  cached ??= createBrowserClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    cookieOptions: { maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
+  });
   return cached;
 }

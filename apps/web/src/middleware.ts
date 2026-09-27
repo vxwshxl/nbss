@@ -18,7 +18,10 @@ import { NextResponse, type NextRequest } from "next/server";
  * drift out of step with a route rename.
  */
 
-const LOGIN_PATH = "/console/login";
+const LOGIN_PATH = "/login";
+
+/** A year — the same as SESSION_MAX_AGE in lib/supabase/env.ts. */
+const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -30,6 +33,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: { maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -49,7 +53,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (pathname === LOGIN_PATH) {
+  if (pathname === LOGIN_PATH || pathname === "/console/login") {
     // Nothing to ask someone who is already through the door. Where they land
     // depends on their role, which the page itself resolves.
     return user ? NextResponse.redirect(new URL("/console", request.url)) : response;
@@ -63,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/console/:path*"],
+  matcher: ["/console/:path*", "/login"],
 };
