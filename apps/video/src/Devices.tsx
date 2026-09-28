@@ -82,8 +82,9 @@ function Screen({ scene, device, f, p }: { scene: PlannedScene; device: DeviceNa
   if (s?.scroll) {
     const t = f - s.from - s.landAt;
     const down = s.pan;
-    if (t >= 0 && t < down + 14 + 26) {
-      const prog = t < down ? easeInOut(t / down) : t < down + 14 ? 1 : 1 - easeInOut((t - down - 14) / 26);
+    // Matches the pause and return in schedule.ts's stepTiming.
+    if (t >= 0 && t < down + 10 + 16) {
+      const prog = t < down ? easeInOut(t / down) : t < down + 10 ? 1 : 1 - easeInOut((t - down - 10) / 16);
       pan = { src: s.scroll.image, y: -s.scroll.to * prog * scale, h: s.scroll.pageHeight * scale };
     }
   }

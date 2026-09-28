@@ -1093,6 +1093,12 @@ export type Database = {
         };
         Returns: { inside: boolean; distance_m: number }[];
       };
+      sos_people: {
+        Args: {
+          p_alert_id: string;
+        };
+        Returns: { kind: string; profile_id: string; full_name: string; phone: string; response: Enums["sos_response"]; distance_m: number; at: string }[];
+      };
       sos_recipients: {
         Args: {
           p_alert_id: string;

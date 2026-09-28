@@ -23,9 +23,9 @@ import { Platform } from "react-native";
  *   therefore never reaches an Android phone running Expo Go. iOS Expo Go still
  *   receives push.
  *
- *   MAPLIBRE — a third-party native module, so the map screen cannot render in Expo Go
- *   whenever it is built. It is only a config plugin today and nothing imports it, which
- *   is why the app boots in Expo Go at all.
+ *   MAPLIBRE — a third-party native module, so the duty screen's map cannot render in
+ *   Expo Go. components/live-map loads it lazily and shows a plain panel instead, which
+ *   is why the app still boots in Expo Go.
  */
 /**
  * react-native-web has no expo-notifications at all — the module's methods throw

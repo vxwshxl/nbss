@@ -479,6 +479,19 @@ async function run() {
     const { data } = await s.guard2.from("sos_acknowledgements").select("response").eq("alert_id", alertId);
     assert(data.length === 1 && data[0].response === "responding", JSON.stringify(data));
   });
+  await check("the guard sees who is coming by name, and nothing more of their profile", async () => {
+    const { data, error } = await s.guard2.rpc("sos_people", { p_alert_id: alertId });
+    if (error) throw error;
+    const responder = data.find((p) => p.kind === "responder");
+    assert(responder?.profile_id === people.supervisor.id && responder.full_name, JSON.stringify(data));
+    assert(!("email" in responder), "email leaked");
+  });
+  await check("nobody outside the alert gets its names", async () => {
+    const other = await s.otherClient.rpc("sos_people", { p_alert_id: alertId });
+    const anon = await fresh().rpc("sos_people", { p_alert_id: alertId });
+    assert(!other.error && other.data.length === 0, JSON.stringify(other.data));
+    assert(anon.error, "anonymous call was allowed");
+  });
   await check("another client cannot close someone else's alert", async () => {
     const { error } = await s.otherClient.rpc("close_sos", { p_alert_id: alertId, p_status: "resolved" });
     assert(error, "was allowed");

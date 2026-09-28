@@ -78,6 +78,10 @@ async function settle(dev, extra = 350) {
   await page
     .waitForFunction(() => !document.querySelector('[role="status"][aria-label="Loading"]'), null, { timeout: 8000 })
     .catch(() => {});
+  // A popup that fetches its details shows a spinner first; never film that.
+  await page
+    .waitForFunction(() => !document.querySelector('[role="dialog"] .animate-spin'), null, { timeout: 15000 })
+    .catch(() => console.log("  (a popup was still loading)"));
   if (await page.locator(".leaflet-container").count().catch(() => 0)) {
     await page
       .waitForFunction(
@@ -312,6 +316,27 @@ async function webSignIn(dev, identifier, secret, point) {
     sfx: "success",
     hold: 2,
   });
+}
+
+/** Until the map's tiles are all in, so no frame shows a half-drawn map. */
+async function waitTiles(dev, ms = 15000) {
+  await dev.page
+    .waitForFunction(
+      () => {
+        const tiles = [...document.querySelectorAll(".leaflet-tile")];
+        return tiles.length > 0 && tiles.every((t) => t.classList.contains("leaflet-tile-loaded"));
+      },
+      null,
+      { timeout: ms },
+    )
+    .catch(() => console.log("  (map tiles still loading)"));
+  // A re-frame zooms: until it ends, the old zoom's tiles are shown stretched.
+  await wait(1200);
+  await dev.page.waitForFunction(() => !document.querySelector(".leaflet-zoom-anim"), null, { timeout: 5000 }).catch(() => {});
+  await dev.page
+    .waitForFunction(() => [...document.querySelectorAll(".leaflet-tile")].every((t) => t.classList.contains("leaflet-tile-loaded")), null, { timeout: ms })
+    .catch(() => {});
+  await wait(400);
 }
 
 const nav = (dev, name) => dev.page.locator("aside, nav").getByRole("link", { name, exact: true });
@@ -648,23 +673,24 @@ try {
     const { page } = guard;
     await go(office, "Attendance", { point: 0, hold: 0.6 });
     await appSignIn(guard, PEOPLE.guard.email, PEOPLE.guard.password, 0);
-    await page.getByText(RICE_MILL).first().waitFor({ timeout: 20000 }).catch(() => {});
-    await wait(1500);
-    await shot(guard, { point: 1, hold: 3, sfx: "error", badge: "1.2 km from the gate" });
+    await page.getByText(/to your post/).first().waitFor({ timeout: 25000 });
+    await waitTiles(guard);
+    await shot(guard, { point: 0, hold: 3, badge: "Live map" });
+
+    // Check-in from a kilometre out: the app answers with the distance and the way.
+    await click(guard, page.getByText("Check in", { exact: true }).first(), {
+      point: 1,
+      until: () => page.getByText("You are not at your post yet").waitFor({ timeout: 20000 }).then(() => wait(700)),
+      sfx: "error",
+      hold: 3.2,
+      badge: "Not there yet",
+    });
+    await click(guard, page.getByText("Close", { exact: true }).last(), { point: 1, hold: 0.8 });
 
     await guard.ctx.setGeolocation({ latitude: INSIDE.lat, longitude: INSIDE.lng, accuracy: 9 });
-    const unlocked = await page
-      .getByText(/Inside the boundary/)
-      .first()
-      .waitFor({ timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!unlocked) {
-      await page.reload({ waitUntil: "networkidle" });
-      await page.getByText(/Inside the boundary/).first().waitFor({ timeout: 20000 });
-    }
-    await wait(900);
-    await shot(guard, { point: 2, hold: 2.4, badge: "At the gate" });
+    await page.getByText("You are at your post").first().waitFor({ timeout: 20000 });
+    await waitTiles(guard);
+    await shot(guard, { point: 2, hold: 2.6, badge: "At the gate" });
 
     const checkIn = page.getByText("Check in", { exact: true }).first();
     await click(guard, checkIn, {
@@ -685,7 +711,8 @@ try {
   }
 
   // ── 7 · SOS ────────────────────────────────────────────────────────────
-  const sup = await phone("phone2", "Supervisor · Ranjit Brahma");
+  // On patrol about 400 m away, so "on the way" shows a believable distance.
+  const sup = await phone("phone2", "Supervisor · Ranjit Brahma", { lat: mill.lat - 0.0036, lng: mill.lng + 0.001 });
   scene({
     id: "sos",
     layout: "trio",

@@ -79,25 +79,24 @@ export function SosAlarm({ alertId }: { alertId: string }) {
     const raiser = Array.isArray(profiles) ? profiles[0] : profiles;
     const site = Array.isArray(sites) ? sites[0] : sites;
 
-    const { data: acks } = await supabase
-      .from("sos_acknowledgements")
-      .select("response, distance_m, profiles(full_name)")
-      .eq("alert_id", alertId);
+    // Names come from sos_people (0015): a guard may not read other profiles, so a
+    // join here gave them "Someone" for every responder and no name on the alert.
+    const { data: people } = await supabase.rpc("sos_people", { p_alert_id: alertId });
+    const raiserRow = (people ?? []).find((p) => p.kind === "raiser");
 
     return {
       alert: {
         ...(row as Omit<Alert, "raiser_name" | "site_name">),
-        raiser_name: raiser?.full_name ?? null,
+        raiser_name: raiserRow?.full_name ?? raiser?.full_name ?? null,
         site_name: site?.name ?? null,
       } as Alert,
-      responders: (acks ?? []).map((ack) => {
-        const who = Array.isArray(ack.profiles) ? ack.profiles[0] : ack.profiles;
-        return {
-          name: who?.full_name ?? "Someone",
-          response: ack.response,
-          distanceM: ack.distance_m,
-        };
-      }),
+      responders: (people ?? [])
+        .filter((p) => p.kind === "responder")
+        .map((p) => ({
+          name: p.full_name ?? "Someone",
+          response: p.response,
+          distanceM: p.distance_m ?? null,
+        })),
     };
   }, [alertId]);
 

@@ -5,6 +5,8 @@ node_modules/
 # next (apps/web)
 .next/
 .next-build/
+# the production build the demo film is captured from (apps/video)
+.next-video/
 out/
 next-env.d.ts
 *.tsbuildinfo

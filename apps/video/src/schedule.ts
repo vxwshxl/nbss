@@ -54,23 +54,29 @@ export type Timeline = { scenes: Scene[] };
 export type VoiceDurations = Record<string, { seconds: number }>;
 
 /** Frames the pointer takes to travel to its target. */
-export const MOVE = 20;
+export const MOVE = 14;
 /** Frames between the press and the screen answering. */
 export const PRESS = 4;
 /** Frames each typing snapshot stays up. */
-export const TYPE_FRAME = 3;
+export const TYPE_FRAME = 2;
 /** Frames each snapshot of a held button stays up (they were taken 200 ms apart). */
 export const HOLD_FRAME = 6;
 
-const INTRO_MIN = 180;
-const CONTENTS_MIN = 250;
-const OUTRO_MIN = 210;
+const INTRO_MIN = 110;
+const CONTENTS_MIN = 150;
+const OUTRO_MIN = 150;
 /** A chapter's opening, before its first step: heading and devices arrive. */
-export const CHAPTER_LEAD = 36;
-export const CHAPTER_TAIL = 24;
+export const CHAPTER_LEAD = 24;
+export const CHAPTER_TAIL = 12;
 /** A voice line starts this many frames into its point, and leaves this much air after. */
-const VOICE_IN = 6;
-const VOICE_AIR = 14;
+const VOICE_IN = 4;
+const VOICE_AIR = 6;
+/**
+ * The holds written by the capture are scaled by this: they were chosen for
+ * reading at leisure, and the film reads better brisk. A point still lasts at
+ * least as long as its line.
+ */
+const HOLD_SCALE = 0.55;
 
 export type PlannedStep = Step & {
   index: number;
@@ -109,9 +115,9 @@ function stepTiming(step: Step) {
   if (step.action?.type === "type") seq = (step.frames?.length ?? 0) * TYPE_FRAME;
   if (step.action?.type === "hold") seq = (step.frames?.length ?? 0) * HOLD_FRAME;
   const landAt = step.action ? pressAt + PRESS + seq : 6;
-  const pan = step.scroll ? Math.max(70, Math.min(170, Math.round(step.scroll.to / 20))) : 0;
-  const scrollExtra = pan ? pan + 14 + 26 : 0;
-  const after = Math.max(16, Math.round((step.hold ?? 1) * FPS));
+  const pan = step.scroll ? Math.max(45, Math.min(110, Math.round(step.scroll.to / 28))) : 0;
+  const scrollExtra = pan ? pan + 10 + 16 : 0;
+  const after = Math.max(12, Math.round((step.hold ?? 1) * FPS * HOLD_SCALE));
   return { pressAt, landAt, pan, dur: landAt + scrollExtra + after };
 }
 
@@ -119,15 +125,15 @@ const framesFor = (voice: VoiceDurations, key: string) =>
   voice[key] ? Math.ceil(voice[key].seconds * FPS) : 0;
 
 export function plan(timeline: Timeline, voice: VoiceDurations = {}): Plan {
-  const intro = Math.max(INTRO_MIN, VOICE_IN + 30 + framesFor(voice, "intro") + VOICE_AIR);
-  const contents = Math.max(CONTENTS_MIN, VOICE_IN + framesFor(voice, "contents") + 90);
+  const intro = Math.max(INTRO_MIN, VOICE_IN + 24 + framesFor(voice, "intro") + VOICE_AIR);
+  const contents = Math.max(CONTENTS_MIN, VOICE_IN + framesFor(voice, "contents") + 60);
   const outro = Math.max(OUTRO_MIN, VOICE_IN + framesFor(voice, "outro") + 60);
 
   const scenes: PlannedScene[] = [];
   const cues: Cue[] = [];
   const voiceCues: VoiceCue[] = [];
-  if (voice.intro) voiceCues.push({ key: "intro", frame: 30, frames: framesFor(voice, "intro") });
-  if (voice.contents) voiceCues.push({ key: "contents", frame: intro + 20, frames: framesFor(voice, "contents") });
+  if (voice.intro) voiceCues.push({ key: "intro", frame: 24, frames: framesFor(voice, "intro") });
+  if (voice.contents) voiceCues.push({ key: "contents", frame: intro + 12, frames: framesFor(voice, "contents") });
 
   let at = intro + contents;
 

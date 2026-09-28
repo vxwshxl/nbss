@@ -1,8 +1,10 @@
 import type { Row } from "@nbss/shared/db";
 import { checkFence, toRing, type Fence } from "@nbss/shared/geo";
 import type { SosKind, SosResponse } from "@nbss/shared/sos";
+import type * as Location from "expo-location";
 
 import { currentFix, restartTracking, startTracking, stopTracking } from "./location";
+import { IS_WEB } from "./runtime";
 import { supabase } from "./supabase";
 
 /**
@@ -159,6 +161,45 @@ export async function nearbySites(sites: Site[]): Promise<{
   };
 }
 
+/**
+ * Whether the guard is where they are about to check in, read from one fresh fix
+ * before anything is sent — so a guard at the wrong gate is told where to go
+ * rather than refused by the server. The same maths the server then applies.
+ */
+export type Arrival =
+  | { kind: "ready"; fix: Location.LocationObject; site: Site }
+  | { kind: "nofix" }
+  | { kind: "weak"; site: Site; accuracyM: number }
+  | { kind: "elsewhere"; fix: Location.LocationObject; site: Site; here: Site }
+  | { kind: "away"; site: Site; remainingM: number };
+
+export async function checkArrival(target: Site, sites: Site[]): Promise<Arrival> {
+  const fix = await currentFix();
+  if (!fix) return { kind: "nofix" };
+  const accuracyM = fix.coords.accuracy ?? Number.POSITIVE_INFINITY;
+  if (accuracyM > target.max_accuracy_m) return { kind: "weak", site: target, accuracyM };
+
+  const point = { lat: fix.coords.latitude, lng: fix.coords.longitude };
+  const verdict = checkFence(toFence(target), point);
+  if (verdict.inside) return { kind: "ready", fix, site: target };
+
+  const here = sites.find((s) => s.id !== target.id && checkFence(toFence(s), point).inside);
+  if (here) return { kind: "elsewhere", fix, site: target, here };
+  return { kind: "away", site: target, remainingM: verdict.remainingM };
+}
+
+/** Turn-by-turn to the site in whatever maps app the phone has. */
+export function directionsUrl(site: Pick<Site, "lat" | "lng">): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${site.lat},${site.lng}&travelmode=walking`;
+}
+
+/** "4 min walk" — or a ride, past a couple of kilometres. */
+export function eta(metres: number): { value: string; unit: string } {
+  if (metres <= 0) return { value: "0", unit: "min · here" };
+  if (metres < 2_000) return { value: String(Math.max(1, Math.round(metres / 80))), unit: "min walk" };
+  return { value: String(Math.max(1, Math.round(metres / 400))), unit: "min ride" };
+}
+
 export type PunchResult =
   | {
       ok: true;
@@ -173,8 +214,12 @@ export type PunchResult =
     }
   | { ok: false; error: string };
 
-export async function punchIn(siteId: string): Promise<PunchResult> {
-  const position = await currentFix();
+/**
+ * `position` is the fix the arrival check already took, so the guard does not
+ * wait for a second one; without it a fresh fix is read here.
+ */
+export async function punchIn(siteId: string, fix?: Location.LocationObject | null): Promise<PunchResult> {
+  const position = fix ?? (await currentFix());
   if (!position) {
     return {
       ok: false,
@@ -217,12 +262,16 @@ export async function punchIn(siteId: string): Promise<PunchResult> {
    * platform, and the background permission may have been declined. Both are reported
    * as a separate `tracking` flag that the duty screen renders as its own warning.
    */
-  let tracking = true;
-  try {
-    await startTracking(punch.mode ?? "on_duty");
-  } catch (err) {
-    tracking = false;
-    console.warn("[duty] checked in, but tracking did not start:", err);
+  // The browser preview has no background location at all, so there is nothing to
+  // start and nothing to warn about — guards carry the native app.
+  let tracking: boolean | undefined = IS_WEB ? undefined : true;
+  if (!IS_WEB) {
+    try {
+      await startTracking(punch.mode ?? "on_duty");
+    } catch (err) {
+      tracking = false;
+      console.warn("[duty] checked in, but tracking did not start:", err);
+    }
   }
 
   return {

@@ -26,7 +26,7 @@ const KEY = env.SARVAM_API_KEY;
 if (!KEY) throw new Error("SARVAM_API_KEY is not set in .env");
 
 const VOICE = process.env.VOICE ?? "kabir";
-const PACE = Number(process.env.PACE ?? 0.94);
+const PACE = Number(process.env.PACE ?? 1.1);
 
 const lines = { intro: INTRO_VOICE, contents: CONTENTS_VOICE, outro: OUTRO_VOICE };
 for (const [id, chapter] of Object.entries(SCRIPT)) {
