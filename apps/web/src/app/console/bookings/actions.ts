@@ -25,7 +25,7 @@ export async function updateBooking(
   const supabase = await supabaseServer();
   const { data: row } = await supabase
     .from("service_requests")
-    .select("id, reference, client_id, status")
+    .select("id, reference, client_id, status, guards_required")
     .eq("id", id)
     .maybeSingle();
   if (!row) return { ok: false, error: "That booking no longer exists." };
@@ -49,8 +49,14 @@ export async function updateBooking(
       return { ok: false, error: "Only an administrator can hand a site to a client." };
     }
     patch.site_id = input.siteId;
-    if (row.client_id) {
-      const { error } = await supabase.from("sites").update({ client_id: row.client_id }).eq("id", input.siteId);
+    // The site is handed to the client, and — unless the desk already set one —
+    // needs as many guards on duty as the client asked for.
+    const { data: target } = await supabase.from("sites").select("guards_required").eq("id", input.siteId).maybeSingle();
+    const sitePatch: { client_id?: string; guards_required?: number } = {};
+    if (row.client_id) sitePatch.client_id = row.client_id;
+    if (target && target.guards_required == null && row.guards_required) sitePatch.guards_required = row.guards_required;
+    if (Object.keys(sitePatch).length) {
+      const { error } = await supabase.from("sites").update(sitePatch).eq("id", input.siteId);
       if (error) return { ok: false, error: error.message };
     }
   }

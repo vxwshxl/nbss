@@ -2,6 +2,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarPlus,
+  CalendarRange,
   ClipboardList,
   ExternalLink,
   Inbox,
@@ -94,6 +95,12 @@ export const groups: NavGroup[] = [
         href: "/console/sites",
         label: "Sites & geofences",
         icon: MapPinned,
+        roles: ["admin", "supervisor"],
+      },
+      {
+        href: "/console/roster",
+        label: "Roster",
+        icon: CalendarRange,
         roles: ["admin", "supervisor"],
       },
       {

@@ -13,8 +13,10 @@ import {
 
 import {
   LiveSosPanel,
+  NotArrivedPanel,
   OnDutyTable,
   type LiveSos,
+  type NotArrivedRow,
   type OnDutyRow,
 } from "@/components/console/dashboard-tables";
 import { PageHeader } from "@/components/console/page-header";
@@ -49,6 +51,11 @@ function hours(minutes: number | null): string {
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
 }
 
+/** Milliseconds since a moment. */
+function since(iso: string): number {
+  return Date.now() - new Date(iso).getTime();
+}
+
 /** How long someone has been standing at a gate, from their check-in stamp. */
 function elapsed(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -63,7 +70,7 @@ export default async function ConsoleDashboard() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [guards, sites, onDuty, todayPunches, liveSos] = await Promise.all([
+  const [guards, sites, onDuty, todayPunches, liveSos, dueShifts] = await Promise.all([
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -86,6 +93,15 @@ export default async function ConsoleDashboard() {
       .select("id, status, kind, raised_at, guard:profiles!sos_alerts_raised_by_fkey(full_name, phone), sites(name)")
       .in("status", ["active", "acknowledged"])
       .order("raised_at", { ascending: false }),
+    // Rostered shifts that have started and are not yet over, still waiting for
+    // their guard — "not arrived" once the site's grace period has passed.
+    supabase
+      .from("shifts")
+      .select("id, guard_id, site_id, starts_at, guard:profiles!shifts_guard_id_fkey(full_name, phone), sites(name, grace_minutes)")
+      .eq("status", "scheduled")
+      .lte("starts_at", new Date().toISOString())
+      .gt("ends_at", new Date().toISOString())
+      .order("starts_at"),
   ]);
 
   const live = onDuty.data ?? [];
@@ -109,6 +125,24 @@ export default async function ConsoleDashboard() {
       siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "a site",
       raised: time(a.raised_at),
     };
+  });
+
+  const checkedIn = new Set(live.map((r) => `${r.guard_id}:${r.site_id}`));
+  const notArrived: NotArrivedRow[] = (dueShifts.data ?? []).flatMap((s) => {
+    const place = one(s.sites as unknown as { name: string; grace_minutes: number } | null);
+    const lateBy = since(s.starts_at);
+    if (lateBy < (place?.grace_minutes ?? 10) * 60_000 || checkedIn.has(`${s.guard_id}:${s.site_id}`)) return [];
+    const g = one(s.guard as unknown as { full_name: string; phone: string | null } | null);
+    return [
+      {
+        id: s.id,
+        guardName: g?.full_name ?? "A guard",
+        guardPhone: g?.phone ?? null,
+        siteName: place?.name ?? "a site",
+        due: time(s.starts_at),
+        late: hours(Math.round(lateBy / 60_000)),
+      },
+    ];
   });
 
   const onDutyRows: OnDutyRow[] = live.map((row) => {
@@ -144,6 +178,7 @@ export default async function ConsoleDashboard() {
       />
 
       {alerts.length > 0 && <LiveSosPanel alerts={alerts} />}
+      {notArrived.length > 0 && <NotArrivedPanel rows={notArrived} />}
 
       {/* Six figures, and the order is the order someone actually scans them:
           what is happening right now, then the standing establishment, then the

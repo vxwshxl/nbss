@@ -120,7 +120,7 @@ export function Contents({ dur, scenes }: { dur: number; scenes: PlannedScene[] 
         From first visit to a guard on the gate
       </div>
       <div style={{ marginTop: 12, fontSize: 26, color: C.muted, opacity: s(10) }}>
-        Nine chapters · every role · real screens from the website, console and app
+        {scenes.length} chapters · every role · real screens from the website, console and app
       </div>
       <div style={{ marginTop: 60, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 22 }}>
         {scenes.map((sc, i) => {

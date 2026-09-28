@@ -185,6 +185,7 @@ export function AttendancePreviewDialog({
                 <>
                   <HeroPill>{STATUS_LABEL[d.status] ?? d.status}</HeroPill>
                   {!d.check_out_at && <HeroPill>● On duty now</HeroPill>}
+                  {d.off_roster && <HeroPill>Off roster</HeroPill>}
                 </>
               }
             />
@@ -262,6 +263,13 @@ export function AttendancePreviewDialog({
                     <Field icon={Mail} label="Email" value={d.guard.email} />
                   </FieldGrid>
                 </Section>
+              )}
+
+              {d.off_roster && d.status === "pending_review" && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+                  {d.guard?.name ?? "This guard"} checked in at a site they were not rostered to. The punch counts once
+                  it is approved — usually a cover for someone who could not come.
+                </p>
               )}
 
               {d.review_note && (

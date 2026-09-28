@@ -25,6 +25,7 @@ export type PersonPreview = {
   lastSeen: string | null;
   mustChangePin: boolean;
   guard?: {
+    posting: { site: string; starts: string; ends: string; days: number[] } | null;
     onDuty: { site: string; since: string } | null;
     days30: number;
     late30: number;
@@ -76,6 +77,13 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
       .order("check_in_at", { ascending: false })
       .limit(200);
 
+    const { data: post } = await supabase
+      .from("site_postings")
+      .select("starts, ends, days, sites(name)")
+      .eq("guard_id", id)
+      .eq("active", true)
+      .maybeSingle();
+
     const list = rows ?? [];
     const open = list.find((r) => r.check_in_at && !r.check_out_at);
     const worked = list.filter((r) => r.status === "present" || r.status === "late");
@@ -95,6 +103,14 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
     });
 
     base.guard = {
+      posting: post
+        ? {
+            site: (post.sites as unknown as { name: string } | null)?.name ?? "A site",
+            starts: post.starts,
+            ends: post.ends,
+            days: post.days,
+          }
+        : null,
       onDuty: open
         ? { site: (open.sites as unknown as { name: string } | null)?.name ?? "A site", since: open.check_in_at! }
         : null,

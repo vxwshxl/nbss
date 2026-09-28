@@ -29,6 +29,8 @@ export type AttendanceDetail = {
   ip: string | null;
   review_note: string | null;
   reviewed_at: string | null;
+  /** Checked in at a site the guard was not rostered to. */
+  off_roster: boolean;
   /** Minutes since check-in while the punch is still open. */
   onDutyMinutes: number | null;
   guard: { id: string; name: string; code: string; phone: string | null; email: string | null } | null;
@@ -42,7 +44,7 @@ export async function attendanceDetail(id: string): Promise<AttendanceDetail | {
   const { data: r } = await supabase
     .from("attendance")
     .select(
-      "id, status, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, device_reported_at, ip, review_note, reviewed_at, profiles!attendance_guard_id_fkey(id, full_name, employee_code, phone, email), sites(id, name, client_name, client_id, district, address, lat, lng, geofence_radius_m, polygon)",
+      "id, status, off_roster, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, device_reported_at, ip, review_note, reviewed_at, profiles!attendance_guard_id_fkey(id, full_name, employee_code, phone, email), sites(id, name, client_name, client_id, district, address, lat, lng, geofence_radius_m, polygon)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -83,6 +85,7 @@ export async function attendanceDetail(id: string): Promise<AttendanceDetail | {
     ip: r.ip as string | null,
     review_note: r.review_note,
     reviewed_at: r.reviewed_at,
+    off_roster: r.off_roster,
     onDutyMinutes:
       r.check_in_at && !r.check_out_at
         ? Math.max(0, Math.round((Date.now() - new Date(r.check_in_at).getTime()) / 60_000))

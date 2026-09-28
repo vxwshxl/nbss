@@ -49,6 +49,7 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { BOOKING_STATUS_LABEL, type BookingStatus } from "@/lib/bookings";
 import { mapsUrl } from "@/lib/fence";
+import { daysLabel, windowLabel } from "@/lib/roster";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -223,6 +224,45 @@ export function SitePreviewDialog({
               </StatGrid>
 
               {site.active && <SiteMap sites={[site]} focus={site.id} height={220} />}
+
+              {d && (
+                <Section
+                  title={`Roster · needs ${d.required ?? "—"} on duty · ${d.posted.length} posted`}
+                  action={
+                    <Link
+                      href={`/console/roster?site=${site.id}`}
+                      onClick={onClose}
+                      className="text-xs font-medium text-primary-ink hover:underline"
+                    >
+                      Manage roster
+                    </Link>
+                  }
+                >
+                  {d.posted.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-app-line-soft px-4 py-4 text-center text-sm text-muted-foreground">
+                      Nobody is posted here — guards check in first come, first served.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-app-line-soft overflow-hidden rounded-xl border border-app-line-soft">
+                      {d.posted.map((p) => (
+                        <PersonRow
+                          key={p.id}
+                          name={p.name}
+                          code={p.code}
+                          phone={p.phone}
+                          detail={`${windowLabel(p.starts, p.ends)} · ${daysLabel(p.days)}`}
+                          right={
+                            <StatusPill
+                              status={d.onDuty.some((x) => x.id === p.id) ? "on_duty" : "checked_out"}
+                              label={d.onDuty.some((x) => x.id === p.id) ? "On duty" : "Off duty"}
+                            />
+                          }
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </Section>
+              )}
 
               <Section title={`On duty now · ${d ? d.onDuty.length : "…"}`}>
                 {!d ? (

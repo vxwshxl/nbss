@@ -49,9 +49,9 @@ const CREW = [
 
 // Around Kokrajhar town. The new site the film registers is placed live.
 const SITES = [
-  { key: "warehouse", name: "Aronai Agro Foods — warehouse gate", client: "clientA", district: "Kokrajhar", address: "Saraibil industrial area", lat: 26.4131, lng: 90.2598, r: 180 },
-  { key: "hospital", name: "Dwisa Care Hospital — emergency block", client: "clientB", district: "Kokrajhar", address: "Titaguri, NH-31C", lat: 26.3902, lng: 90.2861, r: 150 },
-  { key: "terminal", name: "Gwdan Market Complex — north gate", client: null, district: "Kokrajhar", address: "Station road", lat: 26.4046, lng: 90.2741, r: 120 },
+  { key: "warehouse", name: "Aronai Agro Foods — warehouse gate", client: "clientA", district: "Kokrajhar", address: "Saraibil industrial area", lat: 26.4131, lng: 90.2598, r: 180, required: 3 },
+  { key: "hospital", name: "Dwisa Care Hospital — emergency block", client: "clientB", district: "Kokrajhar", address: "Titaguri, NH-31C", lat: 26.3902, lng: 90.2861, r: 150, required: 3 },
+  { key: "terminal", name: "Gwdan Market Complex — north gate", client: null, district: "Kokrajhar", address: "Station road", lat: 26.4046, lng: 90.2741, r: 120, required: 2 },
 ];
 
 /** A timestamp at `h:m` IST, `daysAgo` days before today (IST). */
@@ -61,6 +61,25 @@ function ist(daysAgo, h, m = 0) {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo, h, m) - 5.5 * 3600e3,
   );
 }
+
+/**
+ * Tonight's shift, worked out from the clock so the film always lands mid-shift:
+ * the night crew came on about seven hours ago, on the hour, for twelve hours.
+ */
+const IST_MS = 5.5 * 3600e3;
+function istMinutesNow() {
+  const d = new Date(Date.now() + IST_MS);
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
+}
+const hhmm = (min) => `${String(Math.floor(((min + 1440) % 1440) / 60)).padStart(2, "0")}:${String(((min % 60) + 60) % 60).padStart(2, "0")}`;
+const nightStartMin = Math.floor((istMinutesNow() - 7 * 60 + 1440) % 1440 / 60) * 60;
+const NIGHT = { starts: hhmm(nightStartMin), ends: hhmm(nightStartMin + 12 * 60) };
+/** The instant tonight's shift began. */
+const nightStartAt = Date.now() - (((istMinutesNow() - nightStartMin + 1440) % 1440) * 60e3) - (Date.now() % 60e3);
+/** A relief shift that began about forty minutes ago — its guard has not turned up. */
+const reliefStartMin = Math.floor((istMinutesNow() - 30 + 1440) % 1440 / 60) * 60;
+const RELIEF = { starts: hhmm(reliefStartMin), ends: hhmm(reliefStartMin + 8 * 60) };
+const DAY = { starts: hhmm(nightStartMin + 12 * 60), ends: hhmm(nightStartMin + 20 * 60) };
 
 // Deterministic, so a re-seed films the same numbers.
 let seed = 7;
@@ -119,9 +138,10 @@ async function seedAll() {
           lat: s.lat,
           lng: s.lng,
           geofence_radius_m: s.r,
-          shift_start: "08:00",
-          shift_end: "16:00",
+          shift_start: NIGHT.starts,
+          shift_end: NIGHT.ends,
           grace_minutes: 10,
+          guards_required: s.required,
         })
         .select("id")
         .single();
@@ -142,7 +162,7 @@ async function seedAll() {
       const slot = slots[i % 3];
       for (let d = 29; d >= 1; d--) {
         if (rand() < 0.09) continue; // day off
-        if (d === 1 && slot === 16) continue; // would run into tonight's shift
+        if (d === 1) continue; // tonight's shift covers yesterday evening
         const late = rand() < 0.12;
         const inMin = late ? 12 + Math.floor(rand() * 25) : -Math.floor(rand() * 12);
         const start = ist(d, slot, 0);
@@ -170,33 +190,86 @@ async function seedAll() {
       }
     });
 
-    // Tonight: six on duty now, one of them late and one the fence could not
-    // confirm. Rakesh and two others are off — Rakesh checks in on camera.
+    // Tonight: six of the night crew on duty since the shift began, one of them
+    // late; Pinky, posted to days, covering at the market off the roster; Raju,
+    // on the relief shift, not turned up. Rakesh is posted on camera.
     const tonight = [
-      [0, 23, 52, "present", 0],
-      [1, 23, 58, "present", 1],
-      [2, 0, 3, "present", 2],
-      [3, 0, 21, "late", 0],
-      [4, 23, 55, "present", 1],
-      [5, 0, 9, "pending_review", 2],
+      [0, -8, "present", "warehouse"],
+      [1, -2, "present", "hospital"],
+      [2, 3, "present", "terminal"],
+      [3, 21, "late", "warehouse"],
+      [4, -5, "present", "hospital"],
+      [5, 9, "present", "terminal"],
     ];
-    for (const [ci, h, m, status, si] of tonight) {
-      const site = siteList[si];
+    const tonightRows = [];
+    for (const [ci, offset, status, key] of tonight) {
+      const site = siteList.find((x) => x.key === key);
       const a = jitter(site.lat, site.lng, site.r * 0.6);
-      rows.push({
+      tonightRows.push({
         guard_id: crew[ci].id,
         site_id: site.id,
-        check_in_at: ist(h >= 12 ? 1 : 0, h, m).toISOString(),
+        check_in_at: new Date(nightStartAt + offset * 60e3).toISOString(),
         check_in_lat: a.lat,
         check_in_lng: a.lng,
-        check_in_accuracy_m: status === "pending_review" ? 140 : 12,
-        check_in_distance_m: status === "pending_review" ? site.r + 34 : Math.round(rand() * 60),
+        check_in_accuracy_m: 12,
+        check_in_distance_m: Math.round(rand() * 60),
         status,
       });
     }
-    for (let i = 0; i < rows.length; i += 200) {
-      const { error } = await admin.from("attendance").insert(rows.slice(i, i + 200));
+    {
+      const site = siteList.find((x) => x.key === "terminal");
+      const a = jitter(site.lat, site.lng, site.r * 0.5);
+      tonightRows.push({
+        guard_id: crew[6].id,
+        site_id: site.id,
+        check_in_at: new Date(nightStartAt + 34 * 60e3).toISOString(),
+        check_in_lat: a.lat,
+        check_in_lng: a.lng,
+        check_in_accuracy_m: 11,
+        check_in_distance_m: 42,
+        status: "pending_review",
+        off_roster: true,
+        review_note: "Checked in at a site this guard was not rostered to.",
+      });
+    }
+    rows.push(...tonightRows);
+    // One shape for every row: a batch insert fills any column one row lacks with null.
+    const shaped = rows.map((r) => ({ off_roster: false, review_note: null, ...r }));
+    for (let i = 0; i < shaped.length; i += 200) {
+      const { error } = await admin.from("attendance").insert(shaped.slice(i, i + 200));
       if (error) throw new Error(`attendance: ${error.message}`);
+    }
+
+    // The roster: the night crew at their sites, Pinky on days, Raju on relief.
+    const posts = [
+      [0, "warehouse", NIGHT], [1, "hospital", NIGHT], [2, "terminal", NIGHT],
+      [3, "warehouse", NIGHT], [4, "hospital", NIGHT], [5, "terminal", NIGHT],
+      [6, "warehouse", DAY], [7, "hospital", RELIEF],
+    ];
+    for (const [ci, key, w] of posts) {
+      const { error } = await admin.from("site_postings").insert({
+        site_id: state.siteIds[key],
+        guard_id: crew[ci].id,
+        starts: w.starts,
+        ends: w.ends,
+        created_by: state.ids.supervisor,
+      });
+      if (error) throw new Error(`posting: ${error.message}`);
+    }
+    // Tonight's punches belong to tonight's shifts.
+    for (const r of tonightRows) {
+      if (r.off_roster) continue;
+      const { data: shift } = await admin
+        .from("shifts")
+        .select("id")
+        .eq("guard_id", r.guard_id)
+        .eq("site_id", r.site_id)
+        .lte("starts_at", new Date(new Date(r.check_in_at).getTime() + 4 * 3600e3).toISOString())
+        .gte("ends_at", r.check_in_at)
+        .maybeSingle();
+      if (!shift) continue;
+      await admin.from("shifts").update({ status: "in_progress" }).eq("id", shift.id);
+      await admin.from("attendance").update({ shift_id: shift.id }).eq("guard_id", r.guard_id).is("check_out_at", null);
     }
 
     const bookings = [

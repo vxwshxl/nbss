@@ -15,6 +15,7 @@ const ROUTES: [prefix: string, tables: RouteRealtime][] = [
   ["/console/attendance", ["attendance", "shifts"]],
   ["/console/sites", ["sites", "attendance", "sos_alerts"]],
   ["/console/sos", ["sos_alerts", "attendance"]],
+  ["/console/roster", ["shifts", "site_postings", "attendance", "sites"]],
   ["/console/guards", ["profiles", "attendance"]],
   ["/console/users", ["profiles"]],
   ["/console/submissions", ["submissions"]],
@@ -26,7 +27,7 @@ const ROUTES: [prefix: string, tables: RouteRealtime][] = [
 ];
 
 const EXACT: Record<string, RouteRealtime> = {
-  "/console": ["attendance", "sites", "submissions", "service_requests", "sos_alerts", "profiles"],
+  "/console": ["attendance", "sites", "submissions", "service_requests", "sos_alerts", "profiles", "shifts"],
 };
 
 export function tablesForRoute(pathname: string): RouteRealtime {
@@ -47,4 +48,5 @@ export const CONSOLE_REALTIME_TABLES = [
   "submissions",
   "service_requests",
   "sos_alerts",
+  "site_postings",
 ] as const;

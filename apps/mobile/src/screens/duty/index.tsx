@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import {
+  CalendarRange,
   Clock3,
   MapPin,
   Phone,
@@ -35,6 +36,7 @@ import {
   punchIn,
   punchOut,
   raiseSos,
+  myPost,
   rosteredSites,
   type SiteProximity,
 } from "@/lib/duty";
@@ -85,15 +87,18 @@ export function Duty() {
     let proximity: SiteProximity[] = [];
     let fixAccuracy: number | null = null;
 
+    const post = await myPost();
+
     if (!punch) {
-      const rostered = await rosteredSites();
-      const sites = rostered.length > 0 ? rostered : await allSites();
-      const near = await nearbySites(sites);
+      // Your post first, then everywhere else — the roster is the default, not a wall.
+      const [rostered, all] = await Promise.all([rosteredSites(), allSites()]);
+      const seen = new Set(rostered.map((s) => s.id));
+      const near = await nearbySites([...rostered, ...all.filter((s) => !seen.has(s.id))]);
       proximity = near.proximity;
       fixAccuracy = near.fix?.accuracyM ?? null;
     }
 
-    return { punch, permission, tracking, proximity, fixAccuracy };
+    return { punch, permission, tracking, proximity, fixAccuracy, post };
   }, []);
 
   const { data, refreshing, reload } = useLoader(load);
@@ -105,6 +110,7 @@ export function Duty() {
   const punch = data?.punch;
   const proximity = data?.proximity ?? [];
   const fixAccuracy = data?.fixAccuracy ?? null;
+  const post = data?.post ?? null;
   const tracking = data?.tracking ?? false;
   const permission = askedPermission ?? data?.permission ?? null;
 
@@ -340,6 +346,18 @@ export function Duty() {
         </Panel>
       )}
 
+      {/* ───────────────────────────────────────────────────── your post */}
+      {post && (
+        <Panel tone="emerald" title="Your post" icon={CalendarRange}>
+          <Text variant="body" weight="semibold">
+            {post.siteName}
+          </Text>
+          <Text variant="caption" tone="muted">
+            {istTime(post.startsAt)} – {istTime(post.endsAt)}
+          </Text>
+        </Panel>
+      )}
+
       {/* ─────────────────────────────────────────── where they can check in */}
       {!onDuty && (
         <Panel
@@ -366,6 +384,11 @@ export function Duty() {
                   <Text variant="body" weight="semibold">
                     {site.name}
                   </Text>
+                  {post && (
+                    <Text variant="caption" weight="semibold" tone={post.siteId === site.id ? "primary" : "muted"}>
+                      {post.siteId === site.id ? "Your post" : "Not your post — a supervisor approves it"}
+                    </Text>
+                  )}
                   <Text variant="caption" tone="muted">
                     {[site.client_name, site.district].filter(Boolean).join(" · ") || "—"}
                   </Text>

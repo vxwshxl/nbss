@@ -614,7 +614,73 @@ try {
   const OUTSIDE = { lat: mill.lat + 0.0105, lng: mill.lng + 0.002 };
   const INSIDE = { lat: mill.lat + 0.00012, lng: mill.lng - 0.0001 };
 
-  // ── 6 · The guard's app ───────────────────────────────────────────────
+  // ── 6 · The roster ────────────────────────────────────────────────────
+  // Rakesh's post starts at the next half hour, so on camera he checks in on time.
+  const istNow = new Date(Date.now() + 5.5 * 3600e3);
+  const nextHalf = Math.ceil((istNow.getUTCHours() * 60 + istNow.getUTCMinutes() + 1) / 30) * 30;
+  const at = (min) => `${String(Math.floor((min % 1440) / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+  const POST = { starts: at(nextHalf), ends: at(nextHalf + 12 * 60) };
+
+  /** Sets a time field — the browser's own picker is not something to film. */
+  async function setTime(dev, loc, value, o = {}) {
+    loc = loc.first();
+    const pos = await centre(dev, loc);
+    await dev.page.mouse.move(pos.x, pos.y);
+    const before = await snap(dev);
+    await loc.fill(value);
+    await settle(dev, 250);
+    push(dev, { action: { type: "click", ...pos }, before, image: await snap(dev), ...o });
+  }
+
+  scene({
+    id: "roster",
+    title: "The roster",
+    heading: "Who guards where — planned, and checked against reality",
+    layout: "laptop",
+    points: [
+      "Every site: how many it needs, and how many are on",
+      "Post a guard to a site, a shift and the days",
+      "The week ahead fills itself in from the posts",
+      "Not arrived? The office sees it — and can call",
+      "Checked in off the roster? Allowed, held for approval",
+    ],
+  });
+  {
+    const { page } = office;
+    await go(office, "Roster", { point: 0, hold: 3 });
+    await click(office, page.getByRole("button", { name: "Post a guard" }).first(), { point: 1, hold: 0.6 });
+    const d = dialog(office);
+    await click(office, d.locator("#posting-guard"), { point: 1, hold: 0.4 });
+    await click(office, page.getByRole("option", { name: new RegExp(PEOPLE.guard.name) }), { point: 1, hold: 0.3 });
+    await click(office, d.locator("#posting-site"), { point: 1, hold: 0.4 });
+    await click(office, page.getByRole("option", { name: RICE_MILL }), { point: 1, hold: 0.3 });
+    await setTime(office, d.locator("#posting-starts"), POST.starts, { point: 1, hold: 0.4 });
+    await setTime(office, d.locator("#posting-ends"), POST.ends, { point: 1, hold: 1 });
+    await click(office, d.getByRole("button", { name: "Save post" }), {
+      point: 1,
+      until: () => page.getByText(/posted/i).first().waitFor({ timeout: 20000 }).then(() => settle(office, 900)),
+      sfx: "success",
+      hold: 1.8,
+    });
+    await click(office, page.getByRole("row").filter({ hasText: RICE_MILL }), { point: 2, hold: 2.6 });
+    await wheel(office, BODY, 420, { point: 2, hold: 2.4 });
+    await closeDialog(office);
+    await click(office, page.getByRole("row").filter({ hasText: "Dwisa" }).getByRole("button").first(), {
+      point: 3,
+      hold: 3,
+      badge: "Raju has not arrived",
+      sfx: "error",
+    });
+    await closeDialog(office);
+    await click(office, page.getByRole("button", { name: "Approve" }), {
+      point: 4,
+      until: () => page.getByText(/approved/i).first().waitFor({ timeout: 20000 }).then(() => settle(office, 900)),
+      sfx: "success",
+      hold: 2.2,
+    });
+  }
+
+  // ── 7 · The guard's app ───────────────────────────────────────────────
   const guard = await phone("phone", "Guard · Rakesh Narzary", OUTSIDE);
   scene({
     id: "attendance",
@@ -622,7 +688,7 @@ try {
     heading: "A guard can only check in standing inside the fence",
     layout: "laptop+phone",
     points: [
-      "The guard signs in on the app",
+      "The app shows the guard tonight’s post",
       "Outside the fence: check-in stays locked",
       "Walk inside: the button unlocks",
       "Check in — the office sees it the same second",

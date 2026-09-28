@@ -24,6 +24,9 @@ export type SiteDetail = {
   stats: { shifts30: number; guards30: number; late30: number; hours30: number };
   sos: { id: string; status: Enums["sos_status"]; kind: Enums["sos_kind"]; raisedAt: string; by: string }[];
   bookings: { id: string; reference: string; status: string; quoted: number | null }[];
+  /** The roster: how many the site needs, and who is posted here. */
+  required: number | null;
+  posted: (SitePerson & { starts: string; ends: string; days: number[] })[];
 };
 
 type Person = { id: string; full_name: string; employee_code: string; phone: string | null };
@@ -34,8 +37,8 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
   const supabase = await supabaseServer();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
-  const [{ data: site }, { data: live }, { data: month }, { data: sos }, { data: bookings }] = await Promise.all([
-    supabase.from("sites").select("id, client_id").eq("id", siteId).maybeSingle(),
+  const [{ data: site }, { data: live }, { data: month }, { data: sos }, { data: bookings }, { data: postings }] = await Promise.all([
+    supabase.from("sites").select("id, client_id, guards_required").eq("id", siteId).maybeSingle(),
     supabase
       .from("attendance")
       .select("id, check_in_at, status, check_in_distance_m, profiles!attendance_guard_id_fkey(id, full_name, employee_code, phone)")
@@ -60,6 +63,11 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
       .select("id, reference, status, quoted_amount_paise")
       .eq("site_id", siteId)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("site_postings")
+      .select("guard_id, starts, ends, days, profiles!site_postings_guard_id_fkey(id, full_name, employee_code, phone)")
+      .eq("site_id", siteId)
+      .eq("active", true),
   ]);
 
   if (!site) return { error: "That site could not be found." };
@@ -127,5 +135,12 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
       status: b.status,
       quoted: b.quoted_amount_paise,
     })),
+    required: site.guards_required,
+    posted: (postings ?? []).flatMap((p) => {
+      const g = one(p.profiles as unknown as Person | null);
+      return g
+        ? [{ id: g.id, name: g.full_name, code: g.employee_code, phone: g.phone, starts: p.starts, ends: p.ends, days: p.days }]
+        : [];
+    }),
   };
 }

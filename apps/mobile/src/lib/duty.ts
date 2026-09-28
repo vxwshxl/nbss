@@ -82,12 +82,33 @@ export async function rosteredSites(): Promise<Site[]> {
   return [...sites.values()];
 }
 
+export type Post = { siteId: string; siteName: string; startsAt: string; endsAt: string };
+
 /**
- * Every active site, as a fallback.
+ * The guard's post: the rostered shift covering now, or the next one. Shown at
+ * the top of the duty screen, and the site it names is offered first.
+ */
+export async function myPost(): Promise<Post | null> {
+  const { data } = await supabase
+    .from("shifts")
+    .select("site_id, starts_at, ends_at, sites(name)")
+    .in("status", ["scheduled", "in_progress"])
+    .gt("ends_at", new Date().toISOString())
+    .order("starts_at")
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const site = (Array.isArray(data.sites) ? data.sites[0] : data.sites) as { name: string } | null;
+  return { siteId: data.site_id, siteName: site?.name ?? "your site", startsAt: data.starts_at, endsAt: data.ends_at };
+}
+
+/**
+ * Every active site.
  *
- * A guard sent somewhere at short notice has no roster entry for it, and refusing to
- * show them the site would mean refusing to let them work. The fence still decides
- * whether the punch is allowed, so offering the whole list costs nothing.
+ * Offered after the guard's own post. A guard sent somewhere at short notice has no
+ * roster entry for it, and refusing to show them the site would mean refusing to let
+ * them work — the fence still decides the punch, and one off the roster is held for a
+ * supervisor to approve.
  */
 export async function allSites(): Promise<Site[]> {
   const { data } = await supabase.from("sites").select(SITE_COLUMNS).eq("active", true).order("name");

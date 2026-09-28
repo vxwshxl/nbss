@@ -194,6 +194,7 @@ async function run() {
     guard: await sessionFor(people.guard),
     guard2: await sessionFor(people.guard2),
     client: await sessionFor(people.client),
+    otherClient: await sessionFor(people.otherClient),
   };
 
   await check("admin and supervisor can list every account (Users page)", async () => {
@@ -362,6 +363,134 @@ async function run() {
     assert(error && /not checked in/.test(error.message), error?.message ?? "was allowed");
   });
 
+  // ── Roster (hybrid) -------------------------------------------------------
+  console.log("Roster");
+  const hhmm = (d) => d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata" });
+  const postFrom = hhmm(new Date(Date.now() - 30 * 60_000));
+  const postTo = hhmm(new Date(Date.now() + 7 * 3_600_000));
+
+  await check("with no posts anywhere, check-in stays first come, first served", async () => {
+    const { data } = await admin.from("attendance").select("off_roster, status").eq("guard_id", people.guard.id).single();
+    assert(data.off_roster === false && data.status !== "pending_review", JSON.stringify(data));
+  });
+  await check("a guard cannot post themselves", async () => {
+    const { error } = await s.guard
+      .from("site_postings")
+      .insert({ site_id: people.site, guard_id: people.guard.id, starts: postFrom, ends: postTo });
+    assert(error, "was allowed");
+  });
+  await check("a supervisor posts a guard, and the week's shifts are written from it", async () => {
+    const { error } = await s.supervisor
+      .from("site_postings")
+      .insert({ site_id: people.site, guard_id: people.guard.id, starts: postFrom, ends: postTo });
+    if (error) throw error;
+    const { data } = await admin.from("shifts").select("id, site_id, posting_id").eq("guard_id", people.guard.id);
+    assert(data.length >= 7 && data.every((x) => x.posting_id && x.site_id === people.site), `${data.length} shifts`);
+  });
+  await check("the guard sees their own post; another guard does not", async () => {
+    const mine = await s.guard.from("site_postings").select("id");
+    const theirs = await s.guard2.from("site_postings").select("id");
+    assert(mine.data?.length === 1 && theirs.data?.length === 0, `${mine.data?.length} / ${theirs.data?.length}`);
+  });
+  await check("checking in at your post is an ordinary punch, linked to the shift", async () => {
+    const { data, error } = await punchIn(s.guard, INSIDE);
+    if (error) throw error;
+    assert(data.off_roster === false && data.status !== "pending_review", JSON.stringify(data));
+    const { data: row } = await admin.from("attendance").select("shift_id, shifts(status)").eq("id", data.attendance_id).single();
+    assert(row.shift_id && row.shifts.status === "in_progress", JSON.stringify(row));
+    await punchOut(s.guard, INSIDE);
+  });
+  await check("checking in somewhere else still works, but is held for review", async () => {
+    const { data, error } = await punchIn(s.guard, INSIDE, 15, people.otherSite);
+    if (error) throw error;
+    assert(data.off_roster === true && data.status === "pending_review", JSON.stringify(data));
+    await punchOut(s.guard, INSIDE);
+  });
+  await check("a guard with no post at a rostered site is also held for review", async () => {
+    const { data, error } = await punchIn(s.guard2, INSIDE);
+    if (error) throw error;
+    assert(data.off_roster === true, JSON.stringify(data));
+    await punchOut(s.guard2, INSIDE);
+  });
+  await check("moving a post withdraws its future shifts and writes new ones", async () => {
+    const { error } = await s.supervisor
+      .from("site_postings")
+      .update({ site_id: people.otherSite })
+      .eq("guard_id", people.guard.id);
+    if (error) throw error;
+    const { data } = await admin
+      .from("shifts")
+      .select("site_id, status, starts_at")
+      .eq("guard_id", people.guard.id)
+      .eq("status", "scheduled")
+      .gt("starts_at", new Date().toISOString());
+    assert(data.length > 0 && data.every((x) => x.site_id === people.otherSite), JSON.stringify(data.slice(0, 2)));
+  });
+  await check("a rostered shift nobody came to becomes 'missed'", async () => {
+    const { data: shift, error } = await admin
+      .from("shifts")
+      .insert({
+        site_id: people.site,
+        guard_id: people.guard2.id,
+        starts_at: new Date(Date.now() - 20 * 3_600_000).toISOString(),
+        ends_at: new Date(Date.now() - 12 * 3_600_000).toISOString(),
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    const { error: e2 } = await admin.rpc("roster_mark_missed");
+    if (e2) throw e2;
+    const { data } = await admin.from("shifts").select("status").eq("id", shift.id).single();
+    assert(data.status === "missed", data.status);
+  });
+  await check("nobody signed in can run the roster's or the push sender's internals", async () => {
+    const a = await s.guard.rpc("roster_fill", { p_days: 7 });
+    const b = await fresh().rpc("get_secret", { p_name: "expo_access_token" });
+    const c = await s.client.rpc("set_secret", { p_name: "x", p_value: "y" });
+    assert(a.error && b.error && c.error, "an internal function was callable");
+  });
+
+  // ── SOS ------------------------------------------------------------------
+  console.log("SOS");
+  await check("a guard who is not on duty cannot raise an SOS", async () => {
+    const { error } = await s.guard.rpc("raise_sos", { p_kind: "intruder", p_lat: INSIDE.lat, p_lng: INSIDE.lng, p_accuracy_m: 12 });
+    assert(error && /not checked in/.test(error.message), error?.message ?? "was allowed");
+  });
+  let alertId = null;
+  await check("an on-duty guard raises an SOS, and staff and the site's client are alerted", async () => {
+    const { error: pe } = await punchIn(s.guard2, INSIDE);
+    if (pe) throw pe;
+    const { data, error } = await s.guard2.rpc("raise_sos", { p_kind: "intruder", p_lat: INSIDE.lat, p_lng: INSIDE.lng, p_accuracy_m: 12 });
+    if (error) throw error;
+    alertId = data.alert_id;
+    const { data: n } = await admin.from("sos_notifications").select("profile_id, audience").eq("alert_id", alertId);
+    const who = new Set(n.map((x) => x.profile_id));
+    assert(who.has(people.supervisor.id) && who.has(people.admin.id) && who.has(people.client.id), JSON.stringify(n));
+  });
+  await check("the alert is visible to staff and its client, not to another client", async () => {
+    const staff = await s.supervisor.from("sos_alerts").select("id").eq("id", alertId);
+    const owner = await s.client.from("sos_alerts").select("id").eq("id", alertId);
+    const other = await s.otherClient.from("sos_alerts").select("id").eq("id", alertId);
+    assert(staff.data.length === 1 && owner.data.length === 1 && other.data.length === 0, "wrong visibility");
+  });
+  await check("a supervisor answers 'on the way', and the guard can see it", async () => {
+    const { error } = await s.supervisor.rpc("acknowledge_sos", { p_alert_id: alertId, p_response: "responding" });
+    if (error) throw error;
+    const { data } = await s.guard2.from("sos_acknowledgements").select("response").eq("alert_id", alertId);
+    assert(data.length === 1 && data[0].response === "responding", JSON.stringify(data));
+  });
+  await check("another client cannot close someone else's alert", async () => {
+    const { error } = await s.otherClient.rpc("close_sos", { p_alert_id: alertId, p_status: "resolved" });
+    assert(error, "was allowed");
+  });
+  await check("staff close it as resolved", async () => {
+    const { error } = await s.supervisor.rpc("close_sos", { p_alert_id: alertId, p_status: "resolved", p_note: "e2e" });
+    if (error) throw error;
+    const { data } = await admin.from("sos_alerts").select("status, closed_by").eq("id", alertId).single();
+    assert(data.status === "resolved" && data.closed_by === people.supervisor.id, JSON.stringify(data));
+    await punchOut(s.guard2, INSIDE);
+  });
+
   // ── Realtime -------------------------------------------------------------
   console.log("Realtime");
   await new Promise((r) => setTimeout(r, 2500));
@@ -369,7 +498,9 @@ async function run() {
     assert(heard.supervisor.length >= 2, `supervisor heard ${heard.supervisor.length} events`);
   });
   await check("another guard receives none of them (RLS on the change feed)", async () => {
-    assert(heard.guard2.length === 0, `guard2 heard ${heard.guard2.length}`);
+    // Their own punches (the roster and SOS checks above) they may hear; anyone else's, never.
+    const others = heard.guard2.filter((p) => (p.new?.guard_id ?? p.old?.guard_id) !== people.guard2.id);
+    assert(others.length === 0, `guard2 heard ${others.length} of other guards' rows`);
   });
   await check("the client's private doorbell rings for their site", async () => {
     assert(heard.client.length >= 1, `client heard ${heard.client.length}`);

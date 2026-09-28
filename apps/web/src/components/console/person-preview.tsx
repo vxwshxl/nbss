@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   Building2,
+  CalendarRange,
   CalendarCheck,
   Clock,
   Loader2,
@@ -19,6 +21,7 @@ import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui
 import { Field, PhoneLink, Stat } from "@/components/console/preview-kit";
 import { StatusPill } from "@/components/ui/status-pill";
 import { initials } from "@/lib/ui/initials";
+import { daysLabel, windowLabel } from "@/lib/roster";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/auth";
 
@@ -116,6 +119,22 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
               <Stat icon={TriangleAlert} label="Late · 30d" tone={p.guard.late30 ? "text-amber-600" : "text-foreground"}>
                 {p.guard.late30}
               </Stat>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-app-line-soft px-3.5 py-3">
+              <CalendarRange className="size-4 shrink-0 text-primary-ink" />
+              <span className="min-w-0 flex-1 text-sm">
+                {p.guard.posting ? (
+                  <>
+                    Posted at <span className="font-semibold">{p.guard.posting.site}</span> ·{" "}
+                    {windowLabel(p.guard.posting.starts, p.guard.posting.ends)} · {daysLabel(p.guard.posting.days)}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">No standing post — free for cover shifts.</span>
+                )}
+              </span>
+              <Link href={`/console/roster?guard=${p.id}`} className="text-xs font-medium text-primary-ink hover:underline">
+                {p.guard.posting ? "Move" : "Post"}
+              </Link>
             </div>
             {p.guard.onDuty && (
               <p className="flex items-center gap-2 rounded-xl bg-accent px-3 py-2 text-sm text-accent-foreground">

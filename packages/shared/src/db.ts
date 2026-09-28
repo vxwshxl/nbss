@@ -52,6 +52,7 @@ export type Database = {
           reviewed_at: string | null;
           created_at: string;
           updated_at: string;
+          off_roster: boolean;
         };
         Insert: {
           id?: string;
@@ -83,6 +84,7 @@ export type Database = {
           reviewed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          off_roster?: boolean;
         };
         Update: {
           id?: string;
@@ -114,6 +116,7 @@ export type Database = {
           reviewed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          off_roster?: boolean;
         };
         Relationships: [];
       };
@@ -528,6 +531,7 @@ export type Database = {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          posting_id: string | null;
         };
         Insert: {
           id?: string;
@@ -540,6 +544,7 @@ export type Database = {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          posting_id?: string | null;
         };
         Update: {
           id?: string;
@@ -549,6 +554,46 @@ export type Database = {
           ends_at?: string;
           status?: Enums["shift_status"];
           notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          posting_id?: string | null;
+        };
+        Relationships: [];
+      };
+      site_postings: {
+        Row: {
+          id: string;
+          site_id: string;
+          guard_id: string;
+          starts: string;
+          ends: string;
+          days: number[];
+          active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          guard_id: string;
+          starts: string;
+          ends: string;
+          days?: number[];
+          active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          guard_id?: string;
+          starts?: string;
+          ends?: string;
+          days?: number[];
+          active?: boolean;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -576,6 +621,7 @@ export type Database = {
           updated_at: string;
           client_id: string | null;
           notify_client_on_sos: boolean;
+          guards_required: number | null;
         };
         Insert: {
           id?: string;
@@ -597,6 +643,7 @@ export type Database = {
           updated_at?: string;
           client_id?: string | null;
           notify_client_on_sos?: boolean;
+          guards_required?: number | null;
         };
         Update: {
           id?: string;
@@ -618,6 +665,7 @@ export type Database = {
           updated_at?: string;
           client_id?: string | null;
           notify_client_on_sos?: boolean;
+          guards_required?: number | null;
         };
         Relationships: [];
       };
@@ -1012,6 +1060,23 @@ export type Database = {
       renotify_unanswered_sos: {
         Args: Record<PropertyKey, never>;
         Returns: Json;
+      };
+      roster_fill: {
+        Args: {
+          p_days?: number;
+        };
+        Returns: number;
+      };
+      roster_fill_guard: {
+        Args: {
+          p_guard: string;
+          p_days?: number;
+        };
+        Returns: number;
+      };
+      roster_mark_missed: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
       set_secret: {
         Args: {

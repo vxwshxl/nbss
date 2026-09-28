@@ -34,6 +34,8 @@ export type PunchSite = {
   geofence_radius_m: number;
   max_accuracy_m: number;
   ring: [number, number][] | null;
+  /** The guard is rostered here now. Checking in anywhere else is held for review. */
+  post?: boolean;
 };
 
 type Fix = { lat: number; lng: number; accuracy: number; at: number };
@@ -356,10 +358,16 @@ export function PunchControl({
                 {sites.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
+                    {s.post && <span className="ml-2 text-xs font-semibold text-primary-ink">Your post</span>}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {site && !site.post && sites.some((s) => s.post) && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                This is not your post. You can still check in here, but it will be held until a supervisor approves it.
+              </p>
+            )}
             <input type="hidden" name="site_id" value={siteId} />
           </div>
         )}

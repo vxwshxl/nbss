@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarCheck, Clock3, Radio, Timer } from "lucide-react";
+import { CalendarCheck, CalendarRange, Clock3, Radio, Timer } from "lucide-react";
 
 import {
   AttendanceWorkspace,
@@ -52,7 +52,7 @@ export default async function DutyPage() {
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-  const [openPunch, recent, siteList] = await Promise.all([
+  const [openPunch, recent, siteList, nextShift] = await Promise.all([
     supabase
       .from("attendance")
       .select("id, check_in_at, site_id, status, sites(name, address)")
@@ -73,21 +73,39 @@ export default async function DutyPage() {
       .select("id, name, client_name, district, lat, lng, geofence_radius_m, max_accuracy_m, polygon")
       .eq("active", true)
       .order("name"),
+    // The roster entry covering now or next up — "your post".
+    supabase
+      .from("shifts")
+      .select("site_id, starts_at, ends_at, sites(name)")
+      .eq("guard_id", profile.id)
+      .in("status", ["scheduled", "in_progress"])
+      .gt("ends_at", new Date().toISOString())
+      .order("starts_at")
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  const post = nextShift.data;
+  const postSoon =
+    post && new Date(post.starts_at).getTime() - 4 * 3_600_000 <= new Date().getTime() ? post.site_id : null;
 
   const open = openPunch.data;
   const history = recent.data ?? [];
   const openSite = open ? (Array.isArray(open.sites) ? open.sites[0] : open.sites) : null;
 
-  const punchSites: PunchSite[] = (siteList.data ?? []).map((s) => ({
-    id: s.id,
-    name: s.name,
-    lat: s.lat,
-    lng: s.lng,
-    geofence_radius_m: s.geofence_radius_m,
-    max_accuracy_m: s.max_accuracy_m,
-    ring: toRing(s.polygon),
-  }));
+  const punchSites: PunchSite[] = (siteList.data ?? [])
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      lat: s.lat,
+      lng: s.lng,
+      geofence_radius_m: s.geofence_radius_m,
+      max_accuracy_m: s.max_accuracy_m,
+      ring: toRing(s.polygon),
+      post: s.id === postSoon,
+    }))
+    // Your post first, so it is the one already chosen.
+    .sort((a, b) => Number(b.post) - Number(a.post));
 
   const fences = new Map<string, MapSite>(
     (siteList.data ?? []).map((s) => [
@@ -180,6 +198,17 @@ export default async function DutyPage() {
           tone="sky"
         />
       </div>
+
+      {post && (
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-accent px-5 py-4 text-accent-foreground">
+          <CalendarRange className="size-5 shrink-0" />
+          <p className="text-sm">
+            <span className="font-semibold">Your post:</span>{" "}
+            {(Array.isArray(post.sites) ? post.sites[0] : post.sites)?.name ?? "a site"} · {time(post.starts_at)} –{" "}
+            {time(post.ends_at)}
+          </p>
+        </div>
+      )}
 
       <Panel
         tone={open ? "emerald" : "amber"}
