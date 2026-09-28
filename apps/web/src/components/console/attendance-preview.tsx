@@ -290,9 +290,8 @@ export function AttendancePreviewDialog({
                         </SelectTrigger>
                         <SelectContent>
                           {VERDICTS.map((v) => (
-                            <SelectItem key={v.value} value={v.value}>
+                            <SelectItem key={v.value} value={v.value} description={v.note}>
                               {v.label}
-                              <span className="ml-2 text-xs text-muted-foreground">{v.note}</span>
                             </SelectItem>
                           ))}
                         </SelectContent>

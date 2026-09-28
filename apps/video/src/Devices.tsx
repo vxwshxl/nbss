@@ -1,6 +1,14 @@
 import { Img, interpolate, spring, staticFile, useVideoConfig } from "remotion";
 
-import { LAPTOP_CHROME, PHONE_STATUS, VIEWPORT, type Placement } from "./geometry";
+import {
+  LAPTOP_BASE_OVERHANG,
+  LAPTOP_BEZEL,
+  LAPTOP_CHROME,
+  PHONE_BEZEL,
+  VIEWPORT,
+  phoneStatus,
+  type Placement,
+} from "./geometry";
 import type { DeviceName, PlannedScene, PlannedStep } from "./schedule";
 import { C, FONT, easeInOut, easeOut } from "./theme";
 
@@ -106,29 +114,65 @@ function Screen({ scene, device, f, p }: { scene: PlannedScene; device: DeviceNa
   );
 }
 
-function PovPill({ text, x, y, active }: { text: string; x: number; y: number; active: boolean }) {
+/**
+ * Whose screen this is — role above, name below — sized to its device so two
+ * labels can never run into each other.
+ */
+function PovPill({
+  text,
+  x,
+  y,
+  width,
+  align,
+  active,
+}: {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  align: "left" | "center";
+  active: boolean;
+}) {
+  const [role, ...rest] = text.split(" · ");
+  const name = rest.join(" · ");
   return (
     <div
       style={{
         position: "absolute",
         left: x,
         top: y,
+        width,
         display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 14px 6px 10px",
-        borderRadius: 999,
-        background: active ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.07)",
-        border: `1px solid ${active ? "rgba(52,211,153,0.55)" : "rgba(255,255,255,0.14)"}`,
-        color: C.ink,
-        fontFamily: FONT,
-        fontSize: 15,
-        fontWeight: 600,
-        whiteSpace: "nowrap",
+        justifyContent: align === "center" ? "center" : "flex-start",
       }}
     >
-      <span style={{ width: 8, height: 8, borderRadius: 99, background: active ? C.mint : "rgba(255,255,255,0.4)" }} />
-      {text}
+      <div
+        style={{
+          maxWidth: width,
+          display: "flex",
+          alignItems: "center",
+          gap: 9,
+          padding: "6px 12px 6px 10px",
+          borderRadius: 12,
+          background: active ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.07)",
+          border: `1px solid ${active ? "rgba(52,211,153,0.55)" : "rgba(255,255,255,0.14)"}`,
+          color: C.ink,
+          fontFamily: FONT,
+          overflow: "hidden",
+        }}
+      >
+        <span style={{ flexShrink: 0, width: 8, height: 8, borderRadius: 99, background: active ? C.mint : "rgba(255,255,255,0.4)" }} />
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: C.muted, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {role}
+          </span>
+          {name && (
+            <span style={{ display: "block", fontSize: 15, fontWeight: 650, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {name}
+            </span>
+          )}
+        </span>
+      </div>
     </div>
   );
 }
@@ -147,13 +191,13 @@ export function Laptop({
   active: boolean;
 }) {
   const now = shownAt(scene, "laptop", f).step ?? scene.steps.find((s) => s.device === "laptop") ?? null;
-  const bezel = 16;
+  const bezel = LAPTOP_BEZEL;
   const top = p.y - LAPTOP_CHROME - bezel;
   const w = p.w + bezel * 2;
   const h = p.h + LAPTOP_CHROME + bezel * 2;
   return (
     <div style={{ position: "absolute", inset: 0, opacity: enter, transform: `translateY(${(1 - enter) * 40}px)` }}>
-      {now && <PovPill text={now.pov} x={p.x - bezel} y={top - 46} active={active} />}
+      {now && <PovPill text={now.pov} x={p.x - bezel} y={top - 58} width={w} align="left" active={active} />}
       <div
         style={{
           position: "absolute",
@@ -223,9 +267,9 @@ export function Laptop({
       <div
         style={{
           position: "absolute",
-          left: p.x - bezel - 60,
+          left: p.x - bezel - LAPTOP_BASE_OVERHANG,
           top: top + h,
-          width: w + 120,
+          width: w + LAPTOP_BASE_OVERHANG * 2,
           height: 20,
           borderRadius: "0 0 18px 18px",
           background: "linear-gradient(180deg, #2a3431 0%, #121816 100%)",
@@ -263,8 +307,8 @@ export function Phone({
   active: boolean;
 }) {
   const now = shownAt(scene, device, f).step ?? scene.steps.find((s) => s.device === device) ?? null;
-  const bezel = 11;
-  const status = Math.round((PHONE_STATUS * p.w) / 262);
+  const bezel = PHONE_BEZEL;
+  const status = phoneStatus(p);
   const left = p.x - bezel;
   const top = p.y - status - bezel;
   const w = p.w + bezel * 2;
@@ -272,7 +316,7 @@ export function Phone({
   const radius = Math.round(p.w * 0.16);
   return (
     <div style={{ position: "absolute", inset: 0, opacity: enter, transform: `translateY(${(1 - enter) * 60}px)` }}>
-      {now && <PovPill text={now.pov} x={left} y={top - 46} active={active} />}
+      {now && <PovPill text={now.pov} x={left} y={top - 58} width={w} align="center" active={active} />}
       <div
         style={{
           position: "absolute",
@@ -371,8 +415,8 @@ export function Badge({
         position: "absolute",
         left: x,
         top: y,
-        transform: `translate(-100%, 0) scale(${interpolate(pop, [0, 1], [0.6, 1])})`,
-        transformOrigin: "right center",
+        transform: `translate(-50%, 0) scale(${interpolate(pop, [0, 1], [0.6, 1])})`,
+        transformOrigin: "center top",
         opacity: pop,
         display: "flex",
         alignItems: "center",

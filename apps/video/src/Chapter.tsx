@@ -1,7 +1,7 @@
 import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
 import { Badge, Laptop, Phone, currentStep } from "./Devices";
-import { LAPTOP_CHROME, LAYOUTS, PHONE_STATUS, toStage, type Placement } from "./geometry";
+import { LAYOUTS, frameBox, toStage } from "./geometry";
 import type { DeviceName, PlannedScene, PlannedStep } from "./schedule";
 import { C, FONT, MONO, easeInOut, easeOut } from "./theme";
 
@@ -31,7 +31,7 @@ function LeftPanel({ scene, f, total }: { scene: PlannedScene; f: number; total:
 
       <div
         style={{
-          marginTop: 86,
+          marginTop: 96,
           fontFamily: MONO,
           fontSize: 17,
           letterSpacing: 3,
@@ -40,7 +40,7 @@ function LeftPanel({ scene, f, total }: { scene: PlannedScene; f: number; total:
           transform: `translateY(${(1 - enter(4)) * 16}px)`,
         }}
       >
-        CHAPTER {String(scene.number).padStart(2, "0")} / {String(total).padStart(2, "0")} · {scene.title.toUpperCase()}
+        CHAPTER {String(scene.number).padStart(2, "0")} / {String(total).padStart(2, "0")}
       </div>
       <h1
         style={{
@@ -50,6 +50,7 @@ function LeftPanel({ scene, f, total }: { scene: PlannedScene; f: number; total:
           lineHeight: 1.08,
           fontWeight: 800,
           letterSpacing: -1.2,
+          maxWidth: 500,
           color: C.ink,
           opacity: enter(8),
           transform: `translateY(${(1 - enter(8)) * 24}px)`,
@@ -68,7 +69,7 @@ function LeftPanel({ scene, f, total }: { scene: PlannedScene; f: number; total:
               key={pt}
               style={{
                 display: "flex",
-                alignItems: "flex-start",
+                alignItems: "center",
                 gap: 16,
                 padding: "14px 18px",
                 borderRadius: 16,
@@ -97,7 +98,19 @@ function LeftPanel({ scene, f, total }: { scene: PlannedScene; f: number; total:
               >
                 {done ? "✓" : i + 1}
               </span>
-              <span style={{ fontFamily: FONT, fontSize: 23, lineHeight: 1.35, fontWeight: isActive ? 650 : 500, color: C.ink, paddingTop: 3 }}>
+              <span
+                style={{
+                  minWidth: 0,
+                  fontFamily: FONT,
+                  fontSize: 23,
+                  lineHeight: "34px",
+                  fontWeight: isActive ? 650 : 500,
+                  color: C.ink,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {pt}
               </span>
             </li>
@@ -203,11 +216,6 @@ function Cursor({ scene, f }: { scene: PlannedScene; f: number }) {
   );
 }
 
-function deviceBox(p: Placement) {
-  if (p.kind === "laptop") return { right: p.x + p.w + 16, top: p.y - LAPTOP_CHROME - 16 };
-  return { right: p.x + p.w + 11, top: p.y - Math.round((PHONE_STATUS * p.w) / 262) - 11 };
-}
-
 export function Chapter({ scene, total }: { scene: PlannedScene; total: number }) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -235,9 +243,10 @@ export function Chapter({ scene, total }: { scene: PlannedScene; total: number }
         if (!s?.badge) return null;
         const t = f - s.from - s.landAt;
         if (t < 0 || t > s.dur - s.landAt) return null;
-        const box = deviceBox(places[d]!);
+        // Under the device, never over its screen.
+        const box = frameBox(places[d]!);
         const tone = s.sfx === "alarm" ? "rose" : s.sfx === "error" ? "amber" : "emerald";
-        return <Badge key={d} text={s.badge} x={Math.min(box.right + 14, 1900)} y={box.top + 64} t={t} tone={tone} />;
+        return <Badge key={d} text={s.badge} x={Math.min((box.left + box.right) / 2, 1750)} y={Math.min(box.bottom + 18, 1010)} t={t} tone={tone} />;
       })}
       <Cursor scene={scene} f={f} />
     </AbsoluteFill>

@@ -302,9 +302,8 @@ export function BookingsWorkspace({
                       </SelectTrigger>
                       <SelectContent>
                         {sites.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
+                          <SelectItem key={s.id} value={s.id} description={s.district ?? undefined}>
                             {s.name}
-                            <span className="ml-2 text-xs text-muted-foreground">{s.district ?? ""}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>

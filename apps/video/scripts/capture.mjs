@@ -23,6 +23,7 @@ import { createClient } from "@supabase/supabase-js";
 import { chromium } from "playwright-core";
 
 import { readEnv } from "../../../scripts/db.mjs";
+import { SCRIPT } from "../src/script.ts";
 import { PEOPLE, STATE_FILE } from "./demo-data.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -58,10 +59,13 @@ const film = { scenes: [] };
 let current = null;
 let n = 0;
 
+/** A chapter. Its title, heading and points come from src/script.ts. */
 function scene(meta) {
-  current = { ...meta, steps: [] };
+  const text = SCRIPT[meta.id];
+  if (!text) throw new Error(`No script for chapter "${meta.id}"`);
+  current = { ...meta, title: text.title, heading: text.heading, points: text.points, steps: [] };
   film.scenes.push(current);
-  console.log(`\n▸ ${meta.title}`);
+  console.log(`\n▸ ${text.title}`);
 }
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -106,7 +110,12 @@ async function scrub(dev) {
 async function snap(dev) {
   await scrub(dev);
   const file = `capture/${String(++n).padStart(4, "0")}-${dev.name}.jpg`;
-  await dev.page.screenshot({ path: path.join(PUBLIC, file), type: "jpeg", quality: 88 });
+  const shoot = () => dev.page.screenshot({ path: path.join(PUBLIC, file), type: "jpeg", quality: 88, timeout: 60000 });
+  // A busy machine can stall one screenshot; a second try almost always lands.
+  await shoot().catch(async () => {
+    await wait(1500);
+    await shoot();
+  });
   return file;
 }
 
@@ -341,15 +350,7 @@ try {
   const mobileVisitor = await phone("phone", "Visitor · on a phone");
   scene({
     id: "website",
-    title: "The website",
-    heading: "A website that sells — and one door in",
     layout: "laptop+phone",
-    points: [
-      "Home, Services, About, Careers — four clear menus",
-      "Every service explained on its own page",
-      "Just as readable on a phone",
-      "One Sign in for admins, guards and clients",
-    ],
   });
   {
     const { page } = visitor;
@@ -370,16 +371,7 @@ try {
   // ── 2 · A client signs up and books ──────────────────────────────────
   scene({
     id: "client-book",
-    title: "Client signs up & books",
-    heading: "A new client books guards in two minutes",
     layout: "laptop",
-    points: [
-      "“Create a client account” right on the sign-in page",
-      "Name, organisation, mobile and email",
-      "A 6-digit code by email — no password to forget",
-      "Book guards: service, site, number, shift",
-      "Every request gets a reference to follow",
-    ],
   });
   visitor.pov = "New client · Rahul Das";
   {
@@ -478,15 +470,7 @@ try {
   // ── 3 · The office signs in ───────────────────────────────────────────
   scene({
     id: "admin",
-    title: "One sign-in, every role",
-    heading: "The office signs in — and lands on its own dashboard",
     layout: "laptop",
-    points: [
-      "Email or employee code, then a code or PIN",
-      "Each role lands on its own dashboard",
-      "Live figures: on duty, guards, sites, late, review",
-      "An assistant on the right that reads the screen",
-    ],
   });
   {
     const { page } = office;
@@ -515,15 +499,7 @@ try {
   // ── 4 · Booking to quotation ─────────────────────────────────────────
   scene({
     id: "quote",
-    title: "Booking → quotation",
-    heading: "The desk answers — and the client sees it live",
     layout: "laptop",
-    points: [
-      "Every request lands in the Bookings inbox",
-      "Click a row: contact, site, guards, shift",
-      "Send a monthly quotation in one step",
-      "The client’s screen updates on its own",
-    ],
   });
   {
     const { page } = office;
@@ -551,16 +527,7 @@ try {
   // ── 5 · Sites and geofences ───────────────────────────────────────────
   scene({
     id: "sites",
-    title: "Sites & geofences",
-    heading: "Every site, its fence — and who is standing there",
     layout: "laptop",
-    points: [
-      "All sites on one live map",
-      "Click a site: guards on duty with their phone numbers",
-      "Its client, fence, shift rules and SOS history",
-      "Register a site by clicking the map",
-      "Hand the booking over to the new site",
-    ],
   });
   {
     const { page } = office;
@@ -634,16 +601,7 @@ try {
 
   scene({
     id: "roster",
-    title: "The roster",
-    heading: "Who guards where — planned, and checked against reality",
     layout: "laptop",
-    points: [
-      "Every site: how many it needs, and how many are on",
-      "Post a guard to a site, a shift and the days",
-      "The week ahead fills itself in from the posts",
-      "Not arrived? The office sees it — and can call",
-      "Checked in off the roster? Allowed, held for approval",
-    ],
   });
   {
     const { page } = office;
@@ -684,16 +642,7 @@ try {
   const guard = await phone("phone", "Guard · Rakesh Narzary", OUTSIDE);
   scene({
     id: "attendance",
-    title: "Attendance with a geofence",
-    heading: "A guard can only check in standing inside the fence",
     layout: "laptop+phone",
-    points: [
-      "The app shows the guard tonight’s post",
-      "Outside the fence: check-in stays locked",
-      "Walk inside: the button unlocks",
-      "Check in — the office sees it the same second",
-      "Click the punch: where they stood, against the fence",
-    ],
   });
   {
     const { page } = guard;
@@ -739,16 +688,7 @@ try {
   const sup = await phone("phone2", "Supervisor · Ranjit Brahma");
   scene({
     id: "sos",
-    title: "SOS",
-    heading: "One long press brings help",
     layout: "trio",
-    points: [
-      "Hold for three seconds — no pocket alarms",
-      "The office sees it at once, with the guard’s number",
-      "Supervisors are alerted on their phones",
-      "“On the way” — the guard sees help is coming",
-      "Closed as resolved, with the full record kept",
-    ],
   });
   {
     await go(office, "Dashboard", { point: 0, hold: 0.5 });
@@ -807,15 +747,7 @@ try {
   // ── 8 · Stats and people ──────────────────────────────────────────────
   scene({
     id: "stats",
-    title: "Stats & people",
-    heading: "Every figure the office needs, one click away",
     layout: "laptop",
-    points: [
-      "The dashboard, updated as it happens",
-      "Click any guard for a 30-day picture",
-      "Users by role: admins, supervisors, guards, clients",
-      "The SOS log: response times and false alarms",
-    ],
   });
   {
     const { page } = office;
@@ -835,15 +767,7 @@ try {
   const clientPhone = await phone("phone", "Client app · Aronai Agro Foods");
   scene({
     id: "client",
-    title: "The client’s view",
-    heading: "Clients watch their own site — and nothing else",
     layout: "laptop+phone",
-    points: [
-      "Who is on duty at their gate, live",
-      "Tap a guard: since when, verified at the fence",
-      "The same view in the app",
-      "No other client’s sites, no guard coordinates",
-    ],
   });
   {
     const { page } = visitor;

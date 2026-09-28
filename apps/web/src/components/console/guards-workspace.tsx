@@ -543,9 +543,8 @@ export function GuardsWorkspace({
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
+                    <SelectItem key={r.value} value={r.value} description={r.note}>
                       {r.label}
-                      <span className="ml-2 text-xs text-muted-foreground">{r.note}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -672,9 +671,8 @@ export function GuardsWorkspace({
                     </SelectTrigger>
                     <SelectContent>
                       {ROLES.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
+                        <SelectItem key={r.value} value={r.value} description={r.note}>
                           {r.label}
-                          <span className="ml-2 text-xs text-muted-foreground">{r.note}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>

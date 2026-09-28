@@ -1,9 +1,10 @@
 /**
  * Turns the captured timeline into frames: when each chapter starts, when each
- * step's pointer moves, presses and lands, and where every sound goes.
+ * step's pointer moves, presses and lands, where every sound goes, and when
+ * each voice-over line is spoken.
  *
- * Plain, erasable TypeScript with no imports, so `scripts/audio.mjs` can load
- * it under Node too and cut the music to exactly the film's length.
+ * Plain, erasable TypeScript with no imports, so the Node scripts can load it
+ * too and cut the music to exactly the film's length.
  */
 
 export const FPS = 30;
@@ -49,6 +50,9 @@ export type Scene = {
 
 export type Timeline = { scenes: Scene[] };
 
+/** Seconds of each voice line, keyed "intro", "contents", "outro" and "<chapter>.<point>". */
+export type VoiceDurations = Record<string, { seconds: number }>;
+
 /** Frames the pointer takes to travel to its target. */
 export const MOVE = 20;
 /** Frames between the press and the screen answering. */
@@ -58,12 +62,15 @@ export const TYPE_FRAME = 3;
 /** Frames each snapshot of a held button stays up (they were taken 200 ms apart). */
 export const HOLD_FRAME = 6;
 
-export const INTRO = 180;
-export const CONTENTS = 250;
-export const OUTRO = 210;
+const INTRO_MIN = 180;
+const CONTENTS_MIN = 250;
+const OUTRO_MIN = 210;
 /** A chapter's opening, before its first step: heading and devices arrive. */
 export const CHAPTER_LEAD = 36;
 export const CHAPTER_TAIL = 24;
+/** A voice line starts this many frames into its point, and leaves this much air after. */
+const VOICE_IN = 6;
+const VOICE_AIR = 14;
 
 export type PlannedStep = Step & {
   index: number;
@@ -82,7 +89,18 @@ export type PlannedScene = Omit<Scene, "steps"> & { from: number; dur: number; n
 
 export type Cue = { frame: number; sfx: "click" | "type" | "whoosh" | "hold" | Sfx; volume: number };
 
-export type Plan = { total: number; scenes: PlannedScene[]; outroFrom: number; cues: Cue[] };
+export type VoiceCue = { key: string; frame: number; frames: number };
+
+export type Plan = {
+  total: number;
+  intro: number;
+  contents: number;
+  outro: number;
+  outroFrom: number;
+  scenes: PlannedScene[];
+  cues: Cue[];
+  voice: VoiceCue[];
+};
 
 function stepTiming(step: Step) {
   const move = step.action && step.action.type !== "key" ? MOVE : 0;
@@ -97,15 +115,39 @@ function stepTiming(step: Step) {
   return { pressAt, landAt, pan, dur: landAt + scrollExtra + after };
 }
 
-export function plan(timeline: Timeline): Plan {
+const framesFor = (voice: VoiceDurations, key: string) =>
+  voice[key] ? Math.ceil(voice[key].seconds * FPS) : 0;
+
+export function plan(timeline: Timeline, voice: VoiceDurations = {}): Plan {
+  const intro = Math.max(INTRO_MIN, VOICE_IN + 30 + framesFor(voice, "intro") + VOICE_AIR);
+  const contents = Math.max(CONTENTS_MIN, VOICE_IN + framesFor(voice, "contents") + 90);
+  const outro = Math.max(OUTRO_MIN, VOICE_IN + framesFor(voice, "outro") + 60);
+
   const scenes: PlannedScene[] = [];
   const cues: Cue[] = [];
-  let at = INTRO + CONTENTS;
+  const voiceCues: VoiceCue[] = [];
+  if (voice.intro) voiceCues.push({ key: "intro", frame: 30, frames: framesFor(voice, "intro") });
+  if (voice.contents) voiceCues.push({ key: "contents", frame: intro + 20, frames: framesFor(voice, "contents") });
+
+  let at = intro + contents;
 
   timeline.scenes.forEach((scene, si) => {
+    const timed = scene.steps.map((step) => ({ step, ...stepTiming(step) }));
+
+    // Each point lasts at least as long as its line: the last step of the
+    // point's run holds its screen until the voice has finished.
+    for (let i = 0; i < timed.length; ) {
+      const point = timed[i]!.step.point;
+      let j = i;
+      while (j + 1 < timed.length && timed[j + 1]!.step.point === point) j++;
+      const need = point === undefined ? 0 : framesFor(voice, `${scene.id}.${point}`) + VOICE_IN + VOICE_AIR;
+      const have = timed.slice(i, j + 1).reduce((n, x) => n + x.dur, 0);
+      if (need > have) timed[j]!.dur += need - have;
+      i = j + 1;
+    }
+
     let t = CHAPTER_LEAD;
-    const steps: PlannedStep[] = scene.steps.map((step, index) => {
-      const timing = stepTiming(step);
+    const steps: PlannedStep[] = timed.map(({ step, ...timing }, index) => {
       const planned: PlannedStep = { ...step, index, from: t, ...timing };
       t += timing.dur;
       return planned;
@@ -113,23 +155,52 @@ export function plan(timeline: Timeline): Plan {
     const dur = t + CHAPTER_TAIL;
     scenes.push({ ...scene, steps, from: at, dur, number: si + 1 });
 
-    cues.push({ frame: at, sfx: "whoosh", volume: 0.5 });
+    cues.push({ frame: at, sfx: "whoosh", volume: 0.45 });
+    let lastPoint: number | undefined;
     for (const s of steps) {
       const base = at + s.from;
+      if (s.point !== undefined && s.point !== lastPoint) {
+        const key = `${scene.id}.${s.point}`;
+        if (voice[key]) voiceCues.push({ key, frame: base + VOICE_IN, frames: framesFor(voice, key) });
+        lastPoint = s.point;
+      }
       if (s.action && s.action.type !== "key" && s.action.type !== "wheel") {
-        cues.push({ frame: base + s.pressAt, sfx: s.action.type === "hold" ? "hold" : "click", volume: 0.55 });
+        cues.push({ frame: base + s.pressAt, sfx: s.action.type === "hold" ? "hold" : "click", volume: 0.5 });
       }
       if (s.action?.type === "type") {
         const n = s.frames?.length ?? 0;
-        for (let i = 1; i < n; i += 1) cues.push({ frame: base + s.pressAt + PRESS + i * TYPE_FRAME, sfx: "type", volume: 0.28 });
+        for (let i = 1; i < n; i += 1) cues.push({ frame: base + s.pressAt + PRESS + i * TYPE_FRAME, sfx: "type", volume: 0.24 });
       }
-      if (s.sfx) cues.push({ frame: base + s.landAt, sfx: s.sfx, volume: s.sfx === "alarm" ? 0.42 : 0.5 });
+      if (s.sfx) cues.push({ frame: base + s.landAt, sfx: s.sfx, volume: s.sfx === "alarm" ? 0.38 : 0.45 });
     }
     at += dur;
   });
 
-  cues.push({ frame: INTRO, sfx: "whoosh", volume: 0.45 });
-  cues.push({ frame: at, sfx: "whoosh", volume: 0.45 });
+  cues.push({ frame: intro, sfx: "whoosh", volume: 0.4 });
+  cues.push({ frame: at, sfx: "whoosh", volume: 0.4 });
+  if (voice.outro) voiceCues.push({ key: "outro", frame: at + 20, frames: framesFor(voice, "outro") });
 
-  return { total: at + OUTRO, scenes, outroFrom: at, cues: cues.sort((a, b) => a.frame - b.frame) };
+  return {
+    total: at + outro,
+    intro,
+    contents,
+    outro,
+    outroFrom: at,
+    scenes,
+    cues: cues.sort((a, b) => a.frame - b.frame),
+    voice: voiceCues,
+  };
+}
+
+/** How loud the music sits at a frame: lower while someone is speaking. */
+export function musicLevel(frame: number, voice: VoiceCue[], total: number): number {
+  const fadeIn = Math.min(1, frame / 45);
+  const fadeOut = Math.min(1, (total - frame) / 120);
+  let duck = 0;
+  for (const v of voice) {
+    const into = frame - (v.frame - 10);
+    const outOf = v.frame + v.frames + 12 - frame;
+    if (into > 0 && outOf > 0) duck = Math.max(duck, Math.min(1, into / 10, outOf / 12));
+  }
+  return Math.max(0, Math.min(fadeIn, fadeOut)) * (0.5 - 0.32 * duck);
 }

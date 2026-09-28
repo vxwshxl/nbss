@@ -356,9 +356,8 @@ export function PunchControl({
               </SelectTrigger>
               <SelectContent>
                 {sites.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
+                  <SelectItem key={s.id} value={s.id} description={s.post ? "Your post" : undefined}>
                     {s.name}
-                    {s.post && <span className="ml-2 text-xs font-semibold text-primary-ink">Your post</span>}
                   </SelectItem>
                 ))}
               </SelectContent>

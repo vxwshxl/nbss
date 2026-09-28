@@ -149,9 +149,8 @@ function Pick({
         </SelectTrigger>
         <SelectContent>
           {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
+            <SelectItem key={o.value} value={o.value} description={o.note}>
               {o.label}
-              {o.note && <span className="ml-2 text-xs text-muted-foreground">{o.note}</span>}
             </SelectItem>
           ))}
         </SelectContent>

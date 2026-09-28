@@ -134,7 +134,9 @@ sfx("hold", 3.4, (t) => {
 // ─────────────────────────────────────────────────────────────── music
 
 const timeline = JSON.parse(fs.readFileSync(path.join(HERE, "..", "public", "capture", "timeline.json"), "utf8"));
-const { total } = plan(timeline);
+const voiceFile = path.join(HERE, "..", "public", "voice", "durations.json");
+const voice = fs.existsSync(voiceFile) ? JSON.parse(fs.readFileSync(voiceFile, "utf8")) : {};
+const { total } = plan(timeline, voice);
 const seconds = total / FPS + 1;
 const N = Math.round(seconds * SR);
 console.log(`Film is ${(total / FPS).toFixed(1)} s — writing ${seconds.toFixed(1)} s of music.`);
