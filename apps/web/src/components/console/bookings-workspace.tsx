@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Building2, CalendarDays, ClipboardList, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
+import { Building2, CalendarDays, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateBooking } from "@/app/console/bookings/actions";
@@ -11,7 +11,6 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Panel } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
 import { BOOKING_STATUS_LABEL, SHIFT_PATTERNS, serviceName, type BookingStatus } from "@/lib/bookings";
@@ -194,8 +193,8 @@ export function BookingsWorkspace({
         })}
       </div>
 
-      <Panel tone="emerald" title={`${visible.length} ${visible.length === 1 ? "request" : "requests"}`} icon={ClipboardList} bodyClassName="p-3 sm:p-4">
         <DataTable
+          title={`${visible.length} ${visible.length === 1 ? "request" : "requests"}`}
           columns={columns}
           data={visible}
           getRowKey={(r) => r.id}
@@ -210,7 +209,6 @@ export function BookingsWorkspace({
           searchPlaceholder="Search by reference, client, phone…"
           emptyMessage="No booking requests here yet. Clients book from their console after signing in."
         />
-      </Panel>
 
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpenId(null)}>
         <DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-2xl">

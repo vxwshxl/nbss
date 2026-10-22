@@ -14,8 +14,6 @@ import {
   PowerOff,
   Trash2,
   TriangleAlert,
-  UserRound,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,7 +42,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Panel } from "@/components/ui/panel";
 import {
   Select,
   SelectContent,
@@ -429,21 +426,16 @@ export function GuardsWorkspace({
         </div>
       )}
 
-      <Panel
-        tone="emerald"
-        title={`${visible.length} ${visible.length === 1 ? "account" : "accounts"}`}
-        icon={showRoleTabs ? Users : UserRound}
-        bodyClassName="p-3 sm:p-4"
-        action={
-          canManage ? (
-            <Button size="sm" onClick={() => setAdding(true)}>
-              <Plus data-icon="inline-start" />
-              Add person
-            </Button>
-          ) : undefined
-        }
-      >
         <DataTable
+          title={`${visible.length} ${visible.length === 1 ? "account" : "accounts"}`}
+          toolbar={
+            canManage ? (
+              <Button size="sm" className="rounded-full" onClick={() => setAdding(true)}>
+                <Plus data-icon="inline-start" />
+                Add person
+              </Button>
+            ) : undefined
+          }
           columns={columns}
           data={visible}
           getRowKey={(r) => r.id}
@@ -457,7 +449,6 @@ export function GuardsWorkspace({
           }
           rowClassName={(r) => (r.active ? undefined : "opacity-60")}
         />
-      </Panel>
 
       {/* ---------------------------------------------------------- add ---- */}
       <Dialog open={adding} onOpenChange={setAdding}>

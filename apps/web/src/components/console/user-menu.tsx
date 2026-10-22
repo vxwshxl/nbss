@@ -43,36 +43,33 @@ export function UserMenu({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-3 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          aria-label="Account"
+          className="rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30"
+          aria-label="Account menu"
         >
-          <span className="hidden text-right sm:block">
-            <span className="block text-sm leading-none font-semibold">{name}</span>
-            <span className="mt-0.5 block text-xs text-muted-foreground">{roleLabel}</span>
-          </span>
-          <Avatar className="size-9 border border-border">
+          <Avatar className="size-9 ring-2 ring-border">
             {photoUrl && <AvatarImage src={photoUrl} alt="" />}
-            <AvatarFallback className="bg-foreground text-xs font-semibold text-background">
+            <AvatarFallback className="bg-accent-subtle text-xs font-semibold text-primary-ink">
               {initials(name)}
             </AvatarFallback>
           </Avatar>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-sm font-semibold">{name}</span>
-          <span className="font-mono text-xs font-normal text-muted-foreground">{code}</span>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-64 rounded-2xl border-2 border-border bg-elevated p-1.5 shadow-e3">
+        <DropdownMenuLabel className="flex flex-col gap-0.5 px-3 py-2">
+          <span className="truncate text-sm font-semibold">{name}</span>
+          <span className="truncate text-xs font-normal text-secondary-fg">{code}</span>
+          <span className="mt-1.5 w-fit rounded-md bg-accent-subtle px-1.5 py-0.5 text-[11px] font-semibold text-primary-ink">{roleLabel}</span>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
+        <DropdownMenuSeparator className="my-1 h-0.5 bg-border" />
+        <DropdownMenuItem asChild className="rounded-lg px-3 py-2">
           <Link href="/console/profile">
             <UserRound className="size-4" />
             My profile
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-1 h-0.5 bg-border" />
         <DropdownMenuItem
-          variant="destructive"
+          className="rounded-lg px-3 py-2"
           disabled={pending}
           onSelect={(e) => {
             // The menu would otherwise close mid-transition and take the

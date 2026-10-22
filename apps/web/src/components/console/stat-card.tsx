@@ -25,6 +25,7 @@ export function StatCard({
   href,
   cta,
   tone,
+  hero = false,
 }: {
   label: string;
   value: string;
@@ -36,31 +37,36 @@ export function StatCard({
   cta?: string;
   /** Override the auto-picked accent colour. */
   tone?: Tone;
+  /** The one solid card at the head of a dashboard, as birdev's console has it. */
+  hero?: boolean;
 }) {
   const t = TONES[tone ?? toneFor(label)];
 
   const body = (
     <>
+      {hero && (
+        <span aria-hidden className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full border-[18px] border-white/10" />
+      )}
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          t.chip,
+          hero ? "bg-white/15 text-white" : t.chip,
         )}
       >
         <Icon className="size-5" strokeWidth={1.9} />
       </span>
       <div className="mt-4 flex-1">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className={cn("text-sm font-medium", hero ? "text-white/80" : "text-muted-foreground")}>{label}</p>
         <p className="mt-0.5 font-display text-4xl font-semibold tracking-tight tabular-nums">
           {value}
         </p>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        {hint && <p className={cn("mt-1 text-xs", hero ? "text-white/75" : "text-muted-foreground")}>{hint}</p>}
       </div>
       {href && (
         // Spelled out rather than left to the cursor: on a touch screen there
         // is no cursor to change, and a card that silently happens to be a link
         // is a card nobody taps.
-        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+        <span className={cn("mt-4 inline-flex items-center gap-1.5 text-sm font-semibold", hero ? "text-white" : "text-primary")}>
           {cta ?? "View"}
           <ArrowRight
             className="size-4 transition-transform group-hover/stat:translate-x-0.5 motion-reduce:transition-none"
@@ -71,8 +77,12 @@ export function StatCard({
     </>
   );
 
-  const className =
-    "relative flex flex-col rounded-2xl border border-app-line-soft bg-card p-5 shadow-card print:shadow-none";
+  const className = cn(
+    "relative flex flex-col overflow-hidden rounded-2xl p-5 print:shadow-none",
+    hero
+      ? "bg-[linear-gradient(135deg,#0f9f6e,#047857_60%,#065f46)] text-white shadow-[0_18px_40px_-18px_rgb(4_120_87/0.7)]"
+      : "border border-app-line-soft bg-card shadow-card",
+  );
 
   if (href) {
     return (

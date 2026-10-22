@@ -1,4 +1,3 @@
-import { Link } from "expo-router";
 import { AlertCircle, ArrowRight, KeyRound, Mail } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
@@ -262,9 +261,9 @@ export function SignIn() {
           />
         )}
         {step === "identify" && (
-          <Link href="/(auth)/register" asChild>
-            <Button label="Create a client account" variant="ghost" fullWidth />
-          </Link>
+          <Text variant="caption" tone="muted" style={styles.centred}>
+            New to NBSS? Enter your email. The code sets up your client account.
+          </Text>
         )}
       </View>
     </View>

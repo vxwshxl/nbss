@@ -32,8 +32,12 @@ const VB = "-60 -86 120 160";
 const LED = "#34d399";
 const NAVY = "#1e2a44";
 
-/** A point in the drawing as a transform-origin percentage of the box. */
-const at = (x: number, y: number) => `${(((x + 60) / 120) * 100).toFixed(2)}% ${(((y + 86) / 160) * 100).toFixed(2)}%`;
+/**
+ * A point in the drawing as a transform-origin percentage of the box. Whole numbers only:
+ * React Native's native parser reads "28.33%" as two values ("28" and "33%"), which then
+ * spill into the z position and throw.
+ */
+const at = (x: number, y: number) => `${Math.round(((x + 60) / 120) * 100)}% ${Math.round(((y + 86) / 160) * 100)}%`;
 
 function Layer({ children, style }: { children: React.ReactNode; style?: ViewStyle | object }) {
   return (

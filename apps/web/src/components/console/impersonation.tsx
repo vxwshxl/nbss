@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Eye, EyeOff, Search, UserRoundCog } from "lucide-react";
+import { Eye, EyeOff, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -137,9 +137,14 @@ export function ImpersonationPicker({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" aria-label="View console as someone else">
-          <UserRoundCog />
-        </Button>
+        <button
+          type="button"
+          aria-label="View console as someone else"
+          className="inline-flex h-9 min-w-0 items-center gap-2 rounded-full border-2 border-border bg-elevated px-3.5 text-sm font-semibold shadow-[0_2px_0_var(--ds-border)] transition-[filter,background-color] hover:bg-subtle"
+        >
+          <Eye className="size-4 shrink-0 text-secondary-fg" />
+          <span className="shrink-0 max-sm:hidden">View as</span>
+        </button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>

@@ -27,12 +27,6 @@ type AuthState = {
   sendCode: (identifier: string) => Promise<{ error?: string }>;
   verifyCode: (identifier: string, code: string) => Promise<{ error?: string }>;
   signIn: (identifier: string, secret: string) => Promise<{ error?: string }>;
-  signUpClient: (input: {
-    email: string;
-    fullName: string;
-    phone?: string;
-    organisation?: string;
-  }) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -206,45 +200,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /**
-   * Starts a client account: mails a code and creates the login if the address is
-   * new. `signup: 'client'` is what the trigger in 0007/0009 looks for; the role
-   * itself is NOT sent — the trigger hardcodes 'client' and never reads metadata
-   * for it, so a modified app asking for 'admin' still gets a client account.
-   * The code is then checked with `verifyCode`, exactly as at sign-in.
-   */
-  const signUpClient = useCallback(
-    async (input: { email: string; fullName: string; phone?: string; organisation?: string }) => {
-      if (!isValidEmail(input.email)) return { error: "Enter a valid email address." };
-      if (input.fullName.trim().length < 2) return { error: "Enter your name." };
-
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithOtp({
-        email: input.email.trim().toLowerCase(),
-        options: {
-          shouldCreateUser: true,
-          data: {
-            signup: "client",
-            full_name: input.fullName.trim(),
-            ...(input.phone?.trim() ? { phone: input.phone.trim() } : {}),
-            ...(input.organisation?.trim() ? { organisation: input.organisation.trim() } : {}),
-          },
-        },
-      });
-      setLoading(false);
-
-      if (error) {
-        return {
-          error: /rate|seconds/i.test(error.message)
-            ? "A code was sent a moment ago. Wait half a minute and try again."
-            : "We could not send a code to that address. Check it and try again.",
-        };
-      }
-      return {};
-    },
-    [],
-  );
-
   const signOut = useCallback(async () => {
     setLoading(true);
     /**
@@ -276,11 +231,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sendCode,
       verifyCode,
       signIn,
-      signUpClient,
       signOut,
       refresh,
     }),
-    [session, profile, loading, sendCode, verifyCode, signIn, signUpClient, signOut, refresh],
+    [session, profile, loading, sendCode, verifyCode, signIn, signOut, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

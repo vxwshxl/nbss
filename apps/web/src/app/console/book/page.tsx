@@ -32,14 +32,29 @@ export default async function BookPage({
   ]);
 
   const meta = (auth.user?.user_metadata ?? {}) as { organisation?: string };
+  const local = (session.profile.email ?? "").split("@")[0];
+  const named = session.profile.full_name !== local;
+  const first = rows?.length === 0;
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Book guards" title="Request security for your site" />
+      {first ? (
+        <div className="mb-6">
+          <p className="text-lg text-muted-foreground">Hello{named ? "," : ""}</p>
+          <h1 className="display-section text-[clamp(2rem,4vw,3rem)]">
+            {named ? session.profile.full_name : "Welcome to NBSS"}
+          </h1>
+          <p className="mt-2 max-w-xl text-muted-foreground">
+            Book guards for your site. It takes about two minutes, and the deployment desk calls you back to arrange the site visit.
+          </p>
+        </div>
+      ) : (
+        <PageHeader eyebrow="Book guards" title="Request security for your site" />
+      )}
       <BookWorkspace
         rows={(rows ?? []) as BookingRow[]}
         defaults={{
-          contactName: session.profile.full_name,
+          contactName: session.profile.full_name === local ? "" : session.profile.full_name,
           phone: session.profile.phone ?? "",
           organisation: meta.organisation ?? "",
           service: params.service ?? "",

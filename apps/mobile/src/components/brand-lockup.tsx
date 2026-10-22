@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { StyleSheet, View, type ViewStyle } from "react-native";
-import Svg, { Text as SvgText } from "react-native-svg";
 
 import { COMPANY } from "@nbss/shared/company";
 
@@ -10,9 +9,9 @@ import { BrandMark } from "./brand-mark";
 import { Text } from "./text";
 
 const SIZES = {
-  sm: { mark: 34, word: 28 },
-  md: { mark: 48, word: 40 },
-  lg: { mark: 64, word: 54 },
+  sm: { mark: 34, word: 28, line: 11 },
+  md: { mark: 48, word: 40, line: 15 },
+  lg: { mark: 64, word: 54, line: 20 },
 };
 
 /**
@@ -22,8 +21,9 @@ const SIZES = {
  *   National Bodo
  *   Security Service
  *
- * The first row sets the width; the two lines under it are SVG text stretched to
- * exactly that width (`textLength`), so they end where the last S ends.
+ * The first row sets the width; each line under it is spread letter by letter to
+ * exactly that width, so it ends where the last S ends. Done with layout rather
+ * than SVG `textLength`, which iOS ignores.
  */
 export function BrandLockup({
   size = "md",
@@ -37,7 +37,6 @@ export function BrandLockup({
 }) {
   const s = SIZES[size];
   const [width, setWidth] = useState(0);
-  const height = width * 0.262;
 
   return (
     <View style={[styles.wrap, style]} accessible accessibilityLabel={COMPANY.name}>
@@ -51,31 +50,33 @@ export function BrandLockup({
           {COMPANY.shortName}
         </Text>
       </View>
-      {width > 0 && (
-        <Svg width={width} height={height} viewBox="0 0 1000 262" style={styles.lines}>
-          {["National Bodo", "Security Service"].map((line, i) => (
-            <SvgText
-              key={line}
-              x={0}
-              y={i === 0 ? 100 : 236}
-              textLength={1000}
-              lengthAdjust="spacing"
-              fill={tone}
-              fillOpacity={0.72}
-              fontSize={118}
-              fontFamily={font.medium}
-            >
-              {line}
-            </SvgText>
-          ))}
-        </Svg>
-      )}
+      {width > 0 &&
+        ["National Bodo", "Security Service"].map((line) => (
+          <View key={line} style={[styles.spread, { width }]}>
+            {line.split("").map((ch, i) => (
+              <Text
+                key={i}
+                tone="inherit"
+                style={{
+                  color: tone,
+                  opacity: 0.72,
+                  fontFamily: font.medium,
+                  fontSize: s.line,
+                  lineHeight: s.line * 1.2,
+                  minWidth: ch === " " ? s.line * 0.35 : undefined,
+                }}
+              >
+                {ch}
+              </Text>
+            ))}
+          </View>
+        ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { alignSelf: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  lines: { marginTop: 6 },
+  row: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 2 },
+  spread: { flexDirection: "row", justifyContent: "space-between" },
 });

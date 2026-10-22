@@ -1,6 +1,5 @@
 import { isAdmin, ROLE_LABEL } from "@nbss/shared/identity";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 
 import { signOut } from "@/app/console/actions";
 import { startImpersonation, stopImpersonation } from "@/app/console/impersonate";
@@ -15,7 +14,7 @@ import {
 import { UserMenu } from "@/components/console/user-menu";
 import { Assistant } from "@/components/ai/assistant";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
-import { AppShell, AssistantButton, RAIL_COOKIE, WebsiteTag } from "@/components/shell/app-shell";
+import { AppShell, WebsiteTag } from "@/components/shell/app-shell";
 import { isAssistantConfigured } from "@/lib/ai/assistant";
 import { personaFor } from "@/lib/ai/personas";
 import { CONSOLE_REALTIME_TABLES } from "@/lib/realtime/routes";
@@ -44,7 +43,7 @@ export const dynamic = "force-dynamic";
  * expands on hydration is a page that jumps under the reader.
  */
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  const [session, jar] = await Promise.all([currentSession(), cookies()]);
+  const session = await currentSession();
 
   // The sign-in page lives under /console but has no shell of its own. Rather
   // than redirect here — which would fight the middleware — an unauthenticated
@@ -53,7 +52,6 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   const { profile, realProfile, impersonating } = session;
   const persona = personaFor(profile.role);
-  const railCollapsed = jar.get(RAIL_COOKIE)?.value === "1";
   const canAdmin = isAdmin(realProfile.role);
 
   // The impersonation picker needs the roster. Only an admin ever sees it, so
@@ -85,7 +83,6 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         />
       }
       navIndex={navIndexFor(profile.role)}
-      defaultCollapsed={railCollapsed}
       mark={<BrandLockup size="sm" priority />}
       sidebarFooter={<WebsiteTag label={`${ROLE_LABEL[profile.role]} console · nbss.co.in`} />}
       companion={{ person: realProfile.id }}
@@ -110,15 +107,12 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       topbarRight={
-        <>
-        <AssistantButton />
         <UserMenu
           name={profile.full_name}
           code={profile.employee_code}
           roleLabel={ROLE_LABEL[profile.role]}
           signOut={signOut}
         />
-        </>
       }
     >
       <RealtimeRefresher

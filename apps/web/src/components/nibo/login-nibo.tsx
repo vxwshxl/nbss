@@ -15,9 +15,15 @@ export function LoginNibo({ className }: { className?: string }) {
   const [eyes, setEyes] = useState<NiboEyes>("open");
   const [mood, setMood] = useState<NiboMood>("wave");
 
+  // On a loop while nobody is typing: a wave, a look round, a little cheer.
   useEffect(() => {
-    const t = setTimeout(() => setMood("happy"), 2600);
-    return () => clearTimeout(t);
+    const LOOP: NiboMood[] = ["wave", "happy", "think", "happy", "cheer", "happy"];
+    let i = 0;
+    const t = setInterval(() => {
+      i = (i + 1) % LOOP.length;
+      setMood((m) => (m === "oops" ? m : LOOP[i]!));
+    }, 2800);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {

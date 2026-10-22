@@ -282,4 +282,4 @@ export const faqs: FAQ[] = [
  * and, once it is accepted, watch the guards on their gate.
  */
 export const BOOK_HREF = "/login?from=/console/book";
-export const REGISTER_HREF = "/register?from=/console/book";
+export const REGISTER_HREF = BOOK_HREF;

@@ -7,35 +7,44 @@ import {
   Check,
   Eye,
   EyeOff,
-  Sparkles,
   Square,
   SquarePen,
   TriangleAlert,
   X,
+  CalendarCheck,
+  CalendarRange,
+  Clock3,
+  Inbox,
+  MapPinned,
+  MessageCircleQuestion,
+  Radio,
+  Siren,
+  type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/console/page-header";
 import { pageKnowledge } from "@/lib/ai/pages";
 import { cn } from "@/lib/utils";
+import { Nibo } from "@/components/nibo/nibo";
 import { useAssistantPanel } from "./assistant-panel";
 import { Markdown } from "./markdown";
 
 /**
- * The operations assistant.
+ * Nibo, the NBSS assistant (the same assistant birdev's Bird is).
  *
  * Deliberately thin: it holds a transcript and posts it to `/api/ai/chat`. It
  * knows nothing about roles or permissions and has no way to ask for a
- * particular guard's records — the server derives all of that from the session,
+ * particular person's data, the server derives all of that from the session,
  * so there is nothing here worth tampering with.
  *
  * The thread shows three separate things, in the order they happen, because
  * collapsing them into one spinner is what made the old version feel broken on
  * a slow question:
  *
- *   1. **Thinking** — the model's own working-out, streamed as it arrives. It
+ *   1. **Thinking**, the model's own working-out, streamed as it arrives. It
  *      is collapsed the moment the answer starts, because it is working-out and
- *      not a claim about the agency's records.
- *   2. **Steps** — one line per lookup that actually returned, in plain words.
- *      This is the receipt: it is how a supervisor can tell an answer that
+ *      not a claim about the data.
+ *   2. **Steps**, one line per lookup that actually returned, in plain words.
+ *      This is the receipt: it is how someone can tell an answer that
  *      was read from a figure that was invented.
  *   3. **The answer**, rendered as markdown.
  */
@@ -82,18 +91,39 @@ type Event =
   | { type: "error"; message: string }
   | { type: "done" };
 
+/** The prompt cards on Nibo's opening screen: jade, gold, sky and clay. */
+const PROMPT_LOOKS = [
+  { card: "border-[#bfe5cf] bg-[#ecf8f1] text-[#14532d] shadow-[0_4px_0_#bfe5cf]", tile: "bg-[#23874d] shadow-[0_3px_0_#135c33]" },
+  { card: "border-[#f2d9a0] bg-[#fdf5e1] text-[#6b4a0f] shadow-[0_4px_0_#f2d9a0]", tile: "bg-[#d9a23b] shadow-[0_3px_0_#a3741f]" },
+  { card: "border-[#cbe2f5] bg-[#eef6fd] text-[#173f63] shadow-[0_4px_0_#cbe2f5]", tile: "bg-[#2f7fc1] shadow-[0_3px_0_#1d5a8c]" },
+  { card: "border-[#efcdbd] bg-[#fcf0ea] text-[#6b2e14] shadow-[0_4px_0_#efcdbd]", tile: "bg-[#c8643a] shadow-[0_3px_0_#8f4322]" },
+];
+
+/** A fitting icon for a starter question, from its words. */
+function promptIcon(q: string): LucideIcon {
+  const t = q.toLowerCase();
+  if (/sos|alert|emergency/.test(t)) return Siren;
+  if (/on duty|gate|right now|checked in/.test(t)) return Radio;
+  if (/overtime|hours|man-hours/.test(t)) return Clock3;
+  if (/roster|shift|cover/.test(t)) return CalendarRange;
+  if (/review|attendance|punch/.test(t)) return CalendarCheck;
+  if (/enquir|booking|form|request/.test(t)) return Inbox;
+  if (/site|nobody|fence/.test(t)) return MapPinned;
+  return MessageCircleQuestion;
+}
+
 export function Assistant({
   greetingName,
   suggestions,
   configured,
-  scopeNote,
 }: {
   greetingName: string;
   suggestions: string[];
-  /** False when no API key is set; the composer explains rather than fails. */
+  /** False when no Sarvam key is set; the composer explains rather than fails. */
   configured: boolean;
-  /** One line saying exactly what the assistant can see. */
-  scopeNote: string;
+  /** What the assistant can see. No longer printed on the opening screen
+   *  (kept clean); callers still pass it. */
+  scopeNote?: string;
 }) {
   const panel = useAssistantPanel();
   const pathname = usePathname();
@@ -102,8 +132,8 @@ export function Assistant({
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  // Whether the page behind the panel goes with each question. On by default —
-  // that is the point of asking from beside it — and one tap to withhold.
+  // Whether the page behind the panel goes with each question. On by default
+  // that is the point of asking from beside it, and one tap to withhold.
   const [sharePage, setSharePage] = useState(true);
 
   const threadRef = useRef<HTMLDivElement>(null);
@@ -134,15 +164,12 @@ export function Assistant({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
-    // Scrollable only once the text outgrows the cap; below it the box is
-    // exactly as tall as its text, and a scrollbar there is just noise.
-    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
   }, []);
 
   // The height has to be recomputed when the box gets narrower, not only when
   // it is typed into. Rotating a phone, or opening the console on a 320px
   // screen, rewraps the text into more lines than the height set for the old
-  // width — and the last line was being clipped by the fixed height left over
+  // width, and the last line was being clipped by the fixed height left over
   // from before. A ResizeObserver catches every cause of that, including the
   // sidebar drawer opening, which a window resize listener does not.
   useEffect(() => {
@@ -169,23 +196,23 @@ export function Assistant({
     if (window.matchMedia("(pointer: fine)").matches) boxRef.current?.focus();
   }, [panelOpen]);
 
-  function stop() {
-    abortRef.current?.abort();
-  }
-
-  // Nibo's "Ask" buttons arrive as a window event once the panel is open.
-  const sendRef = useRef(send);
+  // Nibo's "Ask Nibo" buttons (the companion) hand a question over here.
+  const sendRef = useRef<(text: string) => void>(() => {});
   useEffect(() => {
-    sendRef.current = send;
+    sendRef.current = (text: string) => void send(text);
   });
   useEffect(() => {
     const onAsk = (e: globalThis.Event) => {
       const q = (e as CustomEvent<string>).detail;
-      if (typeof q === "string") void sendRef.current(q);
+      if (typeof q === "string" && q.trim()) sendRef.current(q);
     };
-    addEventListener("nibo:ask", onAsk);
-    return () => removeEventListener("nibo:ask", onAsk);
+    window.addEventListener("nibo:ask", onAsk);
+    return () => window.removeEventListener("nibo:ask", onAsk);
   }, []);
+
+  function stop() {
+    abortRef.current?.abort();
+  }
 
   function newChat() {
     stop();
@@ -218,7 +245,7 @@ export function Assistant({
       error: "",
     };
 
-    // The wire transcript is what came before plus this question — never the
+    // The wire transcript is what came before plus this question, never the
     // steps or the reasoning, which are ours to display and not the model's to
     // re-read.
     const history = [
@@ -323,7 +350,7 @@ export function Assistant({
       title="New chat"
       aria-label="New chat"
       className={cn(
-        "press flex items-center justify-center border border-app-line text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-40",
+        "flex items-center justify-center border border-border text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40",
         panel ? "size-8 rounded-lg" : "size-9 rounded-full bg-card",
       )}
     >
@@ -334,13 +361,13 @@ export function Assistant({
   const header = panel ? (
     // One header for the panel. The close button sits with "New chat" because
     // both act on the panel rather than on any one message.
-    <div className="flex items-center gap-2.5 border-b border-app-line-soft px-4 py-3">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/12 text-violet-600 dark:text-violet-300">
-        <Sparkles className="size-4" strokeWidth={1.9} />
+    <div className="flex items-center gap-2.5 border-b border-border px-4 py-3">
+      <span className="flex size-10 shrink-0 items-end justify-center overflow-hidden rounded-2xl bg-accent-subtle">
+        <Nibo uid="panel-head" still={!busy} mood={busy ? "think" : "happy"} className="-mb-1.5 size-11" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col leading-tight">
-        <span className="truncate font-display text-sm font-semibold tracking-tight">
-          Assistant
+        <span className="truncate font-display text-base font-extrabold tracking-tight">
+          Nibo
         </span>
         <span className="truncate text-[11px] text-muted-foreground">
           {configured ? "Connected" : "Not connected"}
@@ -351,22 +378,22 @@ export function Assistant({
         type="button"
         onClick={panel.close}
         aria-label="Close the assistant"
-        className="press flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <X className="size-4.5" strokeWidth={2} />
       </button>
     </div>
   ) : (
     <PageHeader
-      eyebrow="Ask"
-      title="Assistant"
+      eyebrow="Your assistant"
+      title="Nibo"
       action={
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-semibold",
+              "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wide",
               configured
-                ? "bg-violet-500/12 text-violet-700 dark:text-violet-300"
+                ? "bg-accent-subtle text-primary"
                 : "bg-muted text-muted-foreground",
             )}
           >
@@ -386,48 +413,40 @@ export function Assistant({
         className="flex-1 overflow-y-auto scroll-smooth p-4 motion-reduce:scroll-auto sm:p-6"
       >
         {empty ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2.5 py-6 text-center">
-            <span className="flex size-13 items-center justify-center rounded-2xl bg-violet-500/12 text-violet-600 dark:text-violet-300">
-              <Sparkles className="size-6" strokeWidth={1.6} />
-            </span>
-            <h2
-              className={cn(
-                "mt-1 font-display font-semibold tracking-tight",
-                panel ? "text-xl" : "text-2xl",
-              )}
-            >
-              What can I do for you, {greetingName}?
+          // Clean on purpose: who he is, how he can help, and four big prompt
+          // cards. What he can read is decided by the tools, not explained here.
+          <div className="flex h-full flex-col items-center justify-center py-4 text-center">
+            <Nibo uid="assistant-empty" mood="wave" className={panel ? "size-24" : "size-32"} />
+            <h2 className={cn("mt-2 font-display font-black tracking-tight", panel ? "text-2xl" : "text-3xl")}>
+              Hi {greetingName}, I&rsquo;m Nibo!
             </h2>
-            <p className="max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
-              {scopeNote}
-            </p>
-            {/* It knows where you are. Saying so is what makes "what is this
-                page for?" a question somebody thinks to ask. */}
-            {panel && sharePage && page && (
-              <p className="text-xs text-muted-foreground">
-                It can also see the{" "}
-                <span className="font-medium text-foreground">{page.title}</span> page
-                you have open.
-              </p>
-            )}
-            <ul className="mt-4 flex max-w-2xl flex-wrap justify-center gap-2">
-              {suggestions.map((s) => (
-                <li key={s}>
-                  <button
-                    type="button"
-                    onClick={() => send(s)}
-                    disabled={!configured}
-                    className="press rounded-full border border-app-line-soft bg-muted/60 px-3.5 py-2 text-left text-xs font-medium text-muted-foreground outline-none transition-colors hover:border-app-line hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-50 sm:text-[13px]"
-                  >
-                    {s}
-                  </button>
-                </li>
-              ))}
+            <p className="mt-1 text-base font-bold text-muted-foreground">How can I help?</p>
+            <ul className={cn("mt-5 grid w-full gap-3", panel ? "max-w-sm grid-cols-2" : "max-w-2xl grid-cols-2 sm:grid-cols-4")}>
+              {suggestions.slice(0, 4).map((s, i) => {
+                const look = PROMPT_LOOKS[i % PROMPT_LOOKS.length]!;
+                const Icon = promptIcon(s);
+                return (
+                  <li key={s}>
+                    <button
+                      type="button"
+                      onClick={() => send(s)}
+                      disabled={!configured}
+                      className={cn(
+                        "flex aspect-square w-full flex-col justify-between rounded-3xl border-2 p-3.5 text-left outline-none transition-[translate,box-shadow] active:translate-y-[4px] active:shadow-none focus-visible:ring-4 focus-visible:ring-primary/25 disabled:opacity-50",
+                        look.card,
+                      )}
+                    >
+                      <span className={cn("flex size-10 items-center justify-center rounded-2xl text-white", look.tile)}>
+                        <Icon className="size-5" strokeWidth={2.4} />
+                      </span>
+                      <span className="line-clamp-3 text-sm leading-snug font-extrabold">{s}</span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
             {!configured && (
-              <p className="mt-3 text-xs text-muted-foreground">
-                No API key is configured on the server yet.
-              </p>
+              <p className="mt-4 text-xs font-bold text-muted-foreground">Nibo isn&rsquo;t connected on the server yet.</p>
             )}
           </div>
         ) : (
@@ -445,30 +464,28 @@ export function Assistant({
                     "inline-flex items-center gap-1.5 text-xs font-semibold",
                     m.role === "you"
                       ? "text-muted-foreground/70"
-                      : "text-violet-600 dark:text-violet-300",
+                      : "text-primary",
                   )}
                 >
-                  {m.role === "assistant" && (
-                    <Sparkles className="size-3" strokeWidth={1.9} aria-hidden />
-                  )}
-                  {m.role === "you" ? "You" : "Assistant"}
+                  {m.role === "assistant" && <Nibo still className="-my-1 size-5" />}
+                  {m.role === "you" ? "You" : "Nibo"}
                 </span>
 
                 {m.role === "you" ? (
-                  <p className="rounded-2xl rounded-br-md border border-app-line-soft bg-muted/60 px-4 py-2.5 text-left text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  <p className="rounded-2xl rounded-br-md border border-primary/15 bg-accent-subtle px-4 py-2.5 text-left text-sm leading-relaxed break-words whitespace-pre-wrap">
                     {m.text}
                   </p>
                 ) : (
                   <>
                     {m.reasoning && (
                       // Open while it is the only thing there is to read, and
-                      // shut the moment the answer starts — useful for seeing
+                      // shut the moment the answer starts, useful for seeing
                       // why a figure was reached, noise the rest of the time.
                       <details
                         open={m.streaming && !m.text.trim()}
-                        className="w-fit max-w-full self-start rounded-xl border border-app-line-soft bg-muted/50 px-3 py-1.5 text-xs open:w-full"
+                        className="w-fit max-w-full self-start rounded-xl border border-border bg-muted/50 px-3 py-1.5 text-xs open:w-full"
                       >
-                        <summary className="cursor-pointer list-none font-semibold text-muted-foreground outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-ring/60 [&::-webkit-details-marker]:hidden">
+                        <summary className="cursor-pointer list-none font-semibold text-muted-foreground outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-primary/40 [&::-webkit-details-marker]:hidden">
                           <span className="mr-1.5 inline-block transition-transform duration-200 [details[open]_&]:rotate-90 motion-reduce:transition-none">
                             ▸
                           </span>
@@ -488,7 +505,7 @@ export function Assistant({
                             className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground"
                           >
                             <Check
-                              className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400"
+                              className="size-3 shrink-0 text-success"
                               strokeWidth={2.6}
                               aria-hidden
                             />
@@ -498,7 +515,7 @@ export function Assistant({
                       </ul>
                     )}
 
-                    {m.text.trim() && <Markdown source={m.text.trim()} />}
+                    {m.text.trim() && <Markdown source={m.text.trim().replace(/ [—–] /g, ": ")} />}
 
                     {m.streaming && !m.text.trim() && !m.reasoning && (
                       <p className="flex items-center gap-1" aria-label="Working">
@@ -524,7 +541,7 @@ export function Assistant({
 
       <div
         className={cn(
-          "flex flex-col gap-2.5 border-t border-app-line-soft p-3 sm:px-4 sm:pt-3.5 sm:pb-4",
+          "flex flex-col gap-2.5 border-t border-border p-3 sm:px-4 sm:pt-3.5 sm:pb-4",
           // Full screen inside the app, the composer must clear the home
           // indicator; the inset is 0 everywhere else.
           panel && "pb-[calc(--spacing(3)+env(safe-area-inset-bottom))] lg:pb-4",
@@ -549,17 +566,17 @@ export function Assistant({
           disabled={!configured}
           placeholder={
             configured
-              ? "Ask about attendance, sites or guards…"
-              : "Not connected: add an API key on the server to enable this."
+              ? "Ask Nibo about duty, sites, hours, people…"
+              : "Not connected. Add a Sarvam API key on the server to turn this on."
           }
           aria-label="Message the assistant"
-          className="scrollbar-none max-h-50 min-h-11 w-full resize-none overflow-y-hidden rounded-xl border border-app-line bg-background px-3.5 py-2.5 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60"
+          className="max-h-50 min-h-11 w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/25 disabled:opacity-60"
         />
 
         <div className="flex items-center gap-3">
           {panel ? (
             // What goes with the question, said where the question is
-            // written — and withheld with one tap.
+            // written, and withheld with one tap.
             <button
               type="button"
               onClick={() => setSharePage((v) => !v)}
@@ -570,10 +587,10 @@ export function Assistant({
                   : "Tap to let the assistant see the page you have open."
               }
               className={cn(
-                "press mr-auto flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60",
+                "mr-auto flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/40",
                 sharePage
-                  ? "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300"
-                  : "border-app-line text-muted-foreground hover:text-foreground",
+                  ? "border-primary/25 bg-accent-subtle text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
               {sharePage ? (
@@ -587,9 +604,9 @@ export function Assistant({
             </button>
           ) : (
             <p className="mr-auto text-[11px] leading-snug text-muted-foreground">
-              Enter to send · Shift + Enter for a new line.{" "}
+              Enter to send. Shift + Enter for a new line.{" "}
               <span className="max-sm:hidden">
-                Answers come from your own records: check anything you are about to act on.
+                Answers come from your records. Check anything before you act on it.
               </span>
             </p>
           )}
@@ -599,7 +616,7 @@ export function Assistant({
               type="button"
               onClick={stop}
               aria-label="Stop"
-              className="press flex size-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_3px_0_color-mix(in_oklab,var(--ds-accent)_65%,black)] outline-none active:translate-y-[3px] active:shadow-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <Square className="size-3" strokeWidth={2.4} fill="currentColor" />
             </button>
@@ -609,7 +626,7 @@ export function Assistant({
               onClick={() => send(draft)}
               disabled={!canSend}
               aria-label="Send"
-              className="press flex size-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-ring/60 disabled:opacity-35"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_3px_0_color-mix(in_oklab,var(--ds-accent)_65%,black)] outline-none transition-[opacity,translate,box-shadow] active:translate-y-[3px] active:shadow-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-35"
             >
               <ArrowUp className="size-4.5" strokeWidth={2.2} />
             </button>
@@ -620,7 +637,7 @@ export function Assistant({
   );
 
   // One card, not two. In the panel the `<aside>` is already the card, so this
-  // is only the frame — `h-full` to fill it with the composer on the bottom
+  // is only the frame, `h-full` to fill it with the composer on the bottom
   // edge. The standalone page draws its own card of a fixed height.
   return panel ? (
     <div className="flex h-full min-h-0 flex-col">
@@ -630,7 +647,7 @@ export function Assistant({
   ) : (
     <>
       {header}
-      <div className="flex h-[min(72vh,780px)] min-h-[26rem] flex-col overflow-hidden rounded-2xl border border-app-line-soft bg-card shadow-card">
+      <div className="flex h-[min(72vh,780px)] min-h-[26rem] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-e1">
         {body}
       </div>
     </>

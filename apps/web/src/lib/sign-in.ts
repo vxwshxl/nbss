@@ -80,8 +80,33 @@ function deliverable(email: string): boolean {
  */
 export async function sendSignInCode(identifier: string, client: Client): Promise<void> {
   const email = await resolveLoginEmail(identifier);
-  if (!email || !deliverable(email)) return;
-  await client.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+  if (email) {
+    if (!deliverable(email)) return;
+    await client.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    return;
+  }
+
+  // One door for everyone: an address nobody has used yet becomes a client account the
+  // moment its code is asked for. `signup: "client"` is what the handle_new_auth_user
+  // trigger reads to create the profile (role client, next CL- code). An address that
+  // already belongs to someone, active or not, is never re-created here.
+  const raw = identifier.trim().toLowerCase();
+  if (!raw.includes("@") || !isValidEmail(raw) || !deliverable(raw)) return;
+  if (await addressTaken(raw)) return;
+  await client.auth.signInWithOtp({
+    email: raw,
+    options: { shouldCreateUser: true, data: { signup: "client" } },
+  });
+}
+
+/** Whether any profile (active or deactivated) already holds this address. */
+async function addressTaken(email: string): Promise<boolean> {
+  try {
+    const { data } = await supabaseAdmin().from("profiles").select("id").eq("email", email).maybeSingle();
+    return Boolean(data);
+  } catch {
+    return true;
+  }
 }
 
 async function finish(client: Client, userId: string | undefined): Promise<SignInResult> {

@@ -2,8 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import Link from "next/link";
-import { AlertCircle, ArrowLeft, ArrowRight, Building2, KeyRound, Loader2, Mail } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, KeyRound, Loader2, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +100,7 @@ export function SignInForm({ from }: { from: string }) {
       ? { title: "Check your email", sub: "Enter the 6-digit code we sent you." }
       : step === "password"
         ? { title: "Enter your password", sub: "Your password or PIN." }
-        : { title: "Sign in", sub: "Welcome back. Continue with your email or employee code." };
+        : { title: "Sign in", sub: "Continue with your email or employee code." };
 
   return (
     <div className="w-full">
@@ -248,26 +247,12 @@ export function SignInForm({ from }: { from: string }) {
       </div>
 
       {step === "identify" && (
-        // The door for people who do not work here yet: a business that wants
-        // guards. Every "Book guards" button on the website lands on this page,
-        // so the way in for a first-time client has to be impossible to miss.
-        <div className="mt-8 rounded-2xl border border-app-line bg-brand-gradient-soft p-4">
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-primary-ink shadow-xs">
-              <Building2 className="size-5" strokeWidth={1.9} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-accent-foreground">New client?</p>
-              <p className="text-xs text-accent-foreground/80">Book trained guards for your site.</p>
-            </div>
-          </div>
-          <Button asChild className="mt-3 h-10 w-full rounded-xl text-sm font-semibold">
-            <Link href={`/register${from ? `?from=${encodeURIComponent(from)}` : "?from=/console/book"}`}>
-              Create a client account
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-        </div>
+        // One door for everyone: a business that wants guards just types its email. The
+        // first code creates a client account, and the booking form opens after it.
+        <p className="mt-8 rounded-2xl border border-app-line bg-brand-gradient-soft px-4 py-3 text-center text-sm text-accent-foreground">
+          <span className="font-semibold">New to NBSS?</span> Enter your email. We will send a code and set up your
+          client account, then you can book guards in two minutes.
+        </p>
       )}
 
       {step !== "identify" && (

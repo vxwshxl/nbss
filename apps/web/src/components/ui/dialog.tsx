@@ -67,7 +67,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-(color:--scrim) ease-out-strong data-open:duration-200 data-closed:duration-150 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-ink/40 ease-out-strong data-open:duration-200 data-closed:duration-150 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -113,7 +113,7 @@ function DialogContent({
           // The `--dialog-top` / `--dialog-max-h` vars (set by useVisualViewportFit)
           // track the on-screen keyboard so the dialog re-centers above it and
           // shrinks to stay scrollable; they fall back to a static centered layout.
-          "pointer-events-auto! fixed top-[var(--dialog-top,50%)] left-1/2 z-50 grid max-h-[var(--dialog-max-h,calc(100dvh-2rem))] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-2xl border border-app-line-soft bg-popover p-5 text-sm text-popover-foreground shadow-raised ease-out-strong outline-none data-open:duration-200 data-closed:duration-150 sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "pointer-events-auto! fixed top-[var(--dialog-top,50%)] left-1/2 z-50 grid max-h-[var(--dialog-max-h,calc(100dvh-2rem))] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-3xl border border-app-line-soft bg-elevated p-5 text-sm text-popover-foreground shadow-e3 ease-out-strong outline-none data-open:duration-200 data-closed:duration-150 sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

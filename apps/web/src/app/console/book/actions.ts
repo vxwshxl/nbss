@@ -69,6 +69,19 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
 
   if (error) return { ok: false, error: error.message };
 
+  // A client who joined through the sign-in form is named after their email until they
+  // tell us otherwise; the first booking's contact name and phone become their profile's.
+  const local = (session.profile.email ?? "").split("@")[0];
+  if (session.profile.full_name === local || !session.profile.phone) {
+    await supabase
+      .from("profiles")
+      .update({
+        ...(session.profile.full_name === local && { full_name: contactName }),
+        ...(!session.profile.phone && { phone }),
+      })
+      .eq("id", session.profile.id);
+  }
+
   const reference = (result as { reference?: string } | null)?.reference;
   await audit({
     actor: session.profile,

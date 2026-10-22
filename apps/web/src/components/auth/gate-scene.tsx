@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
  * thread and one reduced-motion rule stills it: a car pulls up, the boom lifts
  * and it drives through, the booth's beacon turns, a guard sweeps a torch, a
  * second walks the wall, the camera pans and the town's windows come and go.
- * The car, the boom and the guard at the post share one 12 s cycle so they stay
- * in step with each other.
+ * Two lanes, each with its boom: a car comes in on the far lane and another
+ * leaves on the near one half a cycle later. Each car shares a 12 s cycle
+ * with its boom and wheels so they stay in step.
  *
  * Decorative throughout, so the whole drawing is aria-hidden.
  */
@@ -49,6 +50,26 @@ function Guard({ className, torch = false }: { className?: string; torch?: boole
       <path d="M-7,-45 q7,-8 14,0 z" fill="#0f172a" />
       <rect x="-9" y="-46" width="12" height="2" rx="1" fill="#0f172a" />
     </g>
+  );
+}
+
+function Car({ body, roof, wheelClass = "gs-wheel" }: { body: string; roof: string; wheelClass?: string }) {
+  return (
+    <>
+      <path d="M0,0 h104 a6,6 0 0 1 6,6 v14 h-116 v-14 a6,6 0 0 1 6,-6 z" transform="translate(0 236)" fill={body} />
+      <path d="M20,236 l12,-16 h44 l14,16 z" fill={roof} />
+      <path d="M34,234 l9,-11 h14 v11 z M61,234 v-11 h14 l9,11 z" fill="#99f6e4" opacity="0.7" />
+      <rect x="104" y="241" width="6" height="5" rx="1" fill="#fef3c7" />
+      <path className="gs-headlight" d="M110,243 L190,232 L190,258 Z" fill="#fef3c7" opacity="0.18" />
+      <rect x="-6" y="241" width="4" height="5" rx="1" fill="#ef4444" />
+      {[22, 84].map((cx) => (
+        <g key={cx} className={wheelClass} style={{ transformOrigin: `${cx}px 256px` }}>
+          <circle cx={cx} cy="256" r="9" fill="#0b0f19" />
+          <circle cx={cx} cy="256" r="3.5" fill="#64748b" />
+          <rect x={cx - 1} y="248" width="2" height="16" fill="#334155" />
+        </g>
+      ))}
+    </>
   );
 }
 
@@ -154,17 +175,17 @@ export function GateScene({ className }: { className?: string }) {
         <Guard className="gs-post" torch />
       </g>
 
-      {/* Road */}
+      {/* Road: two lanes, in on the far one and out on the near one */}
       <rect x="0" y="232" width="800" height="68" fill="#0d1512" />
       <rect x="0" y="232" width="800" height="3" fill="#24372f" />
       <g className="gs-lane">
         {Array.from({ length: 22 }, (_, i) => (
-          <rect key={i} x={i * 48} y="268" width="26" height="3" rx="1.5" fill="#3f5a4e" />
+          <rect key={i} x={i * 48} y="267" width="26" height="2.5" rx="1.25" fill="#4b6b5d" />
         ))}
       </g>
+      <rect x="0" y="297" width="800" height="3" fill="#24372f" />
 
-      {/* The boom: a post on the kerb and an arm across the lane at bonnet
-          height, so the car stops in front of it and passes under it raised. */}
+      {/* Entry boom, across the far lane: post on the kerb, arm at bonnet height. */}
       <rect x="582" y="226" width="18" height="10" rx="2" fill="#334155" />
       <rect x="586" y="214" width="10" height="24" rx="2" fill="#475569" />
       <g className="gs-boom">
@@ -174,23 +195,25 @@ export function GateScene({ className }: { className?: string }) {
       </g>
       <circle cx="591" cy="239" r="5" fill="#1e293b" />
 
-      {/* A car, arriving at the gate */}
+      {/* A car coming in on the far lane */}
       <g className="gs-car">
-        <path d="M0,0 h104 a6,6 0 0 1 6,6 v14 h-116 v-14 a6,6 0 0 1 6,-6 z" transform="translate(0 236)" fill="#0f766e" />
-        <path d="M20,236 l12,-16 h44 l14,16 z" fill="#115e59" />
-        <path d="M34,234 l9,-11 h14 v11 z M61,234 v-11 h14 l9,11 z" fill="#99f6e4" opacity="0.7" />
-        <rect x="104" y="241" width="6" height="5" rx="1" fill="#fef3c7" />
-        <path className="gs-headlight" d="M110,243 L190,232 L190,258 Z" fill="#fef3c7" opacity="0.18" />
-        <rect x="-6" y="241" width="4" height="5" rx="1" fill="#ef4444" />
-        <g className="gs-wheel" style={{ transformOrigin: "22px 256px" }}>
-          <circle cx="22" cy="256" r="9" fill="#0b0f19" />
-          <circle cx="22" cy="256" r="3.5" fill="#64748b" />
-          <rect x="21" y="248" width="2" height="16" fill="#334155" />
-        </g>
-        <g className="gs-wheel" style={{ transformOrigin: "84px 256px" }}>
-          <circle cx="84" cy="256" r="9" fill="#0b0f19" />
-          <circle cx="84" cy="256" r="3.5" fill="#64748b" />
-          <rect x="83" y="248" width="2" height="16" fill="#334155" />
+        <Car body="#0f766e" roof="#115e59" />
+      </g>
+
+      {/* Exit boom, across the near lane, opening the other way */}
+      <g className="gs-boom2">
+        <rect x="470" y="268" width="134" height="7" rx="3.5" fill="url(#gs-stripe)" />
+        <circle cx="604" cy="271.5" r="3" fill="#ef4444" />
+        <rect x="601" y="275" width="3" height="16" rx="1" fill="#94a3b8" />
+      </g>
+      <rect x="460" y="262" width="10" height="34" rx="2" fill="#475569" />
+      <rect x="456" y="292" width="18" height="8" rx="2" fill="#334155" />
+      <circle cx="465" cy="271" r="5" fill="#1e293b" />
+
+      {/* A car leaving on the near lane, facing left */}
+      <g className="gs-car2">
+        <g transform="translate(110 32) scale(-1 1)">
+          <Car body="#1e3a8a" roof="#1e40af" wheelClass="gs-wheel2" />
         </g>
       </g>
     </svg>

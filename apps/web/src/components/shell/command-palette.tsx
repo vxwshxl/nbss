@@ -164,34 +164,26 @@ export function CommandPalette({ index }: { index: NavIndexItem[] }) {
         onClick={() => setOpenReset(true)}
         // 44px tall on touch, where it is icon-only; the label and the hint
         // appear once there is room for them.
-        className={cn(
-          "flex h-11 shrink-0 items-center gap-2 rounded-xl border border-app-line-soft bg-card px-2.5 text-sm text-muted-foreground transition-colors sm:h-9 sm:px-3",
-          "hover:bg-accent focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
-        )}
+        className="flex h-10 shrink-0 items-center gap-2 rounded-xl border-2 border-border bg-elevated px-2.5 text-sm text-secondary-fg transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30 focus-visible:outline-none active:translate-y-px sm:w-56 sm:px-3 lg:w-72"
         aria-label="Search the console"
       >
-        <Search className="size-4 shrink-0" strokeWidth={2} />
-        <span className="hidden lg:inline">Search…</span>
-        <kbd className="hidden rounded border border-app-line-soft bg-muted px-1.5 py-0.5 font-sans text-[11px] font-medium xl:inline">
-          ⌘K
-        </kbd>
+        <Search className="size-4 shrink-0" />
+        <span className="hidden flex-1 text-left sm:inline">Search…</span>
+        <kbd className="hidden rounded-md border border-border bg-muted px-1.5 py-0.5 font-sans text-[11px] font-semibold sm:inline">⌘K</kbd>
       </button>
 
       <Dialog open={open} onOpenChange={setOpenReset}>
         <DialogContent
           showCloseButton={false}
-          className="top-[12%] max-w-lg translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-lg"
+          className="top-[12svh] w-[calc(100%-2rem)] max-w-xl translate-y-0 gap-0 overflow-hidden rounded-3xl border-0 bg-elevated p-0 shadow-e3 sm:max-w-xl"
         >
           <DialogTitle className="sr-only">Search the console</DialogTitle>
           <DialogDescription className="sr-only">
             Type to filter every page you have access to, then press Enter.
           </DialogDescription>
 
-          <div className="flex items-center gap-2.5 border-b border-app-line-soft px-4">
-            <Search
-              className="size-4 shrink-0 text-muted-foreground"
-              strokeWidth={2}
-            />
+          <div className="flex items-center gap-3 border-b border-border px-5">
+            <Search className="size-5 shrink-0 text-secondary-fg" />
             <input
               autoFocus
               value={query}
@@ -208,7 +200,7 @@ export function CommandPalette({ index }: { index: NavIndexItem[] }) {
               aria-activedescendant={
                 results[activeIdx] ? `cp-opt-${activeIdx}` : undefined
               }
-              className="h-12 w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
+              className="h-14 w-full bg-transparent text-[16px] outline-none placeholder:text-secondary-fg/70"
             />
           </div>
 

@@ -4,9 +4,14 @@ import {
   ArrowRight,
   Building2,
   CalendarCheck,
+  CalendarRange,
+  Clock3,
+  Gauge,
   MapPinned,
   Radio,
+  Siren,
   Timer,
+  TrendingUp,
   TriangleAlert,
   UserRound,
 } from "lucide-react";
@@ -19,8 +24,9 @@ import {
   type NotArrivedRow,
   type OnDutyRow,
 } from "@/components/console/dashboard-tables";
-import { PageHeader } from "@/components/console/page-header";
-import { StatCard } from "@/components/console/stat-card";
+import { Card, CardTitle, Hello } from "@/components/crm/ui";
+import { StatTile } from "@/components/crm/stat";
+import { AreaTrend, BarList, DonutChart, Ring } from "@/components/crm/viz";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { requireRoleSession } from "@/lib/auth";
@@ -70,7 +76,12 @@ export default async function ConsoleDashboard() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [guards, sites, onDuty, todayPunches, liveSos, dueShifts] = await Promise.all([
+  const monthAgo = new Date(startOfToday);
+  monthAgo.setDate(monthAgo.getDate() - 29);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+
+  const [guards, sites, onDuty, todayPunches, liveSos, dueShifts, month, todayShifts] = await Promise.all([
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -102,6 +113,16 @@ export default async function ConsoleDashboard() {
       .lte("starts_at", new Date().toISOString())
       .gt("ends_at", new Date().toISOString())
       .order("starts_at"),
+    // The last 30 days of punches, for the charts.
+    supabase
+      .from("attendance")
+      .select("check_in_at, worked_minutes, overtime_minutes, status, sites(name)")
+      .gte("check_in_at", monthAgo.toISOString()),
+    supabase
+      .from("shifts")
+      .select("status")
+      .gte("starts_at", startOfToday.toISOString())
+      .lt("starts_at", endOfToday.toISOString()),
   ]);
 
   const live = onDuty.data ?? [];
@@ -163,83 +184,130 @@ export default async function ConsoleDashboard() {
   });
   const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;
 
+  // ---- charts: the last 14 days of hours, how punches were marked, the busiest sites.
+  const monthRows = (month.data ?? []).filter((r): r is typeof r & { check_in_at: string } => !!r.check_in_at);
+  const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: site.timeZone });
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(startOfToday);
+    d.setDate(d.getDate() - (13 - i));
+    return d;
+  });
+  const worked = new Map<string, number>();
+  const extra = new Map<string, number>();
+  for (const r of monthRows) {
+    const k = dayKey(new Date(r.check_in_at));
+    worked.set(k, (worked.get(k) ?? 0) + (r.worked_minutes ?? 0));
+    extra.set(k, (extra.get(k) ?? 0) + (r.overtime_minutes ?? 0));
+  }
+  const dayLabels = days.map((d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: site.timeZone }));
+  const workedSeries = days.map((d) => Math.round((worked.get(dayKey(d)) ?? 0) / 60));
+  const extraSeries = days.map((d) => Math.round((extra.get(dayKey(d)) ?? 0) / 60));
+  const punchesByDay = days.map((d) => monthRows.filter((r) => dayKey(new Date(r.check_in_at)) === dayKey(d)).length);
+
+  const count = (st: string) => monthRows.filter((r) => r.status === st).length;
+  const marked = [
+    { label: "On time", value: count("present"), hue: "jade" as const },
+    { label: "Late", value: count("late"), hue: "gold" as const },
+    { label: "Needs review", value: count("pending_review"), hue: "sky" as const },
+    { label: "Rejected", value: count("rejected"), hue: "brick" as const },
+  ];
+
+  const bySite = new Map<string, number>();
+  for (const r of monthRows) {
+    const name = (Array.isArray(r.sites) ? r.sites[0]?.name : (r.sites as { name?: string } | null)?.name) ?? "Unknown site";
+    bySite.set(name, (bySite.get(name) ?? 0) + (r.worked_minutes ?? 0));
+  }
+  const SITE_HUES = ["jade", "sky", "gold", "teal", "plum"] as const;
+  const busiest = [...bySite.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([label, mins], i) => ({ label, value: Math.round(mins / 60), hue: SITE_HUES[i % SITE_HUES.length]!, sub: `${Math.round(mins / 60)} h` }));
+
+  const shiftsToday = (todayShifts.data ?? []).filter((r) => r.status !== "cancelled");
+  const covered = shiftsToday.filter((r) => r.status === "in_progress" || r.status === "completed").length;
+  const coverPct = shiftsToday.length ? Math.round((covered / shiftsToday.length) * 100) : 0;
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`Good day, ${firstName}`}
-        action={
-          <Button asChild variant="outline">
-            <Link href="/console/attendance">
-              <CalendarCheck data-icon="inline-start" />
-              Attendance
-            </Link>
-          </Button>
+      <Hello
+        name={profile.full_name || firstName}
+        actions={
+          <>
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href="/console/roster">
+                <CalendarRange data-icon="inline-start" />
+                Roster
+              </Link>
+            </Button>
+            <Button asChild className="rounded-full">
+              <Link href="/console/attendance">
+                <CalendarCheck data-icon="inline-start" />
+                Attendance
+              </Link>
+            </Button>
+          </>
         }
       />
 
       {alerts.length > 0 && <LiveSosPanel alerts={alerts} />}
       {notArrived.length > 0 && <NotArrivedPanel rows={notArrived} />}
 
-      {/* Six figures, and the order is the order someone actually scans them:
-          what is happening right now, then the standing establishment, then the
-          two numbers that mean somebody has to do something. */}
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          label="On duty now"
-          value={String(live.length)}
-          hint={
-            live.length === 0
-              ? "Nobody is checked in"
-              : `Across ${new Set(live.map((r) => r.site_id)).size} site${
-                  new Set(live.map((r) => r.site_id)).size === 1 ? "" : "s"
-                }`
-          }
-          icon={Radio}
-          tone="emerald"
-          href="/console/attendance"
-          cta="See the ledger"
-        />
-        <StatCard
-          label="Active guards"
-          value={String(guards.count ?? 0)}
-          hint="With a working login"
-          icon={UserRound}
-          tone="indigo"
-          href="/console/guards"
-          cta="Manage guards"
-        />
-        <StatCard
-          label="Sites"
-          value={String(sites.count ?? 0)}
-          hint="Each with its own geofence"
-          icon={MapPinned}
-          tone="sky"
-          href="/console/sites"
-          cta="Open the map"
-        />
-        <StatCard
-          label="Late today"
-          value={String(lateToday)}
-          hint={lateToday ? "Past the site's grace window" : "Everyone arrived on time"}
-          icon={Timer}
-          tone={lateToday ? "amber" : "slate"}
-        />
-        <StatCard
-          label="Overtime today"
-          value={hours(overtimeToday)}
-          hint="Computed from punch pairs"
-          icon={CalendarCheck}
-          tone="violet"
-        />
-        <StatCard
-          label="Needs review"
-          value={String(needsReview)}
-          hint={needsReview ? "A punch the fence could not confirm" : "Nothing outstanding"}
-          icon={TriangleAlert}
-          tone={needsReview ? "rose" : "slate"}
-          href={needsReview ? "/console/attendance" : undefined}
-          cta="Review"
-        />
+      {/* birdev's stat tiles: the first solid, the rest through the hues, a figure that
+          needs someone in brick. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 @4xl/main:grid-cols-4">
+        <StatTile solid hue="jade" icon={Radio} label="On duty now" value={live.length} href="/console/attendance" trend={punchesByDay} note={live.length ? `Across ${new Set(live.map((r) => r.site_id)).size} sites` : "Nobody is checked in"} />
+        <StatTile hue="sky" icon={UserRound} label="Active guards" value={guards.count ?? 0} href="/console/guards" note="With a working login" />
+        <StatTile hue="gold" icon={MapPinned} label="Sites" value={sites.count ?? 0} href="/console/sites" note="Each with its own geofence" />
+        <StatTile hue={needsReview ? "brick" : "teal"} icon={TriangleAlert} label="Needs review" value={needsReview} href="/console/attendance" note={needsReview ? "A punch the fence could not confirm" : "Nothing outstanding"} noteTone={needsReview ? "bad" : undefined} />
+        <StatTile hue={lateToday ? "brick" : "plum"} icon={Timer} label="Late today" value={lateToday} note={lateToday ? "Past the site's grace window" : "Everyone arrived on time"} noteTone={lateToday ? "bad" : undefined} />
+        <StatTile hue="teal" icon={Clock3} label="Overtime today" value={Math.round(overtimeToday / 60)} note={`${hours(overtimeToday)} from punch pairs`} />
+        <StatTile hue="sky" icon={CalendarRange} label="Shifts today" value={shiftsToday.length} href="/console/roster" note={`${covered} covered so far`} />
+        <StatTile hue="jade" icon={CalendarCheck} label="Punches, 30 days" value={monthRows.length} note={`${marked[0]!.value} on time`} />
+      </div>
+
+      <div className="grid gap-4 @4xl/main:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <Card>
+          <CardTitle title="Man-hours" hint="Last 14 days, worked and overtime" icon={TrendingUp} hue="jade" right={<Link href="/console/attendance" className="text-sm font-medium text-primary-ink hover:underline">Ledger</Link>} />
+          <AreaTrend
+            labels={dayLabels}
+            money={false}
+            series={[
+              { label: "Worked", hue: "jade", values: workedSeries },
+              { label: "Overtime", hue: "gold", values: extraSeries },
+            ]}
+          />
+        </Card>
+        <Card>
+          <CardTitle title="Shift cover today" hint="Rostered shifts with the guard on site" icon={Gauge} hue="teal" />
+          <div className="grid place-items-center py-2">
+            <Ring value={coverPct} hue="teal" label={`${coverPct}%`} sub="covered" />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="hue-sky rounded-2xl bg-[var(--h-soft)] p-3 text-[var(--h-deep)]">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium"><CalendarRange className="size-4" /> Rostered</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{shiftsToday.length}</p>
+            </div>
+            <div className="hue-gold rounded-2xl bg-[var(--h-soft)] p-3 text-[var(--h-deep)]">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium"><Siren className="size-4" /> Live SOS</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">{alerts.length}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 @4xl/main:grid-cols-2">
+        <Card>
+          <CardTitle title="How punches were marked" hint="Last 30 days" icon={CalendarCheck} hue="sky" />
+          <DonutChart data={marked} total="punches" money={false} />
+        </Card>
+        <Card>
+          <CardTitle title="Busiest sites" hint="Hours worked, last 30 days" icon={Building2} hue="gold" right={<Link href="/console/sites" className="text-sm font-medium text-primary-ink hover:underline">All sites</Link>} />
+          {busiest.length ? (
+            <BarList data={busiest} money={false} />
+          ) : (
+            <p className="rounded-2xl border-2 border-dashed border-border px-4 py-10 text-center text-sm text-secondary-fg">No hours worked yet.</p>
+          )}
+        </Card>
       </div>
 
       {/* Only ever shown on a genuinely empty system. It is the one moment where

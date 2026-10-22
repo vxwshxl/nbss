@@ -23,12 +23,12 @@ export function Section({
     <section
       id={id}
       className={cn(
-        "relative px-5 py-20 sm:py-28",
-        alt && "border-y border-app-line-soft bg-muted/40",
+        "relative px-4 py-24 sm:px-8 sm:py-32",
+        alt ? "bg-subtle" : "bg-background",
         className,
       )}
     >
-      <div className="mx-auto w-full max-w-6xl">{children}</div>
+      <div className="mx-auto w-full max-w-[1280px]">{children}</div>
     </section>
   );
 }
@@ -51,11 +51,11 @@ export function SectionHead({
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div className="min-w-0 max-w-3xl">
           <p className="eyebrow mb-3">{kicker}</p>
-          <h2 className="font-display text-[clamp(1.75rem,4vw,2.75rem)] leading-[1.08] font-bold tracking-[-0.025em] text-balance">
+          <h2 className="display-section text-[clamp(2.25rem,5vw,4.25rem)] text-balance">
             {title}
           </h2>
           {lede && (
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-secondary-fg">
               {lede}
             </p>
           )}

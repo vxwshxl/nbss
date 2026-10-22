@@ -2,20 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-import { AronaiBand } from "@/components/brand";
-import { cn } from "@/lib/utils";
+import { ExpandOnScroll, FadeUp } from "@/components/motion/scroll-fx";
 
 /**
- * The masthead of an interior page.
+ * The opening band of an inner page: a big title on the pale ground, the lede set to the
+ * right, and (when the page has one) a photograph that starts as an inset card and opens
+ * to full bleed as it scrolls up. Clears the fixed header itself, so pages need no padding.
  *
- * Two jobs, and the second is the one that earns the photograph. It states what
- * the page is; and it gives a page that is otherwise a wall of prose (a
- * training syllabus, a legal document — one image to establish that this is a
- * real agency in a real place before the reader starts reading.
- *
- * A page with nothing worth photographing passes no `image` and gets the same
- * masthead on the app's own ground instead. That is the honest outcome: a stock
- * photograph chosen to fill a slot is worse than an empty slot.
+ * A page with nothing worth photographing passes no `image` and simply gets the title.
  */
 export function PageHead({
   eyebrow,
@@ -28,97 +22,50 @@ export function PageHead({
   eyebrow: string;
   title: React.ReactNode;
   lede?: React.ReactNode;
-  /** A photograph behind the masthead. Omit where there is nothing apt. */
+  /** A photograph under the title. Omit where there is nothing apt. */
   image?: string;
   /** The current page, for the trail. The root is always "Home". */
   crumb?: string;
   action?: React.ReactNode;
 }) {
-  const dark = Boolean(image);
-
   return (
-    <header
-      className={cn(
-        "relative isolate overflow-hidden",
-        dark
-          ? "bg-foreground text-background"
-          : "border-b border-app-line-soft bg-muted/40",
-      )}
-    >
-      {image && (
-        <>
-          <Image
-            src={image}
-            alt=""
-            fill
-            sizes="100vw"
-            priority
-            className="-z-20 object-cover object-center"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 bg-gradient-to-t from-black/92 via-black/70 to-black/45"
-          />
-          <div aria-hidden className="bg-grid absolute inset-0 -z-10 opacity-[0.06]" />
-        </>
-      )}
-
-      <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
-        {crumb && (
-          <nav aria-label="Breadcrumb" className="mb-6">
-            <ol className="flex items-center gap-1.5 text-xs">
-              <li>
-                <Link
-                  href="/"
-                  className={cn(
-                    "transition-colors",
-                    dark
-                      ? "text-background/55 hover:text-background"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Home
-                </Link>
-              </li>
-              <li aria-hidden>
-                <ChevronRight
-                  className={cn(
-                    "size-3.5",
-                    dark ? "text-background/30" : "text-muted-foreground/40",
-                  )}
-                  strokeWidth={2}
-                />
-              </li>
-              <li aria-current="page" className="font-semibold">
-                {crumb}
-              </li>
-            </ol>
-          </nav>
+    <header className="bg-subtle pt-32 sm:pt-40">
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-8">
+        <FadeUp>
+          {crumb && (
+            <nav aria-label="Breadcrumb" className="mb-5">
+              <ol className="flex items-center gap-1.5 text-[13px] text-secondary-fg">
+                <li>
+                  <Link href="/" className="transition-colors hover:text-foreground">
+                    Home
+                  </Link>
+                </li>
+                <li aria-hidden>
+                  <ChevronRight className="size-3.5 opacity-50" />
+                </li>
+                <li aria-current="page" className="font-medium text-foreground">
+                  {crumb}
+                </li>
+              </ol>
+            </nav>
+          )}
+          <p className="eyebrow">{eyebrow}</p>
+          <h1 className="display-hero mt-4 max-w-5xl text-[clamp(2.5rem,7vw,6.25rem)] text-balance">{title}</h1>
+        </FadeUp>
+        {(lede || action) && (
+          <FadeUp delay={0.1} className="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-xl text-lg text-secondary-fg">{lede}</div>
+            {action && <div className="shrink-0">{action}</div>}
+          </FadeUp>
         )}
-
-        <p className={cn("eyebrow mb-3", dark && "!text-emerald-300")}>{eyebrow}</p>
-
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="min-w-0 max-w-3xl">
-            <h1 className="font-display text-[clamp(2rem,5.5vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.03em] text-balance">
-              {title}
-            </h1>
-            {lede && (
-              <p
-                className={cn(
-                  "mt-5 max-w-2xl text-base leading-relaxed sm:text-lg",
-                  dark ? "text-background/70" : "text-muted-foreground",
-                )}
-              >
-                {lede}
-              </p>
-            )}
-          </div>
-          {action && <div className="shrink-0">{action}</div>}
-        </div>
       </div>
-
-      <AronaiBand className={dark ? "text-primary/40" : "text-primary/25"} />
+      {image ? (
+        <ExpandOnScroll className="relative mt-14 h-[64svh] min-h-[340px]">
+          <Image data-zoom src={image} alt="" fill priority sizes="100vw" className="object-cover" />
+        </ExpandOnScroll>
+      ) : (
+        <div className="h-16 sm:h-20" />
+      )}
     </header>
   );
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ChevronsUpDown,
   ArrowUp,
   ArrowDown,
@@ -23,15 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { TablePrintPreview } from "@/components/ui/table-print-preview";
 import {
   Dialog,
@@ -40,7 +31,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export const PAGE_SIZES = [20, 50, 100, 500, 1000, 2000, 5000] as const;
+export const PAGE_SIZES = [10, 20, 50, 100] as const;
+
+const PAGE_BTN =
+  "grid size-9 place-items-center rounded-full transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-35";
 
 export type Column<T> = {
   header: React.ReactNode;
@@ -80,9 +74,10 @@ export function DataTable<T>({
   data,
   getRowKey,
   emptyMessage = "Nothing here yet.",
-  initialPageSize = 20,
+  initialPageSize = 10,
   searchPlaceholder = "Search…",
   toolbar,
+  title,
   interactiveRows = false,
   printTitle,
   rowClassName,
@@ -98,6 +93,8 @@ export function DataTable<T>({
   searchPlaceholder?: string;
   /** Actions rendered on the right of the search bar (e.g. a create button). */
   toolbar?: React.ReactNode;
+  /** A heading at the left of the dark band, as birdev's tables have ("5 accounts"). */
+  title?: React.ReactNode;
   /** Optional per-row tint for actionable states (e.g. overdue loans, defaulters). */
   rowClassName?: (row: T) => string | undefined;
   /**
@@ -136,7 +133,8 @@ export function DataTable<T>({
    */
   onRowClick?: (row: T) => void;
 }) {
-  const [pageSize, setPageSize] = useState<number>(initialPageSize);
+  const pageSize = initialPageSize;
+  const pagerId = useId();
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState>(null);
@@ -220,43 +218,49 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-app-line-soft bg-card shadow-card print:shadow-none">
-      {(searchable || toolbar || printTitle) && (
-        <div className="flex items-center gap-2 border-b border-app-line-soft px-4 py-3">
-          {searchable && (
-            <div className="relative w-full max-w-xs">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+    <div className="overflow-hidden rounded-3xl bg-elevated shadow-e1 ring-1 ring-border print:shadow-none">
+      {/* birdev's table head: a dark band with the search centred in it, running straight
+          into the column header so the two read as one strip above the white rows. */}
+      <div className="bg-ink px-5 pt-5 pb-3 text-ink-fg sm:px-6">
+        <div className="grid items-center gap-3 @2xl/main:grid-cols-[minmax(0,1fr)_minmax(0,34rem)_minmax(0,1fr)]">
+          <div className="min-w-0 truncate text-[15px] font-semibold">{title}</div>
+          {searchable ? (
+            <label className="flex h-11 min-w-0 items-center gap-2.5 rounded-full bg-white/10 px-4 text-[14px] text-ink-fg ring-1 ring-white/15 focus-within:ring-2 focus-within:ring-white/50">
+              <Search className="size-4 shrink-0 text-ink-fg/60" />
+              <input
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setPage(0);
                 }}
                 placeholder={searchPlaceholder}
-                className="h-9 pl-9"
+                className="h-full w-full min-w-0 bg-transparent outline-none placeholder:text-ink-fg/50"
               />
-            </div>
+              <span className="shrink-0 text-[12px] text-ink-fg/60 tabular-nums">{processed.length}</span>
+            </label>
+          ) : (
+            <span />
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-2">
             {printTitle && (
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={() => setPrinting(true)}
                 disabled={processed.length === 0}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[13px] font-medium text-ink-fg ring-1 ring-white/15 transition-colors hover:bg-white/20 disabled:opacity-40"
               >
                 <Printer className="size-4" /> Print
-              </Button>
+              </button>
             )}
             {toolbar}
           </div>
         </div>
-      )}
+      </div>
 
       <Table>
         <TableHeader>
-          <TableRow className="border-0 bg-foreground hover:bg-foreground">
+          <TableRow className="border-0 bg-ink hover:bg-ink">
+            <TableHead className="h-auto w-14 pt-1 pb-3 pl-5 text-[12.5px] font-semibold text-ink-fg sm:pl-6">S/No.</TableHead>
             {columns.map((c, i) => {
               const sortable = !!c.sortValue;
               const active = sort?.index === i;
@@ -264,7 +268,7 @@ export function DataTable<T>({
                 <TableHead
                   key={i}
                   className={cn(
-                    "h-12 text-sm font-semibold text-background",
+                    "h-auto px-3 pt-1 pb-3 text-[12.5px] font-semibold tracking-[0.01em] text-ink-fg last:pr-5 sm:last:pr-6",
                     c.headClassName,
                   )}
                 >
@@ -272,7 +276,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={() => toggleSort(i)}
-                      className="-mx-1 inline-flex items-center gap-1.5 rounded px-1 py-0.5 transition-colors hover:text-background/70"
+                      className="-mx-1 inline-flex items-center gap-1.5 rounded px-1 py-0.5 transition-colors hover:text-ink-fg/70"
                     >
                       {c.header}
                       {active ? (
@@ -296,7 +300,7 @@ export function DataTable<T>({
         <TableBody>
           {rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={columns.length} className="p-0">
+              <TableCell colSpan={columns.length + 1} className="p-0">
                 <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
                   <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     {query.trim() ? (
@@ -340,9 +344,9 @@ export function DataTable<T>({
               <TableRow
                 key={getRowKey(row, i)}
                 className={cn(
-                  "h-16",
+                  "border-t border-border text-[14px] transition-colors hover:bg-transparent",
                   clickableRows &&
-                    "cursor-pointer hover:bg-accent/40 active:bg-accent/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+                    "cursor-pointer hover:bg-subtle active:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
                   rowClassName?.(row),
                 )}
                 tabIndex={clickableRows ? 0 : undefined}
@@ -355,8 +359,11 @@ export function DataTable<T>({
                     : undefined
                 }
               >
+                <TableCell className="py-3 pr-3 pl-5 text-[13px] text-secondary-fg tabular-nums sm:pl-6">
+                  {current * pageSize + i + 1}
+                </TableCell>
                 {columns.map((c, ci) => (
-                  <TableCell key={ci} className={cn("px-4", c.className)}>
+                  <TableCell key={ci} className={cn("px-3 py-3 last:pr-5 sm:last:pr-6", c.className)}>
                     {c.cell(row)}
                   </TableCell>
                 ))}
@@ -366,79 +373,55 @@ export function DataTable<T>({
         </TableBody>
       </Table>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-app-line-soft px-4 py-3 text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <span>Rows</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => {
-              setPageSize(Number(v));
-              setPage(0);
-            }}
-          >
-            <SelectTrigger size="sm" className="w-[5.5rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-4 text-muted-foreground">
-          <span className="tabular-nums">
-            {from}&ndash;{to} of {processed.length}
-          </span>
+      <div className="mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-border py-4 text-[13px] text-secondary-fg sm:mx-6">
+        <span className="tabular-nums">
+          {processed.length === 0 ? "0 results" : `${from}–${to} of ${processed.length}`}
+        </span>
+        {pageCount > 1 && (
           <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              disabled={current === 0}
-              onClick={() => setPage(0)}
-              aria-label="First page"
-            >
-              <ChevronsLeft className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
+            <button
+              type="button"
+              aria-label="Previous page"
               disabled={current === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              aria-label="Previous page"
+              className={PAGE_BTN}
             >
               <ChevronLeft className="size-4" />
-            </Button>
-            <span className="px-2 tabular-nums text-foreground">
-              {current + 1} / {pageCount}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
+            </button>
+            {Array.from({ length: pageCount }, (_, n) => n)
+              .filter((n) => pageCount <= 7 || Math.abs(n - current) <= 2 || n === 0 || n === pageCount - 1)
+              .map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setPage(n)}
+                  aria-current={n === current ? "page" : undefined}
+                  className={cn(
+                    "relative grid size-9 place-items-center rounded-full font-medium",
+                    n === current ? "text-ink-fg" : "hover:bg-muted",
+                  )}
+                >
+                  {n === current && (
+                    <motion.span
+                      layoutId={`pg-${pagerId}`}
+                      className="absolute inset-0 rounded-full bg-ink"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    />
+                  )}
+                  <span className="relative">{n + 1}</span>
+                </button>
+              ))}
+            <button
+              type="button"
+              aria-label="Next page"
               disabled={current >= pageCount - 1}
               onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-              aria-label="Next page"
+              className={PAGE_BTN}
             >
               <ChevronRight className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              disabled={current >= pageCount - 1}
-              onClick={() => setPage(pageCount - 1)}
-              aria-label="Last page"
-            >
-              <ChevronsRight className="size-4" />
-            </Button>
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {printTitle && (

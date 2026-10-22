@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Building2, MapPinned, PowerOff, Power, Radio, Shapes } from "lucide-react";
+import { MapPinned, PowerOff, Power, Radio, Shapes } from "lucide-react";
 import { toast } from "sonner";
 
 import { setSiteActive } from "@/app/console/sites/actions";
@@ -231,13 +231,8 @@ export function SitesWorkspace({
         )}
       </Panel>
 
-      <Panel
-        tone="slate"
-        title={`${rows.length} ${rows.length === 1 ? "site" : "sites"}`}
-        icon={Building2}
-        bodyClassName="p-3 sm:p-4"
-      >
         <DataTable
+          title={`${rows.length} ${rows.length === 1 ? "site" : "sites"}`}
           columns={columns}
           data={rows}
           getRowKey={(r) => r.id}
@@ -249,7 +244,6 @@ export function SitesWorkspace({
           emptyMessage="No sites registered. A site needs a boundary before anyone can check in there."
           rowClassName={(r) => (r.active ? undefined : "opacity-60")}
         />
-      </Panel>
 
       <SitePreviewDialog
         site={detail}

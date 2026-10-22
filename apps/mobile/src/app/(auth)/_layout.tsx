@@ -17,7 +17,6 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="sign-in" />
-      <Stack.Screen name="register" options={{ presentation: "modal", headerShown: true, title: "Create an account" }} />
     </Stack>
   );
 }

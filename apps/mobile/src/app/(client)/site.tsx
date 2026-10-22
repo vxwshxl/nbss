@@ -1,3 +1,4 @@
+import { Redirect } from "expo-router";
 import { CalendarCheck, Clock3, Phone, Radio, UserRoundCheck, Timer } from "lucide-react-native";
 import { useCallback } from "react";
 import { Linking, RefreshControl, StyleSheet, View } from "react-native";
@@ -41,7 +42,7 @@ export default function ClientSiteRoute() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [live, month] = await Promise.all([
+    const [live, month, sites, requests] = await Promise.all([
       supabase
         .from("client_attendance")
         .select("*")
@@ -51,6 +52,8 @@ export default function ClientSiteRoute() {
         .from("client_attendance")
         .select("worked_minutes, overtime_minutes")
         .gte("check_in_at", monthStart.toISOString()),
+      supabase.from("sites").select("id", { count: "exact", head: true }),
+      supabase.from("service_requests").select("id", { count: "exact", head: true }),
     ]);
 
     const rows = month.data ?? [];
@@ -59,6 +62,9 @@ export default function ClientSiteRoute() {
       monthMinutes: rows.reduce((sum, r) => sum + (r.worked_minutes ?? 0), 0),
       overtime: rows.reduce((sum, r) => sum + (r.overtime_minutes ?? 0), 0),
       shifts: rows.length,
+      // A new client has nothing to watch yet: their first screen is the booking form,
+      // as on the website.
+      fresh: !sites.count && !requests.count,
     };
   }, []);
 
@@ -67,6 +73,7 @@ export default function ClientSiteRoute() {
   const monthMinutes = data?.monthMinutes ?? 0;
   const overtime = data?.overtime ?? 0;
   const shifts = data?.shifts ?? 0;
+  if (data?.fresh) return <Redirect href="/(client)/book" />;
 
   const hours = (minutes: number) => {
     const h = Math.floor(minutes / 60);

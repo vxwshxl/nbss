@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Siren } from "lucide-react";
 
 import { SOS_KIND_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
 import { PhoneLink, istDateTime } from "@/components/console/preview-kit";
 import { SosPreviewDialog } from "@/components/console/sos-preview";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status-pill";
 
 export type SosRow = {
@@ -96,8 +94,9 @@ export function SosWorkspace({ rows }: { rows: SosRow[] }) {
   ];
 
   return (
-    <Panel tone="rose" title={`${rows.length} alert${rows.length === 1 ? "" : "s"}`} icon={Siren} bodyClassName="p-3 sm:p-4">
+    <>
       <DataTable
+        title={`${rows.length} alert${rows.length === 1 ? "" : "s"}`}
         columns={columns}
         data={rows}
         getRowKey={(r) => r.id}
@@ -110,6 +109,6 @@ export function SosWorkspace({ rows }: { rows: SosRow[] }) {
         rowClassName={(r) => (isLive(r.status) ? "bg-rose-50/70 dark:bg-rose-500/10" : undefined)}
       />
       <SosPreviewDialog id={openId} onClose={() => setOpenId(null)} />
-    </Panel>
+    </>
   );
 }

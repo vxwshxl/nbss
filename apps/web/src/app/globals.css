@@ -166,6 +166,25 @@
 }
 
 @theme inline {
+  /* birdev's design vocabulary, in NBSS colours (see "Site tokens" below). */
+  --color-subtle: var(--ds-bg-subtle);
+  --color-elevated: var(--ds-bg-elevated);
+  --color-secondary-fg: var(--ds-fg-secondary);
+  --color-accent-subtle: var(--ds-accent-subtle);
+  --color-border-strong: var(--ds-border-strong);
+  --color-gold: var(--ds-gold);
+  --color-gold-soft: var(--ds-gold-soft);
+  --color-ink: var(--ds-ink);
+  --color-ink-fg: var(--ds-ink-fg);
+  --color-success: var(--ds-success);
+  --color-warning: var(--ds-warning);
+  --color-danger: var(--ds-danger);
+  --shadow-e0: var(--ds-elevation-0);
+  --shadow-e1: var(--ds-elevation-1);
+  --shadow-e2: var(--ds-elevation-2);
+  --shadow-e3: var(--ds-elevation-3);
+  --ease-quick: cubic-bezier(0.2, 0, 0, 1);
+  --ease-soft: cubic-bezier(0.05, 0.7, 0.1, 1);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -1099,6 +1118,9 @@ button:disabled,
 .gate-scene .gs-boom { transform-box: view-box; transform-origin: 591px 239px; animation: gs-boom 12s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
 .gate-scene .gs-car { animation: gs-car 12s cubic-bezier(0.4, 0, 0.3, 1) infinite; }
 .gate-scene .gs-wheel { transform-box: view-box; animation: gs-wheel 12s cubic-bezier(0.4, 0, 0.3, 1) infinite; }
+.gate-scene .gs-boom2 { transform-box: view-box; transform-origin: 465px 271px; animation: gs-boom2 12s cubic-bezier(0.45, 0, 0.25, 1) -6s infinite; }
+.gate-scene .gs-car2 { animation: gs-car2 12s cubic-bezier(0.4, 0, 0.3, 1) -6s infinite; }
+.gate-scene .gs-wheel2 { transform-box: view-box; animation: gs-wheel 12s cubic-bezier(0.4, 0, 0.3, 1) -6s infinite; }
 .gate-scene .gs-headlight { animation: gs-headlight 12s linear infinite; }
 .gate-scene .gs-torch { transform-box: fill-box; transform-origin: 100% 45%; animation: gs-torch 4.5s ease-in-out infinite alternate; }
 .gate-scene .gs-patrol { animation: gs-patrol 18s linear infinite; }
@@ -1125,6 +1147,18 @@ button:disabled,
   99.9% { transform: translateX(920px); }
   100% { transform: translateX(-170px); }
 }
+@keyframes gs-boom2 {
+  0%, 30% { transform: rotate(0deg); }
+  40%, 76% { transform: rotate(-80deg); }
+  88%, 100% { transform: rotate(0deg); }
+}
+@keyframes gs-car2 {
+  0% { transform: translateX(1080px); }
+  22%, 44% { transform: translateX(616px); }
+  75% { transform: translateX(-200px); }
+  99.9% { transform: translateX(-200px); }
+  100% { transform: translateX(1080px); }
+}
 @keyframes gs-wheel {
   0% { transform: rotate(0deg); }
   22%, 44% { transform: rotate(900deg); }
@@ -1145,6 +1179,7 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
   .gate-scene * { animation: none !important; }
   .gate-scene .gs-patrol { transform: translate(120px, 232px); }
+  .gate-scene .gs-car2 { transform: translateX(616px); }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1208,3 +1243,120 @@ button:disabled,
 @media (prefers-reduced-motion: reduce) {
   .nibo *, .nibo { animation: none !important; transition: none !important; }
 }
+
+
+/* ---------------------------------------------------------------------------
+ * Site tokens: the names the birdev-style site and CRM are written in, pointed
+ * at NBSS's palette. "Gold" is birdev's highlight colour; here it is the bright
+ * emerald of the NBSS gradient, and "ink" is the near-black green of the night
+ * gate scene. Light only.
+ * ------------------------------------------------------------------------- */
+:root {
+  --ds-bg: #ffffff;
+  --ds-bg-subtle: #f5f8f6;
+  --ds-bg-muted: #edf2ef;
+  --ds-bg-elevated: #ffffff;
+  --ds-fg: #111a16;
+  --ds-fg-secondary: #5a6660;
+  --ds-fg-muted: #8a958f;
+  --ds-border: #e2e8e4;
+  --ds-border-strong: #cfd8d3;
+  --ds-accent: #047857;
+  --ds-accent-subtle: #e6f6ef;
+  --ds-success: #047857;
+  --ds-warning: #a35c00;
+  --ds-danger: #c0362c;
+  --ds-gold: #10b981;
+  --ds-gold-soft: #6ee7b7;
+  --ds-ink: #06110d;
+  --ds-ink-fg: #eef5f1;
+
+  --hue-jade: #0f9f6e; --hue-jade-soft: #dff5ec; --hue-jade-deep: #04664a;
+  --hue-gold: #c8962e; --hue-gold-soft: #faefd6; --hue-gold-deep: #8a6214;
+  --hue-sky: #2f7fc1; --hue-sky-soft: #e1edf8; --hue-sky-deep: #1d5687;
+  --hue-brick: #cf5f3e; --hue-brick-soft: #fae6dd; --hue-brick-deep: #93391f;
+  --hue-plum: #7a5ab6; --hue-plum-soft: #eee7f8; --hue-plum-deep: #533a85;
+  --hue-teal: #12867c; --hue-teal-soft: #dcf1ee; --hue-teal-deep: #0b5d56;
+
+  --ds-elevation-0: 0 0 0 1px rgb(6 40 28 / 0.05), 0 1px 2px rgb(6 40 28 / 0.04), 0 10px 28px -16px rgb(6 40 28 / 0.14);
+  --ds-elevation-1: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.06);
+  --ds-elevation-2: 0 0 0 1px rgb(0 0 0 / 0.06), 0 4px 12px rgb(0 0 0 / 0.08);
+  --ds-elevation-3: 0 0 0 1px rgb(0 0 0 / 0.08), 0 12px 32px rgb(0 0 0 / 0.12);
+}
+
+/* Big display type: tracking tightens as size grows. */
+.display-hero { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.045em; line-height: 0.95; }
+.display-section { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+/* Letters filled with a photograph (the wordmark moments). */
+.text-photo { background-size: cover; background-position: center; -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.hue-jade  { --h: var(--hue-jade);  --h-soft: var(--hue-jade-soft);  --h-deep: var(--hue-jade-deep); }
+.hue-gold  { --h: var(--hue-gold);  --h-soft: var(--hue-gold-soft);  --h-deep: var(--hue-gold-deep); }
+.hue-sky   { --h: var(--hue-sky);   --h-soft: var(--hue-sky-soft);   --h-deep: var(--hue-sky-deep); }
+.hue-brick { --h: var(--hue-brick); --h-soft: var(--hue-brick-soft); --h-deep: var(--hue-brick-deep); }
+.hue-plum  { --h: var(--hue-plum);  --h-soft: var(--hue-plum-soft);  --h-deep: var(--hue-plum-deep); }
+.hue-teal  { --h: var(--hue-teal);  --h-soft: var(--hue-teal-soft);  --h-deep: var(--hue-teal-deep); }
+
+.blueprint { background-image: linear-gradient(rgb(110 231 183 / 0.07) 1px, transparent 1px), linear-gradient(90deg, rgb(110 231 183 / 0.07) 1px, transparent 1px), linear-gradient(rgb(110 231 183 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(110 231 183 / 0.035) 1px, transparent 1px); background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px; }
+
+/* FAQ as a chat (components/site/faq-chat.tsx): the question rises from the right, BIRD's
+   reply from the left with a slight overshoot like a sent message; typing dots pulse first. */
+.faq-bubble { opacity: 0; transform: translateY(14px) scale(0.85); }
+.faq-from-left { transform-origin: left top; }
+.faq-from-right { transform-origin: right bottom; }
+.faq-bubble.is-in, .faq-typing.is-in { animation: faq-pop 420ms cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.faq-typing { transform-origin: left top; }
+.faq-typing span { width: 7px; height: 7px; border-radius: 999px; background: var(--ds-fg-secondary); animation: faq-dot 1s ease-in-out infinite; }
+.faq-typing span:nth-child(2) { animation-delay: 0.15s; }
+.faq-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes faq-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes faq-dot { 0%, 60%, 100% { opacity: 0.35; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .faq-bubble { opacity: 1; transform: none; }
+  .faq-bubble.is-in { animation: none; }
+}
+@media print {
+  .faq-bubble { opacity: 1 !important; transform: none !important; animation: none !important; }
+}
+
+
+/* Footer service ticker: two identical runs, slid by exactly one run. */
+@keyframes site-marquee { to { transform: translateX(-50%); } }
+.animate-site-marquee { animation: site-marquee 40s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .animate-site-marquee { animation: none; } }
+
+/* Lenis owns scrolling on the public site. */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+
+/* The console's ground, as birdev's CRM: pale paper with soft colour at the top and a
+   faint surveyor's grid, so pages never sit on a flat sheet. */
+.crm-ground {
+  background:
+    radial-gradient(900px 420px at 88% -6%, color-mix(in oklab, var(--hue-jade) 13%, transparent), transparent 70%),
+    radial-gradient(700px 380px at 30% -10%, color-mix(in oklab, var(--hue-teal) 10%, transparent), transparent 70%),
+    radial-gradient(600px 500px at 0% 60%, color-mix(in oklab, var(--hue-sky) 6%, transparent), transparent 70%),
+    var(--ds-bg-subtle);
+}
+.crm-ground::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgb(6 40 28 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(6 40 28 / 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 520px);
+}
+
+/* A row of page actions: equal shares on phones, sized to their labels from desktop up. */
+.action-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr)); gap: 0.5rem; }
+.action-row > *, .action-row > form > button { width: 100%; justify-content: center; }
+@media (min-width: 1024px) {
+  .action-row { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+  .action-row > *, .action-row > form > button { width: auto; }
+}
+
+/* Hero map: a post's blip brightens as the sweep passes. */
+@keyframes hero-blip { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { [data-radar] { display: none; } }

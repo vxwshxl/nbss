@@ -15,7 +15,7 @@ import {
   verifySignInCode,
   type SignInResult,
 } from "@/lib/sign-in";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 
 import type { SignInState } from "./state";
 
@@ -29,8 +29,19 @@ async function clientIp(): Promise<string> {
  * page there re-checks the role and sends anyone who does not belong back to
  * their own home — anything else lands on the role's dashboard.
  */
-function destination(role: Role, from: string): string {
+async function destination(role: Role, userId: string, from: string): Promise<string> {
   if (from.startsWith("/console/") && !from.startsWith("//")) return from;
+  // A client with nothing yet goes straight to the booking form. Decided here rather
+  // than by a second redirect on /console/site, which a server action's redirect cannot
+  // follow cleanly.
+  if (role === "client") {
+    const admin = supabaseAdmin();
+    const [{ count: sites }, { count: requests }] = await Promise.all([
+      admin.from("sites").select("id", { count: "exact", head: true }).eq("client_id", userId),
+      admin.from("service_requests").select("id", { count: "exact", head: true }).eq("client_id", userId),
+    ]);
+    if (!sites && !requests) return "/console/book";
+  }
   return homeFor(role);
 }
 
@@ -97,5 +108,5 @@ export async function signInAction(_prev: SignInState, data: FormData): Promise<
     ip,
   });
 
-  redirect(destination(result.role, from));
+  redirect(await destination(result.role, result.userId, from));
 }

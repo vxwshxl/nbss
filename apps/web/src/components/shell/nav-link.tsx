@@ -3,26 +3,21 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TONES, toneFor, type Tone } from "@/lib/ui/tones";
 
 /**
  * One row of console navigation, shared by the tenant, platform-admin and agent
  * sidebars — they had three byte-identical copies of this markup, which is how
  * a focus ring ends up on two of them.
  *
- * The icon sits in a tinted tile rather than loose in the row. With forty
- * destinations in the tenant nav, a column of same-coloured glyphs is a wall of
- * grey you have to read word by word; the tint is what lets someone find Fees
- * again by shape and colour rather than by re-reading the list. The tone is
- * derived from the href, so a destination keeps its colour for the life of the
- * app and across every role that can see it.
+ * The icon sits in a tinted tile rather than loose in the row, in the hue of
+ * the section it belongs to (the group sets .hue-*), so a destination is found
+ * again by colour and shape rather than by re-reading the list.
  */
 export function NavLink({
   href,
   label,
   icon: Icon,
   active,
-  tone,
   badge,
   onNavigate,
 }: {
@@ -30,13 +25,11 @@ export function NavLink({
   label: string;
   icon: LucideIcon;
   active: boolean;
-  tone?: Tone;
   /** Pending/unseen count. Becomes a dot when the sidebar is a rail. */
   badge?: number;
   /** Called on a plain click, so the nav can show the row as active at once. */
   onNavigate?: () => void;
 }) {
-  const t = TONES[tone ?? toneFor(href)];
   return (
     <Link
       href={href}
@@ -50,26 +43,24 @@ export function NavLink({
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
         onNavigate?.();
       }}
+      // birdev's sidebar: each section has its own hue (set on the group as .hue-*); the
+      // icon sits on that hue's soft wash, and the active row takes the wash with the
+      // icon tile turned solid.
       className={cn(
-        "relative flex items-center gap-2.5 rounded-lg p-2 text-sm font-medium outline-none transition-colors duration-100 lg:p-1.5",
+        "group relative flex items-center gap-3 rounded-[14px] px-2 py-1.5 text-[15px] font-medium outline-none transition-[background-color,color,translate,box-shadow] active:translate-y-px",
         "focus-visible:ring-2 focus-visible:ring-sidebar-ring/60",
-        "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        // The hover pair is repeated for the active row on purpose: `hover:` is
-        // emitted after `data-active:`, so without `data-active:hover:text-…`
-        // hovering the filled pill turned its label dark too — invisible.
-        "data-active:bg-brand-gradient-strong data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:shadow-sm data-active:hover:bg-brand-gradient-strong data-active:hover:brightness-110 data-active:hover:text-sidebar-primary-foreground",
+        active
+          ? "bg-[var(--h-soft)] text-[var(--h-deep)] shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--h)_22%,transparent)]"
+          : "text-secondary-fg hover:bg-muted hover:text-foreground",
       )}
     >
       <span
         className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-md transition-colors",
-          // On the filled row the tile drops its own tint and borrows the
-          // fill's foreground: a pastel square inside a solid ink pill reads as
-          // a sticker, not as the same control in a different state.
-          active ? "bg-sidebar-primary-foreground/15 text-sidebar-primary-foreground" : t.chip,
+          "grid size-8 shrink-0 place-items-center rounded-[10px] transition-[background-color,color,transform] duration-200 group-hover:-rotate-6",
+          active ? "bg-[var(--h)] text-white shadow-[0_6px_14px_-6px_var(--h)]" : "bg-[var(--h-soft)] text-[var(--h-deep)]",
         )}
       >
-        <Icon className="size-4" strokeWidth={1.9} />
+        <Icon className="size-[17px]" strokeWidth={1.9} />
       </span>
       <span data-rail-hide className="min-w-0 flex-1 truncate">
         {label}
@@ -80,9 +71,7 @@ export function NavLink({
           title={`${badge} pending`}
           className={cn(
             "inline-flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
-            active
-              ? "bg-sidebar-primary-foreground text-sidebar-primary"
-              : "bg-primary text-primary-foreground",
+            "bg-gold text-ink",
           )}
         >
           {badge > 9 ? "9+" : badge}
@@ -102,7 +91,7 @@ export function NavGroupLabel({ children }: { children: React.ReactNode }) {
   return (
     <p
       data-nav-group
-      className="px-2 pb-1 text-xs font-medium text-muted-foreground"
+      className="mb-1 px-3 text-[13px] font-semibold text-secondary-fg"
     >
       {children}
     </p>

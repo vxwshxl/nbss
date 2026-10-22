@@ -135,7 +135,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Top-centre rather than a corner: on a phone at a gate the
                 bottom of the screen is under a thumb and the corners are where
                 the OS puts its own chrome. */}
-            <Toaster position="top-center" />
+            <Toaster />
           </TooltipProvider>
         </ThemeProvider>
       </body>

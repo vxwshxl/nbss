@@ -96,6 +96,7 @@ export function AronaiBand({ className }: { className?: string }) {
 }
 
 const LOCKUP = {
+  xs: { mark: 30, word: "text-[25px]", gap: "gap-1.5" },
   sm: { mark: 40, word: "text-[34px]", gap: "gap-2" },
   md: { mark: 54, word: "text-[46px]", gap: "gap-2.5" },
   lg: { mark: 72, word: "text-[62px]", gap: "gap-3" },
@@ -136,16 +137,16 @@ export function BrandLockup({
       </span>
       <svg
         data-rail-hide
-        viewBox="0 0 1000 262"
+        viewBox="0 6 1000 222"
         role="img"
         aria-label={site.name}
-        className="mt-1.5 block h-auto w-0 min-w-full overflow-visible"
+        className="mt-1 block h-auto w-0 min-w-full overflow-visible"
       >
         {["National Bodo", "Security Service"].map((line, i) => (
           <text
             key={line}
             x="0"
-            y={i === 0 ? 100 : 236}
+            y={i === 0 ? 92 : 212}
             textLength="1000"
             lengthAdjust="spacing"
             fill="currentColor"

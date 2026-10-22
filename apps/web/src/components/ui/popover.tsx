@@ -28,7 +28,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 max-h-(--radix-popover-content-available-height) w-64 origin-(--radix-popover-content-transform-origin) overflow-y-auto overscroll-contain rounded-xl bg-popover p-3 text-popover-foreground shadow-raised ring-1 ring-app-line outline-none ease-out-strong data-open:duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "z-50 max-h-(--radix-popover-content-available-height) w-64 origin-(--radix-popover-content-transform-origin) overflow-y-auto overscroll-contain rounded-2xl border-2 border-border bg-elevated p-3 text-popover-foreground shadow-raised ring-1 ring-app-line outline-none ease-out-strong data-open:duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}

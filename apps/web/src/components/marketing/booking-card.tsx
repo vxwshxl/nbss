@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 export function BookingCard({ service, className }: { service?: string; className?: string }) {
   const suffix = service ? `?service=${encodeURIComponent(service)}` : "";
   const signIn = service ? `/login?from=${encodeURIComponent(`/console/book${suffix}`)}` : BOOK_HREF;
-  const register = service ? `/register?from=${encodeURIComponent(`/console/book${suffix}`)}` : REGISTER_HREF;
+  const register = service ? `/login?from=${encodeURIComponent(`/console/book${suffix}`)}` : REGISTER_HREF;
 
   return (
     <div

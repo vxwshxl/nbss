@@ -1,151 +1,86 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Globe, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, Globe, Menu, X } from "lucide-react";
+
 import { AssistantPanelContext } from "@/components/ai/assistant-panel";
-import { NiboCompanion } from "@/components/nibo/nibo-companion";
-import { CommandPalette } from "./command-palette";
-import { Clock } from "./clock";
-import { useMediaQuery } from "./use-media-query";
 import { Mark } from "@/components/brand";
 import { Nibo } from "@/components/nibo/nibo";
+import { NiboCompanion } from "@/components/nibo/nibo-companion";
+import { cn } from "@/lib/utils";
+
+import { CommandPalette } from "./command-palette";
 import { findNavItem, type NavIndexItem } from "./nav-index";
 
-/** Remembers the icon-rail preference across sessions. Read server-side in each
- *  console layout, so the first paint is already the right width. */
+/** Kept for layouts that still read it; the sidebar no longer collapses. */
 export const RAIL_COOKIE = "erp-rail";
 
-const DESKTOP = "(min-width: 64rem)";
-/** The assistant docks as a column from here up (matches globals.css). */
-const DOCK = "(min-width: 90rem)";
-/** Below this the assistant is full screen. */
-const PHONE = "(max-width: 39.99rem)";
-/** Small laptops: the sidebar starts as icons so pages keep their width. */
-const COMPACT = "(min-width: 64rem) and (max-width: 79.99rem)";
-
+/**
+ * The signed-in workspace, laid out as birdev's console: a sidebar on desktop and a
+ * drawer on phones and tablets, a sticky frosted top bar with the page, search, "View
+ * as" and the account menu, and the page on the pale ground.
+ *
+ * Nibo, the companion, floats in the corner; tapping him opens the assistant, which
+ * floats over the page from the right on wide screens and fills the screen below lg.
+ * It is always mounted, only hidden, so the conversation survives closing it and
+ * moving between pages.
+ */
 export function AppShell({
   brand,
   brandHref,
-  assistantHref,
   assistant,
   mark,
   nav,
   navIndex,
   sidebarFooter,
-  topbarLeft,
   topbarRight,
   topbarSecondary,
   banner,
-  defaultCollapsed = false,
   companion,
   children,
 }: {
-  /** Console name — the drawer's accessible name. */
+  /** Console name: the drawer's accessible name. */
   brand: string;
-  /** Where the mark points. */
+  /** Where the logo points. */
   brandHref: string;
-  /**
-   * The assistant, if this console has one. Its button is `<AssistantButton />`,
-   * which the layout places in `topbarRight` — it is not another section of the
-   * console, it is a way to work the whole of it, so it lives in the topbar
-   * rather than in the nav.
-   */
+  /** Kept for callers; the assistant always opens as the panel now. */
   assistantHref?: string;
-  /**
-   * The assistant itself, already rendered by the layout, for the side panel.
-   * A node rather than an import because it needs server-side state (persona,
-   * whether a key is configured) and this file is a Client Component. Without
-   * it the sparkle falls back to `assistantHref`.
-   */
+  /** The assistant, already rendered by the layout, for the panel. */
   assistant?: React.ReactNode;
   /** The logo block at the top of the sidebar. */
   mark: React.ReactNode;
-  /** The console's navigation. Rendered once and shared by the column and the
-   *  drawer, so there is no second copy to keep in step. */
+  /** The console's navigation, shared by the sidebar and the drawer. */
   nav: React.ReactNode;
   navIndex: NavIndexItem[];
   sidebarFooter?: React.ReactNode;
-  /** Beside the clock and search — the language picker. Moves into the drawer
-   *  on a phone, like `topbarSecondary`. */
   topbarLeft?: React.ReactNode;
+  /** The account menu. */
   topbarRight?: React.ReactNode;
-  /**
-   * Controls that matter but are not the first thing you reach for — the
-   * session switcher, the theme control. On a phone the topbar cannot hold
-   * them: the tenant console's right-hand group measured 425px against a 390px
-   * screen, which pushed every single page 110px sideways. So they move into
-   * the drawer down there instead of being dropped, and nothing becomes
-   * unreachable on a phone.
-   */
+  /** "View as". */
   topbarSecondary?: React.ReactNode;
-  /** Full-width strip above the topbar — the subscription banner. */
+  /** Full-width strip above the top bar: the "viewing as" banner. */
   banner?: React.ReactNode;
   defaultCollapsed?: boolean;
-  /** Nibo, the floating companion: whose preferences he keeps. Omitted, he is not shown. */
+  /** Nibo, the floating companion: whose preferences he keeps. */
   companion?: { person: string } | null;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  // On a small laptop the rail is icons unless opened for a look ("peek");
-  // that is not a preference, so it writes no cookie.
-  const isCompact = useMediaQuery(COMPACT, false);
-  const [peek, setPeek] = useState(false);
-  const railCollapsed = isCompact ? !peek : collapsed;
-  // `true` on the server: the console is a desktop tool first, and guessing
-  // "phone" would render every first paint as a drawer and then reflow.
-  const isDesktop = useMediaQuery(DESKTOP, true);
-  // Wide enough to dock the assistant as a third column without squeezing
-  // the page below ~900px. Narrower, it floats over the page as a panel.
-  const isDocked = useMediaQuery(DOCK, true);
-  const isPhone = useMediaQuery(PHONE, false);
-  const drawerOpen = open && !isDesktop;
-
   const [assistantOpen, setAssistantOpen] = useState(false);
-  // What the rail was before the assistant borrowed its width, so closing the
-  // panel puts the sidebar back rather than leaving it narrowed for good.
-  const railBeforeAssistant = useRef<boolean | null>(null);
 
   const openAssistant = useCallback(() => {
-    // Making room for the panel writes no cookie on purpose: it is not a
-    // statement about how this person likes their sidebar, and it must not
-    // outlive the panel.
-    if (isDocked && !collapsed) {
-      railBeforeAssistant.current = collapsed;
-      setCollapsed(true);
-    }
-    // If the phone drawer is open, its job is done.
     setOpen(false);
     setAssistantOpen(true);
-  }, [isDocked, collapsed]);
-
-  const closeAssistant = useCallback(() => {
-    setAssistantOpen(false);
-    if (railBeforeAssistant.current !== null) {
-      setCollapsed(railBeforeAssistant.current);
-      railBeforeAssistant.current = null;
-    }
   }, []);
-
-  // Memoised so the assistant is not re-rendered by everything else that moves
-  // in the shell — the identity is what context consumers compare on.
-  const assistantPanel = useMemo(
-    () => ({ open: assistantOpen, close: closeAssistant }),
-    [assistantOpen, closeAssistant],
-  );
-
-  // What <AssistantButton /> needs, wherever the layout put it in the topbar.
-  const assistantToggle = useMemo<AssistantToggle | null>(
-    () =>
-      assistant
-        ? { open: assistantOpen, toggle: assistantOpen ? closeAssistant : openAssistant }
-        : assistantHref
-          ? { href: assistantHref }
-          : null,
-    [assistant, assistantHref, assistantOpen, openAssistant, closeAssistant],
+  const closeAssistant = useCallback(() => setAssistantOpen(false), []);
+  const assistantPanel = useMemo(() => ({ open: assistantOpen, close: closeAssistant }), [assistantOpen, closeAssistant]);
+  const toggle = useMemo<AssistantToggle | null>(
+    () => (assistant ? { open: assistantOpen, toggle: assistantOpen ? closeAssistant : openAssistant } : null),
+    [assistant, assistantOpen, openAssistant, closeAssistant],
   );
 
   // A button on one of Nibo's bubbles: open the panel, then put the question to it.
@@ -157,334 +92,184 @@ export function AppShell({
     [openAssistant],
   );
 
-  // Full screen on a phone: the page underneath must not scroll behind it.
-  const assistantCovers = assistantOpen && isPhone && !!assistant;
-  useEffect(() => {
-    if (!assistantCovers) return;
-    const { body } = document;
-    const prev = body.style.overflow;
-    body.style.overflow = "hidden";
-    return () => {
-      body.style.overflow = prev;
-    };
-  }, [assistantCovers]);
-
-  function toggleCollapsed() {
-    if (isCompact) {
-      setPeek((p) => !p);
-      return;
-    }
-    const next = !collapsed;
-    setCollapsed(next);
-    // A year, because the preference is about how this person likes to work,
-    // not about this session. Lax rather than Strict so following a link from
-    // an emailed invoice does not arrive with the rail reset.
-    document.cookie = `${RAIL_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+  // Moving to another page closes the drawer.
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setOpen(false);
   }
 
-  // Two things only the open drawer needs: the page behind it must not scroll
-  // under the reader's thumb, and Escape must shut it.
+  // Full screen below lg: the page underneath must not scroll behind the panel or drawer.
   useEffect(() => {
-    if (!drawerOpen) return;
-    const { body } = document;
-    const prev = body.style.overflow;
-    body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
+    if (!(open || (assistantOpen && !matchMedia("(min-width: 64rem)").matches))) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    addEventListener("keydown", onKey);
     return () => {
-      body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+      removeEventListener("keydown", onKey);
     };
-  }, [drawerOpen]);
+  }, [open, assistantOpen]);
 
   return (
-    <div
-      className="app-shell relative grid min-h-dvh flex-1 gap-0 lg:p-3"
-      data-rail={railCollapsed ? "collapsed" : "expanded"}
-      data-assistant={assistant && assistantOpen ? "open" : "closed"}
-    >
-      {/* The ambient ground. Fixed rather than absolute so it covers the
-          viewport and not the document — the blooms should not stretch to the
-          length of a 900-row fee table — and inert so it never takes a click.
-          -z-10 puts it behind the shell's own background-less surface. */}
-      <div aria-hidden className="bg-app-ground fixed inset-0 -z-10 print:hidden" />
+    <AssistantToggleContext.Provider value={toggle}>
+      <div className="crm-ground relative min-h-dvh lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
+        <aside className="hidden border-r-2 border-border bg-elevated lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col print:hidden">
+          <div className="px-5 pt-5 pb-6">
+            <Link href={brandHref} aria-label={brand} className="inline-flex text-foreground">
+              {mark}
+            </Link>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 pb-4">{nav}</div>
+          {sidebarFooter && <div className="border-t-2 border-border p-3">{sidebarFooter}</div>}
+        </aside>
 
-      <aside
-        id="console-nav"
-        aria-label={`${brand} navigation`}
-        // Off-screen is not the same as gone: without this the whole nav stays
-        // in the tab order behind the closed drawer, and the first Tab on a
-        // phone lands somewhere invisible.
-        inert={!isDesktop && !open}
-        className={cn(
-          "z-50 flex flex-col gap-4 border border-app-line-soft bg-sidebar p-4 text-sidebar-foreground shadow-card print:hidden",
-          // Desktop: a panel that floats on the ground, held in view while the
-          // content scrolls past it.
-          "lg:sticky lg:top-3 lg:h-[calc(100dvh-1.5rem)] lg:rounded-2xl lg:translate-x-0",
-          // Below that: a drawer laid over the page. Always full labels here —
-          // a rail preference set on a laptop must not shrink a phone's drawer.
-          "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[17rem] max-lg:rounded-r-2xl max-lg:transition-transform max-lg:duration-200 max-lg:ease-drawer motion-reduce:max-lg:transition-none",
-          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full",
-        )}
-        // One handler for every link in the nav, whatever the console passed
-        // in: a click that lands on a link has navigated, so the drawer's work
-        // is done. Cheaper and less brittle than threading an onNavigate
-        // callback through three different nav components.
-        onClick={(e) => {
-          if ((e.target as HTMLElement).closest("a[href]")) setOpen(false);
-        }}
-      >
-        <div
-          data-rail-compact
-          data-rail-stack
-          className="flex items-center gap-2 border-b border-app-line-soft px-1 pb-4"
-        >
-          <Link
-            href={brandHref}
-            aria-label={brand}
-            className="flex min-w-0 items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/60"
-          >
-            {mark}
-          </Link>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close navigation"
-            className="press ml-auto flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring/60 lg:hidden"
-          >
-            <X className="size-4.5" strokeWidth={2} />
-          </button>
+        <AnimatePresence>
+          {open && (
+            <>
+              <motion.button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setOpen(false)}
+                className="fixed inset-0 z-[60] bg-ink/40 backdrop-blur-[2px] lg:hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${brand} menu`}
+                className="fixed inset-y-0 left-0 z-[61] flex w-[86vw] max-w-[320px] flex-col bg-elevated shadow-e3 lg:hidden"
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "tween", duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              >
+                <div className="flex items-start justify-between px-5 pt-5 pb-6">
+                  <Link href={brandHref} aria-label={brand} className="inline-flex text-foreground">
+                    {mark}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="grid size-9 place-items-center rounded-full hover:bg-muted"
+                    aria-label="Close menu"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-3 pb-4">{nav}</div>
+                {sidebarFooter && <div className="grid gap-2 border-t-2 border-border p-3">{sidebarFooter}</div>}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        <div className="flex min-w-0 flex-col">
+          {banner}
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b-2 border-border bg-elevated/80 px-3 backdrop-blur-xl backdrop-saturate-150 sm:px-6 print:hidden">
+            <button
+              type="button"
+              className="grid size-10 place-items-center rounded-xl hover:bg-muted lg:hidden"
+              onClick={() => setOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="size-5" />
+            </button>
+            <Crumb brand={brand} home={brandHref} index={navIndex} />
+            <CommandPalette index={navIndex} />
+            {topbarSecondary}
+            {topbarRight}
+          </header>
+          <main id="main" className="@container/main mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 sm:px-6 sm:py-8">
+            {children}
+          </main>
         </div>
 
-        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">{nav}</div>
-
-        {(topbarLeft || topbarSecondary) && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-app-line-soft pt-3 sm:hidden">
-            {topbarLeft}
-            {topbarSecondary}
-          </div>
+        {companion && (
+          <NiboCompanion
+            key={companion.person}
+            person={companion.person}
+            nudges
+            tips
+            hidden={assistantOpen || open}
+            onOpen={assistant ? openAssistant : undefined}
+            onAsk={assistant ? askAssistant : undefined}
+            openLabel="Open Nibo, your assistant"
+          />
         )}
 
-        {sidebarFooter && (
-          <div className="border-t border-app-line-soft pt-3">{sidebarFooter}</div>
+        {assistant && (
+          <aside
+            id="console-assistant"
+            aria-label="Nibo, your assistant"
+            inert={!assistantOpen}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") closeAssistant();
+            }}
+            className={cn(
+              "z-[75] flex min-w-0 flex-col overflow-hidden bg-elevated print:hidden",
+              "max-lg:fixed max-lg:inset-0 max-lg:pt-[env(safe-area-inset-top)] max-lg:transition-[translate,visibility] max-lg:duration-[420ms] max-lg:ease-[cubic-bezier(0.32,0.72,0,1)]",
+              "lg:fixed lg:top-3 lg:right-3 lg:bottom-3 lg:w-[min(26rem,calc(100vw-1.5rem))] lg:rounded-3xl lg:border-2 lg:border-border lg:shadow-[0_6px_0_var(--ds-border),0_24px_60px_-20px_rgb(0_0_0/0.3)] lg:transition-[translate,visibility,opacity] lg:duration-300 lg:ease-[cubic-bezier(0.32,0.72,0,1)]",
+              "motion-reduce:transition-none",
+              assistantOpen
+                ? "translate-x-0 translate-y-0 opacity-100"
+                : "pointer-events-none invisible max-lg:translate-y-full lg:translate-x-[calc(100%+1rem)] lg:opacity-0",
+            )}
+          >
+            <AssistantPanelContext.Provider value={assistantPanel}>{assistant}</AssistantPanelContext.Provider>
+          </aside>
         )}
-      </aside>
-
-      {/* Backdrop. A real button so Escape is not the only way out for someone
-          who opened the drawer by accident. */}
-      {drawerOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-40 bg-(--scrim) backdrop-blur-[2px] lg:hidden"
-        />
-      )}
-
-      <div className="flex min-w-0 flex-col">
-        {banner}
-
-        <header className="z-30 flex min-h-14 items-center gap-3 px-4 py-2 max-lg:sticky max-lg:top-0 max-lg:border-b max-lg:border-app-line-soft max-lg:bg-background/85 max-lg:backdrop-blur lg:px-2 print:hidden">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Open navigation"
-            aria-controls="console-nav"
-            aria-expanded={open}
-            className="press flex size-9 shrink-0 items-center justify-center rounded-lg border border-app-line bg-card text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/60 lg:hidden"
-          >
-            <Menu className="size-4.5" strokeWidth={1.9} />
-          </button>
-
-          {/* The desktop counterpart to the hamburger. It lives in the topbar
-              rather than on the sidebar so it stays in one place whether the
-              sidebar is a full column or a narrow rail — a control that moves
-              when you use it is a control you have to hunt for twice. */}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-expanded={!railCollapsed}
-            className="press hidden size-9 shrink-0 items-center justify-center rounded-lg border border-app-line bg-card text-muted-foreground shadow-xs outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 lg:flex"
-          >
-            {railCollapsed ? (
-              <PanelLeftOpen className="size-4.5" strokeWidth={1.9} />
-            ) : (
-              <PanelLeftClose className="size-4.5" strokeWidth={1.9} />
-            )}
-          </button>
-
-          {/* Left: when, find, and in which language. No breadcrumb trail — the
-              page's own title says where you are, and the room is better spent
-              on the controls people actually reach for. */}
-          <Crumb brand={brand} home={brandHref} index={navIndex} />
-          <Clock className="hidden shrink-0 2xl:flex" />
-          <CommandPalette index={navIndex} />
-          {topbarLeft && (
-            <div className="hidden shrink-0 items-center gap-2 sm:flex">{topbarLeft}</div>
-          )}
-
-          {/* Right: the session being viewed, then who you are acting as, then
-              the assistant, notifications and the account. Not `shrink-0`: it
-              holds the account avatar, which must never be pushed off the
-              edge, and — while a platform admin is viewing a school — a pill
-              naming that school, which is allowed to truncate. */}
-          <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-            {topbarSecondary && (
-              <div className="hidden shrink-0 items-center gap-2 sm:flex sm:gap-3">
-                {topbarSecondary}
-              </div>
-            )}
-            <AssistantToggleContext.Provider value={assistantToggle}>
-              {topbarRight}
-            </AssistantToggleContext.Provider>
-          </div>
-        </header>
-
-        {/* The bottom pad keeps the 40px grid step and adds the device's own
-            inset on top, so the last row clears the home indicator inside the
-            mobile app (the shell draws the WebView to the bottom edge). The
-            inset is 0 everywhere else, leaving the desktop spacing unchanged. */}
-        <main className="@container/main min-w-0 flex-1 px-4 pt-4 pb-[calc(--spacing(10)+env(safe-area-inset-bottom))] lg:px-2 lg:pt-3">
-          <div className="mx-auto w-full max-w-6xl">{children}</div>
-        </main>
       </div>
-
-      {companion && (
-        <NiboCompanion
-          key={companion.person}
-          person={companion.person}
-          nudges
-          tips
-          hidden={(assistantOpen && !isDocked) || drawerOpen}
-          onOpen={assistant ? openAssistant : undefined}
-          onAsk={assistant ? askAssistant : undefined}
-          openLabel="Open Nibo, your assistant"
-        />
-      )}
-
-      {/*
-        The assistant panel.
-
-        A column of its own from lg, where there is room to read a register and
-        ask about it at once — it covers nothing, so there is nothing to dim.
-        Full screen below that: a 26rem column on a phone is the whole screen
-        anyway, and a sliver of page behind it is a backdrop nobody can tap.
-
-        Always mounted, only hidden, so the conversation survives closing the
-        panel and moving between pages — the layout persists across
-        navigation, and the transcript lives inside it.
-      */}
-      {assistant && (
-        <aside
-          id="console-assistant"
-          aria-label="Assistant"
-          inert={!assistantOpen}
-          onKeyDown={(e) => {
-            // Scoped to the panel so Escape inside a page's own dialog is not
-            // taken from it.
-            if (e.key === "Escape") closeAssistant();
-          }}
-          className={cn(
-            "z-50 flex min-w-0 flex-col overflow-hidden bg-card print:hidden",
-            // Phone: full screen. Tablet and laptop: a panel floating over
-            // the page from the right, so the page keeps its full width.
-            "max-[90rem]:fixed max-[90rem]:transition-[transform,visibility,opacity] max-[90rem]:duration-200 max-[90rem]:ease-drawer motion-reduce:max-[90rem]:transition-none",
-            "max-sm:inset-0 max-sm:pt-[env(safe-area-inset-top)]",
-            "sm:max-[90rem]:top-3 sm:max-[90rem]:right-3 sm:max-[90rem]:bottom-3 sm:max-[90rem]:w-[min(26rem,calc(100vw-1.5rem))] sm:max-[90rem]:rounded-2xl sm:max-[90rem]:border sm:max-[90rem]:border-app-line-soft sm:max-[90rem]:shadow-[0_24px_60px_-20px_rgb(0_0_0/0.35)]",
-            // Wide: docked as the grid's third column.
-            "min-[90rem]:sticky min-[90rem]:top-3 min-[90rem]:h-[calc(100dvh-1.5rem)] min-[90rem]:rounded-2xl min-[90rem]:border min-[90rem]:border-app-line-soft min-[90rem]:shadow-card",
-            assistantOpen
-              ? "max-[90rem]:translate-x-0"
-              : "max-[90rem]:invisible max-[90rem]:translate-x-[calc(100%+1rem)] min-[90rem]:hidden",
-          )}
-        >
-          {/* No header of its own: the assistant draws one, and the close
-              button is handed to it through context so it sits beside
-              "New chat" rather than in a second bar above it. */}
-          <AssistantPanelContext.Provider value={assistantPanel}>
-            {assistant}
-          </AssistantPanelContext.Provider>
-        </aside>
-      )}
-    </div>
+    </AssistantToggleContext.Provider>
   );
 }
 
-type AssistantToggle =
-  | { open: boolean; toggle: () => void; href?: undefined }
-  | { href: string; open?: undefined; toggle?: undefined };
-
+type AssistantToggle = { open: boolean; toggle: () => void };
 const AssistantToggleContext = createContext<AssistantToggle | null>(null);
 
-const ASSISTANT_BUTTON =
-  "press flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-50 pr-3 pl-0.5 text-sm font-semibold text-primary-ink shadow-xs outline-none transition-[filter,box-shadow,background-color] hover:bg-emerald-100 focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-
-/**
- * The assistant's topbar button. The layout places it in `topbarRight` so it
- * sits where that console wants it (between "view as" and notifications); the
- * shell supplies what it does — open the side panel, or, for a console with no
- * panel, go to the assistant page. Renders nothing when there is no assistant.
- */
+/** Opens the assistant panel from anywhere inside the shell (the standalone page's link, a button). */
 export function AssistantButton() {
   const ctx = useContext(AssistantToggleContext);
   if (!ctx) return null;
-  const icon = (
-    <>
-      <span className="grid size-8 place-items-center overflow-hidden rounded-full bg-white">
-        <Nibo still uid="topbar" className="mt-2 size-9" />
-      </span>
-      <span className="hidden sm:inline">Ask Nibo</span>
-    </>
-  );
-
-  if (ctx.href) {
-    return (
-      <Link href={ctx.href} title="Assistant" aria-label="Assistant" className={ASSISTANT_BUTTON}>
-        {icon}
-      </Link>
-    );
-  }
   return (
     <button
       type="button"
       onClick={ctx.toggle}
-      title="Assistant"
-      aria-label={ctx.open ? "Close the assistant" : "Open the assistant"}
+      aria-label={ctx.open ? "Close Nibo" : "Ask Nibo"}
       aria-controls="console-assistant"
       aria-expanded={ctx.open}
-      className={cn(ASSISTANT_BUTTON, ctx.open && "ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-background")}
+      className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border-2 border-border bg-elevated pr-3 pl-0.5 text-sm font-semibold shadow-[0_2px_0_var(--ds-border)] hover:bg-subtle"
     >
-      {icon}
+      <span className="grid size-7 place-items-center overflow-hidden rounded-full bg-accent-subtle">
+        <Nibo still uid="topbar" className="mt-2 size-8" />
+      </span>
+      Ask Nibo
     </button>
   );
 }
 
 /**
- * "NBSS / Page" at the head of the top bar, as birdev's console shows its
- * workspace and page. The brand links home; the page is the nav item that owns
- * the current path.
+ * "NBSS / Page" at the head of the top bar, as birdev's console shows its workspace and
+ * page. The brand links home; the page is the nav item that owns the current path.
  */
 function Crumb({ brand, home, index }: { brand: string; home: string; index: NavIndexItem[] }) {
   const pathname = usePathname();
   const page = findNavItem(index, pathname, home)?.label;
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px]">
-      <Link
-        href={home}
-        className="hidden items-center gap-2 rounded-lg px-1.5 py-1 font-semibold outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/60 sm:flex"
-      >
+    <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 text-[15px]">
+      <Link href={home} className="hidden items-center gap-2 rounded-lg px-1.5 py-1 font-semibold hover:bg-muted sm:flex">
         <Mark size={22} className="rounded-none" />
         {brand}
       </Link>
       {page && (
         <>
-          <span aria-hidden className="hidden text-muted-foreground/50 sm:inline">
+          <span aria-hidden className="hidden text-border-strong sm:inline">
             /
           </span>
-          <span className="truncate px-1 font-display text-[17px] font-bold tracking-tight">{page}</span>
+          <span className="display-section shrink-0 truncate text-[17px] whitespace-nowrap">{page}</span>
         </>
       )}
     </nav>
@@ -496,19 +281,16 @@ export function WebsiteTag({ label }: { label: string }) {
   return (
     <Link
       href="/"
-      className="group flex items-center gap-3 rounded-xl bg-[color-mix(in_oklab,var(--primary-ink)_80%,black)] px-3.5 py-3 text-white outline-none transition-[filter,translate] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring/60 active:translate-y-px"
+      className="group flex items-center gap-3 rounded-xl bg-[color-mix(in_oklab,var(--ds-accent)_72%,black)] px-3.5 py-3 text-white transition-[filter,translate] hover:brightness-110 active:translate-y-px"
     >
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 text-emerald-200">
+      <span className="grid size-9 place-items-center rounded-lg bg-white/10 text-gold-soft">
         <Globe className="size-[18px]" />
       </span>
-      <span data-rail-hide className="min-w-0 flex-1 leading-tight">
+      <span className="min-w-0 flex-1 leading-tight">
         <span className="block text-sm font-semibold">Website</span>
-        <span className="block truncate text-[11px] font-medium text-emerald-200">{label}</span>
+        <span className="block truncate text-[11px] font-medium text-gold-soft">{label}</span>
       </span>
-      <ArrowUpRight
-        data-rail-hide
-        className="size-4 text-white/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-      />
+      <ArrowUpRight className="size-4 text-white/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
     </Link>
   );
 }

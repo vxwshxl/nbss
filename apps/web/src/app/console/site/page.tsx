@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { CalendarCheck, CircleCheck, Clock3, Phone, Radio, Timer } from "lucide-react";
 
 import { ClientDutyTable } from "@/components/console/client-duty-table";
@@ -59,6 +60,13 @@ function elapsed(iso: string): string {
 export default async function ClientSitePage() {
   const profile = await requireRole("client");
   const supabase = await supabaseServer();
+
+  // A new client has nothing to watch yet: their first screen is the two-minute booking form.
+  const [{ count: siteCount }, { count: requestCount }] = await Promise.all([
+    supabase.from("sites").select("id", { count: "exact", head: true }),
+    supabase.from("service_requests").select("id", { count: "exact", head: true }),
+  ]);
+  if (!siteCount && !requestCount) redirect("/console/book");
 
   const monthStart = new Date();
   monthStart.setDate(1);
