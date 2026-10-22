@@ -91,7 +91,7 @@ export function NavGroupLabel({ children }: { children: React.ReactNode }) {
   return (
     <p
       data-nav-group
-      className="mb-1 px-3 text-[13px] font-semibold text-secondary-fg"
+      className="mb-1 truncate px-3 text-[13px] font-semibold text-secondary-fg"
     >
       {children}
     </p>

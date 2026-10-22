@@ -11,7 +11,7 @@ export type RouteRealtime = readonly string[] | "off";
 const ROUTES: [prefix: string, tables: RouteRealtime][] = [
   ["/console/assistant", "off"],
   ["/console/profile", "off"],
-  ["/console/sites/", "off"], // editing one site's fence
+  ["/console/sites/", ["attendance", "shifts", "site_postings", "sos_alerts", "sites"]], // one site's workspace
   ["/console/attendance", ["attendance", "shifts"]],
   ["/console/sites", ["sites", "attendance", "sos_alerts"]],
   ["/console/sos", ["sos_alerts", "attendance"]],

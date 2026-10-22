@@ -146,7 +146,7 @@ export function ImpersonationPicker({
           <span className="shrink-0 max-sm:hidden">View as</span>
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>View as someone else</DialogTitle>
           <DialogDescription>

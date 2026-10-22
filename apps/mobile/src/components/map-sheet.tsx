@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, View, type LayoutChangeEvent, type ScrollViewProps } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, ScrollView as GestureScrollView } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -18,6 +18,10 @@ export type SheetSnap = "peek" | "half" | "full";
 const ORDER: SheetSnap[] = ["full", "half", "peek"];
 
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
+
+// Gesture Handler's own ScrollView, so the sheet's drag and the list's scroll can
+// hand over to each other; React Native's would swallow one or the other.
+const SheetScroll = Animated.createAnimatedComponent(GestureScrollView);
 
 /**
  * The bottom sheet over a map, as Google Maps has it: drag the handle (or the
@@ -62,18 +66,20 @@ export function MapSheet({
 
   const onLayout = (e: LayoutChangeEvent) => {
     const h = Math.round(e.nativeEvent.layout.height);
-    if (h === height) return;
-    setHeight(h);
+    if (h !== height) setHeight(h);
   };
 
-  // Placed once both sizes are known, and kept at the current snap when they change.
-  const place = (h: number, hh: number, at: SheetSnap) => {
-    if (!h || !hh) return;
-    const pts = { full, half: Math.round(h * 0.5), peek: Math.max(Math.round(h * 0.5), h - (hh + 22)) };
-    top.value = ready.value ? withSpring(pts[at], SPRING) : pts[at];
-    ready.value = true;
-    onSnap?.(at, h - pts[at]);
-  };
+  // Placed once both sizes are known, and kept at the current snap when either changes
+  // (the header grows when the guard checks in, the screen when the keyboard goes).
+  useEffect(() => {
+    if (!height || !headerH) return;
+    const at = points[snap];
+    top.set(ready.get() ? withSpring(at, SPRING) : at);
+    ready.set(true);
+    onSnap?.(snap, height - at);
+    // Only the measured sizes move it; a snap is placed by the gesture itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [height, headerH]);
 
   const settle = (to: SheetSnap) => {
     setSnap(to);
@@ -85,20 +91,21 @@ export function MapSheet({
     .simultaneousWithExternalGesture(native)
     .activeOffsetY([-6, 6])
     .onStart(() => {
-      start.value = top.value;
+      start.set(top.get());
     })
     .onUpdate((e) => {
       const atFull = start.value <= points.full + 1;
       // At full height the list scrolls first: up always scrolls, and down only
       // moves the sheet once the list is back at its top.
       if (atFull && (e.translationY < 0 || scrollY.value > 0)) {
-        start.value = top.value - e.translationY;
+        start.set(top.get() - e.translationY);
         return;
       }
       const next = start.value + e.translationY;
       // A little give past either end, as a real sheet has.
-      top.value =
-        next < points.full ? points.full - (points.full - next) * 0.2 : next > points.peek ? points.peek + (next - points.peek) * 0.2 : next;
+      top.set(
+        next < points.full ? points.full - (points.full - next) * 0.2 : next > points.peek ? points.peek + (next - points.peek) * 0.2 : next,
+      );
     })
     .onEnd((e) => {
       const projected = top.value + e.velocityY * 0.18;
@@ -111,12 +118,12 @@ export function MapSheet({
           best = s;
         }
       }
-      top.value = withSpring(points[best], { ...SPRING, velocity: e.velocityY });
+      top.set(withSpring(points[best], { ...SPRING, velocity: e.velocityY }));
       runOnJS(settle)(best);
     });
 
   const onScroll = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
+    scrollY.set(e.contentOffset.y);
   });
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: top.value }] }));
@@ -132,10 +139,7 @@ export function MapSheet({
     <View
       style={StyleSheet.absoluteFill}
       pointerEvents="box-none"
-      onLayout={(e) => {
-        onLayout(e);
-        place(Math.round(e.nativeEvent.layout.height), headerH, snap);
-      }}
+      onLayout={onLayout}
     >
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.shade, shadeStyle]} />
 
@@ -153,16 +157,14 @@ export function MapSheet({
           <View
             onLayout={(e) => {
               const hh = Math.round(e.nativeEvent.layout.height);
-              if (hh === headerH) return;
-              setHeaderH(hh);
-              place(height, hh, snap);
+              if (hh !== headerH) setHeaderH(hh);
             }}
             style={styles.header}
           >
             {header}
           </View>
           <GestureDetector gesture={native}>
-            <Animated.ScrollView
+            <SheetScroll
               onScroll={onScroll}
               scrollEventThrottle={16}
               scrollEnabled={snap === "full"}
@@ -171,9 +173,10 @@ export function MapSheet({
               refreshControl={refreshControl}
               contentContainerStyle={[styles.body, { paddingBottom: space[6] + (height ? points.full : 0) }]}
               showsVerticalScrollIndicator={false}
+              style={styles.scroll}
             >
               {children}
-            </Animated.ScrollView>
+            </SheetScroll>
           </GestureDetector>
         </Animated.View>
       </GestureDetector>
@@ -197,5 +200,6 @@ const styles = StyleSheet.create({
   grip: { alignItems: "center", paddingTop: space[2], paddingBottom: space[1.5 as 2] },
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: color.border },
   header: { paddingHorizontal: space[5], paddingBottom: space[3] },
+  scroll: { flex: 1 },
   body: { paddingHorizontal: space[5], gap: space[4] },
 });

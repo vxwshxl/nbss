@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import {
+  LayoutDashboard,
   Building2,
   CalendarCheck,
   ChevronRight,
@@ -430,6 +431,12 @@ export function SitePreviewDialog({
                 <Link href={`/console/attendance?site=${site.id}`} onClick={onClose}>
                   <CalendarCheck data-icon="inline-start" />
                   Attendance here
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href={`/console/sites/${site.id}`} onClick={onClose}>
+                  <LayoutDashboard data-icon="inline-start" />
+                  Open site workspace
                 </Link>
               </Button>
               {actions}

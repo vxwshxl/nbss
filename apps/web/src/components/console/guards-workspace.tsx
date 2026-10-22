@@ -452,7 +452,7 @@ export function GuardsWorkspace({
 
       {/* ---------------------------------------------------------- add ---- */}
       <Dialog open={adding} onOpenChange={setAdding}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add a person</DialogTitle>
             <DialogDescription>
@@ -585,7 +585,7 @@ export function GuardsWorkspace({
           window.location.reload();
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{issued ? "New PIN issued" : "Account created"}</DialogTitle>
             <DialogDescription>

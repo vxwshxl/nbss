@@ -1,10 +1,11 @@
-import { isAdmin, ROLE_LABEL } from "@nbss/shared/identity";
+import { isAdmin, isStaff, ROLE_LABEL } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { signOut } from "@/app/console/actions";
 import { startImpersonation, stopImpersonation } from "@/app/console/impersonate";
 import { BrandLockup } from "@/components/brand";
 import { ConsoleNav } from "@/components/console/console-nav";
+import { SosAlarm } from "@/components/console/sos-alarm";
 import { navIndexFor } from "@/components/console/nav-items";
 import {
   ImpersonationBanner,
@@ -19,7 +20,8 @@ import { isAssistantConfigured } from "@/lib/ai/assistant";
 import { personaFor } from "@/lib/ai/personas";
 import { CONSOLE_REALTIME_TABLES } from "@/lib/realtime/routes";
 import { currentSession, homeFor } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import type { WorkspaceSite } from "@/lib/site-workspace";
 import { site } from "@/content/site";
 
 export const metadata: Metadata = {
@@ -69,6 +71,20 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       ).data ?? [])
     : [];
 
+  // Staff work site by site as well as across them: the switcher and a site's sidebar.
+  const staff = isStaff(profile.role);
+  const sites: WorkspaceSite[] = staff
+    ? (
+        (
+          await (await supabaseServer())
+            .from("sites")
+            .select("id, name, district, client_name, active")
+            .order("active", { ascending: false })
+            .order("name")
+        ).data ?? []
+      ).map((s) => ({ id: s.id, name: s.name, district: s.district, client: s.client_name, active: s.active }))
+    : [];
+
   return (
     <AppShell
       brand={site.shortName}
@@ -86,7 +102,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       mark={<BrandLockup size="sm" priority />}
       sidebarFooter={<WebsiteTag label={`${ROLE_LABEL[profile.role]} console · nbss.co.in`} />}
       companion={{ person: realProfile.id }}
-      nav={<ConsoleNav role={profile.role} />}
+      nav={<ConsoleNav role={profile.role} sites={sites} />}
+      sites={staff ? sites : undefined}
       banner={
         impersonating ? (
           <ImpersonationBanner
@@ -119,6 +136,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         tables={CONSOLE_REALTIME_TABLES}
         clientTopic={profile.role === "client" ? `client:${profile.id}` : undefined}
       />
+      {isStaff(realProfile.role) && <SosAlarm />}
       {children}
     </AppShell>
   );

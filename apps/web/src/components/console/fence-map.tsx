@@ -349,7 +349,7 @@ export function FenceMap({
         </Button>
       </div>
 
-      <div className="h-[340px] w-full" ref={host} />
+      <div className="h-[340px] w-full lg:h-[480px]" ref={host} />
 
       <p className="border-t border-app-line-soft px-3 py-2.5 text-xs text-muted-foreground">
         {value.mode === "radius"

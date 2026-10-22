@@ -4,11 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, Globe, Menu, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronsUpDown, Globe, Menu, Search, X } from "lucide-react";
 
 import { AssistantPanelContext } from "@/components/ai/assistant-panel";
 import { Mark } from "@/components/brand";
 import { Nibo } from "@/components/nibo/nibo";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SITE_SECTIONS, siteFromPath, siteHref, type WorkspaceSite } from "@/lib/site-workspace";
 import { NiboCompanion } from "@/components/nibo/nibo-companion";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +42,7 @@ export function AppShell({
   topbarSecondary,
   banner,
   companion,
+  sites,
   children,
 }: {
   /** Console name: the drawer's accessible name. */
@@ -66,6 +69,8 @@ export function AppShell({
   defaultCollapsed?: boolean;
   /** Nibo, the floating companion: whose preferences he keeps. */
   companion?: { person: string } | null;
+  /** Staff: the sites the top bar's workspace switcher offers. */
+  sites?: WorkspaceSite[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -178,7 +183,7 @@ export function AppShell({
             >
               <Menu className="size-5" />
             </button>
-            <Crumb brand={brand} home={brandHref} index={navIndex} />
+            <Crumb brand={brand} home={brandHref} index={navIndex} sites={sites} />
             <CommandPalette index={navIndex} />
             {topbarSecondary}
             {topbarRight}
@@ -251,22 +256,116 @@ export function AssistantButton() {
   );
 }
 
+const SWITCH_HUES = ["hue-jade", "hue-sky", "hue-gold", "hue-teal", "hue-plum", "hue-brick"];
+
 /**
- * "NBSS / Page" at the head of the top bar, as birdev's console shows its workspace and
- * page. The brand links home; the page is the nav item that owns the current path.
+ * "NBSS / Site ▾ / Page" at the head of the top bar, as birdev shows company / project /
+ * page. The site button opens a searchable list: the whole agency, or any one site;
+ * switching keeps the section you were on. Without sites (guards, clients) it is
+ * just "NBSS / Page".
  */
-function Crumb({ brand, home, index }: { brand: string; home: string; index: NavIndexItem[] }) {
+function Crumb({ brand, home, index, sites }: { brand: string; home: string; index: NavIndexItem[]; sites?: WorkspaceSite[] }) {
   const pathname = usePathname();
-  const page = findNavItem(index, pathname, home)?.label;
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const inSite = siteFromPath(pathname);
+  const current = inSite ? sites?.find((x) => x.id === inSite.id) : undefined;
+  const page = current
+    ? (SITE_SECTIONS.find((x) => x.key === inSite!.section)?.label ?? "Overview")
+    : findNavItem(index, pathname, home)?.label;
+  const list = (sites ?? []).filter((x) => !q.trim() || `${x.name} ${x.district ?? ""} ${x.client ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 text-[15px]">
       <Link href={home} className="hidden items-center gap-2 rounded-lg px-1.5 py-1 font-semibold hover:bg-muted sm:flex">
         <Mark size={22} className="rounded-none" />
         {brand}
       </Link>
-      {page && (
+      {sites && sites.length > 0 && (
         <>
           <span aria-hidden className="hidden text-border-strong sm:inline">
+            /
+          </span>
+          <Popover
+            open={open}
+            onOpenChange={(o) => {
+              setOpen(o);
+              if (!o) setQ("");
+            }}
+          >
+            <PopoverTrigger
+              className={cn(
+                "min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 font-semibold outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary/30",
+                current ? "flex" : "hidden text-secondary-fg sm:flex",
+              )}
+            >
+              {current && (
+                <span className="grid size-6 shrink-0 place-items-center rounded-md bg-primary text-[11px] font-bold text-white">
+                  {current.name.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <span className="max-w-[10rem] truncate sm:max-w-[16rem]">{current ? current.name : "All sites"}</span>
+              <ChevronsUpDown className="size-3.5 shrink-0 text-secondary-fg" />
+            </PopoverTrigger>
+            <PopoverContent align="start" sideOffset={8} className="w-[min(22rem,calc(100vw-1.5rem))] p-2">
+              <div className="relative mb-1.5">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-secondary-fg" />
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Find a site"
+                  aria-label="Find a site"
+                  className="h-10 w-full rounded-xl bg-subtle pr-3 pl-9 text-[14px] outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <Link
+                href="/console"
+                onClick={() => setOpen(false)}
+                className={cn("flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] hover:bg-muted", !current && "bg-accent-subtle")}
+              >
+                <Mark size={24} className="rounded-none" />
+                <span className="flex-1 font-medium">{brand} · all sites together</span>
+                {!current && <Check className="size-4 text-primary" />}
+              </Link>
+              <p className="mt-2 mb-1 px-2.5 text-[12px] font-semibold text-secondary-fg">Sites</p>
+              <ul className="max-h-[50vh] overflow-y-auto">
+                {list.length === 0 && <li className="px-2.5 py-3 text-[13px] text-secondary-fg">No site matches.</li>}
+                {list.map((x, i) => (
+                  <li key={x.id}>
+                    <Link
+                      href={siteHref(x.id, inSite?.section ?? "")}
+                      onClick={() => setOpen(false)}
+                      className={cn("flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[14px] hover:bg-muted", current?.id === x.id && "bg-accent-subtle")}
+                    >
+                      <span className={cn("grid size-6 shrink-0 place-items-center rounded-md bg-[var(--h)] text-[11px] font-bold text-white", SWITCH_HUES[i % SWITCH_HUES.length])}>
+                        {x.name.slice(0, 1).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{x.name}</span>
+                        <span className="block truncate text-[11.5px] text-secondary-fg">
+                          {[x.client, x.district, x.active ? null : "Paused"].filter(Boolean).join(" · ") || "Site"}
+                        </span>
+                      </span>
+                      {current?.id === x.id && <Check className="size-4 text-primary" />}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/console/sites"
+                onClick={() => setOpen(false)}
+                className="mt-1 flex items-center justify-center rounded-xl border-t border-border px-2.5 pt-2.5 pb-1.5 text-[13px] font-medium text-primary hover:underline"
+              >
+                Manage sites
+              </Link>
+            </PopoverContent>
+          </Popover>
+        </>
+      )}
+      {page && (!current || page !== "Overview") && (
+        <>
+          <span aria-hidden className={cn("text-border-strong", !current && "hidden sm:inline")}>
             /
           </span>
           <span className="display-section shrink-0 truncate text-[17px] whitespace-nowrap">{page}</span>

@@ -10,7 +10,6 @@ import {
   Navigation,
   Phone,
   SatelliteDish,
-  Siren,
   SignalLow,
   TriangleAlert,
 } from "lucide-react-native";
@@ -322,6 +321,40 @@ export function Duty() {
                 Not your post. A supervisor approves this check-in.
               </Text>
             )}
+            {onDuty ? (
+              <View style={[styles.gap2, styles.headActions]}>
+                <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
+                <View style={styles.row2}>
+                  <View style={styles.flex}>
+                    <Button
+                      label="Check out"
+                      icon={Clock3}
+                      variant="outline"
+                      fullWidth
+                      loading={busy === "out"}
+                      onPress={() => void doPunchOut()}
+                    />
+                  </View>
+                  <View style={styles.flex}>
+                    <Button label="Call desk" icon={Phone} variant="outline" fullWidth onPress={callDesk} />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              target && (
+                <View style={styles.headActions}>
+                  <Button
+                    label={busy === target.id ? "Checking your location…" : "Check in"}
+                    icon={LogIn}
+                    size="lg"
+                    fullWidth
+                    variant={inside ? "default" : "secondary"}
+                    loading={busy === target.id}
+                    onPress={() => void doCheckIn(target)}
+                  />
+                </View>
+              )
+            )}
           </View>
         }
       >
@@ -352,15 +385,6 @@ export function Duty() {
         {/* ────────────────────────────────────────────── off duty: go, check in */}
         {!onDuty && target && (
           <View style={styles.gap2}>
-            <Button
-              label={busy === target.id ? "Checking your location…" : "Check in"}
-              icon={LogIn}
-              size="lg"
-              fullWidth
-              variant={inside ? "default" : "secondary"}
-              loading={busy === target.id}
-              onPress={() => void doCheckIn(target)}
-            />
             <View style={styles.row2}>
               <View style={styles.flex}>
                 <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => directions(target)} />
@@ -458,41 +482,6 @@ export function Duty() {
               }}
             />
           </Panel>
-        )}
-
-        {onDuty && (
-          <Panel
-            tone="rose"
-            title="Emergency"
-            icon={Siren}
-            action={
-              <InfoButton title="What happens when you press it">
-                {[
-                  "Every guard checked in at this site is alerted, along with every admin and supervisor, and the client who owns the premises.",
-                  "They see where you are and can say they are on the way, so you know help is coming.",
-                  "Hold it for three seconds. That is deliberate: a tap could happen in your pocket, and three seconds is short enough to manage when you are frightened.",
-                  "Standing one down afterwards is normal and nobody minds. False alarms are expected; a panic button people are afraid to press is worse than useless.",
-                ]}
-              </InfoButton>
-            }
-          >
-            <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
-          </Panel>
-        )}
-
-        {onDuty && (
-          <View style={styles.gap2}>
-            <Button
-              label="Check out"
-              icon={Clock3}
-              variant="outline"
-              size="lg"
-              fullWidth
-              loading={busy === "out"}
-              onPress={() => void doPunchOut()}
-            />
-            <Button label={`Desk · ${COMPANY.phone}`} icon={Phone} variant="ghost" fullWidth onPress={callDesk} />
-          </View>
         )}
 
         {/* ────────────────────────── somewhere else tonight: every other site */}
@@ -739,6 +728,7 @@ const styles = StyleSheet.create({
   gap1: { gap: 2 },
   gap2: { gap: space[2] },
   row2: { flexDirection: "row", gap: space[2] },
+  headActions: { marginTop: space[3] },
   pressed: { opacity: 0.7 },
 
   chipRow: { position: "absolute", top: space[3], left: space[4], right: space[4], alignItems: "center" },

@@ -107,26 +107,27 @@ export function SiteForm() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[92dvh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[94dvh] overflow-y-auto p-6 sm:max-w-[min(72rem,calc(100%-3rem))] sm:p-7">
         <DialogHeader>
           <DialogTitle>Register a site</DialogTitle>
           <DialogDescription>
-            Place the boundary on the map first: everything below describes how
-            attendance inside it is judged.
+            Place the boundary on the map, then describe the site and how attendance
+            inside it is judged.
           </DialogDescription>
         </DialogHeader>
 
-        <form action={action} className="grid gap-4 sm:grid-cols-2">
+        <form action={action} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
           {state.error && (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive sm:col-span-2"
+              className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive lg:col-span-2"
             >
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span>{state.error}</span>
             </div>
           )}
 
+          <div className="grid content-start gap-4 sm:grid-cols-2 lg:order-1">
           <Field name="name" label="Site name" className="sm:col-span-2">
             <Input
               id="name"
@@ -153,19 +154,6 @@ export function SiteForm() {
             <Input id="address" name="address" defaultValue={state.values?.address} />
           </Field>
 
-          <div className="sm:col-span-2">
-            <Label className="mb-2">
-              Boundary <span className="text-destructive">*</span>
-            </Label>
-            <FenceMap value={fence} onChange={setFence} />
-            {!placed && (
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {fence.mode === "radius"
-                  ? "Click the map to place this site."
-                  : "Drop at least three points to close the area."}
-              </p>
-            )}
-          </div>
 
           {/* The map is the interface; these carry its result to the server. */}
           <input type="hidden" name="lat" value={fence.lat || ""} />
@@ -249,7 +237,23 @@ export function SiteForm() {
             />
           </Field>
 
-          <DialogFooter className="sm:col-span-2">
+          </div>
+
+          <div className="lg:order-2">
+            <Label className="mb-2">
+              Boundary <span className="text-destructive">*</span>
+            </Label>
+            <FenceMap value={fence} onChange={setFence} />
+            {!placed && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {fence.mode === "radius"
+                  ? "Click the map to place this site."
+                  : "Drop at least three points to close the area."}
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="lg:order-3 lg:col-span-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

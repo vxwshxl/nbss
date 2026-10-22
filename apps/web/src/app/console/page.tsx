@@ -81,7 +81,7 @@ export default async function ConsoleDashboard() {
   const endOfToday = new Date(startOfToday);
   endOfToday.setDate(endOfToday.getDate() + 1);
 
-  const [guards, sites, onDuty, todayPunches, liveSos, dueShifts, month, todayShifts] = await Promise.all([
+  const [guards, sites, onDuty, todayPunches, liveSos, dueShifts, month, todayShifts, siteCards, sosSites] = await Promise.all([
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -123,6 +123,9 @@ export default async function ConsoleDashboard() {
       .select("status")
       .gte("starts_at", startOfToday.toISOString())
       .lt("starts_at", endOfToday.toISOString()),
+    // Every site as a card: open one to work in it alone.
+    supabase.from("sites").select("id, name, district, client_name, guards_required").eq("active", true).order("name"),
+    supabase.from("sos_alerts").select("site_id").in("status", ["active", "acknowledged"]),
   ]);
 
   const live = onDuty.data ?? [];
@@ -264,6 +267,55 @@ export default async function ConsoleDashboard() {
         <StatTile hue="sky" icon={CalendarRange} label="Shifts today" value={shiftsToday.length} href="/console/roster" note={`${covered} covered so far`} />
         <StatTile hue="jade" icon={CalendarCheck} label="Punches, 30 days" value={monthRows.length} note={`${marked[0]!.value} on time`} />
       </div>
+
+      {(siteCards.data ?? []).length > 0 && (
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-semibold tracking-[-0.015em]">Sites</h2>
+            <Link href="/console/sites" className="text-sm font-medium text-primary-ink hover:underline">
+              Manage sites
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 @4xl/main:grid-cols-3 @6xl/main:grid-cols-4">
+            {(siteCards.data ?? []).map((x, i) => {
+              const here = live.filter((r) => r.site_id === x.id).length;
+              const need = x.guards_required ?? 0;
+              const sos = (sosSites.data ?? []).some((a) => a.site_id === x.id);
+              const short = need > 0 && here < need;
+              const hue = ["hue-jade", "hue-sky", "hue-gold", "hue-teal", "hue-plum"][i % 5];
+              return (
+                <Link
+                  key={x.id}
+                  href={`/console/sites/${x.id}`}
+                  className={`group ${hue} relative flex items-center gap-3 rounded-[20px] bg-elevated p-4 shadow-[0_0_0_1px_rgb(22_33_27/0.06),0_10px_24px_-18px_rgb(22_33_27/0.3)] transition-[translate,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_var(--h),0_14px_30px_-18px_var(--h)]`}
+                >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--h)] text-[17px] font-bold text-white">
+                    {x.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold">{x.name}</span>
+                    <span className="block truncate text-[12.5px] text-secondary-fg">
+                      {[x.client_name, x.district].filter(Boolean).join(" · ") || "Site"}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className={`block text-[17px] font-semibold tabular-nums ${short ? "text-danger" : "text-[var(--h-deep)]"}`}>
+                      {here}
+                      {need ? <span className="text-[13px] font-medium text-secondary-fg">/{need}</span> : null}
+                    </span>
+                    <span className="block text-[11.5px] text-secondary-fg">on duty</span>
+                  </span>
+                  {sos && (
+                    <span className="absolute -top-1.5 -right-1.5 inline-flex h-6 items-center gap-1 rounded-full bg-danger px-2 text-[11px] font-semibold text-white shadow-e2">
+                      <Siren className="size-3" /> SOS
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-4 @4xl/main:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <Card>

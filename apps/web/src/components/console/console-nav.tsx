@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { groups } from "@/components/console/nav-items";
 import { NavGroupLabel, NavLink } from "@/components/shell/nav-link";
+import { AGENCY_LINKS, SITE_SECTIONS, siteFromPath, siteHref, type WorkspaceSite } from "@/lib/site-workspace";
 import type { Role } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +23,11 @@ const SECTION_HUES = ["hue-jade", "hue-sky", "hue-gold", "hue-teal", "hue-plum",
 export function ConsoleNav({
   role,
   badges = {},
+  sites = [],
 }: {
   role: Role;
+  /** Staff: the sites the workspace switcher lists. Inside one, the sidebar is that site's. */
+  sites?: WorkspaceSite[];
   /** Unactioned counts keyed by href — new enquiries, attendance to review. */
   badges?: Record<string, number>;
 }) {
@@ -33,6 +37,38 @@ export function ConsoleNav({
   // fills in behind it. Cleared the moment the path actually changes.
   const [pending, setPending] = useState<{ href: string; from: string } | null>(null);
   const target = pending && pending.from === pathname ? pending.href : null;
+
+  const inSite = siteFromPath(pathname);
+  const site = inSite ? sites.find((x) => x.id === inSite.id) : undefined;
+  if (inSite && site) {
+    const here = target ?? pathname;
+    const groupsInSite = [
+      {
+        label: site.name,
+        items: SITE_SECTIONS.map((sec) => ({ href: siteHref(site.id, sec.key), label: sec.label, icon: sec.icon, exact: !sec.key })),
+      },
+      { label: "NBSS", items: AGENCY_LINKS },
+    ];
+    return (
+      <nav className="flex flex-col gap-5">
+        {groupsInSite.map((group, gi) => (
+          <div key={group.label} className={cn("flex flex-col gap-0.5", SECTION_HUES[gi % SECTION_HUES.length])}>
+            <NavGroupLabel>{group.label}</NavGroupLabel>
+            {group.items.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={item.exact ? here === item.href : here === item.href || here.startsWith(`${item.href}/`)}
+                onNavigate={() => setPending({ href: item.href, from: pathname })}
+              />
+            ))}
+          </div>
+        ))}
+      </nav>
+    );
+  }
 
   return (
     <nav className="flex flex-col gap-5">
