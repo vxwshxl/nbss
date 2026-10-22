@@ -60,10 +60,10 @@ export function Text({
   );
 }
 
-/** The small capitalised line above a page title, matching the console's PageHeader. */
+/** The line above a page title, matching the console's PageHeader. */
 export function Eyebrow({ children, style, ...rest }: TextProps) {
   return (
-    <Text variant="eyebrow" weight="bold" tone="muted" uppercase style={style} {...rest}>
+    <Text variant="eyebrow" weight="semibold" tone="primary" style={style} {...rest}>
       {children}
     </Text>
   );

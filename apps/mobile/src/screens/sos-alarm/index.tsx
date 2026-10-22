@@ -12,6 +12,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { distanceMetres, formatDistance } from "@nbss/shared/geo";
+import { isStaff } from "@nbss/shared/identity";
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 import { siteChannel, EVENTS } from "@nbss/shared/realtime";
 
@@ -282,7 +283,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
             </>
           )}
 
-          {live && (mine || profile?.role === "admin" || profile?.role === "supervisor") && (
+          {live && (mine || (profile ? isStaff(profile.role) : false)) && (
             <>
               <Button
                 label="Situation resolved"

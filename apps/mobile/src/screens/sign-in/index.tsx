@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COMPANY } from "@nbss/shared/company";
 
 import { AppBackground } from "@/components/app-background";
+import { BrandLockup } from "@/components/brand-lockup";
 import { BrandMark } from "@/components/brand-mark";
+import { Nibo } from "@/components/nibo/nibo";
 import { Button, LinkButton } from "@/components/button";
 import { Field, SecretField } from "@/components/field";
 import { Text } from "@/components/text";
@@ -87,7 +89,8 @@ export function SignIn() {
   const form = (
     <View style={styles.formColumn}>
       <View style={[styles.intro, !isTablet && styles.introCentred]}>
-        {!isTablet && <BrandMark size={72} style={styles.shield} />}
+        {!isTablet && <BrandLockup size="lg" style={styles.shield} />}
+        {!isTablet && <View style={styles.ruleShort} />}
         <Text variant="pageTitle" weight="bold">
           {heading.title}
         </Text>
@@ -278,6 +281,7 @@ export function SignIn() {
       </View>
 
       <View style={styles.brandMiddle}>
+        <Nibo size={110} mood={error ? "oops" : step === "password" ? "sleepy" : "wave"} />
         <Text variant="hero" weight="bold" tone="inherit" style={[styles.brandInk, styles.tagline]}>
           {COMPANY.tagline}
         </Text>
@@ -331,7 +335,8 @@ const styles = StyleSheet.create({
   intro: { gap: space[2] },
   introCentred: { alignItems: "center" },
   centred: { textAlign: "center" },
-  shield: { marginBottom: space[3] },
+  shield: { marginBottom: space[2] },
+  ruleShort: { width: 80, height: 1, backgroundColor: color.primary, opacity: 0.5, marginBottom: space[5] },
 
   form: { gap: space[5] },
   alert: {

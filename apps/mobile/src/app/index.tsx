@@ -37,6 +37,7 @@ export default function Index() {
       return <Redirect href="/(guard)/duty" />;
     case "client":
       return <Redirect href="/(client)/site" />;
+    case "developer":
     case "admin":
     case "supervisor":
       return <Redirect href="/(staff)/live" />;

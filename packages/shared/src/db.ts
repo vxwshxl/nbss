@@ -15,7 +15,7 @@ export type Enums = {
   sos_response: "responding" | "on_scene" | "cannot_respond";
   sos_status: "active" | "acknowledged" | "resolved" | "false_alarm";
   tracking_mode: "on_duty" | "emergency";
-  user_role: "admin" | "supervisor" | "guard" | "client";
+  user_role: "developer" | "admin" | "supervisor" | "guard" | "client";
 };
 
 export type Database = {
@@ -954,6 +954,10 @@ export type Database = {
         Returns: boolean;
       };
       is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      is_developer: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };

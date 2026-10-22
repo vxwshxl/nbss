@@ -33,8 +33,8 @@ if (!name) {
   console.error("--name is required");
   process.exit(1);
 }
-if (!["admin", "supervisor", "guard", "client"].includes(role)) {
-  console.error("--role must be admin, supervisor, guard or client");
+if (!["developer", "admin", "supervisor", "guard", "client"].includes(role)) {
+  console.error("--role must be developer, admin, supervisor, guard or client");
   process.exit(1);
 }
 // Guards get a digit PIN they can thumb in at a gate; office staff hold more

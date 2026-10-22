@@ -10,7 +10,7 @@ import {
   Navigation,
   Phone,
   SatelliteDish,
-  ShieldAlert,
+  Siren,
   SignalLow,
   TriangleAlert,
 } from "lucide-react-native";
@@ -470,7 +470,7 @@ export function Duty() {
             <Panel
               tone="rose"
               title="Emergency"
-              icon={ShieldAlert}
+              icon={Siren}
               action={
                 <InfoButton title="What happens when you press it">
                   {[

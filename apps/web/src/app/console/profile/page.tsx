@@ -18,6 +18,7 @@ export const metadata: Metadata = { title: "My profile" };
 export const dynamic = "force-dynamic";
 
 const ROLE_LABEL: Record<Role, string> = {
+  developer: "Developer",
   admin: "Administrator",
   supervisor: "Supervisor",
   guard: "Guard",

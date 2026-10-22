@@ -1,10 +1,11 @@
+import { roleAllowed } from "@nbss/shared/identity";
 import {
+  BookOpen,
   Building2,
   CalendarCheck,
   CalendarPlus,
   CalendarRange,
   ClipboardList,
-  ExternalLink,
   Inbox,
   LayoutDashboard,
   MapPinned,
@@ -149,15 +150,13 @@ export const groups: NavGroup[] = [
     items: [
       { href: "/console/users", label: "Users", icon: Users, roles: ["admin", "supervisor"] },
       { href: "/console/audit", label: "Audit log", icon: ScrollText, roles: ["admin"] },
+      { href: "/console/guide", label: "Guide", icon: BookOpen, roles: ["admin"] },
     ],
   },
   {
     label: "Account",
     items: [
       { href: "/console/profile", label: "My profile", icon: UserRound },
-      // Last in every role's nav, because it is the way out rather than a place
-      // to work. Its own section so it never reads as part of the account.
-      { href: "/", label: "Main website", icon: ExternalLink, away: true },
     ],
   },
 ];
@@ -179,7 +178,7 @@ export function navIndexFor(role: Role): NavIndexItem[] {
   const allowed = new Set(
     groups
       .flatMap((g) => g.items)
-      .filter((i) => !i.away && (!i.roles || i.roles.includes(role)))
+      .filter((i) => !i.away && (!i.roles || roleAllowed(role, i.roles)))
       .map((i) => i.href),
   );
   return CONSOLE_NAV_INDEX.filter((i) => allowed.has(i.href));

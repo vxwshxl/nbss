@@ -1,3 +1,4 @@
+import { isStaff } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarCheck, X } from "lucide-react";
@@ -74,7 +75,7 @@ export default async function AttendancePage({
   });
 
   const canReview =
-    (session.profile.role === "admin" || session.profile.role === "supervisor") &&
+    isStaff(session.profile.role) &&
     // An admin viewing as someone else must not be able to sign off attendance
     // in that person's name — the audit line would be true and the record
     // misleading.

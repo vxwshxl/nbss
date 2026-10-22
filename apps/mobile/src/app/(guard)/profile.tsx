@@ -1,4 +1,4 @@
-import { CircleUserRound, LogOut, MapPin, ShieldCheck } from "lucide-react-native";
+import { CircleUserRound, LogOut, MapPin, BadgeCheck } from "lucide-react-native";
 import { StyleSheet, View } from "react-native";
 
 import { ROLE_LABEL } from "@nbss/shared/identity";
@@ -84,7 +84,7 @@ export default function ProfileRoute() {
       <Panel
         tone="slate"
         title="Alerts"
-        icon={ShieldCheck}
+        icon={BadgeCheck}
         action={
           <InfoButton title="SOS alerts on this phone">
             {[

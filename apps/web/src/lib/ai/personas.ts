@@ -21,7 +21,7 @@ export type Persona = {
   suggestions: string[];
 };
 
-export const PERSONAS: Record<Role, Persona> = {
+export const PERSONAS: Record<Exclude<Role, "developer">, Persona> = {
   admin: {
     audience:
       "an administrator of the agency, who can see every site, every guard, the enquiry desk and the audit log.",
@@ -76,6 +76,7 @@ export const PERSONAS: Record<Role, Persona> = {
   },
 };
 
+/** A developer sees what an administrator sees, so the assistant speaks to them the same way. */
 export function personaFor(role: Role): Persona {
-  return PERSONAS[role];
+  return PERSONAS[role === "developer" ? "admin" : role];
 }

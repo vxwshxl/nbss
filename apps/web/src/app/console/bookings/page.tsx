@@ -1,3 +1,4 @@
+import { isAdmin } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 import { CalendarClock, CheckCircle2, ClipboardList, MessageSquareQuote } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default async function BookingsPage() {
       <BookingsWorkspace
         rows={rows}
         sites={sites ?? []}
-        canDeploy={session.profile.role === "admin" && !session.impersonating}
+        canDeploy={isAdmin(session.profile.role) && !session.impersonating}
       />
     </div>
   );

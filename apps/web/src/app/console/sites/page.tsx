@@ -1,3 +1,4 @@
+import { isAdmin } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/console/page-header";
@@ -69,7 +70,7 @@ export default async function SitesPage() {
 
   // An admin viewing as someone else must not be able to move a fence in that
   // person's name — so the controls go, not just the label on them.
-  const canManage = session.profile.role === "admin" && !session.impersonating;
+  const canManage = isAdmin(session.profile.role) && !session.impersonating;
 
   return (
     <div className="space-y-6">

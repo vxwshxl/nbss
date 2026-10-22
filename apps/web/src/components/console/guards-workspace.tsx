@@ -77,17 +77,20 @@ const ROLES: { value: Role; label: string; note: string }[] = [
   { value: "guard", label: "Guard", note: "Own shifts and attendance only" },
   { value: "supervisor", label: "Supervisor", note: "Sites they are responsible for" },
   { value: "admin", label: "Administrator", note: "Everything, including settings" },
+  { value: "developer", label: "Developer", note: "Everything, and can appoint developers" },
   { value: "client", label: "Client", note: "Read-only view of their own site" },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
+  developer: "Developer",
   guard: "Guard",
   supervisor: "Supervisor",
   admin: "Administrator",
   client: "Client",
 };
 
-const ROLE_TONE: Record<Role, "emerald" | "violet" | "rose" | "sky"> = {
+const ROLE_TONE: Record<Role, "emerald" | "violet" | "rose" | "sky" | "amber"> = {
+  developer: "amber",
   guard: "emerald",
   supervisor: "violet",
   admin: "rose",
@@ -96,6 +99,7 @@ const ROLE_TONE: Record<Role, "emerald" | "violet" | "rose" | "sky"> = {
 
 const TABS: { value: Role | "all"; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "developer", label: "Developers" },
   { value: "admin", label: "Admins" },
   { value: "supervisor", label: "Supervisors" },
   { value: "guard", label: "Guards" },
@@ -167,12 +171,15 @@ export function GuardsWorkspace({
   rows,
   canManage,
   selfId,
+  isDeveloper = false,
   showRoleTabs = false,
   defaultRole = "guard",
 }: {
   rows: PersonRow[];
   canManage: boolean;
   selfId: string;
+  /** Only a developer is offered the developer role, or may change a developer. */
+  isDeveloper?: boolean;
   /** The Users page: every account, split by role. */
   showRoleTabs?: boolean;
   /** What "Add person" starts on. */
@@ -542,7 +549,7 @@ export function GuardsWorkspace({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map((r) => (
+                  {ROLES.filter((r) => isDeveloper || r.value !== "developer").map((r) => (
                     <SelectItem key={r.value} value={r.value} description={r.note}>
                       {r.label}
                     </SelectItem>
@@ -670,7 +677,7 @@ export function GuardsWorkspace({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.map((r) => (
+                      {ROLES.filter((r) => isDeveloper || r.value !== "developer").map((r) => (
                         <SelectItem key={r.value} value={r.value} description={r.note}>
                           {r.label}
                         </SelectItem>

@@ -1,5 +1,6 @@
 "use client";
 
+import { roleAllowed } from "@nbss/shared/identity";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -32,7 +33,7 @@ export function ConsoleNav({
   return (
     <nav className="flex flex-col gap-3">
       {groups.map((group, gi) => {
-        const visible = group.items.filter((i) => !i.roles || i.roles.includes(role));
+        const visible = group.items.filter((i) => !i.roles || roleAllowed(role, i.roles));
         if (visible.length === 0) return null;
         return (
           <div key={group.label ?? gi} className="flex flex-col gap-0.5">

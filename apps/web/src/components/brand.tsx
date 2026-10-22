@@ -94,3 +94,68 @@ export function AronaiBand({ className }: { className?: string }) {
     />
   );
 }
+
+const LOCKUP = {
+  sm: { mark: 40, word: "text-[34px]", gap: "gap-2" },
+  md: { mark: 54, word: "text-[46px]", gap: "gap-2.5" },
+  lg: { mark: 72, word: "text-[62px]", gap: "gap-3" },
+};
+
+/**
+ * The full lockup:
+ *
+ *   [mark]  NBSS
+ *   National Bodo
+ *   Security Service
+ *
+ * "NBSS" sets the width; the two lines under it are SVG text stretched to that
+ * width (`textLength`), so they end exactly where the S ends at every size.
+ * Colour comes from the parent through `currentColor`. Used on the sign-in
+ * screens and at the head of the console sidebar.
+ */
+export function BrandLockup({
+  size = "md",
+  priority = false,
+  className,
+}: {
+  size?: keyof typeof LOCKUP;
+  priority?: boolean;
+  className?: string;
+}) {
+  const s = LOCKUP[size];
+  return (
+    <span className={cn("inline-flex flex-col", className)}>
+      <span className={cn("flex items-center", s.gap)}>
+        <Mark size={s.mark} priority={priority} className="rounded-none" />
+        <span
+          data-rail-hide
+          className={cn("font-display leading-none font-extrabold tracking-[-0.035em] whitespace-nowrap", s.word)}
+        >
+          {site.shortName}
+        </span>
+      </span>
+      <svg
+        data-rail-hide
+        viewBox="0 0 1000 262"
+        role="img"
+        aria-label={site.name}
+        className="mt-1.5 block h-auto w-0 min-w-full overflow-visible"
+      >
+        {["National Bodo", "Security Service"].map((line, i) => (
+          <text
+            key={line}
+            x="0"
+            y={i === 0 ? 100 : 236}
+            textLength="1000"
+            lengthAdjust="spacing"
+            fill="currentColor"
+            fillOpacity={0.72}
+            style={{ fontFamily: "var(--font-sans)", fontSize: 118, fontWeight: 500 }}
+          >
+            {line}
+          </text>
+        ))}
+      </svg>
+    </span>
+  );
+}

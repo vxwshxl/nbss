@@ -3,11 +3,15 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
+import { isAdmin, roleAllowed } from "@nbss/shared/identity";
+
 import { impersonatedId, type Session } from "@/lib/impersonation";
-import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import { bearerToken, supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import type { Enums, Row } from "@/lib/supabase/types";
 
 export type Role = Enums["user_role"];
+
+export { isAdmin, roleAllowed };
 export type Profile = Row<"profiles">;
 
 /**
@@ -74,9 +78,9 @@ export function isValidPin(pin: string): boolean {
  * request instead of repeating it.
  */
 export const currentProfile = cache(async (): Promise<Profile | null> => {
-  const supabase = await supabaseServer();
+  const [supabase, token] = await Promise.all([supabaseServer(), bearerToken()]);
 
-  const { data: claims } = await supabase.auth.getClaims();
+  const { data: claims } = await supabase.auth.getClaims(token ?? undefined);
   const userId = claims?.claims?.sub;
   if (!userId) return null;
 
@@ -103,7 +107,7 @@ export const currentSession = cache(async (): Promise<Session | null> => {
 
   const viewAs = await impersonatedId();
 
-  if (!viewAs || realProfile.role !== "admin" || viewAs === realProfile.id) {
+  if (!viewAs || !isAdmin(realProfile.role) || viewAs === realProfile.id) {
     return { profile: realProfile, realProfile, impersonating: false };
   }
 
@@ -139,20 +143,21 @@ export async function requireSession(): Promise<Session> {
  */
 export async function requireRole(...roles: Role[]): Promise<Profile> {
   const profile = await requireProfile();
-  if (!roles.includes(profile.role)) redirect(homeFor(profile.role));
+  if (!roleAllowed(profile.role, roles)) redirect(homeFor(profile.role));
   return profile;
 }
 
 /** Role check that also reports whether this is an impersonated view. */
 export async function requireRoleSession(...roles: Role[]): Promise<Session> {
   const session = await requireSession();
-  if (!roles.includes(session.profile.role)) redirect(homeFor(session.profile.role));
+  if (!roleAllowed(session.profile.role, roles)) redirect(homeFor(session.profile.role));
   return session;
 }
 
 /** Where each role lands after signing in. */
 export function homeFor(role: Role): string {
   switch (role) {
+    case "developer":
     case "admin":
     case "supervisor":
       return "/console";

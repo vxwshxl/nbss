@@ -1,6 +1,11 @@
 import { Redirect, Stack } from "expo-router";
 import { useEffect } from "react";
+import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { isStaff } from "@nbss/shared/identity";
+
+import { NiboCompanion } from "@/components/nibo/companion";
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
@@ -15,6 +20,7 @@ import { color } from "@/theme/tokens";
  * alarm.
  */
 export default function StaffLayout() {
+  const insets = useSafeAreaInsets();
   const { session, role, profile } = useAuth();
 
   useEffect(() => {
@@ -23,9 +29,10 @@ export default function StaffLayout() {
   }, [session]);
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
-  if (role && role !== "admin" && role !== "supervisor") return <Redirect href="/" />;
+  if (role && !isStaff(role)) return <Redirect href="/" />;
 
   return (
+    <View style={{ flex: 1 }}>
     <Stack
       screenOptions={{
         // The same topbar the guard and client tabs carry, so all three roles get the
@@ -36,5 +43,7 @@ export default function StaffLayout() {
     >
       <Stack.Screen name="live" />
     </Stack>
+      <NiboCompanion bottom={insets.bottom + 16} />
+    </View>
   );
 }

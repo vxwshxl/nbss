@@ -13,11 +13,13 @@
  * half (session reading, account creation) stays where it can reach Postgres.
  */
 
-export type Role = "admin" | "supervisor" | "guard" | "client";
+export type Role = "developer" | "admin" | "supervisor" | "guard" | "client";
 
-export const ROLES: readonly Role[] = ["admin", "supervisor", "guard", "client"];
+/** Highest authority first. Mirrors the `user_role` enum's order in Postgres. */
+export const ROLES: readonly Role[] = ["developer", "admin", "supervisor", "guard", "client"];
 
 export const ROLE_LABEL: Record<Role, string> = {
+  developer: "Developer",
   admin: "Administrator",
   supervisor: "Supervisor",
   guard: "Guard",
@@ -30,7 +32,21 @@ export function isWorker(role: Role): boolean {
 }
 
 export function isStaff(role: Role): boolean {
-  return role === "admin" || role === "supervisor";
+  return role === "developer" || role === "admin" || role === "supervisor";
+}
+
+/** Administrators and developers. A developer can do everything an admin can. */
+export function isAdmin(role: Role): boolean {
+  return role === "developer" || role === "admin";
+}
+
+/**
+ * Whether `role` passes a check written as a list of roles. A developer passes
+ * any list an administrator would, so call sites keep naming "admin" and the
+ * developer comes along without every list repeating it.
+ */
+export function roleAllowed(role: Role, allowed: readonly Role[]): boolean {
+  return allowed.includes(role) || (role === "developer" && allowed.includes("admin"));
 }
 
 const STAFF_DOMAIN = "staff.nbss.co.in";

@@ -1,21 +1,21 @@
+import { isAdmin, ROLE_LABEL } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 
 import { signOut } from "@/app/console/actions";
 import { startImpersonation, stopImpersonation } from "@/app/console/impersonate";
-import { Wordmark } from "@/components/brand";
+import { BrandLockup } from "@/components/brand";
 import { ConsoleNav } from "@/components/console/console-nav";
 import { navIndexFor } from "@/components/console/nav-items";
 import {
   ImpersonationBanner,
   ImpersonationPicker,
-  ROLE_LABEL,
   type Person,
 } from "@/components/console/impersonation";
 import { UserMenu } from "@/components/console/user-menu";
 import { Assistant } from "@/components/ai/assistant";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
-import { AppShell, AssistantButton, RAIL_COOKIE } from "@/components/shell/app-shell";
+import { AppShell, AssistantButton, RAIL_COOKIE, WebsiteTag } from "@/components/shell/app-shell";
 import { isAssistantConfigured } from "@/lib/ai/assistant";
 import { personaFor } from "@/lib/ai/personas";
 import { CONSOLE_REALTIME_TABLES } from "@/lib/realtime/routes";
@@ -54,13 +54,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const { profile, realProfile, impersonating } = session;
   const persona = personaFor(profile.role);
   const railCollapsed = jar.get(RAIL_COOKIE)?.value === "1";
-  const isAdmin = realProfile.role === "admin";
+  const canAdmin = isAdmin(realProfile.role);
 
   // The impersonation picker needs the roster. Only an admin ever sees it, so
   // it is only fetched for one — and on the admin client, because an admin
   // already viewing as a guard would otherwise be filtered by that guard's
   // row-level policy and find the list empty.
-  const people: Person[] = isAdmin
+  const people: Person[] = canAdmin
     ? ((
         await supabaseAdmin()
           .from("profiles")
@@ -86,7 +86,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       }
       navIndex={navIndexFor(profile.role)}
       defaultCollapsed={railCollapsed}
-      mark={<Wordmark secondary={ROLE_LABEL[profile.role]} size={32} priority />}
+      mark={<BrandLockup size="sm" priority />}
+      sidebarFooter={<WebsiteTag label={`${ROLE_LABEL[profile.role]} console · nbss.co.in`} />}
+      companion={{ person: realProfile.id }}
       nav={<ConsoleNav role={profile.role} />}
       banner={
         impersonating ? (
@@ -103,7 +105,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         // Only offered to an admin who is not already viewing as someone —
         // chaining impersonation is refused by the action anyway, and a control
         // that always fails is worse than no control.
-        isAdmin && !impersonating ? (
+        canAdmin && !impersonating ? (
           <ImpersonationPicker people={people} start={startImpersonation} />
         ) : undefined
       }

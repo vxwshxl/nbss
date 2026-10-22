@@ -121,6 +121,7 @@ export default function RootLayout() {
             <Stack.Screen name="(guard)" options={{ headerShown: false }} />
             <Stack.Screen name="(client)" options={{ headerShown: false }} />
             <Stack.Screen name="(staff)" options={{ headerShown: false }} />
+            <Stack.Screen name="assistant" options={{ headerShown: false, presentation: "modal" }} />
             <Stack.Screen
               name="sos/[id]"
               options={{

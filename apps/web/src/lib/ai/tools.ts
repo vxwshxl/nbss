@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isStaff, roleAllowed } from "@nbss/shared/identity";
 import { z } from "zod";
 
 import { supabaseServer } from "@/lib/supabase/server";
@@ -62,7 +63,7 @@ function stamp(iso: string | null): string {
 }
 
 function office(ctx: AiContext) {
-  if (ctx.role !== "admin" && ctx.role !== "supervisor") {
+  if (!isStaff(ctx.role)) {
     throw new Error("This lookup is only available to the operations desk.");
   }
 }
@@ -499,7 +500,7 @@ const ALL_TOOLS: AiTool[] = [
 
 /** The tools this caller is offered. The first of the two locks; see rule 2. */
 export function toolsFor(ctx: AiContext): AiTool[] {
-  return ALL_TOOLS.filter((t) => t.roles.includes(ctx.role));
+  return ALL_TOOLS.filter((t) => roleAllowed(ctx.role, t.roles));
 }
 
 /**
@@ -535,7 +536,7 @@ export async function runTool(
   if (!tool) throw new Error(`No such lookup: ${name}`);
   // The second lock. `toolsFor` already hid this from the catalogue; a model
   // that names it anyway is refused here rather than trusted.
-  if (!tool.roles.includes(ctx.role)) {
+  if (!roleAllowed(ctx.role, tool.roles)) {
     throw new Error("That lookup is not available to you.");
   }
   const parsed = tool.parameters.parse(args ?? {});

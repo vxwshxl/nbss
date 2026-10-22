@@ -5,7 +5,7 @@ import { istTime } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
 import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
-import { Radio, ShieldAlert, SatelliteDish, WifiOff } from "lucide-react-native";
+import { Radio, Siren, SatelliteDish, WifiOff } from "lucide-react-native";
 
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
@@ -94,7 +94,7 @@ export default function LiveRoute() {
           label="Live alerts"
           value={String(alerts.length)}
           hint={alerts.length ? "Needs answering" : "Nothing outstanding"}
-          icon={ShieldAlert}
+          icon={Siren}
           tone={alerts.length ? "rose" : "slate"}
         />
         <StatCard
@@ -116,7 +116,7 @@ export default function LiveRoute() {
         />
       </CardGrid>
       {alerts.length > 0 && (
-        <Panel tone="rose" title={`${alerts.length} live alert${alerts.length > 1 ? "s" : ""}`} icon={ShieldAlert}>
+        <Panel tone="rose" title={`${alerts.length} live alert${alerts.length > 1 ? "s" : ""}`} icon={Siren}>
           {alerts.map((alert) => (
             <View key={alert.id} style={styles.alert}>
               <View style={styles.alertText}>

@@ -1,3 +1,4 @@
+import { isAdmin } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { GuardsWorkspace, type PersonRow } from "@/components/console/guards-workspace";
@@ -28,8 +29,9 @@ export default async function GuardsPage() {
         rows={(data ?? []) as PersonRow[]}
         // An admin viewing as someone else must not be able to create accounts
         // or reset PINs in that person's name.
-        canManage={session.profile.role === "admin" && !session.impersonating}
+        canManage={isAdmin(session.profile.role) && !session.impersonating}
         selfId={session.realProfile.id}
+        isDeveloper={session.realProfile.role === "developer"}
       />
     </div>
   );

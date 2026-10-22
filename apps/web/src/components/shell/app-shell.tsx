@@ -2,13 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, PanelLeftClose, PanelLeftOpen, Sparkles, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ArrowUpRight, Globe, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AssistantPanelContext } from "@/components/ai/assistant-panel";
+import { NiboCompanion } from "@/components/nibo/nibo-companion";
 import { CommandPalette } from "./command-palette";
 import { Clock } from "./clock";
 import { useMediaQuery } from "./use-media-query";
-import type { NavIndexItem } from "./nav-index";
+import { Mark } from "@/components/brand";
+import { Nibo } from "@/components/nibo/nibo";
+import { findNavItem, type NavIndexItem } from "./nav-index";
 
 /** Remembers the icon-rail preference across sessions. Read server-side in each
  *  console layout, so the first paint is already the right width. */
@@ -36,6 +40,7 @@ export function AppShell({
   topbarSecondary,
   banner,
   defaultCollapsed = false,
+  companion,
   children,
 }: {
   /** Console name — the drawer's accessible name. */
@@ -79,6 +84,8 @@ export function AppShell({
   /** Full-width strip above the topbar — the subscription banner. */
   banner?: React.ReactNode;
   defaultCollapsed?: boolean;
+  /** Nibo, the floating companion: whose preferences he keeps. Omitted, he is not shown. */
+  companion?: { person: string } | null;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -139,6 +146,15 @@ export function AppShell({
           ? { href: assistantHref }
           : null,
     [assistant, assistantHref, assistantOpen, openAssistant, closeAssistant],
+  );
+
+  // A button on one of Nibo's bubbles: open the panel, then put the question to it.
+  const askAssistant = useCallback(
+    (question: string) => {
+      openAssistant();
+      setTimeout(() => dispatchEvent(new CustomEvent("nibo:ask", { detail: question })), 140);
+    },
+    [openAssistant],
   );
 
   // Full screen on a phone: the page underneath must not scroll behind it.
@@ -303,7 +319,8 @@ export function AppShell({
           {/* Left: when, find, and in which language. No breadcrumb trail — the
               page's own title says where you are, and the room is better spent
               on the controls people actually reach for. */}
-          <Clock className="shrink-0" />
+          <Crumb brand={brand} home={brandHref} index={navIndex} />
+          <Clock className="hidden shrink-0 2xl:flex" />
           <CommandPalette index={navIndex} />
           {topbarLeft && (
             <div className="hidden shrink-0 items-center gap-2 sm:flex">{topbarLeft}</div>
@@ -334,6 +351,19 @@ export function AppShell({
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
       </div>
+
+      {companion && (
+        <NiboCompanion
+          key={companion.person}
+          person={companion.person}
+          nudges
+          tips
+          hidden={(assistantOpen && !isDocked) || drawerOpen}
+          onOpen={assistant ? openAssistant : undefined}
+          onAsk={assistant ? askAssistant : undefined}
+          openLabel="Open Nibo, your assistant"
+        />
+      )}
 
       {/*
         The assistant panel.
@@ -390,7 +420,7 @@ type AssistantToggle =
 const AssistantToggleContext = createContext<AssistantToggle | null>(null);
 
 const ASSISTANT_BUTTON =
-  "press flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow-xs outline-none transition-[filter,box-shadow] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-violet-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "press flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-50 pr-3 pl-0.5 text-sm font-semibold text-primary-ink shadow-xs outline-none transition-[filter,box-shadow,background-color] hover:bg-emerald-100 focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 /**
  * The assistant's topbar button. The layout places it in `topbarRight` so it
@@ -401,7 +431,14 @@ const ASSISTANT_BUTTON =
 export function AssistantButton() {
   const ctx = useContext(AssistantToggleContext);
   if (!ctx) return null;
-  const icon = <Sparkles className="size-4.5" strokeWidth={1.6} fill="currentColor" />;
+  const icon = (
+    <>
+      <span className="grid size-8 place-items-center overflow-hidden rounded-full bg-white">
+        <Nibo still uid="topbar" className="mt-2 size-9" />
+      </span>
+      <span className="hidden sm:inline">Ask Nibo</span>
+    </>
+  );
 
   if (ctx.href) {
     return (
@@ -418,9 +455,60 @@ export function AssistantButton() {
       aria-label={ctx.open ? "Close the assistant" : "Open the assistant"}
       aria-controls="console-assistant"
       aria-expanded={ctx.open}
-      className={cn(ASSISTANT_BUTTON, ctx.open && "ring-2 ring-violet-400/50 ring-offset-2 ring-offset-background")}
+      className={cn(ASSISTANT_BUTTON, ctx.open && "ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-background")}
     >
       {icon}
     </button>
+  );
+}
+
+/**
+ * "NBSS / Page" at the head of the top bar, as birdev's console shows its
+ * workspace and page. The brand links home; the page is the nav item that owns
+ * the current path.
+ */
+function Crumb({ brand, home, index }: { brand: string; home: string; index: NavIndexItem[] }) {
+  const pathname = usePathname();
+  const page = findNavItem(index, pathname, home)?.label;
+  return (
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px]">
+      <Link
+        href={home}
+        className="hidden items-center gap-2 rounded-lg px-1.5 py-1 font-semibold outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/60 sm:flex"
+      >
+        <Mark size={22} className="rounded-none" />
+        {brand}
+      </Link>
+      {page && (
+        <>
+          <span aria-hidden className="hidden text-muted-foreground/50 sm:inline">
+            /
+          </span>
+          <span className="truncate px-1 font-display text-[17px] font-bold tracking-tight">{page}</span>
+        </>
+      )}
+    </nav>
+  );
+}
+
+/** Foot of the sidebar: back to the public website, as birdev's console has it. */
+export function WebsiteTag({ label }: { label: string }) {
+  return (
+    <Link
+      href="/"
+      className="group flex items-center gap-3 rounded-xl bg-[color-mix(in_oklab,var(--primary-ink)_80%,black)] px-3.5 py-3 text-white outline-none transition-[filter,translate] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring/60 active:translate-y-px"
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 text-emerald-200">
+        <Globe className="size-[18px]" />
+      </span>
+      <span data-rail-hide className="min-w-0 flex-1 leading-tight">
+        <span className="block text-sm font-semibold">Website</span>
+        <span className="block truncate text-[11px] font-medium text-emerald-200">{label}</span>
+      </span>
+      <ArrowUpRight
+        data-rail-hide
+        className="size-4 text-white/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+      />
+    </Link>
   );
 }

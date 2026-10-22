@@ -105,8 +105,8 @@ export function SignInForm({ from }: { from: string }) {
 
   return (
     <div className="w-full">
-      <div className="mb-7">
-        <h1 className="font-display text-[28px] leading-tight font-bold tracking-tight">
+      <div className="mb-7 text-center">
+        <h1 className="font-display text-[32px] leading-tight font-extrabold tracking-[-0.025em]">
           {heading.title}
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">{heading.sub}</p>

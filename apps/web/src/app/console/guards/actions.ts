@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { isValidEmail } from "@nbss/shared/identity";
+import { isAdmin, isValidEmail, ROLES } from "@nbss/shared/identity";
 
 import {
   audit,
@@ -51,8 +51,11 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
 
   const values = { employee_code: employeeCode, full_name: fullName, phone, email, role, pin: "" };
 
-  if (!["admin", "supervisor", "guard", "client"].includes(role)) {
+  if (!ROLES.includes(role)) {
     return { ok: false, values, error: "Choose a role." };
+  }
+  if (role === "developer" && session.realProfile.role !== "developer") {
+    return { ok: false, values, error: "Only a developer can create another developer." };
   }
   if (!fullName) return { ok: false, values, error: "Enter the person's full name." };
   if (email && !isValidEmail(email)) {
@@ -244,6 +247,10 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
   }
 
   const admin = supabaseAdmin();
+  if (session.realProfile.role !== "developer") {
+    const { data: target } = await admin.from("profiles").select("role").eq("id", profileId).maybeSingle();
+    if (target?.role === "developer") throw new Error("Only a developer can deactivate a developer.");
+  }
   const { error } = await admin.from("profiles").update({ active }).eq("id", profileId);
   if (error) throw new Error(error.message);
 
@@ -262,11 +269,20 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
 export async function changeRole(profileId: string, role: Role): Promise<void> {
   const session = await requireRoleSession("admin");
 
-  if (profileId === session.realProfile.id && role !== "admin") {
+  if (profileId === session.realProfile.id && !isAdmin(role)) {
     throw new Error("You cannot remove your own administrator access.");
   }
 
   const admin = supabaseAdmin();
+
+  // Granting or taking away the developer role is a developer's call alone.
+  const { data: current } = await admin.from("profiles").select("role").eq("id", profileId).maybeSingle();
+  if (
+    session.realProfile.role !== "developer" &&
+    (role === "developer" || current?.role === "developer")
+  ) {
+    throw new Error("Only a developer can grant or remove the developer role.");
+  }
   const { error } = await admin.from("profiles").update({ role }).eq("id", profileId);
   if (error) throw new Error(error.message);
 
@@ -314,7 +330,7 @@ export async function accountFootprint(profileId: string): Promise<{
     admin
       .from("profiles")
       .select("id", { count: "exact", head: true })
-      .eq("role", "admin")
+      .in("role", ["developer", "admin"])
       .eq("active", true),
   ]);
 
@@ -363,11 +379,15 @@ export async function deleteAccount(profileId: string): Promise<void> {
 
   if (!target) throw new Error("That account no longer exists.");
 
-  if (target.role === "admin") {
+  if (target.role === "developer" && session.realProfile.role !== "developer") {
+    throw new Error("Only a developer can delete a developer's account.");
+  }
+
+  if (isAdmin(target.role)) {
     const { count } = await admin
       .from("profiles")
       .select("id", { count: "exact", head: true })
-      .eq("role", "admin")
+      .in("role", ["developer", "admin"])
       .eq("active", true);
 
     // Deleting the only administrator leaves a system nobody can manage — no way to

@@ -27,6 +27,7 @@ export type Person = {
 };
 
 export const ROLE_LABEL: Record<Role, string> = {
+  developer: "Developer",
   admin: "Administrator",
   supervisor: "Supervisor",
   guard: "Guard",

@@ -26,6 +26,7 @@
     "db:types": "node scripts/gen-db-types.mjs",
     "db:sql": "node scripts/sql.mjs",
     "db:auth": "node scripts/configure-auth.mjs",
+    "db:developer": "node scripts/ensure-developer.mjs",
     "test:e2e": "node scripts/e2e.mjs",
     "logo": "node scripts/generate-logo-assets.mjs",
     "env:link": "node scripts/link-env.mjs",

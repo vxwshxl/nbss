@@ -1,4 +1,4 @@
-import { CalendarCheck, Clock3, Phone, Radio, ShieldCheck, Timer } from "lucide-react-native";
+import { CalendarCheck, Clock3, Phone, Radio, UserRoundCheck, Timer } from "lucide-react-native";
 import { useCallback } from "react";
 import { Linking, RefreshControl, StyleSheet, View } from "react-native";
 
@@ -120,7 +120,7 @@ export default function ClientSiteRoute() {
         />
       </CardGrid>
 
-      <Panel tone="emerald" title="On duty now" icon={ShieldCheck} bare>
+      <Panel tone="emerald" title="On duty now" icon={UserRoundCheck} bare>
         {onDuty.length === 0 ? (
           <EmptyState
             icon={Radio}

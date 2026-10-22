@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isStaff } from "@nbss/shared/identity";
 import { site } from "@/content/site";
 import type { AiContext } from "./context";
 import { pageBrief } from "./pages";
@@ -69,7 +70,7 @@ type ToolCall = {
  * property into it.
  */
 function systemPrompt(ctx: AiContext, page?: PageView | null): string {
-  const office = ctx.role === "admin" || ctx.role === "supervisor";
+  const office = isStaff(ctx.role);
   const lines = [
     config().systemMessage,
     "",
@@ -322,7 +323,9 @@ async function runTurn(
       throw new Error(
         res.status === 429
           ? "The assistant is busy right now: try again in a moment."
-          : "The assistant is unavailable right now.",
+          : res.status === 402
+            ? "The assistant's AI account (Sarvam) is out of credits. Top it up and ask again."
+            : "The assistant is unavailable right now.",
       );
     }
 

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { SESSION_MAX_AGE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, secretKey } from "./env";
 import type { Database } from "./types";
@@ -23,7 +23,27 @@ import type { Database } from "./types";
  * response to unvalidated input.
  */
 
+/**
+ * The access token a native client sent, if any. The Expo app has no cookies to
+ * offer, so it calls the console's API routes (the assistant) with its Supabase
+ * session as `Authorization: Bearer <jwt>`. The token is verified the same way a
+ * cookie session is (getClaims), and queries then run as that person under RLS.
+ */
+export async function bearerToken(): Promise<string | null> {
+  const value = (await headers()).get("authorization") ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(value);
+  return match?.[1]?.trim() || null;
+}
+
 export async function supabaseServer() {
+  const token = await bearerToken();
+  if (token) {
+    return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+
   const store = await cookies();
 
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

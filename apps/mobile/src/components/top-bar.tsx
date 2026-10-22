@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,6 +10,7 @@ import { color, space } from "@/theme/tokens";
 
 import { Avatar } from "./avatar";
 import { BrandMark } from "./brand-mark";
+import { Nibo } from "./nibo/nibo";
 import { Text } from "./text";
 
 /**
@@ -62,6 +64,20 @@ export function TopBar({
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Ask Nibo, your assistant"
+          onPress={() => router.push("/assistant")}
+          style={({ pressed }) => [styles.ask, pressed && styles.pressed]}
+        >
+          <View style={styles.askFace}>
+            <Nibo size={30} still style={styles.askNibo} />
+          </View>
+          <Text variant="label" weight="semibold" style={styles.askText}>
+            Ask Nibo
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Your account"
           onPress={onPressAccount}
           disabled={!onPressAccount}
@@ -92,4 +108,19 @@ const styles = StyleSheet.create({
   },
   brandText: { flex: 1, gap: 0 },
   pressed: { opacity: 0.6 },
+  ask: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 36,
+    paddingLeft: 2,
+    paddingRight: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#10b98140",
+    backgroundColor: color.accent,
+  },
+  askFace: { width: 32, height: 32, borderRadius: 16, overflow: "hidden", backgroundColor: color.background, alignItems: "center" },
+  askNibo: { marginTop: 4 },
+  askText: { color: color.primaryInk },
 });

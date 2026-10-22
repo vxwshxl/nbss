@@ -173,6 +173,20 @@ export function Assistant({
     abortRef.current?.abort();
   }
 
+  // Nibo's "Ask" buttons arrive as a window event once the panel is open.
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  useEffect(() => {
+    const onAsk = (e: globalThis.Event) => {
+      const q = (e as CustomEvent<string>).detail;
+      if (typeof q === "string") void sendRef.current(q);
+    };
+    addEventListener("nibo:ask", onAsk);
+    return () => removeEventListener("nibo:ask", onAsk);
+  }, []);
+
   function newChat() {
     stop();
     setMessages([]);

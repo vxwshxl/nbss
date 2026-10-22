@@ -1,5 +1,6 @@
 "use server";
 
+import { isAdmin } from "@nbss/shared/identity";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
@@ -45,7 +46,7 @@ export async function updateBooking(
 
   if (input.status === "converted") {
     if (!input.siteId) return { ok: false, error: "Choose the site the guards are deployed to." };
-    if (session.profile.role !== "admin") {
+    if (!isAdmin(session.profile.role)) {
       return { ok: false, error: "Only an administrator can hand a site to a client." };
     }
     patch.site_id = input.siteId;

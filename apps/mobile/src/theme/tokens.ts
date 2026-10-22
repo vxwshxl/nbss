@@ -128,8 +128,8 @@ export const size = {
  * rather than restating `text-4xl font-semibold tracking-tight tabular-nums` each time.
  */
 export const text = {
-  /** PageHeader's eyebrow: `text-[11px] font-bold tracking-[0.16em] uppercase`. */
-  eyebrow: { fontSize: 11, lineHeight: 14, letterSpacing: 1.76 },
+  /** PageHeader's eyebrow: sentence case, the brand ink. */
+  eyebrow: { fontSize: 14, lineHeight: 20, letterSpacing: -0.07 },
   /** PageHeader's title: `text-3xl font-semibold tracking-tight`. */
   pageTitle: { fontSize: size["3xl"], lineHeight: 36, letterSpacing: -0.6 },
   /** Panel header strip: `text-sm font-bold sm:text-base`. */

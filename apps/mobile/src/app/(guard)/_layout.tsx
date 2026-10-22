@@ -1,9 +1,10 @@
 import { Redirect, Tabs } from "expo-router";
-import { CircleUserRound, Map, ShieldCheck } from "lucide-react-native";
+import { CircleUserRound, Map, Timer } from "lucide-react-native";
 import { useEffect } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NiboCompanion } from "@/components/nibo/companion";
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
@@ -40,6 +41,7 @@ export default function GuardLayout() {
   if (role && role !== "guard") return <Redirect href="/" />;
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         /**
@@ -78,7 +80,7 @@ export default function GuardLayout() {
         name="duty"
         options={{
           title: "Duty",
-          tabBarIcon: ({ color: c, size }) => <ShieldCheck size={size} color={c} strokeWidth={2} />,
+          tabBarIcon: ({ color: c, size }) => <Timer size={size} color={c} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
@@ -98,5 +100,7 @@ export default function GuardLayout() {
         }}
       />
     </Tabs>
+      <NiboCompanion bottom={58 + insets.bottom + 10} />
+    </View>
   );
 }

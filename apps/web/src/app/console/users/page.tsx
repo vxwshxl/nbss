@@ -1,3 +1,4 @@
+import { isAdmin } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { GuardsWorkspace, type PersonRow } from "@/components/console/guards-workspace";
@@ -25,8 +26,9 @@ export default async function UsersPage() {
       <PageHeader eyebrow="People" title="Users" />
       <GuardsWorkspace
         rows={(data ?? []) as PersonRow[]}
-        canManage={session.profile.role === "admin" && !session.impersonating}
+        canManage={isAdmin(session.profile.role) && !session.impersonating}
         selfId={session.realProfile.id}
+        isDeveloper={session.realProfile.role === "developer"}
         showRoleTabs
         defaultRole="client"
       />
