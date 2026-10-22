@@ -24,7 +24,7 @@ const SHIFTS = new Set(["24x7", "day", "night", "custom"]);
 export async function submitBooking(_prev: BookingFormState, data: FormData): Promise<BookingFormState> {
   const session = await requireRoleSession("client");
   if (session.impersonating) {
-    return { ok: false, error: "You are viewing as this client — bookings can only be made by the client." };
+    return { ok: false, error: "You are viewing as this client: bookings can only be made by the client." };
   }
 
   const text = (k: string) => String(data.get(k) ?? "").trim();
@@ -41,7 +41,7 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
   if (!contactName) return { ok: false, error: "Enter a contact name." };
   if (!isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit mobile number for the deployment desk." };
   if (!district || !districtOptions.includes(district)) return { ok: false, error: "Choose the district." };
-  if (text("site_type").length < 2) return { ok: false, error: "Describe the site — for example “Rice mill, 4 acres”." };
+  if (text("site_type").length < 2) return { ok: false, error: "Describe the site: for example “Rice mill, 4 acres”." };
   if (text("guards_required") && (!Number.isInteger(guards) || guards < 1 || guards > 2000)) {
     return { ok: false, error: "Guards needed should be a whole number between 1 and 2000." };
   }

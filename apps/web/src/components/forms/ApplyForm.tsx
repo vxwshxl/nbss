@@ -40,7 +40,7 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
         <input type="hidden" name="vacancy_id" value={vacancy.id} />
 
         <div className="flex flex-col gap-1.5">
-          <Eyebrow num="APP" text="Application" />
+          <Eyebrow text="Application" />
           <h3 className="font-display text-xl font-bold tracking-tight">Apply for {vacancy.title}</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {vacancy.type} · {vacancy.location}
@@ -89,7 +89,7 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
           label="Previous experience"
           rows={3}
           maxLength={1000}
-          placeholder="Where you worked, for how long, and what the duty was. Write “fresher” if this is your first job — freshers are welcome."
+          placeholder="Where you worked, for how long, and what the duty was. Write “fresher” if this is your first job. Freshers are welcome."
         />
 
         <ConsentBox>The details above are correct, and NBSS may verify them.</ConsentBox>

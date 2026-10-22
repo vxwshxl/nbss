@@ -84,7 +84,7 @@ export async function submitApplication(_prev: FormState, data: FormData): Promi
     values: {},
     success: {
       reference: saved.id,
-      title: `Application received — ${saved.id}`,
+      title: `Application received: ${saved.id}`,
       body: "Keep this reference. HR shortlists weekly and calls candidates for a verification interview at the Kokrajhar office. Bring Aadhaar, address proof and two references.",
     },
   };

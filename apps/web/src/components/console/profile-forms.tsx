@@ -89,7 +89,7 @@ export function PinForm({ isGuard, mustChange }: { isGuard: boolean; mustChange:
       <div className="space-y-3 sm:col-span-2">
         {mustChange && !state.ok && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-100/50 px-3 py-2.5 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
-            This {word} was issued to you by the office. Choose your own — nobody else
+            This {word} was issued to you by the office. Choose your own. Nobody else
             should know how you sign in.
           </p>
         )}

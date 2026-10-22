@@ -28,13 +28,13 @@ export function BookingCard({ service, className }: { service?: string; classNam
     >
       <div aria-hidden className="pointer-events-none absolute -top-24 -right-20 size-64 rounded-full bg-brand-gradient opacity-10 blur-2xl" />
       <div className="relative">
-        <Eyebrow num="RFQ" text="Book guards" />
+        <Eyebrow text="Book guards" />
         <h3 className="mt-3 font-display text-2xl font-bold tracking-tight text-balance">
           Book in two minutes. Follow it until the guards arrive.
         </h3>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Sign in to request guards for your site. You get a reference, the survey and the
-          quotation in one place — and, once deployed, who is on your gate right now.
+          quotation in one place, and, once deployed, who is on your gate right now.
         </p>
 
         <div className="mt-7 flex flex-col gap-3">

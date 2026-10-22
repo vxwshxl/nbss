@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import {
+  BellOff,
   BellRing,
   Building2,
   CheckCircle2,
@@ -13,8 +14,7 @@ import {
   MapPin,
   Navigation,
   Phone,
-  ShieldAlert,
-  ShieldOff,
+  Siren,
   UserRound,
   Users,
 } from "lucide-react";
@@ -54,7 +54,7 @@ const RESPONSE_LABEL: Record<string, { label: string; tone: "emerald" | "sky" | 
 };
 
 function minutesBetween(a: string, b: string | null): string {
-  if (!b) return "—";
+  if (!b) return "-";
   const m = Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60_000));
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
 }
@@ -133,7 +133,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
         d && (
           <>
             <PreviewHero
-              icon={ShieldAlert}
+              icon={Siren}
               tone={live ? "rose" : "slate"}
               title={`SOS · ${d.guard?.name ?? "A guard"}`}
               meta={
@@ -145,7 +145,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
               }
               badge={
                 <>
-                  <HeroPill>{live ? `● ${SOS_STATUS_LABEL[d.status]}` : SOS_STATUS_LABEL[d.status]}</HeroPill>
+                  <HeroPill>{SOS_STATUS_LABEL[d.status]}</HeroPill>
                   <HeroPill>{SOS_KIND_LABEL[d.kind]}</HeroPill>
                   {d.insideFence === false && <HeroPill>Outside the fence</HeroPill>}
                 </>
@@ -162,7 +162,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
                     <Phone className="size-4.5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-semibold tracking-wide uppercase">Call {d.guard.name}</span>
+                    <span className="block text-sm font-semibold">Call {d.guard.name}</span>
                     <span className="block font-mono text-lg font-bold">{d.guard.phone}</span>
                   </span>
                 </a>
@@ -191,7 +191,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
                       icon={Crosshair}
                       label="Position"
                       mono
-                      value={d.lat != null && d.lng != null ? `${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}` : "No fix — indoors?"}
+                      value={d.lat != null && d.lng != null ? `${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}` : "No fix: indoors?"}
                     />
                     <Field icon={Gauge} label="Accuracy" mono value={d.accuracy != null ? `±${Math.round(d.accuracy)} m` : null} />
                     <Field icon={Building2} label="Site" value={[d.site.name, d.site.district].filter(Boolean).join(" · ")} />
@@ -239,8 +239,8 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
                 <div className="flex items-start gap-2.5 rounded-xl border border-app-line-soft bg-muted/40 px-3.5 py-3 text-sm">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary-ink" />
                   <span>
-                    {SOS_STATUS_LABEL[d.status]} {d.closedBy ? `by ${d.closedBy}` : ""} · {istDateTime(d.closedAt, true)} —
-                    open for {minutesBetween(d.raisedAt, d.closedAt)}.
+                    {SOS_STATUS_LABEL[d.status]} {d.closedBy ? `by ${d.closedBy}` : ""} · {istDateTime(d.closedAt, true)}.
+                    Open for {minutesBetween(d.raisedAt, d.closedAt)}.
                     {d.closingNote && <span className="mt-1 block text-muted-foreground">{d.closingNote}</span>}
                   </span>
                 </div>
@@ -251,7 +251,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
                   <Input
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="What happened — optional, kept with the alert"
+                    placeholder="What happened (optional, kept with the alert)"
                   />
                 </Section>
               )}
@@ -285,7 +285,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
               {live && (
                 <>
                   <Button variant="outline" size="sm" disabled={saving} onClick={() => finish("false_alarm")}>
-                    <ShieldOff data-icon="inline-start" />
+                    <BellOff data-icon="inline-start" />
                     False alarm
                   </Button>
                   {d.canAcknowledge && (

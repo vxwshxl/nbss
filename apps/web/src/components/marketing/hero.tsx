@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ArrowRight, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, MapPin, Phone } from "lucide-react";
 
 import { Marquee } from "@/components/marketing/marquee";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ const BADGES = [
  *
  * One scroll-driven idea, and it is the argument the whole page rests on: the
  * photograph starts filling the frame and then recedes behind the copy as you
- * read, so the parade — the thing that makes this agency credible — is what you
+ * read, so the parade (the thing that makes this agency credible) is what you
  * see first and the words arrive over it rather than beside it.
  *
  * Three decisions worth naming:
@@ -41,7 +41,7 @@ const BADGES = [
  * the plate read as sitting behind the page.
  *
  * `gsap.matchMedia` owns the reduced-motion case, and GSAP reverts the context
- * when the query stops matching — so a reader who turns the setting on gets a
+ * when the query stops matching, so a reader who turns the setting on gets a
  * plain stacked hero with everything visible, not a half-applied timeline.
  */
 export function Hero() {
@@ -51,7 +51,7 @@ export function Hero() {
     () => {
       const mm = gsap.matchMedia();
 
-      // Explicit values rather than `clearProps: "all"` — clearProps strips
+      // Explicit values rather than `clearProps: "all"`: clearProps strips
       // every inline style GSAP wrote, including the `opacity: 1` set in the
       // same call, which would drop the copy back to its `opacity-0` starting
       // class and leave the hero blank for exactly the readers who cannot see
@@ -141,9 +141,8 @@ export function Hero() {
 
       <div className="mx-auto w-full max-w-6xl px-5 pt-44 pb-12 lg:pt-36">
         <div className="hero-fade">
-          <p className="hero-rise mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 px-3 py-1.5 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-white/90 uppercase backdrop-blur-sm sm:px-3.5 sm:text-[11px] sm:tracking-[0.14em]">
-            <span className="size-1.5 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_10px] shadow-emerald-400" />
-            {site.address.city} · Bodoland Territorial Region
+          <p className="hero-rise mb-5 text-sm font-semibold text-emerald-300 sm:text-base">
+            {site.address.city}, Bodoland Territorial Region
           </p>
 
           <h1 className="hero-rise font-display text-[clamp(2.6rem,6.4vw,4.6rem)] leading-[1.02] font-bold tracking-[-0.03em] text-white [text-shadow:0_2px_30px_rgb(0_0_0/0.45)]">
@@ -163,7 +162,7 @@ export function Hero() {
             <div className="min-w-0">
               <p className="hero-rise max-w-xl text-[17px] leading-relaxed text-white/90 sm:text-lg">
                 Trained, uniformed and police-verified security guards for government
-                offices, hospitals, banks, schools, industry and events — posted where you
+                offices, hospitals, banks, schools, industry and events. Posted where you
                 need them and supervised around the clock.
               </p>
 
@@ -184,13 +183,10 @@ export function Hero() {
                 </Button>
               </div>
 
-              <ul className="hero-rise mt-8 grid max-w-xl gap-2 sm:grid-cols-2">
+              <ul className="hero-rise mt-8 grid max-w-xl gap-x-6 gap-y-2.5 border-t border-white/15 pt-5 sm:grid-cols-2">
                 {BADGES.map((badge) => (
-                  <li
-                    key={badge}
-                    className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-[13px] font-medium text-white backdrop-blur-sm"
-                  >
-                    <ShieldCheck className="size-4 shrink-0 text-emerald-400" strokeWidth={2} />
+                  <li key={badge} className="flex items-center gap-2 text-sm text-white/85">
+                    <Check className="size-4 shrink-0 text-emerald-400" strokeWidth={2.4} aria-hidden />
                     {badge}
                   </li>
                 ))}
@@ -201,7 +197,7 @@ export function Hero() {
                 the single most likely next action from this page is a phone call,
                 and it should not be something the reader has to go looking for. */}
             <aside className="hero-rise rounded-2xl border border-white/15 bg-black/55 p-6 text-white shadow-2xl backdrop-blur-md">
-              <p className="text-[11px] font-bold tracking-[0.16em] text-emerald-300 uppercase">
+              <p className="text-sm font-semibold text-emerald-300">
                 Deployment desk · 24 × 7
               </p>
               <a
@@ -250,7 +246,7 @@ export function Hero() {
           items={coverage.map((d) => d.name)}
           duration={48}
           className="mask-fade-x"
-          itemClassName="text-xs font-semibold tracking-[0.14em] uppercase text-white/80"
+          itemClassName="text-sm font-medium text-white/80"
         />
       </div>
     </section>

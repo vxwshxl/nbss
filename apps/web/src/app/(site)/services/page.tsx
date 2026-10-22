@@ -10,8 +10,8 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Services — trained security personnel for every kind of site",
-  description: `Security guards supplied to ${services.length} kinds of site — schools, hospitals, government offices, banks and ATMs, hotels, retail, industry, construction and events — from Kokrajhar across the Bodoland Territorial Region and lower Assam.`,
+  title: "Services: trained security personnel for every kind of site",
+  description: `Security guards supplied to ${services.length} kinds of site: schools, hospitals, government offices, banks and ATMs, hotels, retail, industry, construction and events, from Kokrajhar across the Bodoland Territorial Region and lower Assam.`,
   path: "/services",
   keywords: [
     "security guard services Kokrajhar",
@@ -24,7 +24,7 @@ const STEPS: Step[] = [
   {
     n: "01",
     title: "You call or send the form",
-    body: "Tell us the site, the shift pattern and roughly how many people you have in mind. A rough answer is fine — that is what the visit is for.",
+    body: "Tell us the site, the shift pattern and roughly how many people you have in mind. A rough answer is fine. That is what the visit is for.",
   },
   {
     n: "02",
@@ -34,7 +34,7 @@ const STEPS: Step[] = [
   {
     n: "03",
     title: "A costed proposal, shown line by line",
-    body: "Wage, the applicable statutory heads and the agency service charge set out separately. If a figure looks odd, ask — it will have a reason.",
+    body: "Wage, the applicable statutory heads and the agency service charge set out separately. If a figure looks odd, ask. It will have a reason.",
   },
   {
     n: "04",
@@ -70,7 +70,6 @@ export default function ServicesPage() {
 
       <Section alt>
         <SectionHead
-          num="◆"
           kicker="How a contract starts"
           title="Four steps, and a visit before any number."
           lede="Nobody is asked to sign anything before the site has been walked and the quotation has been read line by line."

@@ -37,7 +37,7 @@ export type AttendanceRow = {
 const IST = "Asia/Kolkata";
 
 function shortTime(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -49,7 +49,7 @@ function shortTime(iso: string | null): string {
 }
 
 function hours(minutes: number | null): string {
-  if (minutes === null) return "—";
+  if (minutes === null) return "-";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
@@ -95,7 +95,7 @@ export function AttendanceWorkspace({
             header: "Guard",
             cell: (r: AttendanceRow) => (
               <span className="block">
-                <span className="block font-medium">{r.guard_name ?? "—"}</span>
+                <span className="block font-medium">{r.guard_name ?? "-"}</span>
                 <span className="block font-mono text-xs text-muted-foreground">
                   {r.guard_code ?? ""}
                 </span>
@@ -103,13 +103,13 @@ export function AttendanceWorkspace({
             ),
             sortValue: (r: AttendanceRow) => r.guard_name ?? "",
             searchValue: (r: AttendanceRow) => `${r.guard_name ?? ""} ${r.guard_code ?? ""}`,
-            printCell: (r: AttendanceRow) => r.guard_name ?? "—",
+            printCell: (r: AttendanceRow) => r.guard_name ?? "-",
           },
         ]
       : []),
     {
       header: "Site",
-      cell: (r) => r.site_name ?? "—",
+      cell: (r) => r.site_name ?? "-",
       sortValue: (r) => r.site_name ?? "",
       searchValue: (r) => r.site_name ?? "",
     },
@@ -155,12 +155,12 @@ export function AttendanceWorkspace({
       headClassName: "text-right",
       cell: (r) => (
         <span className="tabular-nums">
-          {r.check_in_distance_m === null ? "—" : `${Math.round(r.check_in_distance_m)} m`}
+          {r.check_in_distance_m === null ? "-" : `${Math.round(r.check_in_distance_m)} m`}
         </span>
       ),
       sortValue: (r) => r.check_in_distance_m ?? -1,
       printCell: (r) =>
-        r.check_in_distance_m === null ? "—" : `${Math.round(r.check_in_distance_m)} m`,
+        r.check_in_distance_m === null ? "-" : `${Math.round(r.check_in_distance_m)} m`,
     },
     {
       header: "State",

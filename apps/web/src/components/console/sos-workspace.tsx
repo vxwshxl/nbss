@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ShieldAlert } from "lucide-react";
+import { Siren } from "lucide-react";
 
 import { SOS_KIND_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
@@ -53,7 +53,7 @@ export function SosWorkspace({ rows }: { rows: SosRow[] }) {
     {
       header: "Phone",
       cell: (r) => <PhoneLink phone={r.guardPhone} />,
-      printCell: (r) => r.guardPhone ?? "—",
+      printCell: (r) => r.guardPhone ?? "-",
     },
     {
       header: "Site",
@@ -96,7 +96,7 @@ export function SosWorkspace({ rows }: { rows: SosRow[] }) {
   ];
 
   return (
-    <Panel tone="rose" title={`${rows.length} alert${rows.length === 1 ? "" : "s"}`} icon={ShieldAlert} bodyClassName="p-3 sm:p-4">
+    <Panel tone="rose" title={`${rows.length} alert${rows.length === 1 ? "" : "s"}`} icon={Siren} bodyClassName="p-3 sm:p-4">
       <DataTable
         columns={columns}
         data={rows}

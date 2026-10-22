@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 
 import { Wordmark } from "@/components/brand";
 import { site } from "@/content/site";
@@ -22,7 +22,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <ShieldCheck className="size-3.5 text-primary-ink" />
+          <LockKeyhole className="size-3.5 text-primary-ink" />
           Secured sign-in
           <span aria-hidden>·</span>
           <Link href="/privacy-policy" className="underline-offset-4 hover:text-foreground hover:underline">

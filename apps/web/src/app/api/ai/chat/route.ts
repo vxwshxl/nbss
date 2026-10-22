@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
   if (!isAssistantConfigured()) {
     return NextResponse.json(
-      { error: "The assistant is not connected yet — no API key is configured." },
+      { error: "The assistant is not connected yet: no API key is configured." },
       { status: 503 },
     );
   }

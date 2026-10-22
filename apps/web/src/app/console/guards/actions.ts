@@ -59,7 +59,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     return { ok: false, values, error: "That email address does not look right." };
   }
   if (needsEmail(role) && !email) {
-    return { ok: false, values, error: "An email address is required — sign-in codes are sent there." };
+    return { ok: false, values, error: "An email address is required: sign-in codes are sent there." };
   }
 
   // A guard gets a PIN as well as their email, for the days the mail is slow

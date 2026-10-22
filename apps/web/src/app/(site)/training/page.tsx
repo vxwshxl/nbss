@@ -16,9 +16,9 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Training — the six areas every guard is trained in",
+  title: "Training: the six areas every guard is trained in",
   description:
-    "Guarding duties, physical fitness and parade, fire safety and emergency response, first aid, access control and crowd control — completed before a first posting, and revisited afterwards.",
+    "Guarding duties, physical fitness and parade, fire safety and emergency response, first aid, access control and crowd control, completed before a first posting, and revisited afterwards.",
   path: "/training",
   keywords: [
     "security guard training Assam",
@@ -65,7 +65,7 @@ export default function TrainingPage() {
         eyebrow="Training"
         crumb="Training"
         title="Trained before anyone stands at your gate."
-        lede="Six areas, covered before a first posting and revisited afterwards. A guard who freezes at a fire alarm has not been careless — somebody skipped the training."
+        lede="Six areas, covered before a first posting and revisited afterwards. A guard who freezes at a fire alarm has not been careless. Somebody skipped the training."
         image="/img/nbss/training-classroom.jpg"
       />
 
@@ -73,7 +73,6 @@ export default function TrainingPage() {
         <div className="grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:items-start">
           <Reveal>
             <SectionHead
-              num="01"
               kicker="The premise"
               title="Most guarding failures are training failures."
               className="mb-6"
@@ -81,7 +80,7 @@ export default function TrainingPage() {
             <div className="flex flex-col gap-4 text-base leading-relaxed text-muted-foreground">
               <p>
                 A guard who lets a vehicle out because the paperwork looked roughly right
-                has not been dishonest — he has been untrained. A guard who argues with an
+                has not been dishonest. He has been untrained. A guard who argues with an
                 agitated attendant in a hospital corridor has not been rude. In each case
                 there is a module behind the mistake.
               </p>
@@ -90,7 +89,7 @@ export default function TrainingPage() {
                 training in guarding duties, physical fitness and parade, fire safety and
                 emergency response, first-aid support, access control and gate management,
                 and crowd control and discipline. Sessions are run with external instructors
-                where the subject calls for it — the emergency-response training on this
+                where the subject calls for it. The emergency-response training on this
                 page was conducted with SDRF Assam.
               </p>
             </div>
@@ -118,7 +117,7 @@ export default function TrainingPage() {
                 />
               </div>
               <figcaption className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Drill ranks — bearing, spacing and discipline.{" "}
+                Drill ranks: bearing, spacing and discipline.{" "}
                 <span className="text-muted-foreground/70">
                   National Bodo Security Service
                 </span>
@@ -130,7 +129,6 @@ export default function TrainingPage() {
 
       <Section alt>
         <SectionHead
-          num="02"
           kicker="What we train"
           title="Six areas, every guard."
           lede="These are the areas named in our training programme. They are the ones that decide what happens on a site at three in the morning."
@@ -139,10 +137,7 @@ export default function TrainingPage() {
           {syllabus.map((module, i) => (
             <Reveal key={module.code} delay={Math.min(i, 6) * 60}>
               <article className="flex h-full flex-col rounded-2xl border border-app-line-soft bg-card p-6 shadow-card">
-                <span className="font-mono text-xs font-bold tracking-[0.18em] text-primary">
-                  {module.code}
-                </span>
-                <h3 className="mt-4 font-display text-lg leading-snug font-bold tracking-tight">
+                <h3 className="font-display text-lg leading-snug font-bold tracking-tight">
                   {module.title}
                 </h3>
                 <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
@@ -156,7 +151,6 @@ export default function TrainingPage() {
 
       <Section>
         <SectionHead
-          num="03"
           kicker="Before the uniform"
           title="Verification runs alongside, and it is the harder gate."
           lede="Training makes a guard useful. Verification is what makes them safe to put on your site in the first place, and it is the step an agency in a hurry is most tempted to skip."
@@ -167,13 +161,13 @@ export default function TrainingPage() {
       <Section alt>
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <Reveal>
-            <Eyebrow num="04" text="Parade" />
+            <Eyebrow text="Parade" />
             <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
               Turnout, in motion.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-muted-foreground">
               Parade is where discipline becomes visible. It is also where a supervisor
-              catches the uniform, the cap, the identity card and the bearing — before a
+              catches the uniform, the cap, the identity card and the bearing before a
               client has to notice any of them.
             </p>
           </Reveal>
@@ -189,14 +183,14 @@ export default function TrainingPage() {
 
       {photos.length > 0 && (
         <Section>
-          <SectionHead num="05" kicker="Sessions" title="Training and parade, photographed." />
+          <SectionHead kicker="Sessions" title="Training and parade, photographed." />
           <PhotoStrip photos={photos.slice(0, 6)} />
         </Section>
       )}
 
       <Section alt>
         <Reveal className="mx-auto max-w-2xl text-center">
-          <Eyebrow num="◆" text="Join us" className="justify-center" />
+          <Eyebrow text="Join us" className="justify-center" />
           <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
             Freshers welcome. Training is provided.
           </h2>

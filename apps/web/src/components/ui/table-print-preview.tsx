@@ -108,7 +108,7 @@ export function TablePrintPreview<T>({
               )}
             </div>
             <div className="ml-auto text-right">
-              <p className="text-xs tracking-wide text-muted-foreground uppercase">{title}</p>
+              <p className="text-xs font-medium text-muted-foreground">{title}</p>
               <p className="text-sm text-muted-foreground">{printedAt}</p>
               <p className="text-xs text-muted-foreground">{rows.length} records</p>
             </div>
@@ -118,7 +118,7 @@ export function TablePrintPreview<T>({
           <div className="overflow-x-auto px-6 py-5 print:overflow-visible print:px-0 print:py-3">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
                   {printCols.map((c, i) => (
                     <th key={i} className="px-2 py-2 font-medium print:py-1">
                       {c.printHeader ?? c.header}

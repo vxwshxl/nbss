@@ -225,7 +225,7 @@ export function BookWorkspace({
           </div>
 
           <div className="border-t border-app-line-soft pt-4 sm:col-span-2">
-            <p className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Who we should call</p>
+            <p className="mb-3 label-heading">Who we should call</p>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="contact_name">Name</Label>
@@ -277,7 +277,7 @@ export function BookWorkspace({
                 {r.status === "quoted" && r.quoted_amount_paise != null && (
                   <p className="mt-2 rounded-lg bg-violet-50 px-2.5 py-1.5 text-sm text-violet-800">
                     Quoted <span className="font-semibold">{rupees(r.quoted_amount_paise)}</span> / month
-                    {r.quote_note ? ` — ${r.quote_note}` : ""}
+                    {r.quote_note ? `, ${r.quote_note}` : ""}
                   </p>
                 )}
                 <div className="mt-2.5 flex items-center justify-between">
@@ -325,7 +325,7 @@ export function BookWorkspace({
               </p>
               {openRow.quoted_amount_paise != null && (
                 <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-violet-900">
-                  <p className="text-xs font-semibold tracking-wide uppercase">Quotation</p>
+                  <p className="text-sm font-semibold">Quotation</p>
                   <p className="mt-0.5 text-2xl font-bold">
                     {rupees(openRow.quoted_amount_paise)} <span className="text-sm font-medium">/ month</span>
                   </p>

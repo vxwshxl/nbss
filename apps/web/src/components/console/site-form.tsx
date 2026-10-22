@@ -111,7 +111,7 @@ export function SiteForm() {
         <DialogHeader>
           <DialogTitle>Register a site</DialogTitle>
           <DialogDescription>
-            Place the boundary on the map first — everything below describes how
+            Place the boundary on the map first: everything below describes how
             attendance inside it is judged.
           </DialogDescription>
         </DialogHeader>
@@ -132,7 +132,7 @@ export function SiteForm() {
               id="name"
               name="name"
               defaultValue={state.values?.name}
-              placeholder="Kokrajhar Government College — main gate"
+              placeholder="Kokrajhar Government College, main gate"
               required
             />
           </Field>

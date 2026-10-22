@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarRange, ShieldQuestion, UserRoundX, Users } from "lucide-react";
+import { CalendarRange, CircleHelp, UserRoundX, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
 import {
@@ -157,7 +157,7 @@ export default async function RosterPage() {
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Posts filled now"
-          value={needed ? `${covered} / ${needed}` : "—"}
+          value={needed ? `${covered} / ${needed}` : "-"}
           hint={needed ? (covered >= needed ? "Every site is staffed" : `${needed - covered} short across sites`) : "Set how many each site needs"}
           icon={Users}
           tone={needed && covered < needed ? "amber" : "emerald"}
@@ -173,7 +173,7 @@ export default async function RosterPage() {
           label="Off-roster check-ins"
           value={String(off.length)}
           hint={off.length ? "Waiting for your approval" : "Nothing to approve"}
-          icon={ShieldQuestion}
+          icon={CircleHelp}
           tone={off.length ? "amber" : "slate"}
         />
         <StatCard

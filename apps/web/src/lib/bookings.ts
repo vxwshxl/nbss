@@ -27,7 +27,7 @@ export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
 export const BOOKING_STATUS_NOTE: Record<BookingStatus, string> = {
   new: "The deployment desk has it and will call you.",
   reviewing: "A field officer is arranging a site survey.",
-  quoted: "Your quotation is ready — the desk will walk you through it.",
+  quoted: "Your quotation is ready: the desk will walk you through it.",
   accepted: "Accepted. Guards are being assigned.",
   declined: "The desk could not take this one on.",
   withdrawn: "You withdrew this request.",

@@ -17,7 +17,7 @@ import {
   Navigation,
   Phone,
   Radio,
-  ShieldAlert,
+  Siren,
   Timer,
   TriangleAlert,
   UserRound,
@@ -65,7 +65,7 @@ export type SiteSummary = MapSite & {
 };
 
 function clock(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const [h, m] = value.split(":");
   const hour = Number(h);
   if (!Number.isFinite(hour)) return value;
@@ -183,7 +183,7 @@ export function SitePreviewDialog({
               badge={
                 <>
                   <HeroPill>{site.active ? "In service" : "Out of service"}</HeroPill>
-                  <HeroPill>● {d ? d.onDuty.length : site.onDuty} on duty</HeroPill>
+                  <HeroPill>{d ? d.onDuty.length : site.onDuty} on duty</HeroPill>
                   {liveSos.length > 0 && <HeroPill>⚠ {liveSos.length} live SOS</HeroPill>}
                 </>
               }
@@ -197,12 +197,12 @@ export function SitePreviewDialog({
                   onClick={() => setSosId(a.id)}
                   className="flex w-full items-center gap-3 rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-left text-rose-900 transition hover:bg-rose-100"
                 >
-                  <ShieldAlert className="size-5 shrink-0 text-rose-600" />
+                  <Siren className="size-5 shrink-0 text-rose-600" />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold">
                       SOS · {a.by} · {SOS_KIND_LABEL[a.kind]}
                     </span>
-                    <span className="block text-xs">Raised {ago(a.raisedAt)} — open it to call and respond</span>
+                    <span className="block text-xs">Raised {ago(a.raisedAt)}. Open it to call and respond</span>
                   </span>
                   <ChevronRight className="size-4" />
                 </button>
@@ -227,7 +227,7 @@ export function SitePreviewDialog({
 
               {d && (
                 <Section
-                  title={`Roster · needs ${d.required ?? "—"} on duty · ${d.posted.length} posted`}
+                  title={`Roster · needs ${d.required ?? "-"} on duty · ${d.posted.length} posted`}
                   action={
                     <Link
                       href={`/console/roster?site=${site.id}`}
@@ -240,7 +240,7 @@ export function SitePreviewDialog({
                 >
                   {d.posted.length === 0 ? (
                     <p className="rounded-xl border border-dashed border-app-line-soft px-4 py-4 text-center text-sm text-muted-foreground">
-                      Nobody is posted here — guards check in first come, first served.
+                      Nobody is posted here: guards check in first come, first served.
                     </p>
                   ) : (
                     <ul className="divide-y divide-app-line-soft overflow-hidden rounded-xl border border-app-line-soft">
@@ -336,7 +336,7 @@ export function SitePreviewDialog({
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     {site.client_name
-                      ? `${site.client_name} — no client login is linked to this site yet.`
+                      ? `${site.client_name}: no client login is linked to this site yet.`
                       : "No client recorded for this site."}
                   </p>
                 )}
@@ -372,7 +372,7 @@ export function SitePreviewDialog({
                         onClick={() => setSosId(a.id)}
                         className="flex cursor-pointer items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-muted/60"
                       >
-                        <ShieldAlert className={cn("size-4", isLive(a.status) ? "text-rose-600" : "text-muted-foreground")} />
+                        <Siren className={cn("size-4", isLive(a.status) ? "text-rose-600" : "text-muted-foreground")} />
                         <span className="min-w-0 flex-1 text-sm">
                           <span className="font-medium">{a.by}</span> · {SOS_KIND_LABEL[a.kind]}
                           <span className="block text-xs text-muted-foreground">{istDateTime(a.raisedAt, true)}</span>

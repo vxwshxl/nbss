@@ -315,9 +315,9 @@ export function SuccessPanel({
       </span>
       <h3 className="font-display text-xl font-bold tracking-tight">{title}</h3>
       <p className="max-w-md text-sm leading-relaxed text-muted-foreground">{body}</p>
-      <p className="mt-2 rounded-full bg-card px-4 py-2 text-sm">
+      <p className="mt-2 rounded-lg bg-card px-4 py-2 text-sm">
         Reference{" "}
-        <strong className="font-mono font-semibold tracking-wider">{reference}</strong> — quote
+        <strong className="font-mono font-semibold tracking-wider">{reference}</strong>. Quote
         it if you call.
       </p>
     </div>

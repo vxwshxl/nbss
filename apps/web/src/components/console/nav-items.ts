@@ -7,15 +7,14 @@ import {
   ExternalLink,
   Inbox,
   LayoutDashboard,
-  type LucideIcon,
   MapPinned,
   ScrollText,
-  ShieldAlert,
-  ShieldUser,
+  Siren,
   Sparkles,
   Timer,
   UserRound,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 
 import type { NavIndexItem } from "@/components/shell/nav-index";
@@ -106,13 +105,13 @@ export const groups: NavGroup[] = [
       {
         href: "/console/guards",
         label: "Guards",
-        icon: ShieldUser,
+        icon: UserRound,
         roles: ["admin", "supervisor"],
       },
       {
         href: "/console/sos",
         label: "SOS alerts",
-        icon: ShieldAlert,
+        icon: Siren,
         roles: ["admin", "supervisor"],
       },
     ],

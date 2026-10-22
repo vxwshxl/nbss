@@ -38,7 +38,7 @@ export function LegalArticle({ doc, other }: { doc: LegalDoc; other: LegalDoc })
             </p>
 
             <nav aria-label="On this page" className="mt-5">
-              <p className="mb-3 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+              <p className="label-heading mb-3">
                 On this page
               </p>
               <ol className="flex flex-col gap-1.5">

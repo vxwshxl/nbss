@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
+  CircleCheck,
   IdCard,
   Layers,
-  type LucideIcon,
   Radio,
-  ShieldCheck,
   Sprout,
   Target,
   TriangleAlert,
+  type LucideIcon,
 } from "lucide-react";
 
 import { Eyebrow } from "@/components/marketing/blocks";
@@ -26,9 +26,9 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Careers — join NBSS in Kokrajhar and the BTR districts",
+  title: "Careers: join NBSS in Kokrajhar and the BTR districts",
   description:
-    "Security guards, lady guards, supervisors and field officers in Kokrajhar, Chirang, Baksa and Udalguri. Freshers welcome — training is provided before your first posting, and we never charge a fee for a job.",
+    "Security guards, lady guards, supervisors and field officers in Kokrajhar, Chirang, Baksa and Udalguri. Freshers welcome. Training is provided before your first posting, and we never charge a fee for a job.",
   path: "/careers",
   keywords: [
     "security guard jobs Kokrajhar",
@@ -43,10 +43,10 @@ const PERKS: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Target,
     title: "Training provided",
-    body: "Guarding duties, parade and fitness, fire safety, first aid, access control and crowd handling — taught before your first posting.",
+    body: "Guarding duties, parade and fitness, fire safety, first aid, access control and crowd handling, taught before your first posting.",
   },
   {
-    icon: ShieldCheck,
+    icon: CircleCheck,
     title: "ESI & EPF as applicable",
     body: "Statutory benefits are extended to deployed personnel as applicable, and we help you with the paperwork rather than leaving you to it.",
   },
@@ -81,7 +81,7 @@ const STEPS: Step[] = [
   {
     n: "02",
     title: "Interview and verification",
-    body: "Bring Aadhaar and address proof. Police verification is completed before deployment — for every guard, without exception.",
+    body: "Bring Aadhaar and address proof. Police verification is completed before deployment, for every guard, without exception.",
   },
   {
     n: "03",
@@ -107,13 +107,12 @@ export default function CareersPage() {
         eyebrow={`${vacancies.length} open positions`}
         crumb="Careers"
         title="Honest work, trained properly, supervised well."
-        lede="We hire from Kokrajhar, Chirang, Baksa, Udalguri and the districts around them. Freshers are welcome — training is provided before your first posting."
+        lede="We hire from Kokrajhar, Chirang, Baksa, Udalguri and the districts around them. Freshers are welcome. Training is provided before your first posting."
         image="/img/nbss/parade-salute.jpg"
       />
 
       <Section>
         <SectionHead
-          num="01"
           kicker="Vacancies"
           title="Roles we recruit for."
           lede="Openings vary by district and by season. Call the office to check what is live before you travel."
@@ -178,7 +177,7 @@ export default function CareersPage() {
       </Section>
 
       <Section alt>
-        <SectionHead num="02" kicker="What you get" title="The terms, stated plainly." />
+        <SectionHead kicker="What you get" title="The terms, stated plainly." />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {PERKS.map((perk, i) => {
             const Icon = perk.icon;
@@ -204,7 +203,7 @@ export default function CareersPage() {
       <Section>
         <div className="mx-auto max-w-3xl">
           <Reveal className="mb-10">
-            <Eyebrow num="03" text="How to apply" />
+            <Eyebrow text="How to apply" />
             <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
               Three steps, and nobody asks you for money.
             </h2>

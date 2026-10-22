@@ -18,7 +18,7 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "About — a security agency run from Kokrajhar",
+  title: "About: a security agency run from Kokrajhar",
   description:
     "The company profile, vision and mission of National Bodo Security Service, the management behind it, and the registration and labour compliance it operates under.",
   path: "/about",
@@ -54,7 +54,6 @@ export default function AboutPage() {
         <div className="grid gap-12 lg:grid-cols-[1.35fr_1fr] lg:items-start">
           <Reveal>
             <SectionHead
-              num="01"
               kicker="Who we are"
               title="A regional agency, run from Kokrajhar."
               className="mb-6"
@@ -70,7 +69,7 @@ export default function AboutPage() {
                 Kokrajhar is the administrative seat of the Bodoland Territorial Council,
                 and it is where we recruit, train and run the business from. Our people
                 come from the districts they are posted in. They know the roads, the
-                languages and the neighbours — which is the difference between a guard
+                languages and the neighbours, which is the difference between a guard
                 watching a gate and a guard who knows who belongs at it.
               </p>
               <p>
@@ -78,7 +77,7 @@ export default function AboutPage() {
                 <strong className="text-foreground">Bodo</strong> is the community, and the
                 diamond in our shield is drawn from the <em>Aronai</em>, the woven scarf a
                 Bodo household gives to honour a guest. It is a promise of hospitality and
-                protection — a reasonable thing for a security company to put on its badge.
+                protection, a reasonable thing for a security company to put on its badge.
               </p>
             </div>
           </Reveal>
@@ -95,7 +94,7 @@ export default function AboutPage() {
                 />
               </div>
               <figcaption className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                The <em>Aronai</em> — the woven band our mark is drawn from.{" "}
+                The <em>Aronai</em>, the woven band our mark is drawn from.{" "}
                 <span className="text-muted-foreground/70">
                   Wikimedia Commons, CC BY 4.0
                 </span>
@@ -108,7 +107,7 @@ export default function AboutPage() {
       <StatBand />
 
       <Section alt>
-        <SectionHead num="02" kicker="What we hold to" title="Our vision and our mission." />
+        <SectionHead kicker="What we hold to" title="Our vision and our mission." />
         <div className="grid gap-4 lg:grid-cols-2">
           <Reveal>
             <article className="flex h-full flex-col rounded-2xl border border-app-line-soft bg-card p-7 shadow-card">
@@ -137,13 +136,12 @@ export default function AboutPage() {
       </Section>
 
       <Section>
-        <SectionHead num="03" kicker="Why choose us" title="The parts that take work." />
+        <SectionHead kicker="Why choose us" title="The parts that take work." />
         <PillarGrid />
       </Section>
 
       <Section alt>
         <SectionHead
-          num="04"
           kicker="Management"
           title="Who runs it."
           action={
@@ -175,10 +173,9 @@ export default function AboutPage() {
 
       <Section>
         <SectionHead
-          num="05"
           kicker="Legal compliance"
           title="Paperwork you can ask to see."
-          lede="Registration and compliance documents are shared with the contract, or earlier on request. No registration numbers are printed here — a security agency publishing one it does not hold is a legal problem, not a copy problem."
+          lede="Registration and compliance documents are shared with the contract, or earlier on request. No registration numbers are printed here. A security agency publishing one it does not hold is a legal problem, not a copy problem."
           action={
             <Button asChild variant="outline">
               <Link href="/contact">

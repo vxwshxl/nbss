@@ -50,7 +50,7 @@ const code = `<!doctype html>
                 <p style="margin:0 0 6px;font-size:15px;font-weight:600">Your sign-in code</p>
                 <p style="margin:0 0 20px;font-size:14px;color:#5d5d5d">Enter this code to finish signing in. It expires in 10 minutes.</p>
                 <div style="font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#047857;background:#e9f8f1;border-radius:12px;padding:16px 0;text-align:center">{{ .Token }}</div>
-                <p style="margin:22px 0 0;font-size:12px;color:#8a8a8a">If you did not try to sign in, you can ignore this email — nobody can sign in without the code.</p>
+                <p style="margin:22px 0 0;font-size:12px;color:#8a8a8a">If you did not try to sign in, you can ignore this email. Nobody can sign in without the code.</p>
               </td>
             </tr>
           </table>

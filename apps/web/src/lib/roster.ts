@@ -18,7 +18,7 @@ export const WEEKDAYS = [
 
 /** "20:00:00" → "8:00 pm". */
 export function clock(value: string | null | undefined): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const [h, m] = value.split(":");
   const hour = Number(h);
   if (!Number.isFinite(hour)) return value;

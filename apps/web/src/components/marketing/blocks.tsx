@@ -4,34 +4,11 @@ import { Reveal } from "@/components/marketing/reveal";
 import { cn } from "@/lib/utils";
 
 /**
- * The numbered mono eyebrow, on its own.
- *
- * `SectionHead` renders one already; this is for the places that need the
- * marker without a heading under it — a form panel, a sidebar block — so the
- * dossier numbering stays consistent instead of being re-typed as a `<p>` with
- * approximately the right classes.
+ * The eyebrow on its own, for the places that need the label without a heading
+ * under it: a form panel, a sidebar block.
  */
-export function Eyebrow({
-  num,
-  text,
-  className,
-}: {
-  num: React.ReactNode;
-  text: string;
-  className?: string;
-}) {
-  return (
-    <p
-      className={cn(
-        "flex items-center gap-3 font-mono text-[11px] font-bold tracking-[0.18em] text-muted-foreground uppercase",
-        className,
-      )}
-    >
-      <span className="text-primary">{num}</span>
-      <span aria-hidden className="h-px w-8 bg-app-line" />
-      {text}
-    </p>
-  );
+export function Eyebrow({ text, className }: { text: string; className?: string }) {
+  return <p className={cn("eyebrow", className)}>{text}</p>;
 }
 
 /**
@@ -121,7 +98,7 @@ export function VideoBand({
 }
 
 /**
- * A bordered aside — "typically deployed at", "included on every contract".
+ * A bordered aside: "typically deployed at", "included on every contract".
  *
  * `tone="accent"` is for the one panel per page that is the offer rather than
  * context. More than one accented panel on a screen and neither reads as the
@@ -149,7 +126,7 @@ export function Panel({
       )}
     >
       {title && (
-        <h3 className="mb-3 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+        <h3 className="label-heading mb-3">
           {title}
         </h3>
       )}

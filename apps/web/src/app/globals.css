@@ -1065,3 +1065,21 @@ button:disabled,
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
+
+/* The line above a heading ("What we do"). Sentence case, the body face, the
+ * brand ink. Defined once so the label style is changed in one place. */
+@utility eyebrow {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--primary-ink);
+}
+
+/* A small heading inside a panel, list or footer column. */
+@utility label-heading {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}

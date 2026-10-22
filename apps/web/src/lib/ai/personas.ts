@@ -26,7 +26,7 @@ export const PERSONAS: Record<Role, Persona> = {
     audience:
       "an administrator of the agency, who can see every site, every guard, the enquiry desk and the audit log.",
     scopeNote:
-      "I read this console's own records — duty, sites, hours, the roster and the enquiry desk. I can't see anything the console can't, I don't change anything, and every figure I give you names the lookup it came from.",
+      "I read this console's own records: duty, sites, hours, the roster and the enquiry desk. I can't see anything the console can't, I don't change anything, and every figure I give you names the lookup it came from.",
     suggestions: [
       "Who is on duty right now?",
       "Which sites have nobody in them?",
@@ -53,7 +53,7 @@ export const PERSONAS: Record<Role, Persona> = {
     audience:
       "a guard. They may only be told about their own shifts, and never about another guard.",
     scopeNote:
-      "I can only see your own shifts — when you checked in and out, the hours you worked and the overtime on them. I can't see another guard's record, I can't change yours, and I can't mark you present. That is the button on your duty screen.",
+      "I can only see your own shifts: when you checked in and out, the hours you worked and the overtime on them. I can't see another guard's record, I can't change yours, and I can't mark you present. That is the button on your duty screen.",
     suggestions: [
       "How many hours did I work this week?",
       "Am I checked in right now?",
@@ -64,9 +64,9 @@ export const PERSONAS: Record<Role, Persona> = {
   },
   client: {
     audience:
-      "a client of the agency. They may only be told about cover at their own site — never about a guard's personal record, their coordinates, or any other client.",
+      "a client of the agency. They may only be told about cover at their own site, never about a guard's personal record, their coordinates, or any other client.",
     scopeNote:
-      "I can see the cover at your own site — who is checked in right now, and the man-hours and overtime behind this month's invoice. I can't see another client's site, I can't see a guard's personal record, and I don't change anything.",
+      "I can see the cover at your own site: who is checked in right now, and the man-hours and overtime behind this month's invoice. I can't see another client's site, I can't see a guard's personal record, and I don't change anything.",
     suggestions: [
       "Is anyone on my gate right now?",
       "How many man-hours this month?",

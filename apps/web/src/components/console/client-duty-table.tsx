@@ -77,7 +77,7 @@ export function ClientDutyTable({
               avatar={open.guardName}
               title={open.guardName}
               meta={<span>{open.siteName}</span>}
-              badge={<HeroPill>● On duty now</HeroPill>}
+              badge={<HeroPill>On duty now</HeroPill>}
             />
             <PreviewBody>
               <FieldGrid>

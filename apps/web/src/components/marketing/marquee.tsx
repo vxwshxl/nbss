@@ -23,7 +23,6 @@ export function Marquee({
   reverse = false,
   className,
   itemClassName,
-  separator = "◆",
 }: {
   items: string[];
   /** Seconds for one full pass. Longer track ⇒ longer duration, or it speeds up. */
@@ -31,16 +30,13 @@ export function Marquee({
   reverse?: boolean;
   className?: string;
   itemClassName?: string;
-  separator?: string;
 }) {
   const half = (
     <ul className="flex shrink-0 items-center">
       {items.map((item, i) => (
         <li key={`${item}-${i}`} className={cn("flex items-center whitespace-nowrap", itemClassName)}>
           {item}
-          <span aria-hidden className="mx-6 text-primary/60">
-            {separator}
-          </span>
+          <span aria-hidden className="mx-6 h-3.5 w-px bg-current opacity-25" />
         </li>
       ))}
     </ul>

@@ -54,7 +54,7 @@ export default async function ProfilePage() {
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
           Your employee code and your role are set by the office. If either is wrong,
-          the operations desk changes it — the change is recorded in the audit log.
+          the operations desk changes it and the change is recorded in the audit log.
         </p>
       </Panel>
 
@@ -70,7 +70,7 @@ export default async function ProfilePage() {
         {impersonating ? (
           <p className="text-sm text-muted-foreground">
             A credential cannot be changed from a &ldquo;view as&rdquo; session. Stop
-            viewing as this person, then issue a new PIN from the Guards screen — that
+            viewing as this person, then issue a new PIN from the Guards screen. That
             path is recorded in the audit log.
           </p>
         ) : (
@@ -79,7 +79,7 @@ export default async function ProfilePage() {
         <p className="mt-4 text-xs text-muted-foreground">
           Your {isGuard ? "PIN" : "passphrase"} is stored hashed and cannot be read by
           anyone, including an administrator. If you forget it, the office issues a new
-          one — they never see the old.
+          one. They never see the old.
         </p>
       </Panel>
 

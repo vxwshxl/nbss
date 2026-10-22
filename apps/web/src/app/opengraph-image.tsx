@@ -20,7 +20,7 @@ import { site } from "@/content/site";
  * megabytes. WhatsApp silently drops preview images past a few hundred KB, and
  * a preview that always renders beats a prettier one that usually does not.
  */
-export const alt = `${site.name} — ${site.tagline}`;
+export const alt = `${site.name} | ${site.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

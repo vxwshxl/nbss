@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!vacancy) return {};
 
   return pageMetadata({
-    title: `${vacancy.title} — careers`,
+    title: `${vacancy.title} | Careers`,
     description: vacancy.summary,
     path: `/careers/${vacancy.id}`,
     keywords: [
@@ -43,7 +43,7 @@ const WE_GIVE = [
   "ESI and EPF facility as applicable",
   "Posting in or near your home district wherever possible",
   "Supervision and a supervisor you can actually reach",
-  "A route up — guard to supervisor to field officer",
+  "A route up: guard to supervisor to field officer",
 ];
 
 export default async function VacancyPage({ params }: Params) {
@@ -129,12 +129,12 @@ export default async function VacancyPage({ params }: Params) {
               {vacancy.summary}
             </p>
 
-            <h3 className="mt-10 mb-4 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+            <h3 className="label-heading mt-10 mb-4">
               What we need from you
             </h3>
             <TickList items={vacancy.requirements} />
 
-            <h3 className="mt-10 mb-4 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+            <h3 className="label-heading mt-10 mb-4">
               What we give you
             </h3>
             <TickList items={WE_GIVE} />
@@ -179,7 +179,7 @@ export default async function VacancyPage({ params }: Params) {
             </Panel>
 
             <Panel tone="accent">
-              <p className="text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+              <p className="label-heading">
                 Questions about the role
               </p>
               <a

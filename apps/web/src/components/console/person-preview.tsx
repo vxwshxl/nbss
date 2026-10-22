@@ -35,7 +35,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 const IST = "Asia/Kolkata";
 
 function when(iso: string | null, withTime = false): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
@@ -96,7 +96,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
               <span aria-hidden>·</span>
               {ROLE_LABEL[p.role]}
               {!p.active && (
-                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">Inactive</span>
+                <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold">Inactive</span>
               )}
             </p>
           </div>
@@ -129,7 +129,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
                     {windowLabel(p.guard.posting.starts, p.guard.posting.ends)} · {daysLabel(p.guard.posting.days)}
                   </>
                 ) : (
-                  <span className="text-muted-foreground">No standing post — free for cover shifts.</span>
+                  <span className="text-muted-foreground">No standing post. Free for cover shifts.</span>
                 )}
               </span>
               <Link href={`/console/roster?guard=${p.id}`} className="text-xs font-medium text-primary-ink hover:underline">
@@ -143,7 +143,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
               </p>
             )}
             <div>
-              <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Last 14 days</p>
+              <p className="mb-2 label-heading">Last 14 days</p>
               <DayStrip days={p.guard.strip} />
               <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
                 {(["present", "late", "absent", "review"] as const).map((s) => (
@@ -159,7 +159,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
 
         {p.client && (
           <div>
-            <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <p className="mb-2 label-heading">
               Sites · {p.client.sites.length}
             </p>
             {p.client.sites.length === 0 ? (
@@ -171,7 +171,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
                     <Building2 className="size-4 text-primary-ink" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{s.name}</span>
-                      <span className="block text-xs text-muted-foreground">{s.district ?? "—"}</span>
+                      <span className="block text-xs text-muted-foreground">{s.district ?? "-"}</span>
                     </span>
                     {!s.active && <StatusPill status="inactive" />}
                   </li>

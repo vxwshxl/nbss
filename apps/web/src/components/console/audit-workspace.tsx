@@ -122,11 +122,11 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
     {
       header: "Who",
       cell: (r) => (
-        <span className="font-mono text-sm">{r.actor_code ?? "—"}</span>
+        <span className="font-mono text-sm">{r.actor_code ?? "-"}</span>
       ),
       sortValue: (r) => r.actor_code ?? "",
       searchValue: (r) => r.actor_code ?? "",
-      printCell: (r) => r.actor_code ?? "—",
+      printCell: (r) => r.actor_code ?? "-",
     },
     {
       header: "Action",
@@ -139,18 +139,18 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
     },
     {
       header: "Entity",
-      cell: (r) => <span className="font-mono text-sm">{r.entity ?? "—"}</span>,
+      cell: (r) => <span className="font-mono text-sm">{r.entity ?? "-"}</span>,
       sortValue: (r) => r.entity ?? "",
       searchValue: (r) => `${r.entity ?? ""} ${r.entity_id ?? ""}`,
-      printCell: (r) => r.entity ?? "—",
+      printCell: (r) => r.entity ?? "-",
     },
     {
       header: "From",
       className: "text-right",
       headClassName: "text-right",
-      cell: (r) => <span className="font-mono text-sm">{r.ip ?? "—"}</span>,
+      cell: (r) => <span className="font-mono text-sm">{r.ip ?? "-"}</span>,
       searchValue: (r) => r.ip ?? "",
-      printCell: (r) => r.ip ?? "—",
+      printCell: (r) => r.ip ?? "-",
     },
   ];
 

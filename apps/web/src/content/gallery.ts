@@ -37,7 +37,7 @@ export const gallery: Photo[] = [
   {
     src: "/img/nbss/parade-salute.jpg",
     alt: "NBSS guards standing at attention in formation, saluting during evening parade",
-    caption: "Evening parade — turnout and salute",
+    caption: "Evening parade: turnout and salute",
     category: "training",
     credit: NBSS,
     own: true,
@@ -62,7 +62,7 @@ export const gallery: Photo[] = [
   {
     src: "/img/nbss/parade-ranks.jpg",
     alt: "NBSS guards drawn up in ranks with batons during parade drill",
-    caption: "Drill ranks — bearing, spacing and discipline",
+    caption: "Drill ranks: bearing, spacing and discipline",
     category: "training",
     credit: NBSS,
     own: true,
@@ -102,19 +102,19 @@ export const gallery: Photo[] = [
   { src: "/img/services/warehouse.jpg", alt: "Warehouse and logistics facility", caption: "Dock supervision, warehouse posting", category: "operations", credit: "tm-md", licence: "CC BY 2.0" },
   { src: "/img/gallery/kokrajhar-eve.jpg", alt: "Evening at Kokrajhar Medical College", caption: "Evening handover, hospital posting", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
 
-  { src: "/img/gallery/aronai.jpg", alt: "An Aronai, the traditional woven Bodo scarf", caption: "The Aronai — the woven band our identity is drawn from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 4.0", tall: true },
+  { src: "/img/gallery/aronai.jpg", alt: "An Aronai, the traditional woven Bodo scarf", caption: "The Aronai: the woven band our identity is drawn from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 4.0", tall: true },
   { src: "/img/gallery/aronai-2.jpg", alt: "Detail of Aronai weaving showing diamond motifs", caption: "Diamond motif, hand-loomed", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
   { src: "/img/gallery/bodo-women.jpg", alt: "Bodo women in traditional dokhona", caption: "The community our women guards are recruited from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 3.0" },
   { src: "/img/gallery/bodo-elder.jpg", alt: "An elderly Bodo man", caption: "Kokrajhar district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
   { src: "/img/gallery/kokrajhar-rail.jpg", alt: "Kokrajhar railway station building", caption: "Kokrajhar station", category: "bodoland", credit: "Wikimedia Commons", licence: "CC0" },
   { src: "/img/gallery/kokrajhar-med.jpg", alt: "Kokrajhar Medical College and cancer care centre", caption: "Kokrajhar Medical College", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/manas.jpg", alt: "Manas National Park landscape", caption: "Manas — the northern edge of the region", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 3.0", tall: true },
+  { src: "/img/gallery/manas.jpg", alt: "Manas National Park landscape", caption: "Manas: the northern edge of the region", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 3.0", tall: true },
   { src: "/img/gallery/manas-2.jpg", alt: "Grassland and forest in Manas National Park", caption: "Grassland boundary, Baksa district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
 
-  { src: "/img/gallery/bagurumba-1.jpg", alt: "Bodo women performing the Bagurumba dance", caption: "Bagurumba — the butterfly dance", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/bagurumba-1.jpg", alt: "Bodo women performing the Bagurumba dance", caption: "Bagurumba: the butterfly dance", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
   { src: "/img/gallery/bagurumba-2.jpg", alt: "Bagurumba dancers in traditional dokhona", caption: "Festival ground, Bwisagu week", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
   { src: "/img/gallery/bagurumba-3.jpg", alt: "A Bagurumba performance in progress", caption: "Crowd management at a cultural meet", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0", tall: true },
-  { src: "/img/gallery/bwisagu.jpg", alt: "Bwisagu festival dance performance", caption: "Bwisagu — the Bodo new year", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/bwisagu.jpg", alt: "Bwisagu festival dance performance", caption: "Bwisagu: the Bodo new year", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
   { src: "/img/gallery/bardoi-sikhla.jpg", alt: "Bodo girls performing the Bardoi Sikhla dance", caption: "Bardoi Sikhla, harvest season", category: "community", credit: "Wikimedia Commons", licence: "CC BY 2.0" },
   { src: "/img/gallery/marigold.jpg", alt: "Marigolds in bloom in Kokrajhar", caption: "Kokrajhar in bloom", category: "community", credit: "Wikimedia Commons", licence: "CC BY 4.0" },
 ];
@@ -247,12 +247,12 @@ export const syllabus: TrainingModule[] = [
   {
     code: "04",
     title: "First-aid support",
-    body: "Bleeding control, basic resuscitation, fracture immobilisation and calling for an ambulance correctly — enough to be useful in the minutes before help arrives.",
+    body: "Bleeding control, basic resuscitation, fracture immobilisation and calling for an ambulance correctly, enough to be useful in the minutes before help arrives.",
   },
   {
     code: "05",
     title: "Access control and gate management",
-    body: "Visitor entry, material and vehicle movement, frisking protocol, and the correct — and calm — way to refuse entry to someone who should not have it.",
+    body: "Visitor entry, material and vehicle movement, frisking protocol, and the correct, and calm, way to refuse entry to someone who should not have it.",
   },
   {
     code: "06",

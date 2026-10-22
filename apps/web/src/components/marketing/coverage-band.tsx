@@ -27,7 +27,6 @@ export function CoverageBand() {
       <div className="grid gap-12 lg:grid-cols-[1fr_1.15fr] lg:items-start">
         <div>
           <SectionHead
-            num="04"
             kicker="Where we deploy"
             title="Kokrajhar outward, as far as we can supervise."
             lede="If your site is just outside this list, ask. We would rather give you a straight answer than take on a posting we cannot check on properly."

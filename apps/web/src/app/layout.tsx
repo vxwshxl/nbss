@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   alternates: canonical("/"),
   title: {
-    default: `${site.shortName} — Security Agency in Kokrajhar, Assam`,
+    default: `${site.shortName} | Security Agency in Kokrajhar, Assam`,
     template: `%s · ${site.name}`,
   },
   description: site.descriptor,
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: site.name,
-    title: `${site.shortName} — ${site.tagline}`,
+    title: `${site.shortName} | ${site.tagline}`,
     description: site.descriptor,
     locale: "en_IN",
     // Images come from the `opengraph-image` route convention, which stamps the
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.shortName} — ${site.tagline}`,
+    title: `${site.shortName} | ${site.tagline}`,
     description: site.descriptor,
   },
   // Generated from the client's badge (public/logo/NBSS.png). The .ico carries

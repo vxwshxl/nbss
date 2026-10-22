@@ -1,8 +1,8 @@
 import {
   Banknote,
+  ClipboardCheck,
   Layers,
   Radio,
-  ShieldCheck,
   Target,
   UserCheck,
   type LucideIcon,
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  */
 const ICONS: Record<string, LucideIcon> = {
   drill: Target,
-  "shield-check": ShieldCheck,
+  "clipboard-check": ClipboardCheck,
   radio: Radio,
   layers: Layers,
   rupee: Banknote,
@@ -35,12 +35,12 @@ export function PillarGrid() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {pillars.map((pillar, i) => {
-        const Icon = ICONS[pillar.icon] ?? ShieldCheck;
+        const Icon = ICONS[pillar.icon] ?? ClipboardCheck;
         const tone = TONES[TONE_ORDER[i % TONE_ORDER.length] ?? "slate"];
         return (
           <Reveal key={pillar.index} delay={Math.min(i, 6) * 60}>
             <article className="flex h-full flex-col rounded-2xl border border-app-line-soft bg-card p-6 shadow-card">
-              <div className="flex items-center gap-3">
+              <div>
                 <span
                   className={cn(
                     "flex size-10 shrink-0 items-center justify-center rounded-xl",
@@ -48,9 +48,6 @@ export function PillarGrid() {
                   )}
                 >
                   <Icon className="size-5" strokeWidth={1.9} />
-                </span>
-                <span className="font-mono text-xs font-bold tracking-[0.18em] text-muted-foreground">
-                  {pillar.index}
                 </span>
               </div>
               <h3 className="mt-5 font-display text-lg leading-snug font-bold tracking-tight">

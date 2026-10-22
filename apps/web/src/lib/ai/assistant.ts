@@ -241,7 +241,7 @@ export async function askAssistant(
       // If the retry fails the first answer is still better than an error —
       // but its figures lose their authority by saying where they came from.
       const caveat =
-        "\n\n(I could not verify those figures against the records just now — please re-ask.)";
+        "\n\n(I could not verify those figures against the records just now. Please re-ask.)";
       events.onText?.(first.text + caveat);
       return { text: first.text + caveat, toolsUsed: [] };
     }
@@ -264,7 +264,7 @@ async function runTurn(
   const cfg = config();
   if (!cfg.configured) {
     return {
-      text: "The assistant is not connected yet — no API key is configured on the server.",
+      text: "The assistant is not connected yet: no API key is configured on the server.",
       toolsUsed: [],
       hadTools: false,
     };
@@ -321,7 +321,7 @@ async function runTurn(
       console.error("[ai] provider responded", res.status, await res.text().catch(() => ""));
       throw new Error(
         res.status === 429
-          ? "The assistant is busy right now — try again in a moment."
+          ? "The assistant is busy right now: try again in a moment."
           : "The assistant is unavailable right now.",
       );
     }
@@ -358,7 +358,7 @@ async function runTurn(
   }
 
   return {
-    text: "I could not finish that — it needed more lookups than I am allowed in one go. Try asking for one thing at a time.",
+    text: "I could not finish that: it needed more lookups than I am allowed in one go. Try asking for one thing at a time.",
     toolsUsed,
     hadTools: tools.length > 0,
   };

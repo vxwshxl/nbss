@@ -70,7 +70,7 @@ export default async function SubmissionsPage() {
 
       <p className="text-xs text-muted-foreground">
         Still stored in <code className="font-mono">data/submissions.json</code>. On a
-        serverless host that file is wiped on every deploy — moving these into
+        serverless host that file is wiped on every deploy. Moving these into
         Postgres is the next piece of work.
       </p>
     </div>

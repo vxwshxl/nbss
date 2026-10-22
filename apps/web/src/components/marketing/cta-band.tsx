@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Phone, ShieldUser } from "lucide-react";
+import { ArrowRight, Building2, IdCard, Phone } from "lucide-react";
 
 import { AronaiBand } from "@/components/brand";
 import { Reveal } from "@/components/marketing/reveal";
@@ -38,7 +38,7 @@ export function CtaBand() {
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-background/70">
             Tell us the site, the hours and the number of guards. A field officer
             surveys it, and you get a written quotation showing the wages, the
-            statutory heads and our charge separately — so you can see exactly what
+            statutory heads and our charge separately, so you can see exactly what
             the guard receives and what we charge on top.
           </p>
 
@@ -67,7 +67,7 @@ export function CtaBand() {
             through them — "Sign in" alone makes a client wonder whether it is
             for them at all. */}
         <Reveal delay={90} className="mt-14">
-          <p className="mb-4 text-center text-[11px] font-bold tracking-[0.18em] text-background/45 uppercase">
+          <p className="mb-4 text-center text-sm font-semibold text-background/70">
             Already with us
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -99,7 +99,7 @@ export function CtaBand() {
               className="group/panel press flex items-start gap-3.5 rounded-2xl border border-background/15 bg-background/8 p-5 text-left backdrop-blur-sm transition-colors hover:border-background/30 hover:bg-background/12"
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-                <ShieldUser className="size-5" strokeWidth={1.9} />
+                <IdCard className="size-5" strokeWidth={1.9} />
               </span>
               <span className="min-w-0">
                 <span className="flex items-center gap-1.5 font-semibold">

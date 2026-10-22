@@ -62,7 +62,7 @@ export async function registerAction(_prev: RegisterState, data: FormData): Prom
 
   if (values.fullName.length < 2) return { step: "details", values, error: "Enter your name." };
   if (!isValidPhone(values.phone)) {
-    return { step: "details", values, error: "Enter a 10-digit mobile number — it is how the deployment desk replies." };
+    return { step: "details", values, error: "Enter a 10-digit mobile number. It is how the deployment desk replies." };
   }
   if (!isValidEmail(values.email)) return { step: "details", values, error: "Enter a valid email address." };
 

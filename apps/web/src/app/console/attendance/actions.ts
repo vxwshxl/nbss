@@ -33,7 +33,7 @@ export async function reviewAttendance(
 
   const reason = note.trim();
   if (reason.length < 4) {
-    return { ok: false, error: "Give a reason for the change — it is kept with the record." };
+    return { ok: false, error: "Give a reason for the change: it is kept with the record." };
   }
 
   const admin = supabaseAdmin();

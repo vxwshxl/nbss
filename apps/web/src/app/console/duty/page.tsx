@@ -28,7 +28,7 @@ function time(iso: string): string {
 }
 
 function hours(minutes: number | null): string {
-  if (minutes === null) return "—";
+  if (minutes === null) return "-";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
@@ -240,7 +240,7 @@ export default async function DutyPage() {
 
       <p className="text-xs text-muted-foreground">
         Your hours are calculated by the system from the times you check in and out.
-        If something here looks wrong, tell your supervisor — corrections are
+        If something here looks wrong, tell your supervisor. Corrections are
         recorded, never silent.
       </p>
     </div>

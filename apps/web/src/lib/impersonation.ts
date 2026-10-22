@@ -57,7 +57,7 @@ export type Session = {
 export function assertCanWrite(session: Session, kind: "attendance" | "general" = "general"): void {
   if (session.impersonating && kind === "attendance") {
     throw new Error(
-      "Attendance cannot be recorded while viewing as another person. Stop viewing as them first — a punch has to belong to whoever was actually at the gate.",
+      "Attendance cannot be recorded while viewing as another person. Stop viewing as them first. A punch has to belong to whoever was actually at the gate.",
     );
   }
 }

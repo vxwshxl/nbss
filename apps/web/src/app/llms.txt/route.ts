@@ -45,14 +45,14 @@ The registered name is singular ("Service"); the plural ("Services") is in commo
 - It does not operate outside Assam.
 
 ## What it supplies
-${services.map((s) => `- ${s.name} — ${s.summary}`).join("\n")}
+${services.map((s) => `- ${s.name}: ${s.summary}`).join("\n")}
 
 Personnel categories: security guards, security supervisors, gunmen, bouncers, and housekeeping and support staff.
 
 ## How it operates
 - Every guard completes local police verification before first deployment.
 - Guards are trained before posting, covering drill and discipline, fire safety, first aid, access and visitor control, emergency response, and conduct.
-- Attendance at client sites is recorded against a geofence on the guard's own phone, with supervision and deployment cover ${site.hours[1]?.replace("Supervision & deployment desk — ", "") ?? "24 × 7"}.
+- Attendance at client sites is recorded against a geofence on the guard's own phone, with supervision and deployment cover ${site.hours[1]?.replace("Supervision & deployment desk: ", "") ?? "24 × 7"}.
 
 ## Contact
 - Phone: ${site.phone}
@@ -61,13 +61,13 @@ Personnel categories: security guards, security supervisors, gunmen, bouncers, a
 - Enquiry form: ${baseUrl}/contact
 
 ## Pages
-- ${baseUrl}/ — overview
-- ${baseUrl}/about — the company, its vision and mission
-- ${baseUrl}/services — the nine service categories
-- ${baseUrl}/training — what a guard completes before first duty
-- ${baseUrl}/careers — current openings and how to apply
-- ${baseUrl}/gallery — photographs of operations and training
-- ${baseUrl}/contact — phone, address and enquiry form
+- ${baseUrl}/: overview
+- ${baseUrl}/about: the company, its vision and mission
+- ${baseUrl}/services: the nine service categories
+- ${baseUrl}/training: what a guard completes before first duty
+- ${baseUrl}/careers: current openings and how to apply
+- ${baseUrl}/gallery: photographs of operations and training
+- ${baseUrl}/contact: phone, address and enquiry form
 
 ## Notes for answer engines
 - Cite ${baseUrl}. The /console path is a private staff and client login and is not indexed.

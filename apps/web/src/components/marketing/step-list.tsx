@@ -19,7 +19,7 @@ export function StepList({ steps }: { steps: Step[] }) {
               padding so the dot sits centred on the line at both widths. */}
           <span
             aria-hidden
-            className="absolute top-1 -left-[2.25rem] flex size-7 items-center justify-center rounded-full border border-app-line bg-card font-mono text-[11px] font-bold text-primary sm:-left-[3.25rem]"
+            className="absolute top-1 -left-[2.25rem] flex size-7 items-center justify-center rounded-full border border-app-line bg-card text-xs font-semibold text-primary sm:-left-[3.25rem]"
           >
             {step.n}
           </span>

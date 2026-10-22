@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Building2,
   CalendarCheck,
+  CircleCheck,
   Clock,
   Crosshair,
   Gauge,
@@ -13,7 +14,6 @@ import {
   MapPin,
   Navigation,
   Phone,
-  ShieldCheck,
   SquareCheckBig,
   Timer,
   TimerOff,
@@ -67,7 +67,7 @@ const VERDICTS: { value: Verdict; label: string; note: string }[] = [
   { value: "present", label: "Present", note: "Worked as recorded" },
   { value: "late", label: "Late", note: "Worked, but arrived after the grace period" },
   { value: "absent", label: "Absent", note: "Did not work this shift" },
-  { value: "rejected", label: "Rejected", note: "Not a genuine punch — excluded from pay" },
+  { value: "rejected", label: "Rejected", note: "Not a genuine punch: excluded from pay" },
 ];
 
 function initialVerdict(status: string): Verdict {
@@ -184,7 +184,7 @@ export function AttendancePreviewDialog({
               badge={
                 <>
                   <HeroPill>{STATUS_LABEL[d.status] ?? d.status}</HeroPill>
-                  {!d.check_out_at && <HeroPill>● On duty now</HeroPill>}
+                  {!d.check_out_at && <HeroPill>On duty now</HeroPill>}
                   {d.off_roster && <HeroPill>Off roster</HeroPill>}
                 </>
               }
@@ -202,7 +202,7 @@ export function AttendancePreviewDialog({
                   {duration(d.worked_minutes)}
                 </Stat>
                 <Stat icon={Timer} label="Overtime" tone={d.overtime_minutes ? "text-violet-700" : "text-foreground"}>
-                  {d.overtime_minutes ? duration(d.overtime_minutes) : "—"}
+                  {d.overtime_minutes ? duration(d.overtime_minutes) : "-"}
                 </Stat>
               </StatGrid>
 
@@ -247,7 +247,7 @@ export function AttendancePreviewDialog({
                     }
                   />
                   <Field
-                    icon={ShieldCheck}
+                    icon={CircleCheck}
                     label="Allowed by"
                     value={METHOD_LABEL[d.check_in_method] ?? d.check_in_method}
                   />
@@ -268,7 +268,7 @@ export function AttendancePreviewDialog({
               {d.off_roster && d.status === "pending_review" && (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
                   {d.guard?.name ?? "This guard"} checked in at a site they were not rostered to. The punch counts once
-                  it is approved — usually a cover for someone who could not come.
+                  it is approved. It is usually a cover for someone who could not come.
                 </p>
               )}
 

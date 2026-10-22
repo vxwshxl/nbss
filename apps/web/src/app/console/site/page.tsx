@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarCheck, Clock3, Phone, Radio, ShieldCheck, Timer } from "lucide-react";
+import { CalendarCheck, CircleCheck, Clock3, Phone, Radio, Timer } from "lucide-react";
 
 import { ClientDutyTable } from "@/components/console/client-duty-table";
 import { PageHeader } from "@/components/console/page-header";
@@ -144,7 +144,7 @@ export default async function ClientSitePage() {
         <Panel
           tone="sky"
           title="Your site"
-          icon={ShieldCheck}
+          icon={CircleCheck}
           bodyClassName="p-0 sm:p-0"
         >
           <SiteMap sites={mapSites} height={320} className="rounded-none border-0" />
@@ -168,10 +168,10 @@ export default async function ClientSitePage() {
             deskPhone={company.phone}
             rows={live.map((row, i) => ({
               id: row.id ?? String(i),
-              guardName: row.guard_name ?? "—",
-              siteName: row.site_name ?? "—",
-              since: row.check_in_at ? time(row.check_in_at) : "—",
-              forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "—",
+              guardName: row.guard_name ?? "-",
+              siteName: row.site_name ?? "-",
+              since: row.check_in_at ? time(row.check_in_at) : "-",
+              forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "-",
             }))}
           />
         )}

@@ -245,7 +245,7 @@ export function PunchControl({
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <span>
             Location permission is blocked. Allow it for this site in your browser
-            settings — attendance cannot be recorded without it.
+            settings. Attendance cannot be recorded without it.
           </span>
         </div>
       )}
@@ -302,7 +302,7 @@ export function PunchControl({
           {!accurate && (
             <p className="text-sm text-muted-foreground">
               The fix is still too wide to prove where you are. Step into the open,
-              away from buildings, and wait a few seconds — it usually tightens.
+              away from buildings, and wait a few seconds. It usually tightens.
             </p>
           )}
 

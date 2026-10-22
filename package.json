@@ -10,6 +10,9 @@
   "scripts": {
     "dev": "pnpm --filter @nbss/web dev",
     "dev:mobile": "pnpm --filter @nbss/mobile start",
+    "web": "pnpm --filter @nbss/web dev",
+    "app": "pnpm --filter @nbss/mobile start:go",
+    "app:tunnel": "pnpm --filter @nbss/mobile start:go --tunnel",
     "build": "pnpm --filter @nbss/web build",
     "start": "pnpm --filter @nbss/web start",
     "lint": "pnpm -r lint",

@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       url: service.image,
       width: 1200,
       height: 630,
-      alt: `${service.name} — ${site.name}`,
+      alt: `${service.name} | ${site.name}`,
     },
     keywords: [
       `${service.name} Kokrajhar`,
@@ -126,7 +126,7 @@ export default async function ServiceDetailPage({ params }: Params) {
               {service.detail}
             </p>
 
-            <h3 className="mt-10 mb-4 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+            <h3 className="label-heading mt-10 mb-4">
               Scope of work
             </h3>
             <TickList items={service.scope} columns={2} />
@@ -146,7 +146,7 @@ export default async function ServiceDetailPage({ params }: Params) {
             </Panel>
 
             <Panel>
-              <p className="text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+              <p className="label-heading">
                 Talk to the deployment desk
               </p>
               <a
@@ -167,7 +167,7 @@ export default async function ServiceDetailPage({ params }: Params) {
       <Section alt id="quote">
         <div className="mx-auto max-w-2xl">
           <div className="mb-8 text-center">
-            <Eyebrow num="◆" text="Costed for your site" className="justify-center" />
+            <Eyebrow text="Costed for your site" className="justify-center" />
             <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
               Sign in, book, and a field officer calls.
             </h2>
@@ -183,7 +183,6 @@ export default async function ServiceDetailPage({ params }: Params) {
       {related.length > 0 && (
         <Section>
           <SectionHead
-            num="◆"
             kicker="Other sites we guard"
             title="We post guards here too."
             action={

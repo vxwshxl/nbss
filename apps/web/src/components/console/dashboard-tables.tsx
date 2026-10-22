@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Phone, ShieldAlert, UserRoundX } from "lucide-react";
+import { ArrowRight, Phone, Siren, UserRoundX } from "lucide-react";
 
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
@@ -94,11 +94,7 @@ export function LiveSosPanel({ alerts }: { alerts: LiveSos[] }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-rose-300 bg-rose-50 shadow-card dark:border-rose-500/40 dark:bg-rose-500/10">
       <div className="flex items-center gap-3 bg-gradient-to-r from-rose-600 to-red-700 px-6 py-3 text-white">
-        <span className="relative flex size-2.5">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-white/70" />
-          <span className="relative inline-flex size-2.5 rounded-full bg-white" />
-        </span>
-        <ShieldAlert className="size-5" />
+        <Siren className="size-5" />
         <p className="flex-1 font-semibold">
           {alerts.length} live SOS alert{alerts.length === 1 ? "" : "s"}
         </p>

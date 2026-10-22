@@ -102,7 +102,7 @@ export function NavGroupLabel({ children }: { children: React.ReactNode }) {
   return (
     <p
       data-nav-group
-      className="px-2 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground uppercase"
+      className="px-2 pb-1 text-xs font-medium text-muted-foreground"
     >
       {children}
     </p>

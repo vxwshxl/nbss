@@ -62,8 +62,8 @@ export const site = {
   /** Ready-made for the places that quote the window inside a sentence. */
   hoursShort: "Mon–Sat, 9:00 AM – 6:00 PM IST",
   hours: [
-    "Office — Mon to Sat, 9:00 AM to 6:00 PM IST",
-    "Supervision & deployment desk — 24 × 7",
+    "Office: Mon to Sat, 9:00 AM to 6:00 PM IST",
+    "Supervision & deployment desk: 24 × 7",
   ],
   /** IANA zone for every date the site formats. */
   timeZone: COMPANY.timeZone,
@@ -177,7 +177,7 @@ export const pillars: Pillar[] = [
     index: "02",
     title: "Uniformed and disciplined staff",
     body: "Turnout is inspected, not assumed. Uniform, cap, identity card and bearing are the first thing a visitor to your site sees, and they are the first thing our supervisors check.",
-    icon: "shield-check",
+    icon: "clipboard-check",
   },
   {
     index: "03",
@@ -200,7 +200,7 @@ export const pillars: Pillar[] = [
   {
     index: "06",
     title: "Strong local workforce and management",
-    body: "Our people are recruited from Kokrajhar and the districts around it. They know the roads, the languages and the neighbours — and a stranger at the gate is spotted by someone who actually knows who belongs.",
+    body: "Our people are recruited from Kokrajhar and the districts around it. They know the roads, the languages and the neighbours, and a stranger at the gate is spotted by someone who actually knows who belongs.",
     icon: "roots",
   },
 ];
@@ -213,7 +213,7 @@ export type District = {
 
 /** The districts named in the client's "Client Support & Availability". */
 export const coverage: District[] = [
-  { name: "Kokrajhar", region: "Bodoland Territorial Council — head office", core: true },
+  { name: "Kokrajhar", region: "Bodoland Territorial Council: head office", core: true },
   { name: "Chirang", region: "Bodoland Territorial Council", core: true },
   { name: "Baksa", region: "Bodoland Territorial Council", core: true },
   { name: "Udalguri", region: "Bodoland Territorial Council", core: true },
@@ -233,7 +233,7 @@ export type Person = { name: string; role: string; bio: string };
 export const leadership: Person[] = [
   {
     name: "Mr. Dhanjit Brahma",
-    role: "Director — Owner & Founder",
+    role: "Director: Owner & Founder",
     bio: "Founded National Bodo Security Service in Kokrajhar and runs it. Deployment decisions, client agreements and the standard the guards are held to all come back to him.",
   },
 ];
@@ -247,7 +247,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "Which districts do you operate in?",
-    a: "Kokrajhar, Chirang, Baksa, Udalguri, Bongaigaon, Barpeta and other nearby districts. If your site is just outside that list, call us — we will give you a straight answer about whether we can supervise it properly.",
+    a: "Kokrajhar, Chirang, Baksa, Udalguri, Bongaigaon, Barpeta and other nearby districts. If your site is just outside that list, call us. We will give you a straight answer about whether we can supervise it properly.",
   },
   {
     q: "How are your guards verified?",
@@ -263,7 +263,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "What happens if a guard does not report for duty?",
-    a: "We hold backup strength for exactly this. A shortfall at shift change is covered by a replacement rather than left open — quick replacement and backup support are part of the service, not an extra.",
+    a: "We hold backup strength for exactly this. A shortfall at shift change is covered by a replacement rather than left open. Quick replacement and backup support are part of the service, not an extra.",
   },
   {
     q: "Can we get female security guards?",

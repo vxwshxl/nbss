@@ -12,9 +12,9 @@ import {
   Plus,
   Power,
   PowerOff,
-  ShieldUser,
   Trash2,
   TriangleAlert,
+  UserRound,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -118,7 +118,7 @@ function isRedirect(e: unknown): boolean {
 }
 
 function dateOnly(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -357,13 +357,13 @@ export function GuardsWorkspace({
       cell: (r) => (
         <span className="block min-w-0">
           <span className={cn("block max-w-[16rem] truncate text-sm", !r.email && "text-muted-foreground")}>
-            {r.email ?? (r.role === "guard" || r.role === "client" ? "No email yet" : "—")}
+            {r.email ?? (r.role === "guard" || r.role === "client" ? "No email yet" : "-")}
           </span>
           {r.phone && <span className="block font-mono text-xs text-muted-foreground">{r.phone}</span>}
         </span>
       ),
       sortValue: (r) => r.email ?? "",
-      printCell: (r) => [r.email, r.phone].filter(Boolean).join(" · ") || "—",
+      printCell: (r) => [r.email, r.phone].filter(Boolean).join(" · ") || "-",
     },
     {
       header: "Joined",
@@ -425,7 +425,7 @@ export function GuardsWorkspace({
       <Panel
         tone="emerald"
         title={`${visible.length} ${visible.length === 1 ? "account" : "accounts"}`}
-        icon={showRoleTabs ? Users : ShieldUser}
+        icon={showRoleTabs ? Users : UserRound}
         bodyClassName="p-3 sm:p-4"
         action={
           canManage ? (
@@ -595,7 +595,7 @@ export function GuardsWorkspace({
                 ? `Give this to ${issued.who}. It cannot be shown again.`
                 : addState.created
                   ? addState.created.email
-                    ? `${addState.created.fullName} signs in with ${addState.created.email} — a code is emailed each time.`
+                    ? `${addState.created.fullName} signs in with ${addState.created.email}. A code is emailed each time.`
                     : `${addState.created.fullName} can sign in with ${addState.created.employeeCode}.`
                   : ""}
             </DialogDescription>
@@ -606,12 +606,12 @@ export function GuardsWorkspace({
               <p className="text-sm font-medium">{issued ? "PIN" : "Backup PIN"}</p>
               <Secret value={secret} />
               <p className="text-xs text-muted-foreground">
-                Shown once — it is stored hashed and cannot be read back.
+                Shown once: it is stored hashed and cannot be read back.
               </p>
             </>
           ) : (
             <p className="flex items-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm text-accent-foreground">
-              <Mail className="size-4" /> No PIN needed — sign-in is by emailed code.
+              <Mail className="size-4" /> No PIN needed. Sign-in is by emailed code.
             </p>
           )}
 
@@ -760,7 +760,7 @@ export function GuardsWorkspace({
         confirmLabel="Deactivate"
         description={
           confirm
-            ? `${confirm.row.full_name} will not be able to sign in. Every shift and punch already recorded for them is kept — nothing is deleted, and they can be reactivated at any time.`
+            ? `${confirm.row.full_name} will not be able to sign in. Every shift and punch already recorded for them is kept. Nothing is deleted, and they can be reactivated at any time.`
             : ""
         }
       />
@@ -837,7 +837,7 @@ export function GuardsWorkspace({
         confirmLabel="Issue new PIN"
         description={
           confirm
-            ? `${confirm.row.full_name}'s current PIN stops working immediately. The new one is shown once on the next screen — write it down before closing it.`
+            ? `${confirm.row.full_name}'s current PIN stops working immediately. The new one is shown once on the next screen. Write it down before closing it.`
             : ""
         }
       />

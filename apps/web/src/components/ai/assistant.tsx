@@ -350,7 +350,7 @@ export function Assistant({
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wide",
+              "rounded-md px-2.5 py-1 text-xs font-semibold",
               configured
                 ? "bg-violet-500/12 text-violet-700 dark:text-violet-300"
                 : "bg-muted text-muted-foreground",
@@ -428,7 +428,7 @@ export function Assistant({
               >
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase",
+                    "inline-flex items-center gap-1.5 text-xs font-semibold",
                     m.role === "you"
                       ? "text-muted-foreground/70"
                       : "text-violet-600 dark:text-violet-300",
@@ -536,7 +536,7 @@ export function Assistant({
           placeholder={
             configured
               ? "Ask about attendance, sites or guards…"
-              : "Not connected — add an API key on the server to enable this."
+              : "Not connected: add an API key on the server to enable this."
           }
           aria-label="Message the assistant"
           className="scrollbar-none max-h-50 min-h-11 w-full resize-none overflow-y-hidden rounded-xl border border-app-line bg-background px-3.5 py-2.5 text-sm leading-relaxed outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring/60 focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60"
@@ -575,7 +575,7 @@ export function Assistant({
             <p className="mr-auto text-[11px] leading-snug text-muted-foreground">
               Enter to send · Shift + Enter for a new line.{" "}
               <span className="max-sm:hidden">
-                Answers come from your own records — check anything you are about to act on.
+                Answers come from your own records: check anything you are about to act on.
               </span>
             </p>
           )}

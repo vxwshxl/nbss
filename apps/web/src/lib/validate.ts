@@ -53,10 +53,10 @@ export class Validator {
     if (!value) return this;
     const n = [...value].length;
     if (n < min) {
-      return this.fail(field, `${label} looks too short — please give at least ${min} characters.`);
+      return this.fail(field, `${label} looks too short. Please give at least ${min} characters.`);
     }
     if (n > max) {
-      return this.fail(field, `${label} is too long — keep it under ${max} characters.`);
+      return this.fail(field, `${label} is too long. Keep it under ${max} characters.`);
     }
     return this;
   }

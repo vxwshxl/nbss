@@ -11,7 +11,7 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Gallery — operations, training and the region we come from",
+  title: "Gallery: operations, training and the region we come from",
   description:
     "Photographs from NBSS parades, training sessions and live deployments in Kokrajhar, alongside the Bodoland the agency recruits from.",
   path: "/gallery",
@@ -42,7 +42,7 @@ export default async function GalleryPage({
         eyebrow="Gallery"
         crumb="Gallery"
         title="Our parades, our training, our postings."
-        lede="Photographs from NBSS parades, training sessions and live deployments, alongside the Bodoland the agency comes from — the Aronai, Bwisagu, Manas, and the districts we recruit in."
+        lede="Photographs from NBSS parades, training sessions and live deployments, alongside the Bodoland the agency comes from: the Aronai, Bwisagu, Manas, and the districts we recruit in."
       />
 
       <Section>
@@ -90,10 +90,9 @@ export default async function GalleryPage({
 
       <Section alt>
         <SectionHead
-          num="◆"
           kicker="Credits"
           title="On the photographs."
-          lede="Photographs credited to National Bodo Security Service are our own — our guards, our parades, our postings. The remaining images are used under a Creative Commons licence or are public domain, and the photographer and licence are printed under each frame. Cultural photographs of Bodoland are included because the region is the point, not decoration."
+          lede="Photographs credited to National Bodo Security Service are our own: our guards, our parades, our postings. The remaining images are used under a Creative Commons licence or are public domain, and the photographer and licence are printed under each frame. Cultural photographs of Bodoland are included because the region is the point, not decoration."
           className="mx-auto max-w-3xl text-center [&>div]:justify-center [&_p]:mx-auto"
         />
       </Section>

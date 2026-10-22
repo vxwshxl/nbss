@@ -43,14 +43,14 @@ const empty = { type: "object", properties: {}, required: [] as string[] };
 const IST = "Asia/Kolkata";
 
 function hours(minutes: number | null | undefined): string {
-  if (minutes === null || minutes === undefined) return "—";
+  if (minutes === null || minutes === undefined) return "-";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
 }
 
 function stamp(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -279,7 +279,7 @@ const punchesNeedingReview: AiTool = {
 const guardAttendance: AiTool = {
   name: "guard_attendance",
   description:
-    "One named guard's recent shifts — when they checked in and out, hours worked, overtime and how each shift was marked. Give the guard's name or employee code.",
+    "One named guard's recent shifts: when they checked in and out, hours worked, overtime and how each shift was marked. Give the guard's name or employee code.",
   parameters: z.object({
     who: z.string().min(2).max(60),
     days: z.number().int().min(1).max(90).optional(),
@@ -316,7 +316,7 @@ const guardAttendance: AiTool = {
     if (people.length > 1) {
       return {
         found: false,
-        message: "That matches more than one person — ask again with the employee code.",
+        message: "That matches more than one person: ask again with the employee code.",
         candidates: people.map((p) => ({ name: p.full_name, code: p.employee_code })),
       };
     }

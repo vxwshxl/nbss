@@ -50,7 +50,6 @@ export default function HomePage() {
 
       <Section alt id="services">
         <SectionHead
-          num="01"
           kicker="What we do"
           title="We provide security personnel. That is the whole business."
           lede="Trained, uniformed and police-verified guards, posted where you need them and supervised after they get there. These are the sites we are asked for most often."
@@ -68,17 +67,15 @@ export default function HomePage() {
 
       <Section id="why">
         <SectionHead
-          num="02"
           kicker="Why choose us"
           title="Six reasons clients stay with us."
-          lede="Any agency can print a uniform. These are the parts that take work — which is exactly why they are the ones worth asking us about."
+          lede="Any agency can print a uniform. These are the parts that take work, which is exactly why they are the ones worth asking us about."
         />
         <PillarGrid />
       </Section>
 
       <Section alt id="training">
         <SectionHead
-          num="03"
           kicker="On the ground"
           title="Parade is where the discipline shows."
           lede="Turnout, drill and bearing are not ceremony. A guard who stands a parade properly stands a gate properly, and the morning inspection is where a supervisor catches the uniform, the identity card and the attitude before a client does."
@@ -102,7 +99,6 @@ export default function HomePage() {
           should meet the argument before the objections. */}
       <Section alt id="faq">
         <SectionHead
-          num="05"
           kicker="Common questions"
           title="What clients ask before they sign."
           lede="If your question is not here, the deployment desk answers the phone."

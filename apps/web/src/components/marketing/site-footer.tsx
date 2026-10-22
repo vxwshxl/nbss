@@ -90,7 +90,7 @@ export function SiteFooter() {
           </div>
 
           <nav aria-label="Company">
-            <h2 className="mb-3 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+            <h2 className="label-heading mb-3">
               Company
             </h2>
             <ul className="flex flex-col gap-2 text-sm">
@@ -108,7 +108,7 @@ export function SiteFooter() {
           </nav>
 
           <nav aria-label="Services">
-            <h2 className="mb-3 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+            <h2 className="label-heading mb-3">
               We guard
             </h2>
             <ul className="flex flex-col gap-2 text-sm">
@@ -134,7 +134,7 @@ export function SiteFooter() {
           </nav>
 
           <div>
-            <h2 className="mb-3 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+            <h2 className="label-heading mb-3">
               Reach us
             </h2>
 

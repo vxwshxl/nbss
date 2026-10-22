@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * The masthead of an interior page.
  *
  * Two jobs, and the second is the one that earns the photograph. It states what
- * the page is; and it gives a page that is otherwise a wall of prose — a
+ * the page is; and it gives a page that is otherwise a wall of prose (a
  * training syllabus, a legal document — one image to establish that this is a
  * real agency in a real place before the reader starts reading.
  *
@@ -96,16 +96,7 @@ export function PageHead({
           </nav>
         )}
 
-        <p
-          className={cn(
-            "mb-4 flex items-center gap-3 font-mono text-[11px] font-bold tracking-[0.18em] uppercase",
-            dark ? "text-background/55" : "text-muted-foreground",
-          )}
-        >
-          <span className="text-primary">◆</span>
-          <span aria-hidden className={cn("h-px w-8", dark ? "bg-background/25" : "bg-app-line")} />
-          {eyebrow}
-        </p>
+        <p className={cn("eyebrow mb-3", dark && "!text-emerald-300")}>{eyebrow}</p>
 
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0 max-w-3xl">

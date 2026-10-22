@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Building2, CalendarDays, ClipboardList, Mail, MapPin, Phone, ShieldUser, X } from "lucide-react";
+import { Building2, CalendarDays, ClipboardList, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { updateBooking } from "@/app/console/bookings/actions";
@@ -73,8 +73,8 @@ function Fact({ icon: Icon, label, value }: { icon: typeof Mail; label: string; 
         <Icon className="size-3.5" />
       </span>
       <div className="min-w-0">
-        <dt className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{label}</dt>
-        <dd className="mt-0.5 text-sm break-words">{value || "—"}</dd>
+        <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+        <dd className="mt-0.5 text-sm break-words">{value || "-"}</dd>
       </div>
     </div>
   );
@@ -141,9 +141,9 @@ export function BookingsWorkspace({
     },
     {
       header: "Guards",
-      cell: (r) => <span className="tabular-nums">{r.guards_required ?? "—"}</span>,
+      cell: (r) => <span className="tabular-nums">{r.guards_required ?? "-"}</span>,
       sortValue: (r) => r.guards_required ?? 0,
-      printCell: (r) => String(r.guards_required ?? "—"),
+      printCell: (r) => String(r.guards_required ?? "-"),
     },
     {
       header: "Received",
@@ -245,7 +245,7 @@ export function BookingsWorkspace({
                 </div>
 
                 <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                  <Fact icon={ShieldUser} label="Contact" value={open.contact_name} />
+                  <Fact icon={UserRound} label="Contact" value={open.contact_name} />
                   <Fact icon={Phone} label="Mobile" value={<a className="font-mono text-primary-ink" href={`tel:${open.phone}`}>{open.phone}</a>} />
                   <Fact icon={Mail} label="Email" value={open.email} />
                   <Fact icon={Building2} label="Site" value={[open.site_type, open.guards_required ? `${open.guards_required} guards` : null].filter(Boolean).join(" · ")} />

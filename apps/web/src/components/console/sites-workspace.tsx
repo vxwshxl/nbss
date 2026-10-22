@@ -39,7 +39,7 @@ export type SiteRow = {
 };
 
 function clock(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   const [h, m] = value.split(":");
   const hour = Number(h);
   if (!Number.isFinite(hour)) return value;
@@ -132,7 +132,7 @@ export function SitesWorkspace({
     },
     {
       header: "District",
-      cell: (r) => r.district ?? "—",
+      cell: (r) => r.district ?? "-",
       sortValue: (r) => r.district ?? "",
       searchValue: (r) => r.district ?? "",
     },
@@ -161,11 +161,11 @@ export function SitesWorkspace({
       header: "Shift",
       cell: (r) => (
         <span className="tabular-nums">
-          {r.shift_start ? `${clock(r.shift_start)}–${clock(r.shift_end)}` : "—"}
+          {r.shift_start ? `${clock(r.shift_start)}–${clock(r.shift_end)}` : "-"}
         </span>
       ),
       printCell: (r) =>
-        r.shift_start ? `${clock(r.shift_start)}–${clock(r.shift_end)}` : "—",
+        r.shift_start ? `${clock(r.shift_start)}–${clock(r.shift_end)}` : "-",
     },
     {
       header: "On duty",

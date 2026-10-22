@@ -45,7 +45,7 @@ export const privacyPolicy: LegalDoc = {
   href: "/privacy-policy",
   title: "Plain words about your information.",
   shortTitle: "Privacy Policy",
-  lede: "What this website collects, why, where it goes and the rights you hold over it — written to match what the site actually does, not what a template promises.",
+  lede: "What this website collects, why, where it goes and the rights you hold over it, written to match what the site actually does, not what a template promises.",
   updated: "19 August 2026",
   updatedISO: "2026-08-19",
   sections: [
@@ -64,9 +64,9 @@ export const privacyPolicy: LegalDoc = {
         "This website collects personal information in exactly one way: you type it into one of its three forms and press submit. Nothing is gathered silently in the background while you read.",
       ],
       list: [
-        "Enquiry form — your name, phone number, subject and message, plus an email address and organisation name if you choose to give them.",
-        "Quotation form — your name, phone number, organisation, the service and district in question, the type of site, an approximate headcount and start timeframe, plus an email address and notes if you choose to give them.",
-        "Job application form — your name, phone number, age, district, education and work experience, plus an email address if you choose to give one.",
+        "Enquiry form: your name, phone number, subject and message, plus an email address and organisation name if you choose to give them.",
+        "Quotation form: your name, phone number, organisation, the service and district in question, the type of site, an approximate headcount and start timeframe, plus an email address and notes if you choose to give them.",
+        "Job application form: your name, phone number, age, district, education and work experience, plus an email address if you choose to give one.",
       ],
       after: [
         "Alongside each submission the server records the time it arrived, the sending device's IP address and its browser identifier. These are kept solely to tell genuine submissions from automated spam.",
@@ -89,12 +89,12 @@ export const privacyPolicy: LegalDoc = {
         "Each form asks for your consent before it will submit, and what you send is used for the purpose stated on that form and nothing else:",
       ],
       list: [
-        "Enquiries — to call or write back with an answer.",
-        "Quotation requests — to arrange a site visit and prepare a costed proposal.",
-        "Job applications — to shortlist, verify and contact candidates about the role applied for.",
+        "Enquiries: to call or write back with an answer.",
+        "Quotation requests: to arrange a site visit and prepare a costed proposal.",
+        "Job applications: to shortlist, verify and contact candidates about the role applied for.",
       ],
       after: [
-        "We do not use any of it for marketing, we do not build profiles, and we do not add you to a mailing list — the site does not have one.",
+        "We do not use any of it for marketing, we do not build profiles, and we do not add you to a mailing list. The site does not have one.",
       ],
     },
     {
@@ -109,7 +109,7 @@ export const privacyPolicy: LegalDoc = {
       id: "retention",
       heading: "How long we keep it",
       body: [
-        "Submissions are kept for as long as it takes to deal with them — answer the enquiry, close out the quotation, complete the recruitment round — and for any period the law requires records to be held after that. When a submission no longer serves the purpose it was given for, it is deleted.",
+        "Submissions are kept for as long as it takes to deal with them (answering the enquiry, closing out the quotation, completing the recruitment round) and for any period the law requires records to be held after that. When a submission no longer serves the purpose it was given for, it is deleted.",
         `If you want yours removed sooner, ask. Call ${site.phone} and quote the reference number every submission is given (it looks like NBSS-00123), and it will be erased unless a legal obligation requires keeping it.`,
       ],
     },
@@ -169,7 +169,7 @@ export const termsAndConditions: LegalDoc = {
         "You may browse, search and submit the forms for their intended purposes. In return we ask what any operator would:",
       ],
       list: [
-        "Give accurate information in the forms — quotations, call-backs and interviews are arranged on the strength of what you type.",
+        "Give accurate information in the forms: quotations, call-backs and interviews are arranged on the strength of what you type.",
         "Do not submit automated, bulk or deliberately false entries, and do not probe, overload or interfere with the site or its operations area.",
         "Do not use the site for anything unlawful.",
       ],
@@ -179,7 +179,7 @@ export const termsAndConditions: LegalDoc = {
       heading: "Information, not an offer",
       body: [
         "The pages of this site describe who NBSS is and what it does. They are general information, not a contractual offer: no engagement, price or deployment exists until a written quotation or agreement is accepted by both sides.",
-        "We keep the content accurate — the site states facts drawn from the company's own records, and where a fact is unconfirmed it is left out rather than guessed — but we do not warrant that the site is free of errors or interruptions.",
+        "We keep the content accurate: the site states facts drawn from the company's own records, and where a fact is unconfirmed it is left out rather than guessed, but we do not warrant that the site is free of errors or interruptions.",
       ],
     },
     {
@@ -194,7 +194,7 @@ export const termsAndConditions: LegalDoc = {
       heading: "Job applications",
       body: [
         "Submitting an application does not guarantee an interview or employment. Shortlisting is at NBSS's discretion, and every appointment is conditional on the police verification and document checks completed before deployment.",
-        `NBSS never asks for money through this website — no application fee, no processing fee, no deposit for a uniform or a posting. If anyone demands payment in NBSS's name for a job, do not pay: report it to the office on ${site.phone}.`,
+        `NBSS never asks for money through this website: no application fee, no processing fee, no deposit for a uniform or a posting. If anyone demands payment in NBSS's name for a job, do not pay: report it to the office on ${site.phone}.`,
       ],
     },
     {

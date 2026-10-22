@@ -9,9 +9,9 @@ import {
   CalendarPlus,
   CalendarRange,
   CheckCircle2,
+  CircleHelp,
   Clock,
   MapPinned,
-  ShieldQuestion,
   UserRoundPlus,
   UserRoundX,
   Users,
@@ -202,7 +202,7 @@ export function RosterWorkspace({
   const site = sites.find((s) => s.id === siteId) ?? null;
   const daySite = day ? sites.find((s) => s.id === day.siteId) : null;
   const dayShifts = day ? shifts.filter((s) => s.siteId === day.siteId && s.date === day.date) : [];
-  const siteName = (id: string) => sites.find((s) => s.id === id)?.name ?? "—";
+  const siteName = (id: string) => sites.find((s) => s.id === id)?.name ?? "-";
 
   function openSite(id: string) {
     const s = sites.find((x) => x.id === id);
@@ -276,7 +276,7 @@ export function RosterWorkspace({
             </Panel>
           )}
           {offRoster.length > 0 && (
-            <Panel tone="amber" title={`Off-roster check-ins · ${offRoster.length}`} icon={ShieldQuestion} bodyClassName="p-0 sm:p-0">
+            <Panel tone="amber" title={`Off-roster check-ins · ${offRoster.length}`} icon={CircleHelp} bodyClassName="p-0 sm:p-0">
               <ul className="divide-y divide-app-line-soft">
                 {offRoster.map((a) => (
                   <li key={a.id} className="flex items-center gap-3 px-6 py-3">
@@ -286,7 +286,7 @@ export function RosterWorkspace({
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium">{a.guardName}</span>
                       <span className="block text-xs text-muted-foreground">
-                        At {a.siteName} since {time(a.checkInAt)} — not rostered there
+                        At {a.siteName} since {time(a.checkInAt)}, not rostered there
                       </span>
                     </span>
                     <Button asChild variant="ghost" size="sm">
@@ -331,7 +331,7 @@ export function RosterWorkspace({
                   <TableCell>
                     <span className="block font-medium">{s.name}</span>
                     <span className="block text-xs text-muted-foreground">
-                      Needs {s.required ?? "—"} on duty{s.district ? ` · ${s.district}` : ""}
+                      Needs {s.required ?? "-"} on duty{s.district ? ` · ${s.district}` : ""}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -424,8 +424,8 @@ export function RosterWorkspace({
               meta={<span>{site.client ?? "No client recorded"}</span>}
               badge={
                 <>
-                  <HeroPill>Needs {site.required ?? "—"}</HeroPill>
-                  <HeroPill>● {site.onDuty} on duty</HeroPill>
+                  <HeroPill>Needs {site.required ?? "-"}</HeroPill>
+                  <HeroPill>{site.onDuty} on duty</HeroPill>
                   {site.notArrived > 0 && <HeroPill>{site.notArrived} not arrived</HeroPill>}
                 </>
               }
@@ -433,7 +433,7 @@ export function RosterWorkspace({
             <PreviewBody>
               <StatGrid>
                 <Stat icon={Users} label="Needs on duty">
-                  {site.required ?? "—"}
+                  {site.required ?? "-"}
                 </Stat>
                 <Stat icon={UserRoundPlus} label="Posted here" tone="text-sky-700">
                   {site.posted.length}
@@ -449,7 +449,7 @@ export function RosterWorkspace({
               <Section title="Posted guards">
                 {site.posted.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-app-line-soft px-4 py-5 text-center text-sm text-muted-foreground">
-                    Nobody is posted here yet. Guards can still check in — first come, first served — but nothing
+                    Nobody is posted here yet. Guards can still check in (first come, first served) but nothing
                     is rostered.
                   </p>
                 ) : (
@@ -579,7 +579,7 @@ export function RosterWorkspace({
               }
               badge={
                 <HeroPill>
-                  {dayShifts.length} of {daySite.required ?? "—"} rostered
+                  {dayShifts.length} of {daySite.required ?? "-"} rostered
                 </HeroPill>
               }
             />
@@ -750,7 +750,7 @@ export function RosterWorkspace({
       <PreviewDialog open={!!cover} onClose={() => setCover(null)} label="Add a cover shift">
         {cover && (
           <>
-            <PreviewHero icon={CalendarPlus} title="Add a cover shift" meta={<span>A one-off — someone off sick, an event, an extra night.</span>} />
+            <PreviewHero icon={CalendarPlus} title="Add a cover shift" meta={<span>A one-off: someone off sick, an event, an extra night.</span>} />
             <PreviewBody>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Pick

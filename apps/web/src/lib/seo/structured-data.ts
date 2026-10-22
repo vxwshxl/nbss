@@ -76,7 +76,7 @@ export const SERVICE_LIST = services.map((s) => s.name);
 const DESCRIPTION =
   `${site.name} (NBSS) is a private security agency headquartered in Kokrajhar, ` +
   `Bodoland Territorial Region, Assam. It supplies trained, police-verified security ` +
-  `personnel — guards, supervisors, gunmen, bouncers and housekeeping staff — to ` +
+  `personnel (guards, supervisors, gunmen, bouncers and housekeeping staff) to ` +
   `schools and colleges, hospitals, government offices, banks and ATMs, hotels, retail ` +
   `and malls, industrial plants and warehouses, construction and residential sites, and ` +
   `events, across the BTR and lower Assam.`;

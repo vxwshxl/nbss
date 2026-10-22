@@ -100,7 +100,7 @@ export function PreviewHero({
 /** A small pill for the header, readable on any of its tones. */
 export function HeroPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold text-white">{children}</span>
+    <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold text-white">{children}</span>
   );
 }
 
@@ -171,8 +171,8 @@ export function Field({
         <Icon className="size-3.5" />
       </span>
       <div className="min-w-0">
-        <dt className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{label}</dt>
-        <dd className={cn("mt-0.5 text-sm break-words", mono && "font-mono tabular-nums")}>{value || "—"}</dd>
+        <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+        <dd className={cn("mt-0.5 text-sm break-words", mono && "font-mono tabular-nums")}>{value || "-"}</dd>
       </div>
     </div>
   );
@@ -194,7 +194,7 @@ export function Section({
   return (
     <section>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{title}</p>
+        <p className="label-heading">{title}</p>
         {action}
       </div>
       {children}
@@ -204,7 +204,7 @@ export function Section({
 
 /** A phone number that dials, set in mono so digits line up. */
 export function PhoneLink({ phone, className }: { phone: string | null | undefined; className?: string }) {
-  if (!phone) return <span className="text-muted-foreground">—</span>;
+  if (!phone) return <span className="text-muted-foreground">-</span>;
   return (
     <a
       href={`tel:${phone.replace(/[^\d+]/g, "")}`}
@@ -218,7 +218,7 @@ export function PhoneLink({ phone, className }: { phone: string | null | undefin
 
 /** Timestamps in IST, the way the desk reads them. */
 export function istDateTime(iso: string | null, withYear = false): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
@@ -231,7 +231,7 @@ export function istDateTime(iso: string | null, withYear = false): string {
 }
 
 export function ago(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins} min ago`;
@@ -241,7 +241,7 @@ export function ago(iso: string | null): string {
 }
 
 export function duration(minutes: number | null): string {
-  if (minutes === null) return "—";
+  if (minutes === null) return "-";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;

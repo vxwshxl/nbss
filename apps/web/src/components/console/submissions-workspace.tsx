@@ -65,7 +65,7 @@ function Detail({ label, value }: { label: string; value?: React.ReactNode }) {
   if (!value) return null;
   return (
     <div>
-      <dt className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+      <dt className="text-xs font-medium text-muted-foreground">
         {label}
       </dt>
       <dd className="mt-0.5 text-sm">{value}</dd>
@@ -296,7 +296,7 @@ export function SubmissionsWorkspace({ rows }: { rows: Submission[] }) {
                 <footer className="flex flex-wrap items-center gap-3 border-t border-app-line-soft px-4 py-2.5">
                   <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
                     <Phone className="size-3" strokeWidth={1.9} />
-                    {s.remoteIp ?? "—"}
+                    {s.remoteIp ?? "-"}
                   </span>
                   <span className="ml-auto">
                     <Triage id={s.id} current={s.status} />

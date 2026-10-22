@@ -23,7 +23,7 @@ export const pages: PageEntry[] = [
     href: "/",
     title: "Home",
     summary: "Who NBSS is, the sites we guard, and where we operate.",
-    icon: "shield",
+    icon: "home",
     terms: ["home", "start", "overview", "nbss", "national bodo security service"],
   },
   {

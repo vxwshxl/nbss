@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BellRing, ShieldAlert, ShieldOff, Timer } from "lucide-react";
+import { BellOff, BellRing, Siren, Timer } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
 import { SosWorkspace, type SosRow } from "@/components/console/sos-workspace";
@@ -43,10 +43,10 @@ export default async function SosPage() {
       acknowledgedAt: a.acknowledged_at,
       closedAt: a.closed_at,
       insideFence: a.inside_fence,
-      guardName: g?.full_name ?? "—",
+      guardName: g?.full_name ?? "-",
       guardCode: g?.employee_code ?? "",
       guardPhone: g?.phone ?? null,
-      siteName: s?.name ?? "—",
+      siteName: s?.name ?? "-",
       district: s?.district ?? null,
       responders: (a.sos_acknowledgements as unknown as unknown[] | null)?.length ?? 0,
     };
@@ -72,13 +72,13 @@ export default async function SosPage() {
           label="Live now"
           value={String(live)}
           hint={live ? "A guard is waiting for help" : "All quiet"}
-          icon={ShieldAlert}
+          icon={Siren}
           tone={live ? "rose" : "emerald"}
         />
         <StatCard label="Last 30 days" value={String(month.length)} hint="Alerts raised" icon={BellRing} tone="amber" />
         <StatCard
           label="First answer"
-          value={avg === null ? "—" : `${avg} min`}
+          value={avg === null ? "-" : `${avg} min`}
           hint="Average, last 30 days"
           icon={Timer}
           tone="sky"
@@ -86,8 +86,8 @@ export default async function SosPage() {
         <StatCard
           label="False alarms"
           value={String(falseAlarms)}
-          hint="Stood down — and that is fine"
-          icon={ShieldOff}
+          hint="Stood down, and that is fine"
+          icon={BellOff}
           tone="slate"
         />
       </div>

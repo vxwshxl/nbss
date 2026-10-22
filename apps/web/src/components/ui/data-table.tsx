@@ -264,7 +264,7 @@ export function DataTable<T>({
                 <TableHead
                   key={i}
                   className={cn(
-                    "h-12 text-xs font-semibold tracking-wide text-background uppercase",
+                    "h-12 text-sm font-semibold text-background",
                     c.headClassName,
                   )}
                 >
@@ -494,7 +494,7 @@ function RowPreviewDialog<T>({
           <dl className="grid gap-4 rounded-xl border border-border p-4 sm:grid-cols-2">
             {fields.map((c, i) => (
               <div key={i} className="min-w-0">
-                <dt className="text-xs tracking-wide text-muted-foreground uppercase">
+                <dt className="text-xs font-medium text-muted-foreground">
                   {c.header}
                 </dt>
                 <dd className="mt-1 text-sm font-medium break-words">

@@ -46,7 +46,7 @@ export const PAGES: Record<string, PageKnowledge> = {
   "/console/users": {
     title: "Users",
     about:
-      "Every account in the console — administrators, supervisors, guards and clients — split into role tabs. Clicking a row opens that person's profile.",
+      "Every account in the console (administrators, supervisors, guards and clients), split into role tabs. Clicking a row opens that person's profile.",
     actions: ["Filter by role", "Add a person", "Change someone's role", "Edit contact details", "Deactivate or delete an account"],
     tools: ["roster_overview"],
   },

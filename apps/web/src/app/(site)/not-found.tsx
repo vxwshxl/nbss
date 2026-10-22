@@ -10,7 +10,7 @@ export default function NotFound() {
   return (
     <Section className="min-h-[60dvh] py-28">
       <div className="mx-auto max-w-2xl text-center">
-        <Eyebrow num="404" text="Not on the register" className="justify-center" />
+        <Eyebrow text="Not on the register" className="justify-center" />
 
         <h1 className="mt-5 font-display text-[clamp(2rem,5vw,3rem)] leading-[1.05] font-bold tracking-[-0.03em] text-balance">
           This page is not at its post.

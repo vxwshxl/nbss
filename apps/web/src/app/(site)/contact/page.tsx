@@ -17,7 +17,7 @@ import {
 } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Book guards — Kokrajhar, Bodoland Territorial Region",
+  title: "Book guards: Kokrajhar, Bodoland Territorial Region",
   description:
     "Book trained, police-verified security guards for your site. Tell the deployment desk the district, the site type and the headcount, and a field officer surveys the site before any number is quoted.",
   path: "/contact",
@@ -72,7 +72,7 @@ export default function ContactPage() {
         eyebrow="Book guards"
         crumb="Book guards"
         title="Tell us what needs guarding."
-        lede="Where the site is, what it is, and roughly how many guards you have in mind. If you are not sure about the number, say so — working that out is what the survey is for."
+        lede="Where the site is, what it is, and roughly how many guards you have in mind. If you are not sure about the number, say so. Working that out is what the survey is for."
       />
 
       <Section>
@@ -120,13 +120,13 @@ export default function ContactPage() {
       <Section alt id="quote">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.15fr] lg:items-start">
           <Reveal>
-            <Eyebrow num="01" text="Request a booking" />
+            <Eyebrow text="Request a booking" />
             <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
               Sign in, book, and a field officer calls.
             </h2>
             <p className="mt-5 text-base leading-relaxed text-muted-foreground">
               Give us the district, the site type and roughly how many people you have in
-              mind. If you are not sure about the headcount, leave it blank — working that
+              mind. If you are not sure about the headcount, leave it blank. Working that
               out is what the site visit is for. Anything else, ring the desk.
             </p>
             <TickList
@@ -149,7 +149,6 @@ export default function ContactPage() {
 
       <Section alt>
         <SectionHead
-          num="02"
           kicker="Before you ask"
           title="The questions we get first."
           className="text-center [&>div]:justify-center [&_p]:mx-auto"

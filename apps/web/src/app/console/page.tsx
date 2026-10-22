@@ -6,9 +6,9 @@ import {
   CalendarCheck,
   MapPinned,
   Radio,
-  ShieldUser,
   Timer,
   TriangleAlert,
+  UserRound,
 } from "lucide-react";
 
 import {
@@ -45,7 +45,7 @@ function time(iso: string): string {
 }
 
 function hours(minutes: number | null): string {
-  if (minutes === null) return "—";
+  if (minutes === null) return "-";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
@@ -152,12 +152,12 @@ export default async function ConsoleDashboard() {
     const place = one(row.sites as unknown as { name: string; district: string | null } | null);
     return {
       id: row.id,
-      guardName: guard?.full_name ?? "—",
+      guardName: guard?.full_name ?? "-",
       guardCode: guard?.employee_code ?? "",
-      siteName: place?.name ?? "—",
+      siteName: place?.name ?? "-",
       district: place?.district ?? null,
-      since: row.check_in_at ? time(row.check_in_at) : "—",
-      forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "—",
+      since: row.check_in_at ? time(row.check_in_at) : "-",
+      forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "-",
       late: row.status === "late",
     };
   });
@@ -203,7 +203,7 @@ export default async function ConsoleDashboard() {
           label="Active guards"
           value={String(guards.count ?? 0)}
           hint="With a working login"
-          icon={ShieldUser}
+          icon={UserRound}
           tone="indigo"
           href="/console/guards"
           cta="Manage guards"
@@ -248,7 +248,7 @@ export default async function ConsoleDashboard() {
         <Panel tone="amber" title="Start here" icon={Building2}>
           <p className="max-w-2xl text-sm text-muted-foreground">
             No sites are registered yet. A guard cannot check in until there is a site with
-            a geofence around it — that fence is what makes attendance mean{" "}
+            a geofence around it. That fence is what makes attendance mean{" "}
             <em>actually at the gate</em> rather than <em>tapped a button</em>.
           </p>
           <Button asChild className="mt-4">

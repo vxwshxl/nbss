@@ -180,7 +180,7 @@ export const services: Service[] = [
     name: "Companies, Factories & Warehouses",
     summary: "Gate, perimeter and material-movement control for offices, plants and godowns.",
     detail:
-      "Industrial loss rarely walks in through the front gate — it leaves through it, on a truck, with paperwork that nearly matches. Our postings on company premises, factories and warehouses are built around gate-pass control, material inward and outward checks, shift-change discipline and a perimeter round that is not run to a timetable anyone watching can predict.",
+      "Industrial loss rarely walks in through the front gate. It leaves through it, on a truck, with paperwork that nearly matches. Our postings on company premises, factories and warehouses are built around gate-pass control, material inward and outward checks, shift-change discipline and a perimeter round that is not run to a timetable anyone watching can predict.",
     icon: "factory",
     image: "/img/services/warehouse.jpg",
     accent: "green",
