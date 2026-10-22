@@ -61,5 +61,5 @@ export function runtimeLimitation(): string | null {
 
   return Platform.OS === "android"
     ? "Running in Expo Go. Your location is only shared while this screen is open, and SOS alerts from other guards will not reach this phone at all. Both need a development build."
-    : "Running in Expo Go. Your location is only shared while this screen is open — background tracking needs a development build. Incoming SOS notifications do work.";
+    : "Running in Expo Go. Your location is only shared while this screen is open. Background tracking needs a development build. Incoming SOS notifications do work.";
 }

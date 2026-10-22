@@ -22,6 +22,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "@/lib/auth";
 import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
+import type { ErrorBoundaryProps } from "expo-router";
+import { ErrorScreen } from "@/components/error-screen";
 
 // Held until Geist has loaded, so the first frame is not system-font text that then
 // reflows into Geist — a jump the eye catches on every cold start.
@@ -41,6 +43,11 @@ void SplashScreen.preventAutoHideAsync();
  *   navigates without being asked, which is normally rude and is right here: an SOS is
  *   not a message to be read at leisure.
  */
+/** A screen that throws shows this in its place, with a retry, instead of a red box or a blank app. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <ErrorScreen code={500} onRetry={() => void retry()} detail={__DEV__ ? error.message : undefined} />;
+}
+
 export default function RootLayout() {
   /**
    * Geist, the same family the website serves.

@@ -1,9 +1,8 @@
 import { Redirect, Tabs } from "expo-router";
 import { ClipboardList, Building2 } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { NiboCompanion } from "@/components/nibo/companion";
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { color, font } from "@/theme/tokens";
@@ -16,7 +15,6 @@ export default function ClientLayout() {
   if (role && role !== "client") return <Redirect href="/" />;
 
   return (
-    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         /**
@@ -26,7 +24,7 @@ export default function ClientLayout() {
          * is why every screen underneath passes `topInset={false}` to <Screen>.
          */
         header: () => (
-          <TopBar role={role ?? "client"} name={profile?.full_name ?? "—"} />
+          <TopBar role={role ?? "client"} name={profile?.full_name ?? "-"} />
         ),
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
@@ -66,7 +64,5 @@ export default function ClientLayout() {
         }}
       />
     </Tabs>
-      <NiboCompanion bottom={58 + insets.bottom + 10} />
-    </View>
   );
 }

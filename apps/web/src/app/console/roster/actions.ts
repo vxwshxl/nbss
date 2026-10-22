@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { audit, requireRoleSession } from "@/lib/auth";
-import { istInstant, parseTime } from "@/lib/roster";
+import { istDay, istInstant, parseTime } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 
 /**
@@ -23,13 +23,20 @@ function done(paths: string[] = []) {
   for (const p of ["/console/roster", "/console", "/console/sites", ...paths]) revalidatePath(p);
 }
 
-/** Posts a guard to a site (or moves them). One post per guard. */
+/**
+ * Posts a guard to a site. Weekly (no dates): the window on the chosen weekdays,
+ * every week, and a guard has one such post, so saving again moves them. Dated:
+ * the window on exactly the chosen dates; a guard may hold any number of these,
+ * and `postingId` edits one in place.
+ */
 export async function savePosting(input: {
   guardId: string;
   siteId: string;
   starts: string;
   ends: string;
   days: number[];
+  dates?: string[] | null;
+  postingId?: string | null;
 }): Promise<RosterResult> {
   let session;
   try {
@@ -40,10 +47,15 @@ export async function savePosting(input: {
   const starts = parseTime(input.starts);
   const ends = parseTime(input.ends);
   const days = [...new Set(input.days)].filter((d) => d >= 1 && d <= 7);
+  const dated = Array.isArray(input.dates);
+  const yesterday = istDay(-1);
+  const dates = dated ? [...new Set(input.dates)].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= yesterday).sort() : null;
   if (!input.guardId || !input.siteId) return { ok: false, error: "Choose a guard and a site." };
   if (!starts || !ends) return { ok: false, error: "Give the shift a start and an end time." };
   if (starts === ends) return { ok: false, error: "The shift has to be longer than no time at all." };
-  if (days.length === 0) return { ok: false, error: "Pick at least one day of the week." };
+  if (!dated && days.length === 0) return { ok: false, error: "Pick at least one day of the week." };
+  if (dates && dates.length === 0) return { ok: false, error: "Pick at least one date from today on." };
+  if (dates && dates.length > 366) return { ok: false, error: "A dated post can cover up to a year of dates." };
 
   const supabase = await supabaseServer();
   const { data: guard } = await supabase
@@ -53,19 +65,33 @@ export async function savePosting(input: {
     .maybeSingle();
   if (!guard || guard.role !== "guard" || !guard.active) return { ok: false, error: "Only an active guard can be posted." };
 
-  const { data: existing } = await supabase
-    .from("site_postings")
-    .select("id")
-    .eq("guard_id", input.guardId)
-    .eq("active", true)
-    .maybeSingle();
+  let existing: { id: string } | null = null;
+  if (dates) {
+    if (input.postingId) {
+      const { data } = await supabase
+        .from("site_postings")
+        .select("id")
+        .eq("id", input.postingId)
+        .eq("active", true)
+        .not("dates", "is", null)
+        .maybeSingle();
+      existing = data;
+    }
+  } else {
+    const { data } = await supabase
+      .from("site_postings")
+      .select("id")
+      .eq("guard_id", input.guardId)
+      .eq("active", true)
+      .is("dates", null)
+      .maybeSingle();
+    existing = data;
+  }
 
-  const row = { site_id: input.siteId, starts, ends, days };
+  const row = { site_id: input.siteId, guard_id: input.guardId, starts, ends, days: dates ? [1, 2, 3, 4, 5, 6, 7] : days, dates };
   const { error } = existing
     ? await supabase.from("site_postings").update(row).eq("id", existing.id)
-    : await supabase
-        .from("site_postings")
-        .insert({ ...row, guard_id: input.guardId, created_by: session.realProfile.id });
+    : await supabase.from("site_postings").insert({ ...row, created_by: session.realProfile.id });
   if (error) return { ok: false, error: error.message };
 
   await audit({
@@ -73,14 +99,15 @@ export async function savePosting(input: {
     action: existing ? "posting_moved" : "posting_created",
     entity: "profiles",
     entityId: input.guardId,
-    detail: { site_id: input.siteId, starts, ends, days },
+    detail: { site_id: input.siteId, starts, ends, ...(dates ? { dates } : { days }) },
   });
   done();
-  return { ok: true, note: `${guard.full_name} ${existing ? "moved" : "posted"}` };
+  const what = dates ? `for ${dates.length} ${dates.length === 1 ? "date" : "dates"}` : existing ? "moved" : "posted";
+  return { ok: true, note: `${guard.full_name} ${dates ? "posted " : ""}${what}` };
 }
 
-/** Takes a guard off their post. Their future posted shifts are withdrawn. */
-export async function endPosting(guardId: string): Promise<RosterResult> {
+/** Ends one posting. Its future shifts are withdrawn; the guard's other posts stay. */
+export async function endPosting(postingId: string): Promise<RosterResult> {
   let session;
   try {
     session = await staff();
@@ -88,9 +115,16 @@ export async function endPosting(guardId: string): Promise<RosterResult> {
     return { ok: false, error: (e as Error).message };
   }
   const supabase = await supabaseServer();
-  const { error } = await supabase.from("site_postings").update({ active: false }).eq("guard_id", guardId).eq("active", true);
+  const { data, error } = await supabase
+    .from("site_postings")
+    .update({ active: false })
+    .eq("id", postingId)
+    .eq("active", true)
+    .select("guard_id")
+    .maybeSingle();
   if (error) return { ok: false, error: error.message };
-  await audit({ actor: session.realProfile, action: "posting_ended", entity: "profiles", entityId: guardId });
+  if (!data) return { ok: false, error: "That post has already ended." };
+  await audit({ actor: session.realProfile, action: "posting_ended", entity: "profiles", entityId: data.guard_id, detail: { posting_id: postingId } });
   done();
   return { ok: true };
 }

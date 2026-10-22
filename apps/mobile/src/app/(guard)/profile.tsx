@@ -28,24 +28,24 @@ export default function ProfileRoute() {
 
   return (
     <Screen contentStyle={styles.body} topInset={false} bottomInset={false}>
-      <PageHeader eyebrow="Account" title="You" />
+      <PageHeader title="Account" />
 
-      <Panel tone="indigo" title="Your details" icon={CircleUserRound}>
+      <Panel tone="indigo" title="Details" icon={CircleUserRound}>
         <View style={styles.identity}>
           <Avatar name={profile?.full_name ?? "?"} size={52} />
           <View style={styles.identityText}>
             <Text variant="bodyLarge" weight="semibold">
-              {profile?.full_name ?? "—"}
+              {profile?.full_name ?? "-"}
             </Text>
             <Text variant="caption" tone="muted" mono>
-              {profile?.employee_code ?? "—"}
+              {profile?.employee_code ?? "-"}
             </Text>
           </View>
         </View>
 
         <View style={styles.rows}>
-          <Row label="Role" value={profile ? ROLE_LABEL[profile.role] : "—"} />
-          <Row label="Phone" value={profile?.phone ?? "—"} />
+          <Row label="Role" value={profile ? ROLE_LABEL[profile.role] : "-"} />
+          <Row label="Phone" value={profile?.phone ?? "-"} />
           <Row
             label="Joined"
             value={
@@ -55,7 +55,7 @@ export default function ProfileRoute() {
                     month: "short",
                     year: "numeric",
                   })
-                : "—"
+                : "-"
             }
           />
         </View>
@@ -88,7 +88,7 @@ export default function ProfileRoute() {
         action={
           <InfoButton title="SOS alerts on this phone">
             {[
-              "When a guard at your site raises an emergency, this phone rings — even if the app is closed and the phone is on silent.",
+              "When a guard at your site raises an emergency, this phone rings, even if the app is closed and the phone is on silent.",
               "That is deliberate. An SOS has to reach somebody, so it uses a notification channel that cannot be quietened, and it repeats every minute until a human acknowledges it.",
               IS_EXPO_GO && !CAN_RECEIVE_PUSH
                 ? "This test build cannot receive them at all. A development build can."

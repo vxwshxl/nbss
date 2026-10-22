@@ -60,7 +60,7 @@ async function viaServer(
   body: Record<string, string>,
 ): Promise<{ error?: string }> {
   if (!WEB_URL) {
-    return { error: "Sign in with your email address — the office can tell you which one is on file." };
+    return { error: "Sign in with your email address. The office can tell you which one is on file." };
   }
   try {
     const res = await fetch(`${WEB_URL}/api/auth/${step}`, {

@@ -68,12 +68,7 @@ export function TopBar({
           onPress={() => router.push("/assistant")}
           style={({ pressed }) => [styles.ask, pressed && styles.pressed]}
         >
-          <View style={styles.askFace}>
-            <Nibo size={30} still style={styles.askNibo} />
-          </View>
-          <Text variant="label" weight="semibold" style={styles.askText}>
-            Ask Nibo
-          </Text>
+          <Nibo size={30} still style={styles.askNibo} />
         </Pressable>
 
         <Pressable
@@ -109,18 +104,14 @@ const styles = StyleSheet.create({
   brandText: { flex: 1, gap: 0 },
   pressed: { opacity: 0.6 },
   ask: {
-    flexDirection: "row",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    overflow: "hidden",
     alignItems: "center",
-    gap: 6,
-    height: 36,
-    paddingLeft: 2,
-    paddingRight: 12,
-    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#10b98140",
     backgroundColor: color.accent,
   },
-  askFace: { width: 32, height: 32, borderRadius: 16, overflow: "hidden", backgroundColor: color.background, alignItems: "center" },
-  askNibo: { marginTop: 4 },
-  askText: { color: color.primaryInk },
+  askNibo: { marginTop: 5 },
 });

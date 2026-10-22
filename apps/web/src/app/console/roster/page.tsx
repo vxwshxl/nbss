@@ -41,7 +41,7 @@ export default async function RosterPage() {
     supabase.from("sites").select("id, name, client_name, district, guards_required, grace_minutes").eq("active", true).order("name"),
     supabase
       .from("site_postings")
-      .select("id, site_id, guard_id, starts, ends, days, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
+      .select("id, site_id, guard_id, starts, ends, days, dates, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
       .eq("active", true),
     supabase.from("profiles").select("id, full_name, employee_code, phone").eq("role", "guard").eq("active", true).order("full_name"),
     supabase
@@ -105,6 +105,7 @@ export default async function RosterPage() {
           starts: p.starts,
           ends: p.ends,
           days: p.days,
+          dates: p.dates,
           onDuty: onDutyAt.get(p.guard_id) === s.id,
         };
       });
@@ -124,13 +125,15 @@ export default async function RosterPage() {
 
   const postedGuards = new Set((postings.data ?? []).map((p) => p.guard_id));
   const guardList: RosterGuard[] = (guards.data ?? []).map((g) => {
-    const p = (postings.data ?? []).find((x) => x.guard_id === g.id);
+    const p = (postings.data ?? []).find((x) => x.guard_id === g.id && !x.dates);
+    const dated = (postings.data ?? []).filter((x) => x.guard_id === g.id && x.dates).length;
     return {
       id: g.id,
       name: g.full_name,
       code: g.employee_code,
       phone: g.phone,
       posting: p ? { siteId: p.site_id, starts: p.starts, ends: p.ends, days: p.days } : null,
+      dated,
     };
   });
 

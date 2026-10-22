@@ -82,6 +82,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
       .select("starts, ends, days, sites(name)")
       .eq("guard_id", id)
       .eq("active", true)
+      .is("dates", null)
       .maybeSingle();
 
     const list = rows ?? [];

@@ -49,7 +49,7 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { BOOKING_STATUS_LABEL, type BookingStatus } from "@/lib/bookings";
 import { mapsUrl } from "@/lib/fence";
-import { daysLabel, windowLabel } from "@/lib/roster";
+import { datesLabel, daysLabel, windowLabel } from "@/lib/roster";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -244,13 +244,13 @@ export function SitePreviewDialog({
                     </p>
                   ) : (
                     <ul className="divide-y divide-app-line-soft overflow-hidden rounded-xl border border-app-line-soft">
-                      {d.posted.map((p) => (
+                      {d.posted.map((p, i) => (
                         <PersonRow
-                          key={p.id}
+                          key={`${p.id}-${i}`}
                           name={p.name}
                           code={p.code}
                           phone={p.phone}
-                          detail={`${windowLabel(p.starts, p.ends)} · ${daysLabel(p.days)}`}
+                          detail={`${windowLabel(p.starts, p.ends)} · ${p.dates ? datesLabel(p.dates) : daysLabel(p.days)}`}
                           right={
                             <StatusPill
                               status={d.onDuty.some((x) => x.id === p.id) ? "on_duty" : "checked_out"}

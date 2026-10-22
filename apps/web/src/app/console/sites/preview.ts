@@ -26,7 +26,7 @@ export type SiteDetail = {
   bookings: { id: string; reference: string; status: string; quoted: number | null }[];
   /** The roster: how many the site needs, and who is posted here. */
   required: number | null;
-  posted: (SitePerson & { starts: string; ends: string; days: number[] })[];
+  posted: (SitePerson & { starts: string; ends: string; days: number[]; dates: string[] | null })[];
 };
 
 type Person = { id: string; full_name: string; employee_code: string; phone: string | null };
@@ -65,7 +65,7 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
       .order("created_at", { ascending: false }),
     supabase
       .from("site_postings")
-      .select("guard_id, starts, ends, days, profiles!site_postings_guard_id_fkey(id, full_name, employee_code, phone)")
+      .select("guard_id, starts, ends, days, dates, profiles!site_postings_guard_id_fkey(id, full_name, employee_code, phone)")
       .eq("site_id", siteId)
       .eq("active", true),
   ]);
@@ -139,7 +139,7 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
     posted: (postings ?? []).flatMap((p) => {
       const g = one(p.profiles as unknown as Person | null);
       return g
-        ? [{ id: g.id, name: g.full_name, code: g.employee_code, phone: g.phone, starts: p.starts, ends: p.ends, days: p.days }]
+        ? [{ id: g.id, name: g.full_name, code: g.employee_code, phone: g.phone, starts: p.starts, ends: p.ends, days: p.days, dates: p.dates }]
         : [];
     }),
   };

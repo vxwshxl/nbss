@@ -73,6 +73,8 @@ const nextConfig: NextConfig = {
     // round trip. They never go stale on screen: RealtimeRefresher re-reads a
     // cached page on arrival if its data changed while you were away.
     staleTimes: { dynamic: 60, static: 300 },
+    // Enables forbidden() / unauthorized() and their 403 / 401 pages.
+    authInterrupts: true,
     // The radix-ui umbrella package re-exports every primitive; load only the
     // modules a page imports (lucide-react is optimised by default). Production
     // only: in Turbopack's dev server the rewrite leaves open tabs holding

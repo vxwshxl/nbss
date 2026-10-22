@@ -21,10 +21,8 @@ import {
   Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   View,
-  type LayoutChangeEvent,
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,9 +34,9 @@ import { Button } from "@/components/button";
 import { HoldButton } from "@/components/hold-button";
 import { InfoButton } from "@/components/info";
 import { ATTRIBUTION, LiveMap, type MapSite } from "@/components/live-map";
+import { MapSheet } from "@/components/map-sheet";
 import { Panel } from "@/components/panel";
 import { Text } from "@/components/text";
-import { useLayout } from "@/hooks/use-breakpoint";
 import { useLivePosition } from "@/hooks/use-live-position";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
@@ -84,7 +82,6 @@ import { color, radius, shadow, space } from "@/theme/tokens";
  * on a supervisor's map looks the same as a guard who went home.
  */
 export function Duty() {
-  const { contentMaxWidth } = useLayout();
   const live = useLivePosition();
   const now = useNow(30_000);
 
@@ -205,7 +202,7 @@ export function Duty() {
             tone: result.tracking === false ? "bad" : "ok",
             text:
               result.tracking === false
-                ? `${result.message} Your location is NOT being shared — tell your supervisor.`
+                ? `${result.message} Your location is NOT being shared. Tell your supervisor.`
                 : result.message,
           }
         : { tone: "bad", text: result.error },
@@ -251,7 +248,7 @@ export function Duty() {
   const others = distances.filter((d) => d.site.id !== target?.id).slice(0, 5);
 
   const eyebrow = {
-    duty: `On duty · since ${since ? istTime(since) : "—"} IST`,
+    duty: `On duty · since ${since ? istTime(since) : "-"} IST`,
     picked: "Checking in at",
     post: post ? `Your post · ${istTime(post.startsAt)} – ${istTime(post.endsAt)}` : "Your post",
     here: "You are at",
@@ -290,30 +287,26 @@ export function Duty() {
         {ATTRIBUTION}
       </Text>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Show me and my site"
-        onPress={() => setFrameKey((k) => k + 1)}
-        style={({ pressed }) => [styles.fab, { bottom: sheetH + space[3] }, pressed && styles.pressed]}
-      >
-        <LocateFixed size={22} color={color.foreground} strokeWidth={2} />
-      </Pressable>
-
       {/* ──────────────────────────────────────────────────────── the sheet */}
-      <View
-        style={[styles.sheet, { maxWidth: contentMaxWidth }]}
-        onLayout={(e: LayoutChangeEvent) => setSheetH(Math.round(e.nativeEvent.layout.height))}
-      >
-        <View style={styles.handle} />
-        <ScrollView
-          contentContainerStyle={styles.sheetBody}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.primary} />
-          }
-        >
-          {/* Where. */}
+      <MapSheet
+        initial="half"
+        onSnap={(_, px) => setSheetH(px)}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.primary} />}
+        floating={
+          <View style={styles.floatRow} pointerEvents="box-none">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Show me and my site"
+              onPress={() => setFrameKey((k) => k + 1)}
+              style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+            >
+              <LocateFixed size={22} color={color.primary} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+        }
+        header={
           <View style={styles.gap1}>
-            <Text variant="eyebrow" weight="bold" tone={onDuty || inside ? "primary" : "muted"} uppercase>
+            <Text variant="label" weight="semibold" tone={onDuty || inside ? "primary" : "muted"}>
               {eyebrow}
             </Text>
             <Text variant="title" weight="semibold" numberOfLines={2}>
@@ -321,225 +314,225 @@ export function Duty() {
             </Text>
             {target && (
               <Text variant="caption" tone="muted" numberOfLines={1}>
-                {[target.client_name, target.district].filter(Boolean).join(" · ") || target.address || "—"}
+                {[target.client_name, target.district].filter(Boolean).join(" · ") || target.address || "-"}
               </Text>
             )}
             {!onDuty && post && target && post.siteId !== target.id && (
               <Text variant="caption" weight="semibold" tone="danger">
-                Not your post — a supervisor approves this check-in.
+                Not your post. A supervisor approves this check-in.
               </Text>
             )}
           </View>
+        }
+      >
+        {/* How far, how long. */}
+        {!onDuty && target && (
+          <View style={[styles.trip, inside && styles.tripHere]}>
+            <Figure
+              value={remaining === null ? "-" : inside ? "Inside" : formatDistance(remaining)}
+              label={inside ? "the boundary" : "to the boundary"}
+              strong={inside}
+            />
+            <View style={styles.tripRule} />
+            <Figure value={time ? (inside ? "Now" : time.value) : "-"} label={inside ? "ready to check in" : time?.unit ?? "min"} />
+            <View style={styles.tripRule} />
+            <Figure
+              value={fix ? `±${Math.round(fix.accuracyM)} m` : "-"}
+              label={fix && fix.accuracyM > target.max_accuracy_m ? "GPS weak" : "GPS"}
+            />
+          </View>
+        )}
 
-          {/* How far, how long. */}
-          {!onDuty && target && (
-            <View style={[styles.trip, inside && styles.tripHere]}>
-              <Figure
-                value={remaining === null ? "—" : inside ? "Inside" : formatDistance(remaining)}
-                label={inside ? "the boundary" : "to the boundary"}
-                strong={inside}
-              />
-              <View style={styles.tripRule} />
-              <Figure value={time ? (inside ? "Now" : time.value) : "—"} label={inside ? "ready to check in" : time?.unit ?? "min"} />
-              <View style={styles.tripRule} />
-              <Figure
-                value={fix ? `±${Math.round(fix.accuracyM)} m` : "—"}
-                label={fix && fix.accuracyM > target.max_accuracy_m ? "GPS weak" : "GPS"}
-              />
-            </View>
-          )}
+        {message && (
+          <Panel tone={message.tone === "ok" ? "emerald" : "rose"}>
+            <Text variant="body">{message.text}</Text>
+          </Panel>
+        )}
 
-          {message && (
-            <Panel tone={message.tone === "ok" ? "emerald" : "rose"}>
-              <Text variant="body">{message.text}</Text>
-            </Panel>
-          )}
-
-          {/* ────────────────────────────────────────────── off duty: go, check in */}
-          {!onDuty && target && (
-            <View style={styles.gap2}>
-              <Button
-                label={busy === target.id ? "Checking your location…" : "Check in"}
-                icon={LogIn}
-                size="lg"
-                fullWidth
-                variant={inside ? "default" : "secondary"}
-                loading={busy === target.id}
-                onPress={() => void doCheckIn(target)}
-              />
-              <View style={styles.row2}>
-                <View style={styles.flex}>
-                  <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => directions(target)} />
-                </View>
-                <View style={styles.flex}>
-                  <Button label="Call desk" icon={Phone} variant="outline" fullWidth onPress={callDesk} />
-                </View>
+        {/* ────────────────────────────────────────────── off duty: go, check in */}
+        {!onDuty && target && (
+          <View style={styles.gap2}>
+            <Button
+              label={busy === target.id ? "Checking your location…" : "Check in"}
+              icon={LogIn}
+              size="lg"
+              fullWidth
+              variant={inside ? "default" : "secondary"}
+              loading={busy === target.id}
+              onPress={() => void doCheckIn(target)}
+            />
+            <View style={styles.row2}>
+              <View style={styles.flex}>
+                <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => directions(target)} />
               </View>
-              {targetKind === "picked" && (
-                <Button label="Back to my post" variant="link" onPress={() => setPicked(null)} />
-              )}
-            </View>
-          )}
-
-          {/* ─────────────────────────────── on duty: the shift, help, check out */}
-          {onDuty && (
-            <View style={[styles.trip, inside ? styles.tripHere : styles.tripAway]}>
-              <Figure
-                value={`${Math.floor(elapsed / 60)}h ${String(elapsed % 60).padStart(2, "0")}m`}
-                label={punch?.status === "late" ? "on shift · late" : "on shift"}
-                strong
-              />
-              <View style={styles.tripRule} />
-              <Figure
-                value={!fix ? "—" : inside ? "Inside" : formatDistance(remaining ?? 0)}
-                label={!fix ? "finding you" : inside ? "the boundary" : "outside — go back"}
-              />
-              <View style={styles.tripRule} />
-              {IS_WEB ? (
-                <Figure value={fix ? `±${Math.round(fix.accuracyM)} m` : "—"} label="GPS" />
-              ) : (
-                <Figure value={tracking ? "Sharing" : "Off"} label="location" />
-              )}
-            </View>
-          )}
-
-          {IS_EXPO_GO && (
-            <Panel
-              tone="amber"
-              title="Test build"
-              icon={TriangleAlert}
-              action={
-                <InfoButton title="What does not work in a test build">
-                  {[
-                    runtimeLimitation() ?? "",
-                    CAN_RECEIVE_PUSH
-                      ? "Everything else works normally: checking in and out, raising an SOS, and the live feed while the app is open."
-                      : "You can still raise an SOS from this phone and everyone else will get it. This phone is the one that will not receive one.",
-                    "A development build fixes all of it. Nothing here is a fault with the app itself.",
-                  ]}
-                </InfoButton>
-              }
-            >
-              <Text variant="body" tone="muted">
-                Background location, the map and some alerts are off in this build.
-              </Text>
-            </Panel>
-          )}
-
-          {onDuty && permission && !permission.ok && (
-            <Panel
-              tone="rose"
-              title="Location is not being shared"
-              icon={TriangleAlert}
-              action={
-                <InfoButton title="Why this matters">
-                  {[
-                    permission.need === "services"
-                      ? "Location is switched off on this phone entirely, so nothing can read your position — not this app and not the control room."
-                      : permission.need === "foreground"
-                        ? "This app has not been allowed to read your location at all, so your check-in cannot be verified against the site boundary."
-                        : "This app can only read your location while the screen is on. The moment the phone locks, the control room stops seeing you — which on their map looks the same as a guard who has gone home.",
-                    permission.need === "background"
-                      ? "Open Permissions → Location and choose “Allow all the time”. Android does not let an app ask for this in a dialog, so it has to be done in Settings."
-                      : "It takes a moment to grant, and it stops again the second you check out. You are never tracked off duty.",
-                  ]}
-                </InfoButton>
-              }
-            >
-              <Text variant="body" tone="muted">
-                {permission.need === "services"
-                  ? "Turn location on to be seen by the control room."
-                  : permission.need === "background"
-                    ? "Allowed only while the screen is on."
-                    : "Not allowed to read your location."}
-              </Text>
-              <Button
-                label={permission.need === "services" ? "Open settings" : "Allow location"}
-                variant="default"
-                fullWidth
-                onPress={() => {
-                  if (permission.need !== "services" && permission.canAsk) {
-                    void requestTracking().then(setAskedPermission);
-                  } else openSettings();
-                }}
-              />
-            </Panel>
-          )}
-
-          {onDuty && (
-            <Panel
-              tone="rose"
-              title="Emergency"
-              icon={Siren}
-              action={
-                <InfoButton title="What happens when you press it">
-                  {[
-                    "Every guard checked in at this site is alerted, along with every admin and supervisor, and the client who owns the premises.",
-                    "They see where you are and can say they are on the way, so you know help is coming.",
-                    "Hold it for three seconds. That is deliberate — a tap could happen in your pocket, and three seconds is short enough to manage when you are frightened.",
-                    "Standing one down afterwards is normal and nobody minds. False alarms are expected; a panic button people are afraid to press is worse than useless.",
-                  ]}
-                </InfoButton>
-              }
-            >
-              <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
-            </Panel>
-          )}
-
-          {onDuty && (
-            <View style={styles.gap2}>
-              <Button
-                label="Check out"
-                icon={Clock3}
-                variant="outline"
-                size="lg"
-                fullWidth
-                loading={busy === "out"}
-                onPress={() => void doPunchOut()}
-              />
-              <Button label={`Desk · ${COMPANY.phone}`} icon={Phone} variant="ghost" fullWidth onPress={callDesk} />
-            </View>
-          )}
-
-          {/* ────────────────────────── somewhere else tonight: every other site */}
-          {!onDuty && others.length > 0 && (
-            <View style={styles.gap2}>
-              <Text variant="eyebrow" weight="bold" tone="muted" uppercase>
-                Checking in somewhere else?
-              </Text>
-              <View style={styles.list}>
-                {others.map(({ site, inside: in_, remainingM }, i) => (
-                  <Pressable
-                    key={site.id}
-                    accessibilityRole="button"
-                    onPress={() => setPicked(site.id)}
-                    style={({ pressed }) => [styles.listRow, i > 0 && styles.listRule, pressed && styles.pressed]}
-                  >
-                    <View style={[styles.listIcon, in_ && styles.listIconHere]}>
-                      <MapPin size={16} color={in_ ? color.primary : color.mutedForeground} strokeWidth={2} />
-                    </View>
-                    <View style={styles.flex}>
-                      <Text variant="label" weight="semibold" numberOfLines={1}>
-                        {site.name}
-                      </Text>
-                      <Text variant="caption" tone={in_ ? "primary" : "muted"} numberOfLines={1}>
-                        {in_ ? "You are inside this one" : `${formatDistance(remainingM)} away`}
-                        {post?.siteId === site.id ? " · your post" : ""}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
+              <View style={styles.flex}>
+                <Button label="Call desk" icon={Phone} variant="outline" fullWidth onPress={callDesk} />
               </View>
             </View>
-          )}
+            {targetKind === "picked" && (
+              <Button label="Back to my post" variant="link" onPress={() => setPicked(null)} />
+            )}
+          </View>
+        )}
 
-          {!onDuty && !fix && live.problem === null && (
-            <Text variant="caption" tone="muted" style={styles.centerText}>
-              Finding your position… Step outside if it takes long.
+        {/* ─────────────────────────────── on duty: the shift, help, check out */}
+        {onDuty && (
+          <View style={[styles.trip, inside ? styles.tripHere : styles.tripAway]}>
+            <Figure
+              value={`${Math.floor(elapsed / 60)}h ${String(elapsed % 60).padStart(2, "0")}m`}
+              label={punch?.status === "late" ? "on shift · late" : "on shift"}
+              strong
+            />
+            <View style={styles.tripRule} />
+            <Figure
+              value={!fix ? "-" : inside ? "Inside" : formatDistance(remaining ?? 0)}
+              label={!fix ? "finding you" : inside ? "the boundary" : "outside, go back"}
+            />
+            <View style={styles.tripRule} />
+            {IS_WEB ? (
+              <Figure value={fix ? `±${Math.round(fix.accuracyM)} m` : "-"} label="GPS" />
+            ) : (
+              <Figure value={tracking ? "Sharing" : "Off"} label="location" />
+            )}
+          </View>
+        )}
+
+        {IS_EXPO_GO && (
+          <Panel
+            tone="amber"
+            title="Test build"
+            icon={TriangleAlert}
+            action={
+              <InfoButton title="What does not work in a test build">
+                {[
+                  runtimeLimitation() ?? "",
+                  CAN_RECEIVE_PUSH
+                    ? "Everything else works normally: checking in and out, raising an SOS, and the live feed while the app is open."
+                    : "You can still raise an SOS from this phone and everyone else will get it. This phone is the one that will not receive one.",
+                  "A development build fixes all of it. Nothing here is a fault with the app itself.",
+                ]}
+              </InfoButton>
+            }
+          >
+            <Text variant="body" tone="muted">
+              Background location, the map and some alerts are off in this build.
             </Text>
-          )}
-        </ScrollView>
-      </View>
+          </Panel>
+        )}
+
+        {onDuty && permission && !permission.ok && (
+          <Panel
+            tone="rose"
+            title="Location is not being shared"
+            icon={TriangleAlert}
+            action={
+              <InfoButton title="Why this matters">
+                {[
+                  permission.need === "services"
+                    ? "Location is switched off on this phone entirely, so nothing can read your position: not this app and not the control room."
+                    : permission.need === "foreground"
+                      ? "This app has not been allowed to read your location at all, so your check-in cannot be verified against the site boundary."
+                      : "This app can only read your location while the screen is on. The moment the phone locks, the control room stops seeing you, which on their map looks the same as a guard who has gone home.",
+                  permission.need === "background"
+                    ? "Open Permissions → Location and choose “Allow all the time”. Android does not let an app ask for this in a dialog, so it has to be done in Settings."
+                    : "It takes a moment to grant, and it stops again the second you check out. You are never tracked off duty.",
+                ]}
+              </InfoButton>
+            }
+          >
+            <Text variant="body" tone="muted">
+              {permission.need === "services"
+                ? "Turn location on to be seen by the control room."
+                : permission.need === "background"
+                  ? "Allowed only while the screen is on."
+                  : "Not allowed to read your location."}
+            </Text>
+            <Button
+              label={permission.need === "services" ? "Open settings" : "Allow location"}
+              variant="default"
+              fullWidth
+              onPress={() => {
+                if (permission.need !== "services" && permission.canAsk) {
+                  void requestTracking().then(setAskedPermission);
+                } else openSettings();
+              }}
+            />
+          </Panel>
+        )}
+
+        {onDuty && (
+          <Panel
+            tone="rose"
+            title="Emergency"
+            icon={Siren}
+            action={
+              <InfoButton title="What happens when you press it">
+                {[
+                  "Every guard checked in at this site is alerted, along with every admin and supervisor, and the client who owns the premises.",
+                  "They see where you are and can say they are on the way, so you know help is coming.",
+                  "Hold it for three seconds. That is deliberate: a tap could happen in your pocket, and three seconds is short enough to manage when you are frightened.",
+                  "Standing one down afterwards is normal and nobody minds. False alarms are expected; a panic button people are afraid to press is worse than useless.",
+                ]}
+              </InfoButton>
+            }
+          >
+            <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
+          </Panel>
+        )}
+
+        {onDuty && (
+          <View style={styles.gap2}>
+            <Button
+              label="Check out"
+              icon={Clock3}
+              variant="outline"
+              size="lg"
+              fullWidth
+              loading={busy === "out"}
+              onPress={() => void doPunchOut()}
+            />
+            <Button label={`Desk · ${COMPANY.phone}`} icon={Phone} variant="ghost" fullWidth onPress={callDesk} />
+          </View>
+        )}
+
+        {/* ────────────────────────── somewhere else tonight: every other site */}
+        {!onDuty && others.length > 0 && (
+          <View style={styles.gap2}>
+            <Text variant="eyebrow" weight="bold" tone="muted" uppercase>
+              Checking in somewhere else?
+            </Text>
+            <View style={styles.list}>
+              {others.map(({ site, inside: in_, remainingM }, i) => (
+                <Pressable
+                  key={site.id}
+                  accessibilityRole="button"
+                  onPress={() => setPicked(site.id)}
+                  style={({ pressed }) => [styles.listRow, i > 0 && styles.listRule, pressed && styles.pressed]}
+                >
+                  <View style={[styles.listIcon, in_ && styles.listIconHere]}>
+                    <MapPin size={16} color={in_ ? color.primary : color.mutedForeground} strokeWidth={2} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text variant="label" weight="semibold" numberOfLines={1}>
+                      {site.name}
+                    </Text>
+                    <Text variant="caption" tone={in_ ? "primary" : "muted"} numberOfLines={1}>
+                      {in_ ? "You are inside this one" : `${formatDistance(remainingM)} away`}
+                      {post?.siteId === site.id ? " · your post" : ""}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {!onDuty && !fix && live.problem === null && (
+          <Text variant="caption" tone="muted" style={styles.centerText}>
+            Finding your position… Step outside if it takes long.
+          </Text>
+        )}
+      </MapSheet>
 
       {/* ─────────────────────── "not here yet": what to do instead of a refusal */}
       <ArrivalSheet
@@ -594,10 +587,10 @@ function StatusChip({
   let text = "Finding you…";
   if (problem === "denied") {
     tone = "bad";
-    text = "Location not allowed — tap to fix";
+    text = "Location not allowed. Tap to fix";
   } else if (problem === "off") {
     tone = "bad";
-    text = "GPS is off — tap to retry";
+    text = "GPS is off. Tap to retry";
   } else if (hasFix && remainingM !== null) {
     if (inside) {
       tone = "good";
@@ -668,7 +661,7 @@ function ArrivalSheet({
 
   if (a?.kind === "away") {
     title = "You are not at your post yet";
-    body = `${formatDistance(a.remainingM)} from the boundary of ${a.site.name}. Walk there — the button turns green once you are inside.`;
+    body = `${formatDistance(a.remainingM)} from the boundary of ${a.site.name}. Walk there. The button turns green once you are inside.`;
     actions = (
       <>
         <Button label="Get directions" icon={Navigation} size="lg" fullWidth onPress={() => onDirections(a.site)} />
@@ -762,12 +755,11 @@ const styles = StyleSheet.create({
   chipAcc: { opacity: 0.8 },
   credit: { position: "absolute", left: space[2], backgroundColor: "#ffffffb3", paddingHorizontal: 4, borderRadius: 3 },
 
+  floatRow: { flexDirection: "row", justifyContent: "flex-end" },
   fab: {
-    position: "absolute",
-    right: space[4],
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: color.card,
     alignItems: "center",
     justifyContent: "center",

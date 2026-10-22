@@ -1,10 +1,10 @@
-import { MapPinned } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
 
+import { MapCanvas } from "@/components/map-canvas";
 import { Text } from "@/components/text";
 import { IS_EXPO_GO } from "@/lib/runtime";
-import { color, font, space } from "@/theme/tokens";
+import { font, space } from "@/theme/tokens";
 
 import {
   MAP_COLOR,
@@ -39,8 +39,23 @@ if (!IS_EXPO_GO) {
  * boundary, and a dashed line between the two until they are inside it.
  */
 export function LiveMap(props: LiveMapProps) {
-  if (!MapLibre) return <NoMap />;
+  if (!MapLibre) return <CanvasMap {...props} />;
   return <NativeMap lib={MapLibre} {...props} />;
+}
+
+/** Where MapLibre cannot load (Expo Go): the same picture, drawn by Leaflet in a WebView. */
+function CanvasMap({ me, site, inside, frameKey, padding }: LiveMapProps) {
+  const tone = inside ? MAP_COLOR.inside : MAP_COLOR.outside;
+  const fences = useMemo(() => (site ? [{ id: site.id, name: site.name, ring: fenceRing(site), tone }] : []), [site, tone]);
+  return (
+    <MapCanvas
+      fences={fences}
+      me={me}
+      route={me && site && !inside ? [me, site] : null}
+      frameKey={`${frameKey}|${site?.id ?? ""}`}
+      padding={padding}
+    />
+  );
 }
 
 function NativeMap({ lib, me, site, inside, frameKey, padding }: LiveMapProps & { lib: MapLibreModule }) {
@@ -194,17 +209,6 @@ export function SitePin({ name, tone }: { name: string; tone: string }) {
   );
 }
 
-function NoMap() {
-  return (
-    <View style={[StyleSheet.absoluteFill, none.box]}>
-      <MapPinned size={28} color={color.mutedForeground} strokeWidth={1.8} />
-      <Text variant="label" tone="muted" style={none.text}>
-        The map needs the full NBSS app.{"\n"}Distances below are still live.
-      </Text>
-    </View>
-  );
-}
-
 const dot = StyleSheet.create({
   box: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   halo: { position: "absolute", width: 64, height: 64, borderRadius: 32, backgroundColor: MAP_COLOR.me },
@@ -226,7 +230,3 @@ const pin = StyleSheet.create({
   foot: { width: 12, height: 12, borderRadius: 6, borderWidth: 3, backgroundColor: "#ffffff", marginTop: -2 },
 });
 
-const none = StyleSheet.create({
-  box: { alignItems: "center", justifyContent: "center", gap: space[2], backgroundColor: "#e8ebe8" },
-  text: { textAlign: "center" },
-});

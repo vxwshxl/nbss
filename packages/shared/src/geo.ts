@@ -114,7 +114,7 @@ export function nearestFence<T extends Fence>(
 
 /** "120 m away" / "1.4 km away" — the string under the check-in button. */
 export function formatDistance(metres: number): string {
-  if (!Number.isFinite(metres)) return "—";
+  if (!Number.isFinite(metres)) return "-";
   if (metres < 1000) return `${Math.round(metres)} m`;
   return `${(metres / 1000).toFixed(metres < 10_000 ? 1 : 0)} km`;
 }

@@ -139,14 +139,14 @@ export default function ClientSiteRoute() {
             <PanelRow key={row.id} first={i === 0}>
               <View style={styles.rowText}>
                 <Text variant="body" weight="semibold">
-                  {row.guard_name ?? "—"}
+                  {row.guard_name ?? "-"}
                 </Text>
                 <Text variant="caption" tone="muted">
-                  {row.site_name ?? "—"}
+                  {row.site_name ?? "-"}
                 </Text>
               </View>
               <Text variant="caption" tone="muted" mono>
-                {row.check_in_at ? `${istTime(row.check_in_at)} IST` : "—"}
+                {row.check_in_at ? `${istTime(row.check_in_at)} IST` : "-"}
               </Text>
             </PanelRow>
           ))
@@ -157,7 +157,7 @@ export default function ClientSiteRoute() {
         <Text variant="body" tone="muted">
           Man-hours are computed from the times guards checked in and out at your site, each
           one verified against its boundary. The deployment desk is staffed{" "}
-          {COMPANY.deskHours}. Signed in as {profile?.full_name ?? "—"}.
+          {COMPANY.deskHours}. Signed in as {profile?.full_name ?? "-"}.
         </Text>
         <Button
           label={COMPANY.phone}

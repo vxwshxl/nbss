@@ -68,3 +68,13 @@ export function parseTime(value: FormDataEntryValue | string | null): string | n
   const s = String(value ?? "").trim();
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : null;
 }
+
+/** "3 Nov", "3, 5 and 9 Nov", or "12 dates, 3 Nov to 28 Nov" for a dated posting. */
+export function datesLabel(dates: string[]): string {
+  const sorted = [...dates].sort();
+  const short = (d: string) => new Date(`${d}T12:00:00+05:30`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: IST });
+  if (sorted.length === 0) return "No dates";
+  if (sorted.length === 1) return short(sorted[0]!);
+  if (sorted.length <= 3) return `${sorted.slice(0, -1).map(short).join(", ")} and ${short(sorted.at(-1)!)}`;
+  return `${sorted.length} dates, ${short(sorted[0]!)} to ${short(sorted.at(-1)!)}`;
+}

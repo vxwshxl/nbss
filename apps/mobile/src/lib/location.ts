@@ -3,6 +3,7 @@ import { Linking } from "react-native";
 
 import { policyFor, type TrackingMode } from "@nbss/shared/location";
 
+import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
 import { LOCATION_TASK, clearTrackingState, readMode, wireTaskControls, writeMode } from "./location-task";
 
 /**
@@ -27,14 +28,19 @@ export type PermissionState =
 export async function requestTracking(): Promise<PermissionState> {
   // Location switched off device-wide beats any permission. Worth distinguishing,
   // because "grant permission" is useless advice to someone with GPS turned off.
-  if (!(await Location.hasServicesEnabledAsync())) return { ok: false, need: "services" };
+  if (!(await Location.hasServicesEnabledAsync().catch(() => true))) return { ok: false, need: "services" };
 
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (!foreground.granted) {
     return { ok: false, need: "foreground", canAsk: foreground.canAskAgain };
   }
 
-  const background = await Location.requestBackgroundPermissionsAsync();
+  // Expo Go has no background location: asking would throw, and while-in-use is
+  // all it can use anyway.
+  if (!CAN_TRACK_IN_BACKGROUND) return { ok: true };
+
+  const background = await Location.requestBackgroundPermissionsAsync().catch(() => null);
+  if (!background) return { ok: true };
   if (!background.granted) {
     // On Android this returns `canAskAgain: false` immediately on 11+, because there
     // is no dialog to ask with. The screen reads that as "send them to Settings".
@@ -46,15 +52,27 @@ export async function requestTracking(): Promise<PermissionState> {
 
 /** Reads the current state without prompting — for a screen deciding what to show. */
 export async function checkTracking(): Promise<PermissionState> {
-  if (!(await Location.hasServicesEnabledAsync())) return { ok: false, need: "services" };
+  if (!(await Location.hasServicesEnabledAsync().catch(() => true))) return { ok: false, need: "services" };
 
   const foreground = await Location.getForegroundPermissionsAsync();
   if (!foreground.granted) return { ok: false, need: "foreground", canAsk: foreground.canAskAgain };
 
-  const background = await Location.getBackgroundPermissionsAsync();
-  if (!background.granted) return { ok: false, need: "background", canAsk: background.canAskAgain };
+  if (!CAN_TRACK_IN_BACKGROUND) return { ok: true };
+  const background = await Location.getBackgroundPermissionsAsync().catch(() => null);
+  if (background && !background.granted) return { ok: false, need: "background", canAsk: background.canAskAgain };
 
   return { ok: true };
+}
+
+/**
+ * The while-in-use prompt, asked as soon as a guard or supervisor opens the app
+ * rather than at the first map: the OS only shows it once, and it reads better
+ * on arrival than in the middle of a check-in.
+ */
+export async function askForegroundOnce(): Promise<void> {
+  const current = await Location.getForegroundPermissionsAsync().catch(() => null);
+  if (!current || current.granted || !current.canAskAgain) return;
+  await Location.requestForegroundPermissionsAsync().catch(() => null);
 }
 
 export function openSettings(): void {
@@ -101,7 +119,7 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
      * they were tracked. So it says plainly what it is doing.
      */
     foregroundService: {
-      notificationTitle: "On duty — location shared",
+      notificationTitle: "On duty, location shared",
       notificationBody:
         "The control room can see you are on site. This stops when you check out.",
       notificationColor: "#009164",

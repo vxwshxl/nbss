@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 
 import { istTime } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
 import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
-import { Radio, Siren, SatelliteDish, WifiOff } from "lucide-react-native";
+import { Map as MapIcon, Radio, Siren, SatelliteDish, WifiOff } from "lucide-react-native";
 
 import { Button } from "@/components/button";
+import { MAP_COLOR, fenceRing } from "@/components/live-map/shared";
+import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
@@ -18,8 +20,7 @@ import { Text } from "@/components/text";
 import { useLayout } from "@/hooks/use-breakpoint";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
-import { useAuth } from "@/lib/auth";
-import { liveAlerts } from "@/lib/duty";
+import { allSites, liveAlerts, toFence } from "@/lib/duty";
 import { supabase } from "@/lib/supabase";
 import { color, space } from "@/theme/tokens";
 import { router } from "expo-router";
@@ -38,7 +39,6 @@ import { router } from "expo-router";
  * what a supervisor mostly wants anyway — "is anybody out of contact".
  */
 export default function LiveRoute() {
-  const { profile } = useAuth();
   const { statColumns } = useLayout();
 
   const [batch, setBatch] = useState<PositionBatch | null>(null);
@@ -65,7 +65,41 @@ export default function LiveRoute() {
     };
   }, [reload]);
 
-  const positions = batch?.positions ?? [];
+  const positions = useMemo(() => batch?.positions ?? [], [batch]);
+
+  // Sites for the map, and every guard's name, so a row reads as a person.
+  const { data: board } = useLoader(
+    useCallback(async () => {
+      const [sites, people] = await Promise.all([
+        allSites(),
+        supabase.from("profiles").select("id, full_name, employee_code").eq("role", "guard"),
+      ]);
+      return { sites, names: new Map((people.data ?? []).map((p) => [p.id, p])) };
+    }, []),
+  );
+  const nameOf = (id: string) => board?.names.get(id)?.full_name ?? "Guard";
+
+  const fences = useMemo<MapFence[]>(
+    () =>
+      (board?.sites ?? []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        ring: fenceRing({ id: s.id, name: s.name, lat: s.lat, lng: s.lng, radiusM: s.geofence_radius_m, ring: toFence(s).ring ?? null }),
+        tone: color.primary,
+      })),
+    [board],
+  );
+  const dots = useMemo<MapPerson[]>(
+    () =>
+      positions.map((p) => ({
+        id: p.guard_id,
+        lat: p.lat,
+        lng: p.lng,
+        label: board?.names.get(p.guard_id)?.full_name.split(" ")[0],
+        tone: p.mode === "emergency" ? color.destructive : p.inside_fence ? MAP_COLOR.inside : MAP_COLOR.outside,
+      })),
+    [positions, board],
+  );
 
   return (
     <Screen
@@ -115,6 +149,12 @@ export default function LiveRoute() {
           tone="amber"
         />
       </CardGrid>
+      <Panel tone="teal" icon={MapIcon} title="Map" subtitle="Every site, and every guard on duty" bare>
+        <View style={styles.map}>
+          <MapCanvas fences={fences} people={dots} frameKey={board ? "sites" : ""} />
+        </View>
+      </Panel>
+
       {alerts.length > 0 && (
         <Panel tone="rose" title={`${alerts.length} live alert${alerts.length > 1 ? "s" : ""}`} icon={Siren}>
           {alerts.map((alert) => (
@@ -157,7 +197,7 @@ export default function LiveRoute() {
               <PanelRow key={position.guard_id}>
                 <View style={styles.rowText}>
                   <Text weight="semibold" variant="body">
-                    {position.guard_id.slice(0, 8)}
+                    {nameOf(position.guard_id)}
                   </Text>
                   <Text variant="caption" tone="muted" mono>
                     {position.inside_fence ? "Inside the boundary" : `${Math.round(position.distance_m ?? 0)} m out`}
@@ -174,9 +214,6 @@ export default function LiveRoute() {
         )}
       </Panel>
 
-      <Panel tone="slate" title="Signed in as" icon={Radio}>
-        <Text variant="body">{profile?.full_name ?? "—"}</Text>
-      </Panel>
     </Screen>
   );
 }
@@ -188,4 +225,5 @@ const styles = StyleSheet.create({
   alert: { flexDirection: "row", alignItems: "center", gap: space[3] },
   alertText: { flex: 1, gap: 2 },
   rowText: { flex: 1, gap: 2 },
+  map: { height: 320, overflow: "hidden", borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
 });

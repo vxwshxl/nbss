@@ -297,7 +297,7 @@ export function SosAlarm({ alertId }: { alertId: string }) {
                 }}
               />
               <Button
-                label="False alarm — stand down"
+                label="False alarm, stand down"
                 variant="secondary"
                 loading={busy === "false"}
                 onPress={async () => {

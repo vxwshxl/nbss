@@ -121,7 +121,7 @@ export default function BookRoute() {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Screen contentStyle={styles.body} topInset={false} bottomInset={false}>
-        <Panel title="What do you need?" subtitle="Pick the closest — we will sort out the detail on the phone.">
+        <Panel title="What do you need?" subtitle="Pick the closest. We will sort out the detail on the phone.">
           <View style={styles.chips}>
             {SERVICES.map((option) => (
               <Chip

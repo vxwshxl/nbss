@@ -9,6 +9,8 @@ import {
   CalendarPlus,
   CalendarRange,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleHelp,
   Clock,
   MapPinned,
@@ -48,7 +50,7 @@ import { Panel } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { WEEKDAYS, clock, dayHeading, daysLabel, istDay, windowLabel } from "@/lib/roster";
+import { WEEKDAYS, clock, datesLabel, dayHeading, daysLabel, istDay, windowLabel } from "@/lib/roster";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +69,8 @@ export type RosterSite = {
     starts: string;
     ends: string;
     days: number[];
+    /** Set for a dated posting: exactly these IST dates. */
+    dates: string[] | null;
     onDuty: boolean;
   }[];
   onDuty: number;
@@ -96,7 +100,10 @@ export type RosterGuard = {
   name: string;
   code: string;
   phone: string | null;
+  /** Their weekly post, if any. */
   posting: { siteId: string; starts: string; ends: string; days: number[] } | null;
+  /** How many dated posts they hold. */
+  dated: number;
 };
 
 type OffRoster = {
@@ -159,7 +166,17 @@ function Pick({
   );
 }
 
-type PostingDraft = { guardId: string; siteId: string; starts: string; ends: string; days: number[] };
+type PostingDraft = {
+  guardId: string;
+  siteId: string;
+  starts: string;
+  ends: string;
+  days: number[];
+  /** Null for a weekly post; the chosen dates for a dated one. */
+  dates: string[] | null;
+  /** The dated post being edited. */
+  postingId?: string;
+};
 type CoverDraft = { guardId: string; siteId: string; date: string; starts: string; ends: string };
 
 export function RosterWorkspace({
@@ -193,6 +210,7 @@ export function RosterWorkspace({
           starts: found.posting?.starts.slice(0, 5) ?? "20:00",
           ends: found.posting?.ends.slice(0, 5) ?? "08:00",
           days: found.posting?.days ?? [1, 2, 3, 4, 5, 6, 7],
+          dates: null,
         }
       : null;
   });
@@ -230,11 +248,12 @@ export function RosterWorkspace({
       starts: g?.posting?.starts.slice(0, 5) ?? "20:00",
       ends: g?.posting?.ends.slice(0, 5) ?? "08:00",
       days: g?.posting?.days ?? [1, 2, 3, 4, 5, 6, 7],
+      dates: null,
       ...preset,
     });
   }
 
-  const unposted = guards.filter((g) => !g.posting);
+  const unposted = guards.filter((g) => !g.posting && !g.dated);
 
   return (
     <>
@@ -455,7 +474,7 @@ export function RosterWorkspace({
                 ) : (
                   <ul className="divide-y divide-app-line-soft overflow-hidden rounded-xl border border-app-line-soft">
                     {site.posted.map((p) => (
-                      <li key={p.guardId} className="flex flex-wrap items-center gap-3 px-3.5 py-2.5">
+                      <li key={p.postingId} className="flex flex-wrap items-center gap-3 px-3.5 py-2.5">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
                           {initials(p.name)}
                         </span>
@@ -464,22 +483,32 @@ export function RosterWorkspace({
                             {p.name} <span className="font-mono text-xs font-normal text-muted-foreground">{p.code}</span>
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            {windowLabel(p.starts, p.ends)} · {daysLabel(p.days)}
+                            {windowLabel(p.starts, p.ends)} · {p.dates ? datesLabel(p.dates) : daysLabel(p.days)}
                           </span>
                         </span>
                         <PhoneLink phone={p.phone} className="text-xs" />
                         <StatusPill status={p.onDuty ? "on_duty" : "checked_out"} label={p.onDuty ? "On duty" : "Off duty"} />
                         {canEdit && (
                           <span className="flex gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => newPosting({ guardId: p.guardId })}>
-                              Move
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                newPosting(
+                                  p.dates
+                                    ? { guardId: p.guardId, siteId: site.id, starts: p.starts.slice(0, 5), ends: p.ends.slice(0, 5), dates: p.dates, postingId: p.postingId }
+                                    : { guardId: p.guardId },
+                                )
+                              }
+                            >
+                              {p.dates ? "Edit" : "Move"}
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
                               className="text-muted-foreground"
                               disabled={pending}
-                              onClick={() => run(() => endPosting(p.guardId), `${p.name} taken off the post`)}
+                              onClick={() => run(() => endPosting(p.postingId), `${p.name} taken off the post`)}
                             >
                               <X className="size-3.5" />
                             </Button>
@@ -643,8 +672,20 @@ export function RosterWorkspace({
           <>
             <PreviewHero
               icon={UserRoundPlus}
-              title={guards.find((g) => g.id === posting.guardId)?.posting ? "Move a guard" : "Post a guard"}
-              meta={<span>Their shifts for the week are written from this.</span>}
+              title={
+                posting.postingId
+                  ? "Edit dated post"
+                  : !posting.dates && guards.find((g) => g.id === posting.guardId)?.posting
+                    ? "Move a guard"
+                    : "Post a guard"
+              }
+              meta={
+                <span>
+                  {posting.dates
+                    ? "A shift is written for each date you pick. The guard keeps any other posts."
+                    : "Their shifts for the week are written from this, every week."}
+                </span>
+              }
             />
             <PreviewBody>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -664,7 +705,7 @@ export function RosterWorkspace({
                   options={guards.map((g) => ({
                     value: g.id,
                     label: g.name,
-                    note: g.posting ? `now at ${siteName(g.posting.siteId)}` : "no post",
+                    note: g.posting ? `now at ${siteName(g.posting.siteId)}` : g.dated ? `${g.dated} dated` : "no post",
                   }))}
                 />
                 <Pick
@@ -695,6 +736,30 @@ export function RosterWorkspace({
                     className="h-10"
                   />
                 </div>
+                {!posting.postingId && (
+                  <div className="sm:col-span-2">
+                    <Segmented
+                      label="Repeat"
+                      value={posting.dates ? "dates" : "weekly"}
+                      onChange={(v) => setPosting({ ...posting, dates: v === "dates" ? [] : null })}
+                      options={[
+                        { value: "weekly", label: "Every week" },
+                        { value: "dates", label: "On dates" },
+                      ]}
+                    />
+                  </div>
+                )}
+                {posting.dates ? (
+                  <div className="flex flex-col gap-2 sm:col-span-2">
+                    <Label>Dates</Label>
+                    <DatesPicker value={posting.dates} onChange={(dates) => setPosting({ ...posting, dates })} />
+                    <p className="text-xs text-muted-foreground">
+                      {posting.starts && posting.ends
+                        ? `${clock(`${posting.starts}:00`)} to ${clock(`${posting.ends}:00`)}${posting.ends <= posting.starts ? ", ending the next morning" : ""} · ${datesLabel(posting.dates)}`
+                        : "Set the times."}
+                    </p>
+                  </div>
+                ) : (
                 <div className="flex flex-col gap-2 sm:col-span-2">
                   <Label>Days</Label>
                   <div className="flex flex-wrap gap-1.5">
@@ -727,6 +792,7 @@ export function RosterWorkspace({
                       : "Set the times."}
                   </p>
                 </div>
+                )}
               </div>
             </PreviewBody>
             <PreviewActions>
@@ -735,7 +801,7 @@ export function RosterWorkspace({
               </Button>
               <Button
                 size="sm"
-                disabled={pending || !posting.guardId || !posting.siteId}
+                disabled={pending || !posting.guardId || !posting.siteId || posting.dates?.length === 0}
                 onClick={() => run(() => savePosting(posting), "Posted", () => setPosting(null))}
               >
                 <CheckCircle2 data-icon="inline-start" />
@@ -809,3 +875,122 @@ export function RosterWorkspace({
   );
 }
 
+
+/** Two or three choices side by side, one on. */
+function Segmented<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-xl border-2 border-border bg-muted p-1">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "h-8 rounded-lg px-3.5 text-sm font-semibold transition",
+            value === o.value ? "bg-elevated text-foreground shadow-e1" : "text-secondary-fg hover:text-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A month calendar where each tap adds or removes a date. Shift-tap fills every
+ * date between the last one tapped and this one, for a run of nights.
+ */
+function DatesPicker({ value, onChange }: { value: string[]; onChange: (dates: string[]) => void }) {
+  const today = istDay(0);
+  const [month, setMonth] = useState(() => (value[0] ?? today).slice(0, 7));
+  const [anchor, setAnchor] = useState<string | null>(null);
+  const picked = new Set(value);
+
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const lead = (first.getUTCDay() + 6) % 7; // Monday first
+  const length = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const cells = [...Array<null>(lead).fill(null), ...Array.from({ length }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`)];
+  const shift = (n: number) => {
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    setMonth(d.toISOString().slice(0, 7));
+  };
+  const title = first.toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
+
+  function toggle(date: string, range: boolean) {
+    if (range && anchor) {
+      const [a, b] = [anchor, date].sort() as [string, string];
+      const next = new Set(picked);
+      for (let d = new Date(`${a}T00:00:00Z`); d.toISOString().slice(0, 10) <= b; d.setUTCDate(d.getUTCDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        if (iso >= today) next.add(iso);
+      }
+      onChange([...next].sort());
+    } else {
+      onChange(picked.has(date) ? value.filter((d) => d !== date) : [...value, date].sort());
+    }
+    setAnchor(date);
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-border p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <button type="button" onClick={() => shift(-1)} disabled={month <= today.slice(0, 7)} className="grid size-8 place-items-center rounded-lg hover:bg-muted disabled:opacity-30" aria-label="Previous month">
+          <ChevronLeft className="size-4" />
+        </button>
+        <p className="text-sm font-semibold">{title}</p>
+        <button type="button" onClick={() => shift(1)} className="grid size-8 place-items-center rounded-lg hover:bg-muted" aria-label="Next month">
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {WEEKDAYS.map((d) => (
+          <span key={d.value} className="py-1 text-[11px] font-semibold text-muted-foreground">
+            {d.short}
+          </span>
+        ))}
+        {cells.map((date, i) =>
+          date ? (
+            <button
+              key={date}
+              type="button"
+              disabled={date < today}
+              aria-pressed={picked.has(date)}
+              onClick={(e) => toggle(date, e.shiftKey)}
+              className={cn(
+                "h-9 rounded-lg text-sm font-medium tabular-nums transition disabled:opacity-30",
+                picked.has(date) ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+                date === today && !picked.has(date) && "ring-2 ring-primary/40 ring-inset",
+              )}
+            >
+              {Number(date.slice(8))}
+            </button>
+          ) : (
+            <span key={`pad-${i}`} />
+          ),
+        )}
+      </div>
+      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+        <span>Shift-click to fill a run of dates.</span>
+        {value.length > 0 && (
+          <button type="button" onClick={() => onChange([])} className="font-semibold text-foreground hover:underline">
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

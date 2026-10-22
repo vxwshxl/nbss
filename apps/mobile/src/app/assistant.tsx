@@ -7,6 +7,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Nibo, type NiboMood } from "@/components/nibo/nibo";
+import { Markdown } from "@/components/markdown";
 import { Text } from "@/components/text";
 import { useAuth } from "@/lib/auth";
 import { WEB_URL } from "@/lib/config";
@@ -170,9 +171,13 @@ export default function AssistantScreen() {
                 {m.error}
               </Text>
             ) : m.text ? (
-              <Text variant="body" style={m.role === "you" ? styles.mineText : undefined}>
-                {m.text}
-              </Text>
+              m.role === "you" ? (
+                <Text variant="body" style={styles.mineText}>
+                  {m.text}
+                </Text>
+              ) : (
+                <Markdown>{m.text}</Markdown>
+              )
             ) : (
               <View style={styles.thinking}>
                 <ActivityIndicator size="small" color={color.primary} />

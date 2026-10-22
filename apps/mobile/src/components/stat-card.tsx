@@ -77,7 +77,7 @@ export function StatCard({
           // An em-dash at full size reads as a thick black bar rather than as "no value",
           // so a missing figure is rendered at the hint's size instead of the figure's.
           style={
-            value === "—"
+            value === "-"
               ? styles.absent
               : { fontSize: valueSize, lineHeight: Math.round(valueSize * 1.15) }
           }
