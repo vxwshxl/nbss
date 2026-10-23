@@ -115,6 +115,7 @@ export function siteStructuredData() {
         description: DESCRIPTION,
         slogan: site.tagline,
         telephone: e164(site.phone),
+        email: site.email,
         image: absoluteUrl("/og"),
         logo: {
           "@type": "ImageObject",
@@ -175,6 +176,7 @@ export function siteStructuredData() {
             "@type": "ContactPoint",
             contactType: "sales",
             telephone: e164(site.phone),
+            email: site.email,
             areaServed: "IN",
             availableLanguage: ["en", "as", "brx", "hi", "bn"],
             hoursAvailable: {

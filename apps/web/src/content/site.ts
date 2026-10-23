@@ -7,7 +7,7 @@
  *
  * EVERY FACT BELOW IS DRAWN FROM THE COMPANY PROFILE SUPPLIED BY THE CLIENT.
  * Nothing here is invented. Where the profile is silent — a founding year, a
- * registration number, an email address, client names, headcounts — the field
+ * registration number, client names, headcounts — the field
  * is absent rather than filled with a plausible placeholder, because a security
  * agency publishing a licence number it does not hold is a legal problem, not a
  * copy problem. Add them here as the client confirms them.
@@ -34,6 +34,8 @@ export const site = {
   descriptor:
     "National Bodo Security Service (NBSS) is a trusted, professionally managed security agency headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained, police-verified security personnel to government, corporate, institutional and commercial clients.",
   phone: COMPANY.phone,
+  /** Confirmed by the client. Enquiries from the contact form are mailed here too. */
+  email: "support@nbsskokrajhar.com",
   address: {
     label: "Registered Office",
     /** Rendered line by line wherever the address appears. */

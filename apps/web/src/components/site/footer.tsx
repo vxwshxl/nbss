@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowUpRight, CalendarPlus, MapPin, Phone } from "lucide-react";
+import { ArrowUp, ArrowUpRight, CalendarPlus, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 
 import { GateScene } from "@/components/auth/gate-scene";
@@ -150,6 +150,9 @@ export function SiteFooter() {
               </span>
               <a href={`tel:${tel(site.phone)}`} className={`${link} flex items-center gap-2.5`}>
                 <Phone className="size-4 shrink-0 text-gold-soft" aria-hidden /> {site.phone}
+              </a>
+              <a href={`mailto:${site.email}`} className={`${link} flex items-center gap-2.5`}>
+                <Mail className="size-4 shrink-0 text-gold-soft" aria-hidden /> {site.email}
               </a>
               <p className="text-[14px] text-ink-fg/55">{site.hours.join(" · ")}</p>
               <a

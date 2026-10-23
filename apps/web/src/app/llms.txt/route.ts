@@ -56,9 +56,10 @@ Personnel categories: security guards, security supervisors, gunmen, bouncers, a
 
 ## Contact
 - Phone: ${site.phone}
+- Email: ${site.email}
 - Office hours: ${hours}
 - Deployment and supervision desk: 24 × 7
-- Enquiry form: ${baseUrl}/contact
+- Enquiry form (no account needed): ${baseUrl}/contact#enquiry
 
 ## Pages
 - ${baseUrl}/: overview

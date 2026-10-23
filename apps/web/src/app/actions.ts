@@ -4,13 +4,16 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { educationOptions, vacancyById } from "@/content/gallery";
+import { site } from "@/content/site";
+import { sendMail } from "@/lib/mail";
 import { addSubmission, setStatus, type NewSubmission, type Status } from "@/lib/store";
 import { Validator, type FormState } from "@/lib/validate";
 
 /**
- * Server actions behind the public careers form, and the desk's triage of it.
- * Quote and enquiry requests are no longer anonymous forms: clients book from
- * the console (app/console/book) after signing in.
+ * Server actions behind the public enquiry and careers forms, and the desk's
+ * triage of them. Booking guards is not an anonymous form: clients book from the
+ * console (app/console/book) after signing in. The enquiry form is for
+ * everything else, and needs no account.
  *
  * Each is wired to a `<form action={...}>` via `useActionState`, so the forms
  * submit and validate perfectly well before React hydrates — the JavaScript
@@ -33,6 +36,74 @@ async function requestMeta(): Promise<Pick<NewSubmission, "userAgent" | "remoteI
  */
 function silentlyAccepted(title: string, body: string): FormState {
   return { ok: true, errors: {}, values: {}, success: { reference: "NBSS-00000", title, body } };
+}
+
+// --------------------------------------------------------------- enquiry
+
+export async function submitEnquiry(_prev: FormState, data: FormData): Promise<FormState> {
+  const f = new Validator(data);
+
+  if (f.isBot) {
+    return silentlyAccepted(
+      "Thank you, your message is with us.",
+      "Our deployment desk will call you back on the number you gave.",
+    );
+  }
+
+  f.required("name", "Your name").length("name", "Your name", 2, 80);
+  f.required("phone", "A phone number").phone("phone");
+  f.email("email");
+  f.length("company", "Organisation", 0, 120);
+  f.required("subject", "A subject").length("subject", "Subject", 3, 120);
+  f.required("message", "A message").length("message", "Message", 10, 2000);
+  f.consent("consent", "Please confirm we may contact you about this enquiry.");
+
+  if (!f.valid) return f.toFailure();
+
+  // Saved before it is mailed: the console inbox is the record, the email is the
+  // nudge. A mail outage must never cost an enquiry.
+  const saved = await addSubmission({
+    kind: "enquiry",
+    name: f.get("name"),
+    email: f.get("email") || undefined,
+    phone: f.get("phone"),
+    company: f.get("company") || undefined,
+    subject: f.get("subject"),
+    message: f.get("message"),
+    ...(await requestMeta()),
+  });
+
+  const lines = [
+    `Reference: ${saved.id}`,
+    `Name: ${saved.name}`,
+    `Phone: ${saved.phone}`,
+    ...(saved.email ? [`Email: ${saved.email}`] : []),
+    ...(saved.company ? [`Organisation: ${saved.company}`] : []),
+    "",
+    saved.message ?? "",
+    "",
+    `Open the inbox: ${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/console/submissions`,
+  ];
+  const mailed = await sendMail({
+    to: site.email,
+    subject: `Enquiry ${saved.id}: ${saved.subject}`,
+    text: lines.join("\n"),
+    ...(saved.email && { replyTo: { address: saved.email, name: saved.name } }),
+  });
+  if (!mailed.ok) console.error(`[enquiry] ${saved.id} saved but not mailed: ${mailed.error}`);
+
+  revalidatePath("/console/submissions");
+
+  return {
+    ok: true,
+    errors: {},
+    values: {},
+    success: {
+      reference: saved.id,
+      title: `Message received: reference ${saved.id}`,
+      body: `The deployment desk answers enquiries within one working day. If it is urgent, call ${site.phone} and quote your reference.`,
+    },
+  };
 }
 
 // ----------------------------------------------------------- application

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Clock3, MapPin, Phone } from "lucide-react";
+import { Clock3, Mail, MapPin, Phone } from "lucide-react";
 
 import { Eyebrow, Panel, TickList } from "@/components/marketing/blocks";
 import { CoverageBand } from "@/components/marketing/coverage-band";
@@ -8,6 +8,7 @@ import { PageHead } from "@/components/marketing/page-head";
 import { Reveal } from "@/components/marketing/reveal";
 import { Section, SectionHead } from "@/components/marketing/section";
 import { BookingCard } from "@/components/marketing/booking-card";
+import { EnquiryForm } from "@/components/forms/EnquiryForm";
 import { faqs, site, tel } from "@/content/site";
 import { pageMetadata } from "@/lib/seo/page-metadata";
 import {
@@ -97,6 +98,15 @@ export default function ContactPage() {
                       {site.phone}
                     </a>
                   ) : null}
+                  {isPhone ? (
+                    <a
+                      href={`mailto:${site.email}`}
+                      className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                    >
+                      <Mail className="size-4" strokeWidth={1.9} aria-hidden />
+                      {site.email}
+                    </a>
+                  ) : null}
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {channel.body}
                   </p>
@@ -127,7 +137,7 @@ export default function ContactPage() {
             <p className="mt-5 text-base leading-relaxed text-muted-foreground">
               Give us the district, the site type and roughly how many people you have in
               mind. If you are not sure about the headcount, leave it blank. Working that
-              out is what the site visit is for. Anything else, ring the desk.
+              out is what the site visit is for. Anything else, write to us below or ring the desk.
             </p>
             <TickList
               className="mt-7"
@@ -143,6 +153,40 @@ export default function ContactPage() {
 
           <Reveal delay={80}>
             <BookingCard />
+          </Reveal>
+        </div>
+      </Section>
+
+      <Section id="enquiry">
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-start">
+          <Reveal>
+            <EnquiryForm />
+          </Reveal>
+
+          <Reveal delay={80}>
+            <Eyebrow text="General enquiry" />
+            <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
+              Something else on your mind?
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              Compliance documents, a tender query, a complaint about one of our guards, a
+              request to see our registration papers: this form reaches the same desk, with
+              no account needed, and a complaint reaches it faster.
+            </p>
+            <ul className="mt-6 flex flex-col gap-2.5">
+              <li className="flex items-start gap-2.5 text-sm">
+                <Mail className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.9} />
+                <a href={`mailto:${site.email}`} className="hover:text-primary hover:underline">
+                  {site.email}
+                </a>
+              </li>
+              {site.hours.map((h) => (
+                <li key={h} className="flex items-start gap-2.5 text-sm">
+                  <Clock3 className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.9} />
+                  {h}
+                </li>
+              ))}
+            </ul>
           </Reveal>
         </div>
       </Section>
