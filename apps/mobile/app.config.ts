@@ -72,6 +72,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   android: {
     package: "com.nbss.okhrang",
+    // Firebase project nbss-kokrajhar (Cloud Messaging only). Not a secret: it
+    // identifies the app to FCM; the private sending key lives in EAS, not here.
+    googleServicesFile: "./google-services.json",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",

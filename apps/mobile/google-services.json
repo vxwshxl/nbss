@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "893696361784",
+    "project_id": "nbss-kokrajhar",
+    "storage_bucket": "nbss-kokrajhar.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893696361784:android:230be606978ce3102e2dcd",
+        "android_client_info": {
+          "package_name": "com.nbss.okhrang"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFsqd1dF3o1Ir65Ewfx_wDDNJC-RLybJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

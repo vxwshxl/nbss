@@ -51,3 +51,7 @@ apps/*/.env
 
 # Supabase CLI scratch, not ours
 supabase/.temp/
+
+# Firebase service-account keys are private (uploaded to EAS, never committed)
+*firebase-adminsdk*.json
+*service-account*.json
