@@ -115,7 +115,7 @@ async function sendMail(row) {
         Authorization: `Zoho-enczapikey ${MAIL_TOKEN.replace(/^Zoho-enczapikey\s+/, "")}`,
       },
       body: JSON.stringify({
-        from: { address: MAIL_FROM, name: "NBSS Operations" },
+        from: { address: MAIL_FROM, name: "NBSS Kokrajhar" },
         to: [{ email_address: { address: row.to_email, ...(row.to_name && { name: row.to_name }) } }],
         subject: row.subject,
         htmlbody: body.html,

@@ -1,4 +1,4 @@
-# NBSS Operations — the app
+# NBSS Kokrajhar — the app
 
 Expo SDK 57. Guards, supervisors and clients.
 

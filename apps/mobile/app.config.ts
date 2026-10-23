@@ -29,7 +29,7 @@ const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "NBSS Operations",
+  name: "NBSS Kokrajhar",
   slug: "nbss-operations",
   owner: "vxwshxl",
   scheme: "nbss",

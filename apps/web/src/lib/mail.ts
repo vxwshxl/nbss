@@ -34,7 +34,7 @@ export async function sendMail(mail: Mail): Promise<{ ok: true } | { ok: false; 
         Authorization: `Zoho-enczapikey ${token.replace(/^Zoho-enczapikey\s+/, "")}`,
       },
       body: JSON.stringify({
-        from: { address: from, name: "NBSS website" },
+        from: { address: from, name: "NBSS Kokrajhar" },
         to: [{ email_address: { address: mail.to } }],
         ...(mail.replyTo && { reply_to: [mail.replyTo] }),
         subject: mail.subject,

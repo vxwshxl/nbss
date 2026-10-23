@@ -49,7 +49,7 @@ const settings = {
   GOTRUE_SMTP_USER: env.SMTP_USER,
   GOTRUE_SMTP_PASS: env.SMTP_PASS,
   GOTRUE_SMTP_ADMIN_EMAIL: env.SMTP_FROM,
-  GOTRUE_SMTP_SENDER_NAME: "NBSS",
+  GOTRUE_SMTP_SENDER_NAME: "NBSS Kokrajhar",
   GOTRUE_SMTP_MAX_FREQUENCY: "30s",
   GOTRUE_RATE_LIMIT_EMAIL_SENT: "200",
   GOTRUE_MAILER_OTP_LENGTH: "6",
@@ -97,7 +97,7 @@ const status = execFileSync("ssh", [HOST, remote], {
 
 console.log("Auth configured:", {
   site,
-  smtp_sender: `NBSS <${env.SMTP_FROM}>`,
+  smtp_sender: `NBSS Kokrajhar <${env.SMTP_FROM}>`,
   template,
   otp_length: 6,
   otp_exp_s: 600,
