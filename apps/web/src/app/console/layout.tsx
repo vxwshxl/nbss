@@ -1,4 +1,4 @@
-import { isAdmin, isStaff, ROLE_LABEL } from "@nbss/shared/identity";
+import { isStaff, ROLE_LABEL } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { signOut } from "@/app/console/actions";
@@ -54,13 +54,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   const { profile, realProfile, impersonating } = session;
   const persona = personaFor(profile.role);
-  const canAdmin = isAdmin(realProfile.role);
+  const canImpersonate = realProfile.role === "developer";
 
-  // The impersonation picker needs the roster. Only an admin ever sees it, so
-  // it is only fetched for one — and on the admin client, because an admin
+  // The impersonation picker needs the roster. Only a developer ever sees it, so
+  // it is only fetched for one — and on the admin client, because a developer
   // already viewing as a guard would otherwise be filtered by that guard's
   // row-level policy and find the list empty.
-  const people: Person[] = canAdmin
+  const people: Person[] = canImpersonate
     ? ((
         await supabaseAdmin()
           .from("profiles")
@@ -116,10 +116,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       topbarSecondary={
-        // Only offered to an admin who is not already viewing as someone —
+        // Only offered to a developer who is not already viewing as someone —
         // chaining impersonation is refused by the action anyway, and a control
         // that always fails is worse than no control.
-        canAdmin && !impersonating ? (
+        canImpersonate && !impersonating ? (
           <ImpersonationPicker people={people} start={startImpersonation} />
         ) : undefined
       }

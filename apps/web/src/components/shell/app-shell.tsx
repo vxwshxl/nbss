@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 import { CommandPalette } from "./command-palette";
 import { findNavItem, type NavIndexItem } from "./nav-index";
+import { useMediaQuery } from "./use-media-query";
 
 /** Kept for layouts that still read it; the sidebar no longer collapses. */
 export const RAIL_COOKIE = "erp-rail";
@@ -25,8 +26,10 @@ export const RAIL_COOKIE = "erp-rail";
  * drawer on phones and tablets, a sticky frosted top bar with the page, search, "View
  * as" and the account menu, and the page on the pale ground.
  *
- * Nibo, the companion, floats in the corner; tapping him opens the assistant, which
- * floats over the page from the right on wide screens and fills the screen below lg.
+ * On desktop Nibo, the companion, floats in the corner; below lg he would sit over the
+ * page, so he lives in the top bar instead, as a round button beside the account
+ * avatar. Either opens the assistant, which floats over the page from the right on
+ * wide screens and fills the screen below lg.
  * It is always mounted, only hidden, so the conversation survives closing it and
  * moving between pages.
  */
@@ -76,6 +79,7 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const desktop = useMediaQuery("(min-width: 64rem)");
 
   const openAssistant = useCallback(() => {
     setOpen(false);
@@ -186,6 +190,7 @@ export function AppShell({
             <Crumb brand={brand} home={brandHref} index={navIndex} sites={sites} />
             <CommandPalette index={navIndex} />
             {topbarSecondary}
+            {assistant && <AssistantButton className="lg:hidden" />}
             {topbarRight}
           </header>
           <main id="main" className="@container/main mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 sm:px-6 sm:py-8">
@@ -193,7 +198,7 @@ export function AppShell({
           </main>
         </div>
 
-        {companion && (
+        {companion && desktop && (
           <NiboCompanion
             key={companion.person}
             person={companion.person}
@@ -235,23 +240,27 @@ export function AppShell({
 type AssistantToggle = { open: boolean; toggle: () => void };
 const AssistantToggleContext = createContext<AssistantToggle | null>(null);
 
-/** Opens the assistant panel from anywhere inside the shell (the standalone page's link, a button). */
-export function AssistantButton() {
+/**
+ * Nibo as a round avatar beside the account's, opening the assistant panel. The top
+ * bar shows it below lg, where the floating companion is not drawn.
+ */
+export function AssistantButton({ className }: { className?: string }) {
   const ctx = useContext(AssistantToggleContext);
   if (!ctx) return null;
   return (
     <button
       type="button"
       onClick={ctx.toggle}
-      aria-label={ctx.open ? "Close Nibo" : "Ask Nibo"}
+      aria-label={ctx.open ? "Close Nibo" : "Ask Nibo, your assistant"}
+      title="Ask Nibo"
       aria-controls="console-assistant"
       aria-expanded={ctx.open}
-      className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border-2 border-border bg-elevated pr-3 pl-0.5 text-sm font-semibold shadow-[0_2px_0_var(--ds-border)] hover:bg-subtle"
+      className={cn(
+        "grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-accent-subtle ring-2 ring-border outline-none hover:ring-border-strong focus-visible:ring-[3px] focus-visible:ring-primary/30",
+        className,
+      )}
     >
-      <span className="grid size-7 place-items-center overflow-hidden rounded-full bg-accent-subtle">
-        <Nibo still uid="topbar" className="mt-2 size-8" />
-      </span>
-      Ask Nibo
+      <Nibo still uid="topbar" className="mt-2.5 size-10" />
     </button>
   );
 }

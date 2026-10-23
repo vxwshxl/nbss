@@ -1,12 +1,14 @@
 import { Redirect, Tabs } from "expo-router";
-import { CircleUserRound, Map, Timer } from "lucide-react-native";
+import { CalendarDays, CircleUserRound, MapPinned } from "lucide-react-native";
 import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
+import { registerHandset } from "@/lib/device";
 import { askForegroundOnce } from "@/lib/location";
+import { flush } from "@/lib/location-task";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 
@@ -27,7 +29,10 @@ export default function GuardLayout() {
 
   useEffect(() => {
     if (!session) return;
-    void askForegroundOnce();
+    // Which phone this is, every launch: the Devices page and the check-in rule read it.
+    void askForegroundOnce().then(() => registerHandset());
+    // Anything walked while offline goes up the moment the app is opened again.
+    void flush();
     void registerForPush().then((result) => {
       if (!result.ok && result.reason !== "simulator") {
         // Not shown to the guard as an error, because there is nothing useful they can
@@ -76,18 +81,19 @@ export default function GuardLayout() {
     >
       {/* The same lucide icons the console's nav uses, from lucide-react-native — the
           packages are pinned to the same version, so these are the identical glyphs. */}
+      {/* Three tabs and no more: the map with the one thing to do, the roster, and the account. */}
       <Tabs.Screen
         name="duty"
         options={{
           title: "Duty",
-          tabBarIcon: ({ color: c, size }) => <Timer size={size} color={c} strokeWidth={2} />,
+          tabBarIcon: ({ color: c, size }) => <MapPinned size={size} color={c} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
-        name="map"
+        name="duties"
         options={{
-          title: "Site",
-          tabBarIcon: ({ color: c, size }) => <Map size={size} color={c} strokeWidth={2} />,
+          title: "My duties",
+          tabBarIcon: ({ color: c, size }) => <CalendarDays size={size} color={c} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen

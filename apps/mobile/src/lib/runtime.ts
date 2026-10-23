@@ -23,9 +23,9 @@ import { Platform } from "react-native";
  *   therefore never reaches an Android phone running Expo Go. iOS Expo Go still
  *   receives push.
  *
- *   MAPLIBRE — a third-party native module, so the duty screen's map cannot render in
- *   Expo Go. components/live-map loads it lazily and shows a plain panel instead, which
- *   is why the app still boots in Expo Go.
+ *   (Maps do work: react-native-maps is bundled in Expo Go, Google Maps on Android.
+ *   And while the duty screen is open it sends its own fixes, so a guard testing in
+ *   Expo Go is still tracked for as long as the app stays in front.)
  */
 /**
  * react-native-web has no expo-notifications at all — the module's methods throw
@@ -60,6 +60,6 @@ export function runtimeLimitation(): string | null {
   if (!IS_EXPO_GO) return null;
 
   return Platform.OS === "android"
-    ? "Running in Expo Go. Your location is only shared while this screen is open, and SOS alerts from other guards will not reach this phone at all. Both need a development build."
+    ? "Running in Expo Go. Your location is only shared while this screen is open, and SOS alerts from other guards will not reach this phone at all. Install the NBSS app build for both."
     : "Running in Expo Go. Your location is only shared while this screen is open. Background tracking needs a development build. Incoming SOS notifications do work.";
 }

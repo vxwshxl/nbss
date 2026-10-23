@@ -25,7 +25,7 @@ export default async function BookPage({
     supabase
       .from("service_requests")
       .select(
-        "id, reference, service_type, site_type, district, address, guards_required, shift_pattern, start_date, duration_months, notes, status, quote_note, quoted_amount_paise, created_at",
+        "id, reference, service_type, site_type, district, address, guards_required, shift_pattern, start_date, duration_months, days_required, shift_types, notes, status, quote_note, quoted_amount_paise, created_at",
       )
       .order("created_at", { ascending: false }),
     supabase.auth.getUser(),

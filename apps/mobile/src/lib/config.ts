@@ -54,3 +54,10 @@ export const WEB_URL = webUrl();
 
 /** Used as the User-Agent-ish marker on a position, so a trail can name its source. */
 export const APP_VERSION = Constants.expoConfig?.version ?? "0.0.0";
+
+/**
+ * Google Maps, for the browser preview (the native maps read it from the
+ * manifest that app.config.ts writes). Public by design and restricted by
+ * referrer and Android package in Google Cloud.
+ */
+export const GOOGLE_MAPS_KEY = typeof extra.googleMapsKey === "string" ? extra.googleMapsKey : "";

@@ -20,7 +20,7 @@ export default async function BookingsPage() {
     supabase
       .from("service_requests")
       .select(
-        "id, reference, client_id, contact_name, organisation, email, phone, service_type, site_type, district, address, guards_required, shift_pattern, start_date, duration_months, notes, status, quoted_amount_paise, quote_note, site_id, source, created_at",
+        "id, reference, client_id, contact_name, organisation, email, phone, service_type, site_type, district, address, guards_required, shift_pattern, start_date, duration_months, days_required, shift_types, notes, status, quoted_amount_paise, quote_note, site_id, source, created_at",
       )
       .order("created_at", { ascending: false }),
     supabase.from("sites").select("id, name, district, client_id").eq("active", true).order("name"),

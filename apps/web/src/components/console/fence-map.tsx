@@ -1,32 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { Map as LeafletMap, Marker, Circle, Polygon } from "leaflet";
+import { useEffect, useRef } from "react";
 import { LocateFixed } from "lucide-react";
 
+import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
 import { Button } from "@/components/ui/button";
+import { KOKRAJHAR, MAP_COLOR } from "@/lib/google-maps";
 import { cn } from "@/lib/utils";
 
 /**
- * Drawing a site's boundary.
+ * Drawing a site's boundary, on Google Maps.
  *
  * Two shapes, because sites come in two kinds. A gate or an ATM is a point
  * with a radius around it. A campus, a factory or a hospital compound is an
  * outline, and forcing a circle onto one either leaves half the grounds
  * outside the fence or swallows the road beside it.
  *
- * Tiles come from `/api/tiles`, this site's own origin, so the strict
- * Content-Security-Policy needs no exception for a map CDN.
- *
- * Leaflet is loaded dynamically rather than imported at module scope: it
- * reaches for `window` as it initialises, which fails during server rendering.
+ * Both use Google's own editable shapes: the circle has a centre handle to drag
+ * and an edge handle to resize; the outline has a handle on every corner and a
+ * ghost handle half-way along each side that adds a corner when pulled.
  */
 
 export type Fence =
   | { mode: "radius"; lat: number; lng: number; radius: number }
   | { mode: "polygon"; lat: number; lng: number; ring: [number, number][] };
-
-const KOKRAJHAR: [number, number] = [26.4015, 90.2717];
 
 /** Metric area of a lat/lng ring, via the shoelace formula on a local projection. */
 function ringAreaM2(ring: [number, number][]): number {
@@ -51,6 +48,11 @@ function centroid(ring: [number, number][]): [number, number] {
   return [lng, lat];
 }
 
+function polygonFence(ring: [number, number][]): Fence {
+  const [lng, lat] = ring.length ? centroid(ring) : [0, 0];
+  return { mode: "polygon", ring, lat, lng };
+}
+
 export function FenceMap({
   value,
   onChange,
@@ -59,178 +61,102 @@ export function FenceMap({
   onChange: (fence: Fence) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const map = useRef<LeafletMap | null>(null);
-  const centre = useRef<Marker | null>(null);
-  const circle = useRef<Circle | null>(null);
-  const shape = useRef<Polygon | null>(null);
-  const points = useRef<Marker[]>([]);
-  const latest = useRef(value);
-  const [ready, setReady] = useState(false);
+  const { maps, map, error } = useGoogleMap(host, {
+    center: value.lat ? { lat: value.lat, lng: value.lng } : KOKRAJHAR,
+    zoom: value.lat ? 17 : 14,
+    gestureHandling: "greedy",
+    draggableCursor: "crosshair",
+  });
 
-  /**
-   * The newest `value`, reachable from Leaflet's own event handlers.
-   *
-   * Those handlers are registered once when the map is created and then live outside
-   * React entirely, so they cannot close over a `value` that changes — hence the ref.
-   *
-   * Synced in an effect rather than assigned during render. A render can be discarded and
-   * re-run, so a write during one is not guaranteed to have happened exactly once, which
-   * is why `react-hooks/refs` rejects it. `useRef(value)` already holds the first value,
-   * and this effect runs before any user interaction can reach a handler.
-   */
+  // The newest value and handler, reachable from the map's own listeners,
+  // which are registered once and live outside React.
+  const latest = useRef({ value, onChange });
   useEffect(() => {
-    latest.current = value;
-  }, [value]);
+    latest.current = { value, onChange };
+  }, [value, onChange]);
 
-  // ------------------------------------------------------------- create map
+  // A click places the circle, or adds a corner to the outline.
   useEffect(() => {
-    let cancelled = false;
+    if (!maps || !map) return;
+    const listener = map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      if (!e.latLng) return;
+      const { value: v, onChange: change } = latest.current;
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      if (v.mode === "radius") change({ ...v, lat, lng });
+      else change(polygonFence([...v.ring, [lng, lat]]));
+    });
+    return () => listener.remove();
+  }, [maps, map]);
 
-    (async () => {
-      const L = await import("leaflet");
-      if (cancelled || !host.current || map.current) return;
-
-      const instance = L.map(host.current, {
-        center: [value.lat || KOKRAJHAR[0], value.lng || KOKRAJHAR[1]],
-        zoom: value.lat ? 17 : 14,
-        // The default zoom control sits top-left, over the mode switch.
-        zoomControl: false,
-        attributionControl: true,
-      });
-
-      L.tileLayer("/api/tiles/{z}/{x}/{y}", {
-        maxZoom: 19,
-        minZoom: 3,
-        attribution: "© OpenStreetMap contributors",
-      }).addTo(instance);
-
-      L.control.zoom({ position: "topright" }).addTo(instance);
-
-      instance.on("click", (e) => {
-        const current = latest.current;
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-
-        if (current.mode === "radius") {
-          onChange({ ...current, lat, lng });
-        } else {
-          const ring: [number, number][] = [...current.ring, [lng, lat]];
-          const [cLng, cLat] = centroid(ring);
-          onChange({ mode: "polygon", ring, lat: cLat, lng: cLng });
-        }
-      });
-
-      map.current = instance;
-      setReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-      map.current?.remove();
-      map.current = null;
+  // Draw the current shape; editing it reports back through onChange.
+  useEffect(() => {
+    if (!maps || !map) return;
+    const listeners: google.maps.MapsEventListener[] = [];
+    let shape: google.maps.Circle | google.maps.Polygon | null = null;
+    const style = {
+      strokeColor: MAP_COLOR.primary,
+      strokeWeight: 2,
+      fillColor: MAP_COLOR.primary,
+      fillOpacity: 0.14,
     };
-    // Created once. Redrawing is handled by the effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // ---------------------------------------------------------------- redraw
-  useEffect(() => {
-    if (!ready || !map.current) return;
-
-    let cancelled = false;
-
-    (async () => {
-      const L = await import("leaflet");
-      if (cancelled || !map.current) return;
-      const m = map.current;
-
-      // Clear whatever the previous state drew.
-      for (const marker of points.current) marker.remove();
-      points.current = [];
-      centre.current?.remove();
-      centre.current = null;
-      circle.current?.remove();
-      circle.current = null;
-      shape.current?.remove();
-      shape.current = null;
-
-      const pin = L.divIcon({
-        className: "fence-pin",
-        html: '<span></span>',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
-      });
-
-      if (value.mode === "radius") {
-        if (!value.lat && !value.lng) return;
-
-        circle.current = L.circle([value.lat, value.lng], {
+    if (value.mode === "radius") {
+      if (value.lat || value.lng) {
+        const circle = new maps.Circle({
+          ...style,
+          map,
+          center: { lat: value.lat, lng: value.lng },
           radius: value.radius,
-          color: "#19A96E",
-          weight: 2,
-          fillColor: "#19A96E",
-          fillOpacity: 0.12,
-        }).addTo(m);
-
-        centre.current = L.marker([value.lat, value.lng], { icon: pin, draggable: true })
-          .addTo(m)
-          .on("drag", (e) => {
-            const p = (e.target as Marker).getLatLng();
-            circle.current?.setLatLng(p);
-          })
-          .on("dragend", (e) => {
-            const p = (e.target as Marker).getLatLng();
-            onChange({ mode: "radius", lat: p.lat, lng: p.lng, radius: latest.current.mode === "radius" ? latest.current.radius : 150 });
-          });
-
-        return;
+          editable: true,
+          draggable: true,
+        });
+        const report = () => {
+          const c = circle.getCenter();
+          if (!c) return;
+          const radius = Math.max(25, Math.min(1000, Math.round(circle.getRadius() / 5) * 5));
+          latest.current.onChange({ mode: "radius", lat: c.lat(), lng: c.lng(), radius });
+        };
+        listeners.push(circle.addListener("dragend", report), circle.addListener("radius_changed", report));
+        shape = circle;
       }
-
-      if (value.ring.length === 0) return;
-
-      // Each vertex is draggable, which is what "adjusted manually via points"
-      // has to mean — dropping a corner in roughly the right place and then
-      // nudging it onto the wall.
-      value.ring.forEach(([lng, lat], index) => {
-        const marker = L.marker([lat, lng], { icon: pin, draggable: true })
-          .addTo(m)
-          .on("drag", (e) => {
-            const p = (e.target as Marker).getLatLng();
-            const ring = latest.current.mode === "polygon" ? [...latest.current.ring] : [];
-            ring[index] = [p.lng, p.lat];
-            shape.current?.setLatLngs(ring.map(([x, y]) => [y, x] as [number, number]));
-          })
-          .on("dragend", (e) => {
-            const p = (e.target as Marker).getLatLng();
-            if (latest.current.mode !== "polygon") return;
-            const ring = [...latest.current.ring];
-            ring[index] = [p.lng, p.lat];
-            const [cLng, cLat] = centroid(ring);
-            onChange({ mode: "polygon", ring, lat: cLat, lng: cLng });
-          })
-          // Right-click removes a point, the usual gesture for this.
-          .on("contextmenu", () => {
-            if (latest.current.mode !== "polygon") return;
-            const ring = latest.current.ring.filter((_, i) => i !== index);
-            const [cLng, cLat] = ring.length ? centroid(ring) : [0, 0];
-            onChange({ mode: "polygon", ring, lat: cLat, lng: cLng });
-          });
-
-        points.current.push(marker);
+    } else if (value.ring.length > 0) {
+      const polygon = new maps.Polygon({
+        ...style,
+        map,
+        paths: value.ring.map(([lng, lat]) => ({ lat, lng })),
+        editable: true,
       });
-
-      if (value.ring.length >= 2) {
-        shape.current = L.polygon(
-          value.ring.map(([lng, lat]) => [lat, lng] as [number, number]),
-          { color: "#19A96E", weight: 2, fillColor: "#19A96E", fillOpacity: 0.12 },
-        ).addTo(m);
-      }
-    })();
+      const path = polygon.getPath();
+      const report = () => {
+        const ring = path.getArray().map((p) => [p.lng(), p.lat()] as [number, number]);
+        latest.current.onChange(polygonFence(ring));
+      };
+      listeners.push(
+        path.addListener("set_at", report),
+        path.addListener("insert_at", report),
+        polygon.addListener("rightclick", (e: google.maps.PolyMouseEvent) => {
+          if (e.vertex == null) return;
+          path.removeAt(e.vertex);
+          report();
+        }),
+        // A click inside the outline adds a corner too, rather than being swallowed.
+        polygon.addListener("click", (e: google.maps.PolyMouseEvent) => {
+          const v = latest.current.value;
+          if (e.vertex != null || e.edge != null || !e.latLng || v.mode !== "polygon") return;
+          latest.current.onChange(polygonFence([...v.ring, [e.latLng.lng(), e.latLng.lat()]]));
+        }),
+      );
+      shape = polygon;
+    }
 
     return () => {
-      cancelled = true;
+      for (const l of listeners) l.remove();
+      shape?.setMap(null);
     };
-  }, [value, ready, onChange]);
+    // Redrawn when the shape itself changes, not on every parent render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maps, map, JSON.stringify(value)]);
 
   const area = value.mode === "polygon" ? ringAreaM2(value.ring) : Math.PI * value.radius ** 2;
 
@@ -332,15 +258,10 @@ export function FenceMap({
           onClick={() =>
             navigator.geolocation.getCurrentPosition((pos) => {
               const { latitude, longitude } = pos.coords;
-              map.current?.setView([latitude, longitude], 18);
-              if (latest.current.mode === "radius") {
-                onChange({
-                  mode: "radius",
-                  lat: latitude,
-                  lng: longitude,
-                  radius: latest.current.radius,
-                });
-              }
+              map?.setCenter({ lat: latitude, lng: longitude });
+              map?.setZoom(18);
+              const v = latest.current.value;
+              if (v.mode === "radius") onChange({ mode: "radius", lat: latitude, lng: longitude, radius: v.radius });
             })
           }
         >
@@ -349,12 +270,12 @@ export function FenceMap({
         </Button>
       </div>
 
-      <div className="h-[340px] w-full lg:h-[480px]" ref={host} />
+      <MapFrame hostRef={host} ready={!!map} error={error} className="h-[340px] w-full rounded-none border-0 lg:h-[480px]" />
 
       <p className="border-t border-app-line-soft px-3 py-2.5 text-xs text-muted-foreground">
         {value.mode === "radius"
-          ? "Click the map to place the site, then drag the pin to fine-tune. The shaded circle is where a guard may check in."
-          : "Click to drop each corner of the boundary. Drag a point to move it, right-click one to remove it. Three points make an area."}
+          ? "Click the map to place the site. Drag the centre to move it and the edge to resize. The shaded circle is where a guard may check in."
+          : "Click to drop each corner of the boundary. Drag a corner to move it, pull a mid-point to add one, right-click a corner to remove it. Three points make an area."}
       </p>
     </div>
   );

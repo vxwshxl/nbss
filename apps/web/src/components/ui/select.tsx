@@ -44,14 +44,14 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group/select flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[state=open]:border-ring h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/select:rotate-180" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
@@ -60,13 +60,11 @@ function SelectTrigger({
 /**
  * Search inside a dropdown.
  *
- * Any list longer than a handful gets a search field on top — the roster's
- * guard picker, the site picker and the service list are all long enough that
- * scrolling for a name is slower than typing two letters of it. Items stay
- * mounted and are only hidden, so the trigger keeps showing the chosen value.
+ * Every list gets a search field on top by default — typing two letters of a
+ * name is faster than scrolling for it, and one habit for every dropdown beats
+ * guessing which ones can be searched. `searchable={false}` turns it off. Items
+ * stay mounted and are only hidden, so the trigger keeps showing the chosen value.
  */
-const SEARCH_AFTER = 6
-
 const SelectSearchContext = React.createContext("")
 
 /** The readable text of an item's children, for matching. */
@@ -103,14 +101,14 @@ function SelectContent({
   searchPlaceholder = "Search…",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content> & {
-  /** Force the search field on or off. By default it appears past six options. */
+  /** The search field is on by default; false turns it off. */
   searchable?: boolean
   searchPlaceholder?: string
 }) {
   const [query, setQuery] = React.useState("")
   const input = React.useRef<HTMLInputElement>(null)
   const texts = itemTexts(children)
-  const show = searchable ?? texts.length > SEARCH_AFTER
+  const show = searchable ?? texts.length > 1
   const q = query.trim().toLowerCase()
   const none = show && q !== "" && !texts.some((t) => matches(t, q))
   // A searchable list opens below its trigger: aligning the chosen item over
@@ -202,7 +200,7 @@ function SelectContent({
         <SelectPrimitive.Viewport
           data-position={place}
           className={cn(
-            "data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",
+            "data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-[calc(var(--radix-select-trigger-width)-1rem)]",
             show && "data-[position=popper]:h-auto"
           )}
         >
@@ -245,7 +243,7 @@ function SelectItem({
       data-slot="select-item"
       hidden={hidden}
       className={cn(
-        "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-default items-center gap-1.5 rounded-lg py-1.5 pr-8 pl-2 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}

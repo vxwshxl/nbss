@@ -11,7 +11,6 @@ import {
   Geist_700Bold,
   useFonts,
 } from "@expo-google-fonts/geist";
-import { GeistMono_400Regular, GeistMono_500Medium } from "@expo-google-fonts/geist-mono";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -61,8 +60,6 @@ export default function RootLayout() {
     Geist_500Medium,
     Geist_600SemiBold,
     Geist_700Bold,
-    GeistMono_400Regular,
-    GeistMono_500Medium,
   });
 
   useEffect(() => {

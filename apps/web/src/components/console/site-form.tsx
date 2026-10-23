@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 
-import "leaflet/dist/leaflet.css";
 
 function Submit({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
@@ -204,20 +204,20 @@ export function SiteForm() {
           </Field>
 
           <Field name="shift_start" label="Shift start">
-            <Input
+            <TimePicker
               id="shift_start"
               name="shift_start"
-              type="time"
               defaultValue={state.values?.shift_start}
+              placeholder="Not fixed"
             />
           </Field>
 
           <Field name="shift_end" label="Shift end">
-            <Input
+            <TimePicker
               id="shift_end"
               name="shift_end"
-              type="time"
               defaultValue={state.values?.shift_end}
+              placeholder="Not fixed"
             />
           </Field>
 

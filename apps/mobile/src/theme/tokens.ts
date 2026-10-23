@@ -106,8 +106,10 @@ export const font = {
   medium: "Geist_500Medium",
   semibold: "Geist_600SemiBold",
   bold: "Geist_700Bold",
-  mono: "GeistMono_400Regular",
-  monoMedium: "GeistMono_500Medium",
+  // Codes and numbers: Geist with tabular figures (Text asks for them), not Geist Mono,
+  // whose slashed zero reads as code rather than a guard's number.
+  mono: "Geist_500Medium",
+  monoMedium: "Geist_600SemiBold",
 } as const;
 
 /** Tailwind's scale, which is what the console's classes resolve to. */

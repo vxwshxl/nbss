@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { shiftTypeFor } from "@nbss/shared/shifts";
+
 import { audit, requireRoleSession } from "@/lib/auth";
 import { istDay, istInstant, parseTime } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -52,7 +54,7 @@ export async function savePosting(input: {
   const dates = dated ? [...new Set(input.dates)].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= yesterday).sort() : null;
   if (!input.guardId || !input.siteId) return { ok: false, error: "Choose a guard and a site." };
   if (!starts || !ends) return { ok: false, error: "Give the shift a start and an end time." };
-  if (starts === ends) return { ok: false, error: "The shift has to be longer than no time at all." };
+  // Equal start and end is the 24-hour shift: it runs to the same time the next day.
   if (!dated && days.length === 0) return { ok: false, error: "Pick at least one day of the week." };
   if (dates && dates.length === 0) return { ok: false, error: "Pick at least one date from today on." };
   if (dates && dates.length > 366) return { ok: false, error: "A dated post can cover up to a year of dates." };
@@ -88,7 +90,15 @@ export async function savePosting(input: {
     existing = data;
   }
 
-  const row = { site_id: input.siteId, guard_id: input.guardId, starts, ends, days: dates ? [1, 2, 3, 4, 5, 6, 7] : days, dates };
+  const row = {
+    site_id: input.siteId,
+    guard_id: input.guardId,
+    starts,
+    ends,
+    days: dates ? [1, 2, 3, 4, 5, 6, 7] : days,
+    dates,
+    shift_type: shiftTypeFor(starts, ends),
+  };
   const { error } = existing
     ? await supabase.from("site_postings").update(row).eq("id", existing.id)
     : await supabase.from("site_postings").insert({ ...row, created_by: session.realProfile.id });
@@ -179,6 +189,7 @@ export async function addShift(input: {
     ends_at: to.toISOString(),
     notes: "Cover shift",
     created_by: session.realProfile.id,
+    shift_type: shiftTypeFor(starts, ends),
   });
   if (error) {
     return {

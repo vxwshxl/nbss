@@ -4,6 +4,7 @@ import {
   Check,
   Clock3,
   LocateFixed,
+  NotebookPen,
   LogIn,
   MapPin,
   MapPinOff,
@@ -21,18 +22,20 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY, istTime, tel } from "@nbss/shared/company";
+import { shiftTypeLabel } from "@nbss/shared/shifts";
 import { checkFence, formatDistance } from "@nbss/shared/geo";
 
 import { Button } from "@/components/button";
 import { HoldButton } from "@/components/hold-button";
 import { InfoButton } from "@/components/info";
-import { ATTRIBUTION, LiveMap, type MapSite } from "@/components/live-map";
+import { LiveMap, type MapSite } from "@/components/live-map";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel } from "@/components/panel";
 import { Text } from "@/components/text";
@@ -44,7 +47,9 @@ import {
   checkArrival,
   directionsUrl,
   eta,
+  handoverNotes,
   myPost,
+  myTrail,
   openPunch,
   punchIn,
   punchOut,
@@ -61,6 +66,7 @@ import {
   requestTracking,
   type PermissionState,
 } from "@/lib/location";
+import { feedLocations } from "@/lib/location-task";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO, IS_WEB, runtimeLimitation } from "@/lib/runtime";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
@@ -106,7 +112,12 @@ export function Duty() {
     // Your post first, then everywhere else — the roster is the default, not a wall.
     const seen = new Set(rostered.map((s) => s.id));
     const sites = [...rostered, ...all.filter((s) => !seen.has(s.id))];
-    return { punch, permission, tracking, post, sites };
+    const noteSite = punch?.site_id ?? post?.siteId ?? null;
+    const [notes, trail] = await Promise.all([
+      noteSite ? handoverNotes(noteSite) : Promise.resolve([]),
+      punch ? myTrail(punch.id) : Promise.resolve([]),
+    ]);
+    return { punch, permission, tracking, post, sites, notes, trail };
   }, []);
 
   const { data, refreshing, reload } = useLoader(load);
@@ -118,6 +129,28 @@ export function Duty() {
   const permission = askedPermission ?? data?.permission ?? null;
   const fix = live.fix;
   const onDuty = Boolean(punch);
+  const [handoverOpen, setHandoverOpen] = useState(false);
+  const [handover, setHandover] = useState("");
+
+  /**
+   * While on duty and this screen is open, its own fixes go into the same outbox
+   * as the background task. In Expo Go that is the only thing sending at all; in a
+   * build it fills in while the background stream warms up. The policy in the
+   * outbox drops anything too close to the last point, so nothing is sent twice.
+   */
+  const fedAt = useRef(0);
+  useEffect(() => {
+    if (!onDuty || !fix || IS_WEB || fix.at === fedAt.current) return;
+    fedAt.current = fix.at;
+    void feedLocations([{ lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracyM, at: fix.at }]);
+  }, [onDuty, fix]);
+
+  // The blue line of where they have been, refreshed every minute on duty.
+  useEffect(() => {
+    if (!onDuty) return;
+    const t = setInterval(() => void reload(), 60_000);
+    return () => clearInterval(t);
+  }, [onDuty, reload]);
 
   /* ─────────────────────────── which site the map and the sheet are about */
   const byId = (id: string | null | undefined) => (id ? sites.find((s) => s.id === id) : undefined);
@@ -211,9 +244,11 @@ export function Duty() {
   };
 
   const doPunchOut = async () => {
+    setHandoverOpen(false);
     setBusy("out");
     setMessage(null);
-    const result = await punchOut();
+    const result = await punchOut(handover);
+    if (result.ok) setHandover("");
     setBusy(null);
     setMessage(result.ok ? { tone: "ok", text: result.message } : { tone: "bad", text: result.error });
     await reload();
@@ -249,7 +284,9 @@ export function Duty() {
   const eyebrow = {
     duty: `On duty · since ${since ? istTime(since) : "-"} IST`,
     picked: "Checking in at",
-    post: post ? `Your post · ${istTime(post.startsAt)} – ${istTime(post.endsAt)}` : "Your post",
+    post: post
+      ? `${post.replacing ? `Replacing ${post.replacing}` : "Your duty"} · ${shiftTypeLabel(post.shiftType) ? `${shiftTypeLabel(post.shiftType)} · ` : ""}${istTime(post.startsAt)} – ${istTime(post.endsAt)}`
+      : "Your duty",
     here: "You are at",
     nearest: "Nearest site",
   }[targetKind];
@@ -262,6 +299,7 @@ export function Duty() {
           me={fix}
           site={mapSite}
           inside={inside}
+          trail={onDuty ? (data?.trail ?? null) : null}
           // Re-framed on the recenter button, and when the guard has moved a few
           // hundred metres — the blue dot never walks off the edge on its own.
           frameKey={`${frameKey}:${fix ? `${Math.round(fix.lat * 300)},${Math.round(fix.lng * 300)}` : "-"}`}
@@ -282,9 +320,6 @@ export function Duty() {
         />
       </View>
 
-      <Text variant="micro" tone="muted" style={[styles.credit, { bottom: sheetH + space[1] }]}>
-        {ATTRIBUTION}
-      </Text>
 
       {/* ──────────────────────────────────────────────────────── the sheet */}
       <MapSheet
@@ -332,7 +367,7 @@ export function Duty() {
                       variant="outline"
                       fullWidth
                       loading={busy === "out"}
-                      onPress={() => void doPunchOut()}
+                      onPress={() => setHandoverOpen(true)}
                     />
                   </View>
                   <View style={styles.flex}>
@@ -352,6 +387,10 @@ export function Duty() {
                     loading={busy === target.id}
                     onPress={() => void doCheckIn(target)}
                   />
+                  {/* Help is not only for the shift: on the way to the gate counts too. */}
+                  <View style={styles.sosOff}>
+                    <HoldButton label="Emergency? Hold 3s for help" onComplete={() => void doRaiseSos()} />
+                  </View>
                 </View>
               )
             )}
@@ -419,6 +458,17 @@ export function Duty() {
               <Figure value={tracking ? "Sharing" : "Off"} label="location" />
             )}
           </View>
+        )}
+
+        {(data?.notes ?? []).length > 0 && (
+          <Panel tone="amber" title="From the last shift" icon={NotebookPen}>
+            {(data?.notes ?? []).map((n) => (
+              <Text key={n.id} variant="body">
+                {n.body}
+                <Text variant="caption" tone="muted">{`  · ${istTime(new Date(n.created_at))}`}</Text>
+              </Text>
+            ))}
+          </Panel>
         )}
 
         {IS_EXPO_GO && (
@@ -522,6 +572,37 @@ export function Duty() {
           </Text>
         )}
       </MapSheet>
+
+      {/* ─────────────────────── check-out: anything for the next guard? */}
+      <Modal visible={handoverOpen} transparent animationType="fade" onRequestClose={() => setHandoverOpen(false)}>
+        <Pressable style={styles.noteScrim} onPress={() => setHandoverOpen(false)}>
+          <Pressable style={styles.dialog} onPress={() => undefined}>
+            <Text variant="title" weight="semibold">
+              Check out
+            </Text>
+            <Text variant="body" tone="muted">
+              Anything the next guard should know? It shows on their phone when they check in. You can leave it empty.
+            </Text>
+            <TextInput
+              value={handover}
+              onChangeText={setHandover}
+              placeholder="e.g. Gate 2 lock is broken, use the chain"
+              placeholderTextColor={color.mutedForeground}
+              multiline
+              maxLength={2000}
+              style={styles.noteInput}
+            />
+            <View style={styles.row2}>
+              <View style={styles.flex}>
+                <Button label="Cancel" variant="outline" fullWidth onPress={() => setHandoverOpen(false)} />
+              </View>
+              <View style={styles.flex}>
+                <Button label="Check out" icon={Clock3} fullWidth onPress={() => void doPunchOut()} />
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ─────────────────────── "not here yet": what to do instead of a refusal */}
       <ArrivalSheet
@@ -721,6 +802,19 @@ function ArrivalSheet({
 }
 
 const styles = StyleSheet.create({
+  sosOff: { marginTop: space[3] },
+  noteScrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: space[5] },
+  dialog: { backgroundColor: color.card, borderRadius: radius["2xl"], padding: space[5], gap: space[3] },
+  noteInput: {
+    minHeight: 96,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: color.border,
+    padding: space[3],
+    textAlignVertical: "top",
+    color: color.foreground,
+    fontSize: 16,
+  },
   root: { flex: 1, backgroundColor: color.appBg },
   center: { alignItems: "center", justifyContent: "center" },
   centerText: { textAlign: "center" },

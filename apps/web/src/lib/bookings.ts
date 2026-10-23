@@ -1,3 +1,4 @@
+import { SHIFT_LABEL, type ShiftType } from "@nbss/shared/shifts";
 import { services } from "@/content/services";
 
 /**
@@ -40,6 +41,24 @@ export const SHIFT_PATTERNS = [
   { value: "night", label: "Night shift" },
   { value: "custom", label: "Something else" },
 ] as const;
+
+/** "Night, 24 Hours · 10 days" — what a booking asks for, from the new fields or the old pattern. */
+export function bookingWhen(r: {
+  shift_types?: string[] | null;
+  shift_pattern?: string | null;
+  days_required?: number | null;
+  duration_months?: number | null;
+}): string {
+  const shifts = r.shift_types?.length
+    ? r.shift_types.map((t) => SHIFT_LABEL[t as ShiftType] ?? t).join(", ")
+    : SHIFT_PATTERNS.find((p) => p.value === r.shift_pattern)?.label;
+  const length = r.days_required
+    ? `${r.days_required} ${r.days_required === 1 ? "day" : "days"}`
+    : r.duration_months
+      ? `${r.duration_months} months`
+      : null;
+  return [shifts, length].filter(Boolean).join(" · ");
+}
 
 export const SERVICE_OPTIONS = services.map((s) => ({ value: s.slug, label: s.name }));
 

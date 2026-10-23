@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
-import { BOOKING_STATUS_LABEL, SHIFT_PATTERNS, serviceName, type BookingStatus } from "@/lib/bookings";
+import { BOOKING_STATUS_LABEL, bookingWhen, serviceName, type BookingStatus } from "@/lib/bookings";
 import { cn } from "@/lib/utils";
 
 export type BookingInboxRow = {
@@ -32,6 +32,8 @@ export type BookingInboxRow = {
   shift_pattern: string | null;
   start_date: string | null;
   duration_months: number | null;
+  days_required: number | null;
+  shift_types: string[] | null;
   notes: string | null;
   status: BookingStatus;
   quoted_amount_paise: number | null;
@@ -251,11 +253,7 @@ export function BookingsWorkspace({
                   <Fact
                     icon={CalendarDays}
                     label="When"
-                    value={[
-                      SHIFT_PATTERNS.find((s) => s.value === open.shift_pattern)?.label,
-                      open.start_date ? `from ${when(open.start_date)}` : null,
-                      open.duration_months ? `${open.duration_months} months` : null,
-                    ]
+                    value={[bookingWhen(open), open.start_date ? `from ${when(open.start_date)}` : null]
                       .filter(Boolean)
                       .join(" · ")}
                   />

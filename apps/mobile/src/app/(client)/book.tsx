@@ -2,6 +2,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { isValidPhone } from "@nbss/shared/identity";
+import { SHIFT_TYPES, type ShiftType } from "@nbss/shared/shifts";
 
 import { Button } from "@/components/button";
 import { Panel } from "@/components/panel";
@@ -35,18 +36,12 @@ const SERVICES = [
   { slug: "housekeeping", label: "Housekeeping & facility" },
 ];
 
-const PATTERNS = [
-  { value: "24x7", label: "Round the clock" },
-  { value: "day", label: "Day only" },
-  { value: "night", label: "Night only" },
-  { value: "custom", label: "Something else" },
-];
-
 export default function BookRoute() {
   const { profile } = useAuth();
 
   const [service, setService] = useState<string | null>(null);
-  const [pattern, setPattern] = useState<string | null>(null);
+  const [shifts, setShifts] = useState<ShiftType[]>([]);
+  const [days, setDays] = useState("");
   const [contact, setContact] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [district, setDistrict] = useState("");
@@ -69,6 +64,11 @@ export default function BookRoute() {
     if (count !== null && (!Number.isInteger(count) || count < 1 || count > 2000)) {
       return setError("How many guards? Enter a whole number.");
     }
+    if (shifts.length === 0) return setError("Pick the shifts you need: Morning, Evening, Night or 24 Hours.");
+    const dayCount = days.trim() ? Number(days) : null;
+    if (dayCount !== null && (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > 3650)) {
+      return setError("For how many days? Enter a whole number.");
+    }
 
     setBusy(true);
     const { data, error: rpcError } = await supabase.rpc("submit_service_request", {
@@ -78,7 +78,8 @@ export default function BookRoute() {
       p_district: district.trim() || undefined,
       p_address: address.trim() || undefined,
       p_guards_required: count ?? undefined,
-      p_shift_pattern: pattern ?? undefined,
+      p_shift_types: shifts,
+      p_days_required: dayCount ?? undefined,
       p_notes: notes.trim() || undefined,
       p_source: "app",
     });
@@ -111,6 +112,8 @@ export default function BookRoute() {
             setReference(null);
             setService(null);
             setGuards("");
+            setShifts([]);
+            setDays("");
             setNotes("");
           }}
         />
@@ -151,16 +154,26 @@ export default function BookRoute() {
             keyboardType="number-pad"
             hint="A rough number is fine."
           />
+        </Panel>
+
+        <Panel title="Which shifts, and for how long" subtitle="Pick one or more.">
           <View style={styles.chips}>
-            {PATTERNS.map((option) => (
+            {SHIFT_TYPES.map((t) => (
               <Chip
-                key={option.value}
-                label={option.label}
-                selected={pattern === option.value}
-                onPress={() => setPattern(option.value)}
+                key={t.code}
+                label={t.code === "full_day" ? "24 Hours" : `${t.label} ${clock(t.starts)}–${clock(t.ends)}`}
+                selected={shifts.includes(t.code)}
+                onPress={() => setShifts((cur) => (cur.includes(t.code) ? cur.filter((x) => x !== t.code) : [...cur, t.code]))}
               />
             ))}
           </View>
+          <Field
+            label="Number of days"
+            placeholder="e.g. 3 for an event, 365 for a year"
+            value={days}
+            onChangeText={setDays}
+            keyboardType="number-pad"
+          />
         </Panel>
 
         <Panel title="How we reach you">
@@ -181,6 +194,12 @@ export default function BookRoute() {
       </Screen>
     </KeyboardAvoidingView>
   );
+}
+
+/** "06:00" → "6 am". */
+function clock(hhmm: string): string {
+  const h = Number(hhmm.slice(0, 2));
+  return `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "am" : "pm"}`;
 }
 
 /** A selectable pill. Bigger than it looks necessary, because it is tapped with a thumb. */

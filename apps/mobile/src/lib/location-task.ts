@@ -1,11 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Battery from "expo-battery";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 
 import { distanceMetres } from "@nbss/shared/geo";
 import { shouldSendPing, type Fix, type TrackingMode } from "@nbss/shared/location";
 
+import { batteryState, cachedDeviceId } from "./device";
 import { supabase } from "./supabase";
 
 /**
@@ -20,8 +20,8 @@ import { supabase } from "./supabase";
  *
  * ── Why the OS stream is denser than the write rate
  *
- * The adaptive policy in @nbss/shared/location says roughly "write on 50 m of
- * movement, or every two minutes". The obvious implementation is to ask the OS for
+ * The adaptive policy in @nbss/shared/location says roughly "write on 20 m of
+ * movement, or every minute". The obvious implementation is to ask the OS for
  * updates at exactly that rate. That does not work on Android, where
  * `timeInterval` has historically been ignored in favour of `distanceInterval`
  * alone — a guard standing still at a gate then produces no callbacks, no
@@ -63,24 +63,135 @@ async function writeMode(mode: TrackingMode): Promise<void> {
   await AsyncStorage.setItem(MODE_KEY, mode).catch(() => undefined);
 }
 
+/**
+ * Forgets the cadence and the baseline. The outbox is kept on purpose: points
+ * walked before a check-out still belong to that shift and are sent first.
+ */
 export async function clearTrackingState(): Promise<void> {
   await AsyncStorage.multiRemove([LAST_FIX_KEY, MODE_KEY]).catch(() => undefined);
 }
 
 /**
- * Battery level, read per ping rather than watched.
- *
- * A subscription would mean holding state across a task that is torn down between
- * invocations, and the value is only there to tell "the guard stopped moving" apart
- * from "the phone died" — a reading that is a minute old answers that perfectly.
+ * The outbox: positions accepted by the policy but not yet confirmed by the
+ * server. A guard walking through a dead zone keeps adding to it; the next
+ * successful send carries all of it, with each point's own time, so the route
+ * history shows the real path rather than a straight line across the gap.
+ * Capped, oldest first out, so a phone offline all night cannot grow it forever.
  */
-async function batteryPercent(): Promise<number | null> {
+const QUEUE_KEY = "nbss.positionQueue";
+const QUEUE_MAX = 1500;
+const BATCH_MAX = 200;
+
+type QueuedPoint = {
+  lat: number;
+  lng: number;
+  accuracy_m: number;
+  heading?: number;
+  speed_mps?: number;
+  battery?: number;
+  charging?: boolean;
+  at: number;
+};
+
+async function readQueue(): Promise<QueuedPoint[]> {
   try {
-    const level = await Battery.getBatteryLevelAsync();
-    return level < 0 ? null : Math.round(level * 100);
+    const raw = await AsyncStorage.getItem(QUEUE_KEY);
+    const q = raw ? (JSON.parse(raw) as QueuedPoint[]) : [];
+    return Array.isArray(q) ? q : [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+async function writeQueue(q: QueuedPoint[]): Promise<void> {
+  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-QUEUE_MAX))).catch(() => undefined);
+}
+
+/** How many points are waiting for a signal — shown on the duty screen. */
+export async function queuedCount(): Promise<number> {
+  return (await readQueue()).length;
+}
+
+let flushing: Promise<void> | null = null;
+
+/**
+ * Feeds positions in — from the background task, or from the screen while it is
+ * open (the only source in Expo Go, which has no background location). Both go
+ * through the same policy and the same outbox, so they never double-count.
+ */
+export async function feedLocations(locations: { lat: number; lng: number; accuracyM: number; heading?: number | null; speed?: number | null; at: number }[]): Promise<void> {
+  if (locations.length === 0) return;
+  const [mode, battery] = await Promise.all([readMode(), batteryState()]);
+  let previous = await readLastFix();
+  const accepted: QueuedPoint[] = [];
+
+  for (const l of [...locations].sort((a, b) => a.at - b.at)) {
+    const fix: Fix = { lat: l.lat, lng: l.lng, accuracyM: l.accuracyM, at: l.at };
+    if (previous && fix.at <= previous.at) continue;
+    const decision = shouldSendPing(fix, previous, mode, fix.at, distanceMetres);
+    if (!decision.send) continue;
+    accepted.push({
+      lat: fix.lat,
+      lng: fix.lng,
+      accuracy_m: Math.round(fix.accuracyM * 10) / 10,
+      heading: l.heading != null && l.heading >= 0 ? l.heading : undefined,
+      speed_mps: l.speed != null && l.speed >= 0 ? l.speed : undefined,
+      battery: battery.level ?? undefined,
+      charging: battery.charging ?? undefined,
+      at: fix.at,
+    });
+    previous = fix;
+  }
+
+  if (accepted.length > 0) {
+    await writeLastFix(previous!);
+    await writeQueue([...(await readQueue()), ...accepted]);
+  }
+  await flush();
+}
+
+/** Sends what is waiting. One at a time: a second caller waits for the first. */
+export async function flush(): Promise<void> {
+  if (flushing) return flushing;
+  flushing = (async () => {
+    try {
+      for (let round = 0; round < 10; round++) {
+        const queue = await readQueue();
+        if (queue.length === 0) return;
+        const batch = queue.slice(0, BATCH_MAX);
+        const { data, error } = await supabase.rpc("record_positions", {
+          p_points: batch,
+          p_device_id: (await cachedDeviceId()) ?? undefined,
+        });
+        if (error) {
+          // Kept for the next try: no signal, or the token is mid-refresh.
+          console.warn("[location] record_positions failed, kept", queue.length, error.message);
+          return;
+        }
+        // Only what was sent is removed: points added while the request was out stay.
+        const latest = await readQueue();
+        await writeQueue(latest.slice(batch.length));
+
+        const payload = (data ?? {}) as { tracked?: boolean; mode?: TrackingMode };
+        if (payload.tracked === false) {
+          // Checked out (from another phone, or by a supervisor): stop, and drop
+          // anything queued — the server will not take positions for a closed shift.
+          await writeQueue([]);
+          await stopTracking();
+          return;
+        }
+        const mode = await readMode();
+        if (payload.mode && payload.mode !== mode) {
+          await writeMode(payload.mode);
+          await restartTracking(payload.mode);
+        }
+        if (latest.length <= batch.length) return;
+      }
+    } finally {
+      flushing = null;
+    }
+  })();
+  return flushing;
 }
 
 type LocationTaskData = { locations?: Location.LocationObject[] };
@@ -93,76 +204,18 @@ TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async ({ data, error }) 
     return;
   }
 
-  const locations = data?.locations ?? [];
-  if (locations.length === 0) return;
-
-  // The newest only. A batch arrives when the OS has been holding updates while the
-  // device had no connectivity, and replaying a queue of stale positions would
-  // write a trail that says the guard teleported.
-  const newest = locations[locations.length - 1];
-  if (!newest) return;
-
-  const fix: Fix = {
-    lat: newest.coords.latitude,
-    lng: newest.coords.longitude,
-    accuracyM: newest.coords.accuracy ?? Number.POSITIVE_INFINITY,
-    at: Date.now(),
-  };
-
-  const [previous, mode] = await Promise.all([readLastFix(), readMode()]);
-
-  const decision = shouldSendPing(fix, previous, mode, Date.now(), distanceMetres);
-  if (!decision.send) return;
-
-  const battery = await batteryPercent();
-
-  const { data: result, error: rpcError } = await supabase.rpc("record_position", {
-    p_lat: fix.lat,
-    p_lng: fix.lng,
-    p_accuracy_m: fix.accuracyM,
-    p_heading: newest.coords.heading ?? undefined,
-    p_speed_mps: newest.coords.speed ?? undefined,
-    p_battery: battery ?? undefined,
-    p_device_reported_at: new Date(newest.timestamp).toISOString(),
-    p_ping_reason: decision.reason,
-  });
-
-  if (rpcError) {
-    // Deliberately not recorded as sent. The next callback will try again, and the
-    // distance rule still measures from the last position the server actually has —
-    // so a spell without signal produces a gap rather than a wrong trail.
-    console.warn("[location] record_position failed", rpcError.message);
-    return;
-  }
-
-  const payload = (result ?? {}) as {
-    tracked?: boolean;
-    stored?: boolean;
-    reason?: string;
-    mode?: TrackingMode;
-  };
-
-  // The server refused to track: the guard has checked out, or the account is no
-  // longer a guard. Stopping here rather than waiting for the app to notice is what
-  // keeps the promise that tracking follows the shift — the phone stops reporting
-  // even if nobody opens the app again.
-  if (payload.tracked === false) {
-    await stopTracking();
-    return;
-  }
-
-  if (payload.stored) await writeLastFix(fix);
-
-  /**
-   * An SOS was raised at this site while we were away, and the server said so in the
-   * reply to a ping we were making anyway — no push needed, no extra round trip.
-   * The OS stream is restarted at the denser settings, because the interval is fixed
-   * when updates start and cannot be changed in place.
-   */
-  if (payload.mode && payload.mode !== mode) {
-    await writeMode(payload.mode);
-    await restartTracking(payload.mode);
-  }
+  // Every location, not only the newest: when the OS has been holding updates
+  // (screen off, no signal) each one is a real place the guard was, at a real time,
+  // and the route history is only as good as what is kept here.
+  const locations = (data?.locations ?? []).map((l) => ({
+    lat: l.coords.latitude,
+    lng: l.coords.longitude,
+    accuracyM: l.coords.accuracy ?? Number.POSITIVE_INFINITY,
+    heading: l.coords.heading,
+    speed: l.coords.speed,
+    at: l.timestamp,
+  }));
+  await feedLocations(locations);
 });
 
 /** Imported by ./location, which owns starting and stopping. Kept here to avoid a cycle. */

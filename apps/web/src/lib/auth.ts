@@ -97,8 +97,8 @@ export const currentProfile = cache(async (): Promise<Profile | null> => {
 /**
  * The real account, plus whoever the console is currently being viewed as.
  *
- * The impersonation cookie is only honoured when the *real* account is an
- * admin, checked here on every request rather than trusted from the cookie —
+ * The impersonation cookie is only honoured when the *real* account is a
+ * developer, checked here on every request rather than trusted from the cookie —
  * so forging it gains nothing.
  */
 export const currentSession = cache(async (): Promise<Session | null> => {
@@ -107,7 +107,7 @@ export const currentSession = cache(async (): Promise<Session | null> => {
 
   const viewAs = await impersonatedId();
 
-  if (!viewAs || !isAdmin(realProfile.role) || viewAs === realProfile.id) {
+  if (!viewAs || realProfile.role !== "developer" || viewAs === realProfile.id) {
     return { profile: realProfile, realProfile, impersonating: false };
   }
 

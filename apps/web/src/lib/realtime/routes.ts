@@ -13,6 +13,12 @@ const ROUTES: [prefix: string, tables: RouteRealtime][] = [
   ["/console/profile", "off"],
   ["/console/sites/", ["attendance", "shifts", "site_postings", "sos_alerts", "sites"]], // one site's workspace
   ["/console/attendance", ["attendance", "shifts"]],
+  ["/console/live", ["attendance", "sos_alerts"]],
+  ["/console/routes", ["attendance"]],
+  ["/console/replacements", ["replacement_requests", "shifts"]],
+  ["/console/handover", ["handover_notes"]],
+  ["/console/devices", ["attendance"]],
+  ["/console/reports", ["attendance"]],
   ["/console/sites", ["sites", "attendance", "sos_alerts"]],
   ["/console/sos", ["sos_alerts", "attendance"]],
   ["/console/roster", ["shifts", "site_postings", "attendance", "sites"]],
@@ -49,4 +55,6 @@ export const CONSOLE_REALTIME_TABLES = [
   "service_requests",
   "sos_alerts",
   "site_postings",
+  "replacement_requests",
+  "handover_notes",
 ] as const;

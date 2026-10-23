@@ -44,12 +44,16 @@ import {
   rowProps,
 } from "@/components/console/preview-kit";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Panel } from "@/components/ui/panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SHIFT_TYPES, shiftTypeFor, shiftTypeLabel } from "@nbss/shared/shifts";
+
 import { WEEKDAYS, clock, datesLabel, dayHeading, daysLabel, istDay, windowLabel } from "@/lib/roster";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
@@ -79,6 +83,9 @@ export type RosterSite = {
 };
 
 export type RosterShift = {
+  shiftType: string | null;
+  /** The guard this shift's guard is covering, when it is a replacement. */
+  replacing: string | null;
   id: string;
   siteId: string;
   guardId: string;
@@ -627,7 +634,9 @@ export function RosterWorkspace({
                           {s.guardName} {s.cover && <span className="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700">Cover</span>}
                         </span>
                         <span className="block text-xs text-muted-foreground">
+                          {shiftTypeLabel(s.shiftType) ? `${shiftTypeLabel(s.shiftType)} · ` : ""}
                           {time(s.startsAt)} – {time(s.endsAt)}
+                          {s.replacing ? ` · replacing ${s.replacing}` : ""}
                         </span>
                       </span>
                       <PhoneLink phone={s.guardPhone} className="text-xs" />
@@ -635,6 +644,11 @@ export function RosterWorkspace({
                         <StatusPill label="Not arrived" tone="rose" />
                       ) : (
                         <StatusPill status={s.status === "in_progress" ? "on_duty" : s.status} />
+                      )}
+                      {canEdit && (s.upcoming || s.notArrived || s.status === "in_progress") && (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/console/replacements?guard=${s.guardId}&shift=${s.id}`}>Replace</Link>
+                        </Button>
                       )}
                       {canEdit && s.upcoming && (
                         <Button
@@ -716,23 +730,22 @@ export function RosterWorkspace({
                   placeholder="Choose a site…"
                   options={sites.map((s) => ({ value: s.id, label: s.name }))}
                 />
+                <ShiftTypePicker starts={posting.starts} ends={posting.ends} onPick={(a, b) => setPosting({ ...posting, starts: a, ends: b })} />
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="posting-starts">From</Label>
-                  <Input
+                  <TimePicker
                     id="posting-starts"
-                    type="time"
                     value={posting.starts}
-                    onChange={(e) => setPosting({ ...posting, starts: e.target.value })}
+                    onChange={(v) => setPosting({ ...posting, starts: v })}
                     className="h-10"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="posting-ends">To</Label>
-                  <Input
+                  <TimePicker
                     id="posting-ends"
-                    type="time"
                     value={posting.ends}
-                    onChange={(e) => setPosting({ ...posting, ends: e.target.value })}
+                    onChange={(v) => setPosting({ ...posting, ends: v })}
                     className="h-10"
                   />
                 </div>
@@ -839,18 +852,19 @@ export function RosterWorkspace({
                   placeholder="Choose a site…"
                   options={sites.map((s) => ({ value: s.id, label: s.name }))}
                 />
+                <ShiftTypePicker starts={cover.starts} ends={cover.ends} onPick={(a, b) => setCover({ ...cover, starts: a, ends: b })} />
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="cover-date">Date</Label>
-                  <Input id="cover-date" type="date" value={cover.date} onChange={(e) => setCover({ ...cover, date: e.target.value })} className="h-10" />
+                  <DatePicker id="cover-date" value={cover.date} onChange={(v) => setCover({ ...cover, date: v })} className="h-10" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="cover-starts">From</Label>
-                    <Input id="cover-starts" type="time" value={cover.starts} onChange={(e) => setCover({ ...cover, starts: e.target.value })} className="h-10" />
+                    <TimePicker id="cover-starts" value={cover.starts} onChange={(v) => setCover({ ...cover, starts: v })} className="h-10" />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="cover-ends">To</Label>
-                    <Input id="cover-ends" type="time" value={cover.ends} onChange={(e) => setCover({ ...cover, ends: e.target.value })} className="h-10" />
+                    <TimePicker id="cover-ends" value={cover.ends} onChange={(v) => setCover({ ...cover, ends: v })} className="h-10" />
                   </div>
                 </div>
               </div>
@@ -875,6 +889,44 @@ export function RosterWorkspace({
   );
 }
 
+
+/** Morning, Evening, Night or 24 Hours: one tap fills both times. "Custom" is any other window. */
+function ShiftTypePicker({ starts, ends, onPick }: { starts: string; ends: string; onPick: (starts: string, ends: string) => void }) {
+  const current = shiftTypeFor(starts, ends);
+  return (
+    <div className="flex flex-col gap-2 sm:col-span-2">
+      <Label>Shift</Label>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+        {SHIFT_TYPES.map((t) => (
+          <button
+            key={t.code}
+            type="button"
+            aria-pressed={current === t.code}
+            onClick={() => onPick(t.starts, t.ends)}
+            className={cn(
+              "flex flex-col items-start rounded-xl border px-3 py-2 text-left transition",
+              current === t.code ? "border-primary/50 bg-accent text-accent-foreground" : "border-app-line-soft hover:bg-muted",
+            )}
+          >
+            <span className="text-sm font-semibold">{t.label}</span>
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              {clock(`${t.starts}:00`)}–{clock(`${t.ends}:00`)}
+            </span>
+          </button>
+        ))}
+        <span
+          className={cn(
+            "flex flex-col items-start rounded-xl border px-3 py-2",
+            current === null ? "border-primary/50 bg-accent text-accent-foreground" : "border-dashed border-app-line-soft text-muted-foreground",
+          )}
+        >
+          <span className="text-sm font-semibold">Custom</span>
+          <span className="text-[11px]">Set the times below</span>
+        </span>
+      </div>
+    </div>
+  );
+}
 
 /** Two or three choices side by side, one on. */
 function Segmented<T extends string>({

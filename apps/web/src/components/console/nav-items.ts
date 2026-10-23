@@ -1,16 +1,22 @@
 import { roleAllowed } from "@nbss/shared/identity";
 import {
+  ArrowLeftRight,
   BookOpen,
   Building2,
   CalendarCheck,
   CalendarPlus,
   CalendarRange,
   ClipboardList,
+  FileSpreadsheet,
   Inbox,
   LayoutDashboard,
   MapPinned,
+  NotebookPen,
+  Radar,
+  Route,
   ScrollText,
   Siren,
+  Smartphone,
   Sparkles,
   Timer,
   UserRound,
@@ -82,8 +88,35 @@ export const groups: NavGroup[] = [
       { href: "/console/book", label: "Book guards", icon: CalendarPlus, roles: ["client"] },
     ],
   },
+  // The four modules the desk works in, named as the agency names them. Each is
+  // one job: where the guards are, who is on which shift, the people and phones
+  // doing the guarding, and the hours that payroll and billing come from.
   {
-    label: "Operations",
+    label: "Location tracking",
+    items: [
+      { href: "/console/live", label: "Live tracking", icon: Radar, roles: ["admin", "supervisor"] },
+      { href: "/console/routes", label: "Route history", icon: Route, roles: ["admin", "supervisor"] },
+      { href: "/console/sites", label: "Sites & geofences", icon: MapPinned, roles: ["admin", "supervisor"] },
+    ],
+  },
+  {
+    label: "Shift management",
+    items: [
+      { href: "/console/roster", label: "Roster", icon: CalendarRange, roles: ["admin", "supervisor"] },
+      { href: "/console/replacements", label: "Replacements", icon: ArrowLeftRight, roles: ["admin", "supervisor"] },
+      { href: "/console/handover", label: "Handover notes", icon: NotebookPen, roles: ["admin", "supervisor"] },
+    ],
+  },
+  {
+    label: "Security management",
+    items: [
+      { href: "/console/guards", label: "Guards", icon: UserRound, roles: ["admin", "supervisor"] },
+      { href: "/console/devices", label: "Devices", icon: Smartphone, roles: ["admin", "supervisor"] },
+      { href: "/console/sos", label: "SOS alerts", icon: Siren, roles: ["admin", "supervisor"] },
+    ],
+  },
+  {
+    label: "Attendance",
     items: [
       {
         href: "/console/attendance",
@@ -91,30 +124,7 @@ export const groups: NavGroup[] = [
         icon: CalendarCheck,
         roles: ["admin", "supervisor", "guard"],
       },
-      {
-        href: "/console/sites",
-        label: "Sites & geofences",
-        icon: MapPinned,
-        roles: ["admin", "supervisor"],
-      },
-      {
-        href: "/console/roster",
-        label: "Roster",
-        icon: CalendarRange,
-        roles: ["admin", "supervisor"],
-      },
-      {
-        href: "/console/guards",
-        label: "Guards",
-        icon: UserRound,
-        roles: ["admin", "supervisor"],
-      },
-      {
-        href: "/console/sos",
-        label: "SOS alerts",
-        icon: Siren,
-        roles: ["admin", "supervisor"],
-      },
+      { href: "/console/reports", label: "Reports", icon: FileSpreadsheet, roles: ["admin", "supervisor"] },
     ],
   },
   {

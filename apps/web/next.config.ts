@@ -39,17 +39,28 @@ const supabaseConnect = supabaseOrigin
   ? ` ${supabaseOrigin} ${supabaseOrigin.replace(/^https/, "wss")}`
   : "";
 
+/**
+ * Google Maps, the one third party the console loads. The map is drawn by
+ * Google's own script, which fetches tiles, fonts and its own sub-scripts from
+ * these hosts — the allowlist Google publishes for a CSP that does not use
+ * nonces. 'unsafe-eval' is part of it: the Maps script compiles some of its
+ * workers at run time. Everything else on the page stays same-origin.
+ */
+const GOOGLE_MAPS =
+  "https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com";
+
 const csp = [
   "default-src 'self'",
-  "img-src 'self' data: blob:",
-  "style-src 'self' 'unsafe-inline'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "font-src 'self'",
-  `connect-src 'self'${supabaseConnect}` + (isDev ? " ws: wss:" : ""),
+  `img-src 'self' data: blob: ${GOOGLE_MAPS}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${GOOGLE_MAPS}`,
+  "font-src 'self' https://fonts.gstatic.com",
+  `connect-src 'self'${supabaseConnect} ${GOOGLE_MAPS} data: blob:` + (isDev ? " ws: wss:" : ""),
+  "frame-src https://*.google.com",
   // The service worker that makes this installable. Same-origin only — it would fall back
   // to script-src anyway, but a worker is the one thing that keeps running after the page
   // is closed, so its policy is worth stating rather than inheriting.
-  "worker-src 'self'",
+  "worker-src 'self' blob:",
   "manifest-src 'self'",
   "form-action 'self'",
   "base-uri 'self'",

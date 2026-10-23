@@ -19,6 +19,10 @@ const SEMANTIC: Record<string, { label: string; tone: Tone }> = {
   // admissions / leave / approvals
   accepted: { label: "Accepted", tone: "emerald" },
   approved: { label: "Approved", tone: "emerald" },
+  blocked: { label: "Blocked", tone: "rose" },
+  open: { label: "Needs cover", tone: "amber" },
+  assigned: { label: "Covered", tone: "emerald" },
+  replaced: { label: "Replaced", tone: "violet" },
   forwarded: { label: "Forwarded", tone: "sky" },
   rejected: { label: "Rejected", tone: "rose" },
   // attendance

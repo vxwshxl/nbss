@@ -1,5 +1,7 @@
 /**
- * Push delivery: drains `push_outbox` to Expo's push service.
+ * Push and email delivery: drains `push_outbox` to Expo's push service and
+ * `email_outbox` to ZeptoMail (0022_field_ops.sql; templates in
+ * ./email-templates.mjs).
  *
  * Runs beside the site under PM2 (`nbss-push`, see ecosystem.config.cjs). It
  * replaced the pg_net sender from 0006, which cannot send from this database on
@@ -18,6 +20,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+
+import { render } from "./email-templates.mjs";
 
 const EXPO_URL = "https://exp.host/--/api/v2/push/send";
 const BATCH = 100; // Expo's per-request maximum
@@ -87,6 +91,61 @@ async function round() {
   return batch.length;
 }
 
+/**
+ * Mail goes through ZeptoMail's HTTP API, the same agent and token as the
+ * sign-in codes (see src/lib/mail.ts for why the SMTP password is the token).
+ * Reserved test domains are refused here, so an E2E run never sends anything.
+ */
+const MAIL_HOST = process.env.SMTP_HOST;
+const MAIL_TOKEN = process.env.SMTP_PASS;
+const MAIL_FROM = process.env.SMTP_FROM;
+const RESERVED = /@([^@]+\.)?(test|invalid|example|localhost)$|@example\.(com|org|net)$/i;
+
+async function sendMail(row) {
+  if (RESERVED.test(row.to_email)) return { ok: false, final: true, error: "reserved test domain, not sent" };
+  if (!MAIL_HOST || !MAIL_TOKEN || !MAIL_FROM) return { ok: false, error: "SMTP_HOST, SMTP_PASS and SMTP_FROM must be set" };
+  const body = render(row);
+  if (!body) return { ok: false, final: true, error: `unknown template ${row.template}` };
+  try {
+    const res = await fetch(`https://${MAIL_HOST.replace(/^smtp\./, "api.")}/v1.1/email`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Zoho-enczapikey ${MAIL_TOKEN.replace(/^Zoho-enczapikey\s+/, "")}`,
+      },
+      body: JSON.stringify({
+        from: { address: MAIL_FROM, name: "NBSS Operations" },
+        to: [{ email_address: { address: row.to_email, ...(row.to_name && { name: row.to_name }) } }],
+        subject: row.subject,
+        htmlbody: body.html,
+        textbody: body.text,
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (res.ok) return { ok: true };
+    const text = (await res.text()).slice(0, 300);
+    return { ok: false, final: res.status >= 400 && res.status < 500 && res.status !== 429, error: `ZeptoMail ${res.status}: ${text}` };
+  } catch (err) {
+    return { ok: false, error: String(err?.message ?? err) };
+  }
+}
+
+async function mailRound() {
+  const { data: batch, error } = await db.rpc("claim_email_batch", { p_limit: 20 });
+  if (error) throw new Error(`claim_email_batch: ${error.message}`);
+  if (!batch?.length) return 0;
+  for (const row of batch) {
+    const r = await sendMail(row);
+    // A refusal that will never succeed is recorded as the third attempt, so it stops.
+    if (!r.ok && r.final) await db.from("email_outbox").update({ attempts: 3 }).eq("id", row.id);
+    const { error: e } = await db.rpc("record_email_result", { p_id: row.id, p_ok: r.ok, p_error: r.error ?? null });
+    if (e) throw new Error(`record_email_result: ${e.message}`);
+    log(r.ok ? "mailed" : "mail failed", { id: row.id, template: row.template, ...(r.error && { error: r.error }) });
+  }
+  return batch.length;
+}
+
 let running = true;
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => (running = false));
 
@@ -97,6 +156,11 @@ while (running) {
     handled = await round();
   } catch (err) {
     log("error", { message: String(err?.message ?? err) });
+  }
+  try {
+    await mailRound();
+  } catch (err) {
+    log("mail error", { message: String(err?.message ?? err) });
   }
   // A full batch means more may be waiting; go again at once.
   if (handled < BATCH) await new Promise((r) => setTimeout(r, IDLE_MS));

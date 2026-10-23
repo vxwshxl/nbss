@@ -61,6 +61,8 @@ export const BATCH_INTERVAL_MS = 15_000;
 export type LivePosition = {
   guard_id: string;
   site_id: string | null;
+  /** The open punch this position belongs to — the route history key. */
+  attendance_id?: string | null;
   lat: number;
   lng: number;
   accuracy_m: number;
@@ -68,13 +70,17 @@ export type LivePosition = {
   speed_mps: number | null;
   /** Percentage, 0–100. Tells "stopped moving" apart from "the phone died". */
   battery: number | null;
+  /** Plugged in at the last report. */
+  charging?: boolean | null;
   /** The fence verdict at the moment of the ping, computed in Postgres. */
   inside_fence: boolean | null;
   /** Metres from the site centre, rounded to one decimal place by the broadcaster. */
   distance_m: number | null;
   mode: "on_duty" | "emergency";
-  /** Server time the position was recorded. ISO 8601. */
+  /** When the position was taken (the phone's clock, clamped to the shift). ISO 8601. */
   recorded_at: string;
+  /** When the server last heard from the phone, which can be later than the position. */
+  received_at?: string;
 };
 
 export type PositionBatch = {

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2 } from "lucide-react";
 
 import { useFormErrors, useFormField } from "@/components/forms/FormContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label as UiLabel } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +21,10 @@ import { cn } from "@/lib/utils";
  * biggest reason a real enquiry never arrives is a form that empties itself on
  * a validation error.
  *
- * These are deliberately native `<select>` and `<input type="radio">` rather
- * than the Radix equivalents the console uses. This is a form filled in once,
- * often on a phone, sometimes over mobile data in a district office: the
- * platform's own controls are familiar, they work before hydration, and they
- * open the OS picker instead of a custom listbox. The console can afford a
- * richer control because the same person uses it forty times a day.
+ * The dropdown is the console's searchable Select, so the site and the console
+ * share one control; Radix renders a hidden native select beside it, so the
+ * value still posts with the form and `required` still holds. Radios and the
+ * consent box stay real inputs, drawn over, so they work before hydration.
  */
 
 /** Inline error under a control. */
@@ -145,31 +144,22 @@ export function SelectField({
   const { value, error, set } = useFormField(name);
   return (
     <Field name={name} label={label} required={required} error={error} hint={hint}>
-      <select
-        id={name}
-        name={name}
-        value={value}
-        onChange={(e) => set(e.target.value)}
-        required={required}
-        aria-invalid={error ? true : undefined}
-        className={cn(
-          "h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-[color,box-shadow]",
-          "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-          "aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20",
-          value ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => {
-          const optionValue = typeof o === "string" ? o : o.value;
-          const optionLabel = typeof o === "string" ? o : o.label;
-          return (
-            <option key={optionValue} value={optionValue} className="text-foreground">
-              {optionLabel}
-            </option>
-          );
-        })}
-      </select>
+      <Select name={name} value={value} onValueChange={set} required={required}>
+        <SelectTrigger id={name} aria-invalid={error ? true : undefined} className="w-full bg-background">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent position="popper" align="start">
+          {options.map((o) => {
+            const optionValue = typeof o === "string" ? o : o.value;
+            const optionLabel = typeof o === "string" ? o : o.label;
+            return (
+              <SelectItem key={optionValue} value={optionValue}>
+                {optionLabel}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
     </Field>
   );
 }
@@ -221,14 +211,18 @@ export function ConsentBox({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-        <input
-          type="checkbox"
-          name="consent"
-          value="yes"
-          checked={value === "yes"}
-          onChange={(e) => set(e.target.checked ? "yes" : "")}
-          className="mt-0.5 size-4 shrink-0 accent-primary"
-        />
+        <span className="relative mt-0.5 grid size-[18px] shrink-0 place-items-center">
+          <input
+            type="checkbox"
+            name="consent"
+            value="yes"
+            checked={value === "yes"}
+            onChange={(e) => set(e.target.checked ? "yes" : "")}
+            aria-invalid={error ? true : undefined}
+            className="peer absolute inset-0 m-0 cursor-pointer appearance-none rounded-[5px] border-2 border-border-strong bg-background transition-colors checked:border-primary checked:bg-primary focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive"
+          />
+          <Check className="pointer-events-none relative size-3 text-primary-foreground opacity-0 peer-checked:opacity-100" strokeWidth={3.5} />
+        </span>
         <span className="leading-relaxed text-muted-foreground">
           {children} <span className="text-destructive">*</span>
         </span>

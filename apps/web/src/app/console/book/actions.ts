@@ -12,7 +12,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 import type { BookingFormState } from "./state";
 
-const SHIFTS = new Set(["24x7", "day", "night", "custom"]);
+const SHIFT_TYPES = new Set(["morning", "evening", "night", "full_day"]);
 
 /**
  * A client asks for guards.
@@ -32,10 +32,10 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
   const contactName = text("contact_name");
   const phone = text("phone");
   const district = text("district");
-  const shift = text("shift_pattern");
+  const shiftTypes = data.getAll("shift_types").map(String).filter((t) => SHIFT_TYPES.has(t));
   const guards = Number(text("guards_required") || 0);
   const start = text("start_date");
-  const months = Number(text("duration_months") || 0);
+  const days = Number(text("days_required") || 0);
 
   if (!SERVICE_OPTIONS.some((s) => s.value === service)) return { ok: false, error: "Choose which service you need." };
   if (!contactName) return { ok: false, error: "Enter a contact name." };
@@ -45,7 +45,10 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
   if (text("guards_required") && (!Number.isInteger(guards) || guards < 1 || guards > 2000)) {
     return { ok: false, error: "Guards needed should be a whole number between 1 and 2000." };
   }
-  if (shift && !SHIFTS.has(shift)) return { ok: false, error: "Choose a shift pattern." };
+  if (shiftTypes.length === 0) return { ok: false, error: "Pick at least one shift: Morning, Evening, Night or 24 Hours." };
+  if (text("days_required") && (!Number.isInteger(days) || days < 1 || days > 3650)) {
+    return { ok: false, error: "Number of days should be a whole number, 1 or more." };
+  }
   if (start && Number.isNaN(Date.parse(start))) return { ok: false, error: "That start date does not look right." };
 
   const supabase = await supabaseServer();
@@ -60,9 +63,9 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
     p_district: district,
     p_address: text("address") || undefined,
     p_guards_required: guards || undefined,
-    p_shift_pattern: shift || undefined,
+    p_shift_types: shiftTypes,
+    p_days_required: days > 0 ? days : undefined,
     p_start_date: start || undefined,
-    p_duration_months: months > 0 ? months : undefined,
     p_notes: text("notes") || undefined,
     p_source: "web",
   });

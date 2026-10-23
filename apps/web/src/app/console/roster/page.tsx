@@ -46,7 +46,7 @@ export default async function RosterPage() {
     supabase.from("profiles").select("id, full_name, employee_code, phone").eq("role", "guard").eq("active", true).order("full_name"),
     supabase
       .from("shifts")
-      .select("id, site_id, guard_id, starts_at, ends_at, status, notes, posting_id")
+      .select("id, site_id, guard_id, starts_at, ends_at, status, notes, posting_id, shift_type, replaces_shift")
       .neq("status", "cancelled")
       .gte("ends_at", from.toISOString())
       .lt("starts_at", to.toISOString())
@@ -73,6 +73,8 @@ export default async function RosterPage() {
     const started = new Date(s.starts_at).getTime() + (graceBySite.get(s.site_id) ?? 10) * 60_000 < now;
     const running = new Date(s.ends_at).getTime() > now;
     return {
+      shiftType: s.shift_type,
+      replacing: s.replaces_shift ? (s.notes?.replace(/^Replacing /, "") ?? "a guard") : null,
       id: s.id,
       siteId: s.site_id,
       guardId: s.guard_id,

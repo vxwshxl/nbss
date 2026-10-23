@@ -7,13 +7,14 @@ require.
 
 ## Typefaces
 
-Self-hosted as variable `woff2` under `public/fonts/`, taken from the `geist`
-npm package (v1.7.2). Both are licensed under the **SIL Open Font License 1.1**.
+Self-hosted as a variable `woff2` under `public/fonts/`, taken from the `geist`
+npm package (v1.7.2). Licensed under the **SIL Open Font License 1.1**.
 
 | Family | Role | Source |
 | --- | --- | --- |
-| Geist Sans | Headings and body copy | [vercel/geist-font](https://github.com/vercel/geist-font) |
-| Geist Mono | Eyebrows, data, labels | [vercel/geist-font](https://github.com/vercel/geist-font) |
+| Geist Sans | Headings, body copy, and codes and figures (tabular) | [vercel/geist-font](https://github.com/vercel/geist-font) |
+
+Geist Mono is not used: its slashed zero read as code in employee codes and phone numbers.
 
 The colour ramps, radius and elevation in `src/app/globals.css` follow Vercel's
 published [Geist design system](https://vercel.com/geist/colors). Geist is used

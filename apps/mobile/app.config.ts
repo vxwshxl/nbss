@@ -24,6 +24,8 @@ const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KE
  * localhost.
  */
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? "";
+/** Google Maps (Maps SDK for Android and iOS). Expo Go on Android carries Google's own key; builds use this one. */
+const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -134,26 +136,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-build-properties",
       {
         android: {
-          // MapLibre's native library needs 16 KB page alignment on Android 15+,
-          // and a recent NDK to build against.
           minSdkVersion: 24,
           compileSdkVersion: 36,
           targetSdkVersion: 36,
         },
         ios: {
           deploymentTarget: "16.4",
-          // MapLibre ships as a dynamic framework.
           useFrameworks: "static",
         },
       },
     ],
     "expo-secure-store",
     "expo-task-manager",
-    // Vector maps, and no API key anywhere. MapLibre renders whatever style it is
-    // given: today the console's own /api/tiles proxy as a raster source, and the
-    // same Protomaps PMTiles on R2 once those are generated — the app does not
-    // change either way, only the style URL does.
-    "@maplibre/maplibre-react-native",
+    // Google Maps. The key is written into AndroidManifest.xml and Info.plist at
+    // prebuild; the same key the console uses, restricted to this package in Google Cloud.
+    ["react-native-maps", { androidGoogleMapsApiKey: GOOGLE_MAPS_KEY, iosGoogleMapsApiKey: GOOGLE_MAPS_KEY }],
   ],
 
   experiments: {
@@ -165,6 +162,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: SUPABASE_URL,
     supabasePublishableKey: SUPABASE_PUBLISHABLE_KEY,
     webUrl: WEB_URL,
+    googleMapsKey: GOOGLE_MAPS_KEY,
     // From `eas init` (Expo account vxwshxl, project nbss-operations). Never guess
     // it: a wrong projectId makes push tokens silently belong to another project.
     eas: { projectId: "0d44980c-9bc5-4aff-b18b-28568538db6c" },

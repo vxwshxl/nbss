@@ -1,11 +1,6 @@
 import type { Ring } from "@nbss/shared/geo";
 
-import { WEB_URL } from "@/lib/config";
-
-/**
- * What both map renderers draw — MapLibre on the phone, Leaflet in the browser
- * preview — so the duty screen hands either one the same props.
- */
+/** What the maps draw — Google Maps on the phone and in the browser preview. */
 
 export type MapPoint = { lat: number; lng: number };
 
@@ -27,21 +22,12 @@ export type LiveMapProps = {
   frameKey: string;
   /** Room taken by what floats over the map, so framing uses what is left. */
   padding: { top: number; right: number; bottom: number; left: number };
+  /** The path walked since check-in, while on duty. */
+  trail?: MapPoint[] | null;
 };
 
-/**
- * The console's own tile proxy when the app knows where the console is, so the
- * phones share its R2 cache instead of each asking OpenStreetMap.
- */
-export const TILE_URL = WEB_URL
-  ? `${WEB_URL}/api/tiles/{z}/{x}/{y}`
-  : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-/**
- * Drawn by the duty screen just above its sheet: both maps' own credit sits in
- * a corner the sheet covers, and OpenStreetMap's licence asks for it visible.
- */
-export const ATTRIBUTION = "© OpenStreetMap contributors";
+/** Google draws its own credit on the map, so there is nothing extra to show. */
+export const ATTRIBUTION = "";
 
 /** A radius fence as a polygon, so both renderers draw one shape. */
 export function circleRing(center: MapPoint, radiusM: number, steps = 72): [number, number][] {

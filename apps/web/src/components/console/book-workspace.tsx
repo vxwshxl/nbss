@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { SHIFT_TYPES } from "@nbss/shared/shifts";
+
 import { submitBooking, withdrawBooking } from "@/app/console/book/actions";
 import { emptyBookingState } from "@/app/console/book/state";
 import {
@@ -30,6 +32,7 @@ import {
   rowProps,
 } from "@/components/console/preview-kit";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Panel } from "@/components/ui/panel";
@@ -37,11 +40,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusPill } from "@/components/ui/status-pill";
 import { Textarea } from "@/components/ui/textarea";
 import { districtOptions, site as company, tel } from "@/content/site";
+import { clock } from "@/lib/roster";
 import {
   BOOKING_STATUS_LABEL,
   BOOKING_STATUS_NOTE,
   SERVICE_OPTIONS,
-  SHIFT_PATTERNS,
+  bookingWhen,
   serviceName,
   withdrawable,
   type BookingStatus,
@@ -58,6 +62,8 @@ export type BookingRow = {
   shift_pattern: string | null;
   start_date: string | null;
   duration_months: number | null;
+  days_required: number | null;
+  shift_types: string[] | null;
   notes: string | null;
   status: BookingStatus;
   quote_note: string | null;
@@ -210,14 +216,32 @@ export function BookWorkspace({
             <Label htmlFor="guards_required">Guards needed</Label>
             <Input id="guards_required" name="guards_required" type="number" min={1} max={2000} placeholder="Not sure? Leave blank" className="h-10" />
           </div>
-          <Choice id="shift_pattern" label="Shift" placeholder="Choose…" options={SHIFT_PATTERNS} />
+          <fieldset className="flex flex-col gap-2 sm:col-span-2">
+            <legend className="mb-2 text-sm font-medium">Which shifts? Pick one or more</legend>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {SHIFT_TYPES.map((t) => (
+                <label
+                  key={t.code}
+                  className="flex cursor-pointer flex-col rounded-xl border border-app-line-soft px-3 py-2.5 transition has-[:checked]:border-primary/50 has-[:checked]:bg-accent"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <input type="checkbox" name="shift_types" value={t.code} className="size-4 accent-primary" />
+                    {t.label}
+                  </span>
+                  <span className="pl-6 text-xs text-muted-foreground">
+                    {t.code === "full_day" ? "Round the clock" : `${clock(`${t.starts}:00`)} – ${clock(`${t.ends}:00`)}`}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <div className="flex flex-col gap-2">
             <Label htmlFor="start_date">Start from</Label>
-            <Input id="start_date" name="start_date" type="date" min={today} className="h-10" />
+            <DatePicker id="start_date" name="start_date" min={today} placeholder="Not sure yet" className="h-10" />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="duration_months">For how long (months)</Label>
-            <Input id="duration_months" name="duration_months" type="number" min={1} max={120} placeholder="e.g. 12" className="h-10" />
+            <Label htmlFor="days_required">Number of days</Label>
+            <Input id="days_required" name="days_required" type="number" min={1} max={3650} placeholder="e.g. 3 for an event, 365 for a year" className="h-10" />
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="notes">Anything else?</Label>
@@ -336,20 +360,8 @@ export function BookWorkspace({
                 <Field icon={Building2} label="Site" value={openRow.site_type} />
                 <Field icon={MapPin} label="Where" value={[openRow.address, openRow.district].filter(Boolean).join(", ")} />
                 <Field icon={Users} label="Guards" value={openRow.guards_required ? String(openRow.guards_required) : "To be advised"} />
-                <Field
-                  icon={Clock}
-                  label="Shift"
-                  value={SHIFT_PATTERNS.find((p) => p.value === openRow.shift_pattern)?.label}
-                />
-                <Field
-                  icon={CalendarPlus}
-                  label="From"
-                  value={
-                    [openRow.start_date ? when(openRow.start_date) : null, openRow.duration_months ? `${openRow.duration_months} months` : null]
-                      .filter(Boolean)
-                      .join(" · ")
-                  }
-                />
+                <Field icon={Clock} label="Shifts and days" value={bookingWhen(openRow)} />
+                <Field icon={CalendarPlus} label="From" value={openRow.start_date ? when(openRow.start_date) : null} />
               </FieldGrid>
               {openRow.notes && (
                 <p className="rounded-xl bg-muted/60 px-3.5 py-3 text-sm whitespace-pre-wrap">{openRow.notes}</p>

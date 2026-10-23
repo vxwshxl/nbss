@@ -53,6 +53,9 @@ export type Database = {
           created_at: string;
           updated_at: string;
           off_roster: boolean;
+          device_id: string | null;
+          device_flag: string | null;
+          check_in_battery: number | null;
         };
         Insert: {
           id?: string;
@@ -85,6 +88,9 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           off_roster?: boolean;
+          device_id?: string | null;
+          device_flag?: string | null;
+          check_in_battery?: number | null;
         };
         Update: {
           id?: string;
@@ -117,6 +123,9 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           off_roster?: boolean;
+          device_id?: string | null;
+          device_flag?: string | null;
+          check_in_battery?: number | null;
         };
         Relationships: [];
       };
@@ -195,6 +204,114 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_outbox: {
+        Row: {
+          id: number;
+          to_email: string;
+          to_name: string | null;
+          template: string;
+          subject: string;
+          data: Json;
+          attempts: number;
+          claimed_at: string | null;
+          queued_at: string;
+          sent_at: string | null;
+          failed_at: string | null;
+          error: string | null;
+        };
+        Insert: {
+          id?: number;
+          to_email: string;
+          to_name?: string | null;
+          template: string;
+          subject: string;
+          data?: Json;
+          attempts?: number;
+          claimed_at?: string | null;
+          queued_at?: string;
+          sent_at?: string | null;
+          failed_at?: string | null;
+          error?: string | null;
+        };
+        Update: {
+          id?: number;
+          to_email?: string;
+          to_name?: string | null;
+          template?: string;
+          subject?: string;
+          data?: Json;
+          attempts?: number;
+          claimed_at?: string | null;
+          queued_at?: string;
+          sent_at?: string | null;
+          failed_at?: string | null;
+          error?: string | null;
+        };
+        Relationships: [];
+      };
+      guard_devices: {
+        Row: {
+          id: string;
+          profile_id: string;
+          device_id: string;
+          platform: string | null;
+          brand: string | null;
+          model: string | null;
+          os_version: string | null;
+          app_version: string | null;
+          device_name: string | null;
+          status: string;
+          battery: number | null;
+          charging: boolean | null;
+          location_permission: string | null;
+          gps_enabled: boolean | null;
+          first_seen_at: string;
+          last_seen_at: string;
+          approved_by: string | null;
+          approved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          device_id: string;
+          platform?: string | null;
+          brand?: string | null;
+          model?: string | null;
+          os_version?: string | null;
+          app_version?: string | null;
+          device_name?: string | null;
+          status?: string;
+          battery?: number | null;
+          charging?: boolean | null;
+          location_permission?: string | null;
+          gps_enabled?: boolean | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          approved_by?: string | null;
+          approved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          device_id?: string;
+          platform?: string | null;
+          brand?: string | null;
+          model?: string | null;
+          os_version?: string | null;
+          app_version?: string | null;
+          device_name?: string | null;
+          status?: string;
+          battery?: number | null;
+          charging?: boolean | null;
+          location_permission?: string | null;
+          gps_enabled?: boolean | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          approved_by?: string | null;
+          approved_at?: string | null;
+        };
+        Relationships: [];
+      };
       guard_location_history: {
         Row: {
           id: number;
@@ -213,6 +330,9 @@ export type Database = {
           recorded_at: string;
           device_reported_at: string | null;
           ping_reason: string | null;
+          charging: boolean | null;
+          device_id: string | null;
+          received_at: string | null;
         };
         Insert: {
           id?: number;
@@ -231,6 +351,9 @@ export type Database = {
           recorded_at?: string;
           device_reported_at?: string | null;
           ping_reason?: string | null;
+          charging?: boolean | null;
+          device_id?: string | null;
+          received_at?: string | null;
         };
         Update: {
           id?: number;
@@ -249,6 +372,9 @@ export type Database = {
           recorded_at?: string;
           device_reported_at?: string | null;
           ping_reason?: string | null;
+          charging?: boolean | null;
+          device_id?: string | null;
+          received_at?: string | null;
         };
         Relationships: [];
       };
@@ -269,6 +395,9 @@ export type Database = {
           recorded_at: string;
           device_reported_at: string | null;
           ping_reason: string | null;
+          charging: boolean | null;
+          device_id: string | null;
+          received_at: string | null;
         };
         Insert: {
           guard_id: string;
@@ -286,6 +415,9 @@ export type Database = {
           recorded_at?: string;
           device_reported_at?: string | null;
           ping_reason?: string | null;
+          charging?: boolean | null;
+          device_id?: string | null;
+          received_at?: string | null;
         };
         Update: {
           guard_id?: string;
@@ -303,6 +435,36 @@ export type Database = {
           recorded_at?: string;
           device_reported_at?: string | null;
           ping_reason?: string | null;
+          charging?: boolean | null;
+          device_id?: string | null;
+          received_at?: string | null;
+        };
+        Relationships: [];
+      };
+      handover_notes: {
+        Row: {
+          id: string;
+          site_id: string;
+          attendance_id: string | null;
+          author_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          attendance_id?: string | null;
+          author_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          attendance_id?: string | null;
+          author_id?: string;
+          body?: string;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -379,6 +541,7 @@ export type Database = {
           sent_at: string | null;
           failed_at: string | null;
           error: string | null;
+          claimed_at: string | null;
         };
         Insert: {
           id?: number;
@@ -398,6 +561,7 @@ export type Database = {
           sent_at?: string | null;
           failed_at?: string | null;
           error?: string | null;
+          claimed_at?: string | null;
         };
         Update: {
           id?: number;
@@ -417,6 +581,43 @@ export type Database = {
           sent_at?: string | null;
           failed_at?: string | null;
           error?: string | null;
+          claimed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      replacement_requests: {
+        Row: {
+          id: string;
+          shift_id: string;
+          guard_id: string;
+          reason: string | null;
+          status: string;
+          replacement_guard: string | null;
+          handled_by: string | null;
+          handled_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          shift_id: string;
+          guard_id: string;
+          reason?: string | null;
+          status?: string;
+          replacement_guard?: string | null;
+          handled_by?: string | null;
+          handled_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          shift_id?: string;
+          guard_id?: string;
+          reason?: string | null;
+          status?: string;
+          replacement_guard?: string | null;
+          handled_by?: string | null;
+          handled_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -452,6 +653,9 @@ export type Database = {
           ip: string | null;
           created_at: string;
           updated_at: string;
+          days_required: number | null;
+          shift_types: string[] | null;
+          end_date: string | null;
         };
         Insert: {
           id?: string;
@@ -484,6 +688,9 @@ export type Database = {
           ip?: string | null;
           created_at?: string;
           updated_at?: string;
+          days_required?: number | null;
+          shift_types?: string[] | null;
+          end_date?: string | null;
         };
         Update: {
           id?: string;
@@ -516,6 +723,33 @@ export type Database = {
           ip?: string | null;
           created_at?: string;
           updated_at?: string;
+          days_required?: number | null;
+          shift_types?: string[] | null;
+          end_date?: string | null;
+        };
+        Relationships: [];
+      };
+      shift_types: {
+        Row: {
+          code: string;
+          label: string;
+          starts: string;
+          ends: string;
+          sort: number;
+        };
+        Insert: {
+          code: string;
+          label: string;
+          starts: string;
+          ends: string;
+          sort: number;
+        };
+        Update: {
+          code?: string;
+          label?: string;
+          starts?: string;
+          ends?: string;
+          sort?: number;
         };
         Relationships: [];
       };
@@ -532,6 +766,10 @@ export type Database = {
           created_at: string;
           updated_at: string;
           posting_id: string | null;
+          shift_type: string | null;
+          replaces_shift: string | null;
+          replaced_by_shift: string | null;
+          cancel_reason: string | null;
         };
         Insert: {
           id?: string;
@@ -545,6 +783,10 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           posting_id?: string | null;
+          shift_type?: string | null;
+          replaces_shift?: string | null;
+          replaced_by_shift?: string | null;
+          cancel_reason?: string | null;
         };
         Update: {
           id?: string;
@@ -558,6 +800,10 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           posting_id?: string | null;
+          shift_type?: string | null;
+          replaces_shift?: string | null;
+          replaced_by_shift?: string | null;
+          cancel_reason?: string | null;
         };
         Relationships: [];
       };
@@ -574,6 +820,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           dates: string[] | null;
+          shift_type: string | null;
         };
         Insert: {
           id?: string;
@@ -587,6 +834,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           dates?: string[] | null;
+          shift_type?: string | null;
         };
         Update: {
           id?: string;
@@ -600,6 +848,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           dates?: string[] | null;
+          shift_type?: string | null;
         };
         Relationships: [];
       };
@@ -895,9 +1144,30 @@ export type Database = {
         };
         Returns: Json;
       };
+      assign_replacement: {
+        Args: {
+          p_shift_ids: string[];
+          p_guard: string;
+          p_reason?: string;
+          p_request_id?: string;
+        };
+        Returns: Json;
+      };
       broadcast_positions: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      claim_email_batch: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: string[];
+      };
+      claim_push_batch: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: { id: number; message: Json }[];
       };
       client_owns_site: {
         Args: {
@@ -917,16 +1187,51 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Json;
       };
+      device_flag_for: {
+        Args: {
+          p_guard: string;
+          p_device_id: string;
+        };
+        Returns: string;
+      };
       drain_push_outbox: {
         Args: {
           p_limit?: number;
         };
         Returns: Json;
       };
+      enqueue_email: {
+        Args: {
+          p_to: string;
+          p_name: string;
+          p_template: string;
+          p_subject: string;
+          p_data: Json;
+        };
+        Returns: string;
+      };
+      enqueue_push: {
+        Args: {
+          p_profiles: string[];
+          p_title: string;
+          p_body: string;
+          p_data: Json;
+          p_channel?: string;
+        };
+        Returns: number;
+      };
       enqueue_sos_push: {
         Args: {
           p_alert_id: string;
           p_repeat?: boolean;
+        };
+        Returns: number;
+      };
+      enqueue_staff_email: {
+        Args: {
+          p_template: string;
+          p_subject: string;
+          p_data: Json;
         };
         Returns: number;
       };
@@ -956,6 +1261,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      guard_trail: {
+        Args: {
+          p_attendance_id: string;
+        };
+        Returns: Json;
+      };
       is_admin: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
@@ -973,6 +1284,13 @@ export type Database = {
           p_topic: string;
         };
         Returns: boolean;
+      };
+      my_duties: {
+        Args: {
+          p_days_back?: number;
+          p_days_ahead?: number;
+        };
+        Returns: Json;
       };
       my_role: {
         Args: Record<PropertyKey, never>;
@@ -1012,6 +1330,8 @@ export type Database = {
           p_photo_key?: string;
           p_ip?: string;
           p_user_agent?: string;
+          p_device_id?: string;
+          p_battery?: number;
         };
         Returns: Json;
       };
@@ -1023,6 +1343,7 @@ export type Database = {
           p_device_reported_at?: string;
           p_photo_key?: string;
           p_ip?: string;
+          p_handover?: string;
         };
         Returns: Json;
       };
@@ -1035,6 +1356,14 @@ export type Database = {
           p_note?: string;
         };
         Returns: Json;
+      };
+      record_email_result: {
+        Args: {
+          p_id: number;
+          p_ok: boolean;
+          p_error?: string;
+        };
+        Returns: string;
       };
       record_position: {
         Args: {
@@ -1049,12 +1378,41 @@ export type Database = {
         };
         Returns: Json;
       };
+      record_positions: {
+        Args: {
+          p_points: Json;
+          p_device_id?: string;
+        };
+        Returns: Json;
+      };
+      record_push_tickets: {
+        Args: {
+          p_results: Json;
+        };
+        Returns: Json;
+      };
       register_device: {
         Args: {
           p_token: string;
           p_platform: string;
           p_device_name?: string;
           p_app_version?: string;
+        };
+        Returns: Json;
+      };
+      register_handset: {
+        Args: {
+          p_device_id: string;
+          p_platform?: string;
+          p_brand?: string;
+          p_model?: string;
+          p_os_version?: string;
+          p_app_version?: string;
+          p_device_name?: string;
+          p_battery?: number;
+          p_charging?: boolean;
+          p_location_permission?: string;
+          p_gps_enabled?: boolean;
         };
         Returns: Json;
       };
@@ -1066,6 +1424,13 @@ export type Database = {
       };
       renotify_unanswered_sos: {
         Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      request_replacement: {
+        Args: {
+          p_shift_id: string;
+          p_reason?: string;
+        };
         Returns: Json;
       };
       roster_fill: {
@@ -1131,6 +1496,8 @@ export type Database = {
           p_duration_months?: number;
           p_notes?: string;
           p_source?: string;
+          p_days_required?: number;
+          p_shift_types?: string[];
         };
         Returns: Json;
       };
@@ -1139,6 +1506,12 @@ export type Database = {
           p_site_id: string;
         };
         Returns: Enums["tracking_mode"];
+      };
+      withdraw_replacement_request: {
+        Args: {
+          p_request_id: string;
+        };
+        Returns: Json;
       };
       withdraw_service_request: {
         Args: {

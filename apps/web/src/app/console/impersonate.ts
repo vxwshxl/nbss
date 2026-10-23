@@ -11,12 +11,12 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 /**
  * Start viewing the console as someone else.
  *
- * Only an admin may do this, checked against the *real* signed-in account
- * rather than the effective one — so an admin already viewing as a guard
+ * Only a developer may do this, checked against the *real* signed-in account
+ * rather than the effective one — so a developer already viewing as a guard
  * cannot chain into a third account.
  */
 export async function startImpersonation(profileId: string): Promise<void> {
-  const session = await requireRoleSession("admin");
+  const session = await requireRoleSession("developer");
 
   if (session.impersonating) {
     throw new Error("Stop viewing as the current person before switching to another.");

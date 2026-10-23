@@ -20,11 +20,11 @@
 @custom-variant dark (&:is(.nbss-never-dark *));
 
 /* ---------------------------------------------------------------------------
- * Geist, self-hosted. Two variable woff2 files carry the whole product — the
+ * Geist, self-hosted. One variable woff2 file carries the whole product — the
  * marketing headline, the console body and the tabular figures in an
- * attendance sheet all draw from one 68 KB download. Self-hosted rather than
- * fetched from Google: the site is read over patchy mobile data in the BTR,
- * and a font that arrives on the third round trip is a font nobody sees.
+ * attendance sheet. Self-hosted rather than fetched from Google: the site is
+ * read over patchy mobile data in the BTR, and a font that arrives on the
+ * third round trip is a font nobody sees.
  * ------------------------------------------------------------------------- */
 @font-face {
   font-family: "Geist";
@@ -33,17 +33,15 @@
   font-display: swap;
   src: url("/fonts/geist-sans-variable.woff2") format("woff2-variations");
 }
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("/fonts/geist-mono-variable.woff2") format("woff2-variations");
-}
 
 :root {
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  /*
+   * "Mono" in this app means data: employee codes, phone numbers, references.
+   * They take Geist itself with tabular figures (see .font-mono below) rather
+   * than Geist Mono, whose slashed zero reads as code, not a guard's number.
+   */
+  --font-data: var(--font-sans);
   --font-display: var(--font-sans);
 }
 
@@ -188,7 +186,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-data);
   --font-heading: var(--font-display);
   --font-display: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -348,6 +346,18 @@
   html,
   body {
     overscroll-behavior: none;
+  }
+  /*
+   * An icon beside text keeps its size: in a flex row whose label wraps, a
+   * shrinkable SVG gets squeezed narrower than its box and sits off-centre.
+   */
+  svg.lucide {
+    flex-shrink: 0;
+  }
+  /* Codes and numbers in Geist: tabular, and spaced a touch for reading aloud. */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
   }
   h1, h2, h3, h4, .font-display {
     font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
@@ -765,111 +775,165 @@
   }
 }
 /* ---------------------------------------------------------------------------
- * Leaflet, re-skinned onto the app's tokens.
+ * Google Maps markers and info windows, on the app's tokens.
  *
- * Unlayered and global on purpose: Leaflet writes its own class names into the
- * DOM at runtime, so there is nothing for a Tailwind utility to attach to. The
- * whole map is one third-party subtree, and this is where it is made to look
- * like the rest of the product.
- *
- * Leaflet writes its own class names into the DOM at runtime, so there is
- * nothing for a Tailwind utility to attach to — the whole map is one
- * third-party subtree, and this is where it is made to look like the rest of
- * the product rather than like a map someone embedded.
+ * Unlayered and global: the markers are HTML overlays the map positions itself
+ * (lib/google-maps.ts → createHtmlMarker), so there is nothing for a Tailwind
+ * utility to attach to. Each marker sets --c to its state colour.
  * ------------------------------------------------------------------------- */
-.leaflet-container {
-  font-family: var(--font-sans);
-  background: var(--muted);
-  outline: none;
-  z-index: 0; /* keeps panes under dialogs and popovers */
+.gm-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font: 600 12px/16px var(--font-sans);
+  pointer-events: auto;
 }
-
-.leaflet-bar,
-.leaflet-bar a,
-.leaflet-bar a:hover {
-  background: var(--card);
-  color: var(--foreground);
-  border-color: var(--border);
-}
-.leaflet-bar a:hover {
-  background: var(--muted);
-}
-.leaflet-touch .leaflet-bar {
-  border-radius: var(--radius-md);
+.gm-pin span {
+  max-width: 180px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--c);
+  white-space: nowrap;
   overflow: hidden;
-  box-shadow: var(--app-shadow-card);
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 6px oklch(0 0 0 / 0.25);
+}
+.gm-pin i {
+  width: 3px;
+  height: 10px;
+  background: var(--c);
 }
 
-.leaflet-control-attribution {
-  background: color-mix(in srgb, var(--card) 88%, transparent) !important;
-  color: var(--muted-foreground) !important;
-  font-size: 10px !important;
-  border-radius: var(--radius-sm) 0 0 0;
-}
-.leaflet-control-attribution a {
-  color: var(--primary) !important;
-}
-
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  background: var(--popover);
-  color: var(--popover-foreground);
-  border: 1px solid var(--border);
-  box-shadow: var(--app-shadow-raised);
-}
-.leaflet-popup-content-wrapper {
-  border-radius: var(--radius-lg);
-}
-.leaflet-popup-content {
-  margin: 0.75rem 0.875rem;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-}
-.leaflet-container a.leaflet-popup-close-button {
-  color: var(--muted-foreground);
-}
-
-/* The draggable centre pin in the fence editor. Larger than a punch dot and
- * given a grab cursor, because unlike a punch it is a control. */
-.fence-pin {
-  background: none;
-  border: none;
-  cursor: grab;
-}
-.fence-pin:active {
-  cursor: grabbing;
-}
-.fence-pin span {
-  display: block;
-  width: 16px;
-  height: 16px;
-  border-radius: 9999px;
-  background: var(--primary);
-  border: 3px solid var(--card);
-  box-shadow: 0 0 0 1px var(--primary), 0 2px 8px oklch(0 0 0 / 0.4);
-}
-
-/* A guard's position, drawn as a pulsing dot rather than Leaflet's default pin.
- * A pin's tip claims a precision a GPS fix does not have; a dot inside its own
- * accuracy circle tells the truth about what is known. */
-.punch-dot {
-  background: none;
-  border: none;
-}
-.punch-dot::after {
-  content: "";
+/* A recorded point: a dot, not a pin — a pin's tip claims a precision a GPS
+ * fix does not have; a dot inside its accuracy circle tells the truth. */
+.gm-dot {
   display: block;
   width: 14px;
   height: 14px;
-  border-radius: 9999px;
+  border-radius: 999px;
+  background: var(--c);
+  border: 2.5px solid #fff;
+  box-shadow: 0 0 0 1px var(--c), 0 2px 6px oklch(0 0 0 / 0.35);
+}
+
+/* A guard on the live map: a round avatar in their state colour, a name chip
+ * under it, and a pulse while they are live. */
+.gm-guard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font: 600 11px/14px var(--font-sans);
+  pointer-events: auto;
+}
+.gm-guard b {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--c);
+  color: #fff;
+  font-size: 11px;
+  border: 2.5px solid #fff;
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.35);
+}
+.gm-guard[data-live] b::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 2px solid var(--c);
+  animation: gm-pulse 2s ease-out infinite;
+}
+.gm-guard[data-selected] b {
+  outline: 3px solid color-mix(in srgb, var(--c) 35%, transparent);
+  outline-offset: 2px;
+}
+.gm-guard span {
+  margin-top: 3px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: oklch(1 0 0 / 0.95);
+  color: #111;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.2);
+}
+.gm-guard small {
+  font-weight: 500;
+  color: #555;
+}
+/* Zoomed out (live-map sets [data-far]): dots, no chips, no site labels. */
+[data-far] .gm-guard span,
+[data-far] .gm-pin span,
+[data-far] .gm-pin i {
+  display: none;
+}
+[data-far] .gm-guard b {
+  width: 18px;
+  height: 18px;
+  font-size: 0;
+  border-width: 2px;
+}
+[data-far] .gm-guard[data-selected] b {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+@keyframes gm-pulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gm-guard[data-live] b::before { animation: none; }
+}
+
+/* Start and end of a route, and the playback head. */
+.gm-flag {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--c);
+  color: #fff;
+  font: 700 11px/1 var(--font-sans);
+  border: 2.5px solid #fff;
+  box-shadow: 0 2px 6px oklch(0 0 0 / 0.35);
+}
+.gm-head {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgb(37 99 235 / 0.2), 0 2px 6px oklch(0 0 0 / 0.35);
+}
+
+/* The fence editor's draggable centre pin. A control, so it gets a grab cursor. */
+.gm-handle {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
   background: var(--primary);
-  border: 2.5px solid var(--card);
-  box-shadow: 0 0 0 1px var(--primary), 0 2px 6px oklch(0 0 0 / 0.35);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px var(--primary), 0 2px 8px oklch(0 0 0 / 0.4);
+  cursor: grab;
 }
-.punch-dot[data-outside]::after {
-  background: var(--destructive);
-  box-shadow: 0 0 0 1px var(--destructive), 0 2px 6px oklch(0 0 0 / 0.35);
+
+.gm-info {
+  font: 400 13px/1.45 var(--font-sans);
+  color: #171717;
+  padding: 2px 4px;
 }
+.gm-info strong {
+  font-weight: 600;
+}
+
 
 /* ---------------------------------------------------------------------------
  * The marketing header, while it is overlaid on the hero.
@@ -925,6 +989,85 @@ button:disabled,
 [aria-disabled="true"],
 [data-disabled] {
   cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+ * Native controls that stay native, drawn to match the kit.
+ *
+ * Unlayered so they win over any leftover utility on the element (an
+ * `accent-*`, a `bg-muted`): every slider and number field looks the same
+ * wherever it was written. Pickers, dropdowns and confirms are components
+ * (ui/date-picker, ui/time-picker, ui/select, ui/confirm-dialog); these are the
+ * two controls that are better kept as real inputs.
+ * ------------------------------------------------------------------------- */
+
+/* Range: a slim track filled with the brand up to the thumb is not portable,
+   so the track is plain and the thumb carries the colour. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: var(--primary);
+  border: 3px solid var(--background);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent), 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform 150ms var(--ease-out-strong, ease-out);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  border: 3px solid var(--background);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent), 0 2px 6px rgb(0 0 0 / 0.18);
+}
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+input[type="range"]:focus-visible {
+  outline: none;
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 35%, transparent);
+}
+input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 35%, transparent);
+}
+
+/* Number: no spinner arrows crowding the value; typing and the arrow keys still work. */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* Global thin, subtle scrollbars. The thumb is currentColor at low opacity, so

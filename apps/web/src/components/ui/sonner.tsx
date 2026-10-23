@@ -23,7 +23,9 @@ function Toaster({ position = "bottom-center", ...props }: ToasterProps) {
         classNames: {
           toast:
             "flex w-[min(92vw,380px)] items-center gap-3 rounded-2xl bg-ink px-4 py-3.5 text-[14px] text-ink-fg shadow-e3 ring-1 ring-white/10",
-          title: "font-medium",
+          icon: "mt-px shrink-0 self-start",
+          content: "min-w-0 flex-1",
+          title: "font-medium leading-5",
           description: "mt-0.5 text-[13px] text-ink-fg/70",
           actionButton: "ml-auto rounded-full bg-ink-fg px-3 py-1.5 text-[12px] font-medium text-ink",
           cancelButton: "rounded-full bg-white/10 px-3 py-1.5 text-[12px] font-medium",

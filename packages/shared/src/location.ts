@@ -46,11 +46,15 @@ export type PingPolicy = {
  * that has heard nothing for five minutes is reporting a problem, not a pause.
  */
 export const ON_DUTY_POLICY: PingPolicy = {
-  minDistanceM: 50,
-  heartbeatMs: 120_000,
-  minIntervalMs: 20_000,
-  maxAccuracyM: 200,
-  desiredAccuracy: "balanced",
+  // Denser than the first cut (50 m / 2 min): the agency wants the whole path a
+  // guard took between check-in and check-out, through lanes and compounds as
+  // well as along roads, and 50 m cut corners off every turn. 20 m keeps a GPS
+  // jitter of ~10 m from writing anything while standing still.
+  minDistanceM: 20,
+  heartbeatMs: 60_000,
+  minIntervalMs: 10_000,
+  maxAccuracyM: 150,
+  desiredAccuracy: "high",
 };
 
 /**

@@ -3,7 +3,9 @@ import { checkFence, toRing, type Fence } from "@nbss/shared/geo";
 import type { SosKind, SosResponse } from "@nbss/shared/sos";
 import type * as Location from "expo-location";
 
+import { batteryState, deviceId } from "./device";
 import { currentFix, restartTracking, startTracking, stopTracking } from "./location";
+import { flush } from "./location-task";
 import { IS_WEB } from "./runtime";
 import { supabase } from "./supabase";
 
@@ -84,7 +86,7 @@ export async function rosteredSites(): Promise<Site[]> {
   return [...sites.values()];
 }
 
-export type Post = { siteId: string; siteName: string; startsAt: string; endsAt: string };
+export type Post = { siteId: string; siteName: string; startsAt: string; endsAt: string; shiftType: string | null; replacing: string | null };
 
 /**
  * The guard's post: the rostered shift covering now, or the next one. Shown at
@@ -93,7 +95,7 @@ export type Post = { siteId: string; siteName: string; startsAt: string; endsAt:
 export async function myPost(): Promise<Post | null> {
   const { data } = await supabase
     .from("shifts")
-    .select("site_id, starts_at, ends_at, sites(name)")
+    .select("site_id, starts_at, ends_at, shift_type, notes, replaces_shift, sites(name)")
     .in("status", ["scheduled", "in_progress"])
     .gt("ends_at", new Date().toISOString())
     .order("starts_at")
@@ -101,7 +103,14 @@ export async function myPost(): Promise<Post | null> {
     .maybeSingle();
   if (!data) return null;
   const site = (Array.isArray(data.sites) ? data.sites[0] : data.sites) as { name: string } | null;
-  return { siteId: data.site_id, siteName: site?.name ?? "your site", startsAt: data.starts_at, endsAt: data.ends_at };
+  return {
+    siteId: data.site_id,
+    siteName: site?.name ?? "your site",
+    startsAt: data.starts_at,
+    endsAt: data.ends_at,
+    shiftType: data.shift_type,
+    replacing: data.replaces_shift ? (data.notes?.replace(/^Replacing /, "") ?? null) : null,
+  };
 }
 
 /**
@@ -233,6 +242,8 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
     p_lng: position.coords.longitude,
     p_accuracy_m: position.coords.accuracy ?? 9999,
     p_device_reported_at: new Date(position.timestamp).toISOString(),
+    p_device_id: IS_WEB ? undefined : await deviceId(),
+    p_battery: (await batteryState()).level ?? undefined,
   });
 
   // The function raises with a message written for a guard at a gate, so it is shown
@@ -244,6 +255,7 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
     status?: string;
     distance_m?: number;
     mode?: "on_duty" | "emergency";
+    device_flag?: string | null;
   };
 
   /**
@@ -279,13 +291,18 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
     tracking,
     distanceM: punch.distance_m ?? 0,
     message:
-      punch.status === "late"
-        ? `Checked in at ${punch.site_name}. Marked late.`
-        : `Checked in at ${punch.site_name}.`,
+      (punch.status === "late" ? `Checked in at ${punch.site_name}. Marked late.` : `Checked in at ${punch.site_name}.`) +
+      (punch.device_flag === "shared_device"
+        ? " This phone belongs to another guard, so your supervisor will check this attendance."
+        : punch.device_flag === "new_device"
+          ? " This phone is new for you, so your supervisor will approve it."
+          : ""),
   };
 }
 
-export async function punchOut(): Promise<PunchResult> {
+export async function punchOut(handover?: string): Promise<PunchResult> {
+  // Whatever was walked without signal goes in before the shift closes.
+  await flush().catch(() => undefined);
   const position = await currentFix();
   if (!position) {
     return { ok: false, error: "Your location could not be read. Try again with GPS switched on." };
@@ -296,6 +313,7 @@ export async function punchOut(): Promise<PunchResult> {
     p_lng: position.coords.longitude,
     p_accuracy_m: position.coords.accuracy ?? 9999,
     p_device_reported_at: new Date(position.timestamp).toISOString(),
+    p_handover: handover?.trim() || undefined,
   });
 
   if (error) return { ok: false, error: error.message };
@@ -440,4 +458,63 @@ export async function liveAlerts(): Promise<LiveAlert[]> {
     const site = Array.isArray(sites) ? sites[0] : sites;
     return { ...alert, raiser_name: raiser?.full_name ?? null, site_name: site?.name ?? null } as LiveAlert;
   });
+}
+
+/* ───────────────────────────────────────────────────────── my duties ── */
+
+export type MyDuty = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: "scheduled" | "in_progress" | "completed" | "missed" | "cancelled";
+  shift_type: string | null;
+  cancel_reason: string | null;
+  site: Pick<Site, "id" | "name" | "address" | "district" | "lat" | "lng" | "geofence_radius_m" | "polygon" | "max_accuracy_m">;
+  /** Who took this duty over, when it was handed to someone else. */
+  replaced_by: string | null;
+  /** Whose duty this is, when this guard is covering it. */
+  replacing: string | null;
+  request: { id: string; status: "open" | "assigned" | "declined" | "withdrawn"; reason: string | null } | null;
+  attendance: { id: string; check_in_at: string | null; check_out_at: string | null; worked_minutes: number | null; status: string } | null;
+};
+
+/** The guard's duties from a week back to two weeks ahead, in order. */
+export async function myDuties(): Promise<MyDuty[]> {
+  const { data, error } = await supabase.rpc("my_duties", { p_days_back: 7, p_days_ahead: 14 });
+  if (error) {
+    console.warn("[duty] my_duties failed", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as MyDuty[];
+}
+
+export async function requestReplacement(shiftId: string, reason?: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc("request_replacement", { p_shift_id: shiftId, p_reason: reason?.trim() || undefined });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function withdrawReplacement(requestId: string): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc("withdraw_replacement_request", { p_request_id: requestId });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export type HandoverNote = { id: string; body: string; created_at: string; author: string | null };
+
+/** The latest notes left at a site — what the last shift wants this one to know. */
+export async function handoverNotes(siteId: string): Promise<HandoverNote[]> {
+  const { data } = await supabase
+    .from("handover_notes")
+    .select("id, body, created_at, author_id")
+    .eq("site_id", siteId)
+    .gte("created_at", new Date(Date.now() - 3 * 86_400_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(3);
+  return (data ?? []).map((n) => ({ id: n.id, body: n.body, created_at: n.created_at, author: null }));
+}
+
+/** The path walked since check-in, for the blue line on the duty map. */
+export async function myTrail(attendanceId: string): Promise<{ lat: number; lng: number }[]> {
+  const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
+  const points = ((data as { points?: [number, number][] } | null)?.points ?? []) as [number, number][];
+  return points.map(([lat, lng]) => ({ lat: Number(lat), lng: Number(lng) }));
 }

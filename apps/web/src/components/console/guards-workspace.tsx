@@ -175,7 +175,7 @@ export function GuardsWorkspace({
   rows: PersonRow[];
   canManage: boolean;
   selfId: string;
-  /** Only a developer is offered the developer role, or may change a developer. */
+  /** Only a developer is offered the developer role, may change a developer, or "View as". */
   isDeveloper?: boolean;
   /** The Users page: every account, split by role. */
   showRoleTabs?: boolean;
@@ -685,15 +685,17 @@ export function GuardsWorkspace({
                     Edit contact
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pending || detail.id === selfId || !detail.active}
-                  onClick={() => runViewAs(detail)}
-                >
-                  <Eye data-icon="inline-start" />
-                  View as
-                </Button>
+                {isDeveloper && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pending || detail.id === selfId || !detail.active}
+                    onClick={() => runViewAs(detail)}
+                  >
+                    <Eye data-icon="inline-start" />
+                    View as
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
