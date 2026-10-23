@@ -154,9 +154,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     "expo-secure-store",
     "expo-task-manager",
-    // Google Maps. The key is written into AndroidManifest.xml and Info.plist at
-    // prebuild; the same key the console uses, restricted to this package in Google Cloud.
-    ["react-native-maps", { androidGoogleMapsApiKey: GOOGLE_MAPS_KEY, iosGoogleMapsApiKey: GOOGLE_MAPS_KEY }],
+    // Google Maps on Android: the key is written into AndroidManifest.xml at prebuild
+    // (plugins/with-android-maps-key.js explains why not react-native-maps' own plugin).
+    // The same key the console uses, restricted to this package in Google Cloud.
+    ["./plugins/with-android-maps-key", { apiKey: GOOGLE_MAPS_KEY }],
   ],
 
   experiments: {

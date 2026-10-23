@@ -1,4 +1,7 @@
-import { Redirect, Tabs } from "expo-router";
+import { Redirect } from "expo-router";
+import { Tabs } from "expo-router/js-tabs";
+import type { ColorValue } from "react-native";
+
 import { CalendarDays, CircleUserRound, MapPinned } from "lucide-react-native";
 import { useEffect } from "react";
 import { AppState, StyleSheet } from "react-native";
@@ -11,6 +14,9 @@ import { askForegroundOnce } from "@/lib/location";
 import { ensureTracking } from "@/lib/keep-alive";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
+
+/** What the tab bar hands an icon. Spelled out: SDK 58's js-tabs types do not infer it. */
+type TabIcon = { color: ColorValue; size: number };
 
 /**
  * A guard's app.
@@ -95,22 +101,22 @@ export default function GuardLayout() {
         name="duty"
         options={{
           title: "Duty",
-          tabBarIcon: ({ color: c, size }) => <MapPinned size={size} color={c} strokeWidth={2} />,
+          tabBarIcon: ({ color: c, size }: TabIcon) => <MapPinned size={size} color={c as string} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
         name="duties"
         options={{
           title: "My duties",
-          tabBarIcon: ({ color: c, size }) => <CalendarDays size={size} color={c} strokeWidth={2} />,
+          tabBarIcon: ({ color: c, size }: TabIcon) => <CalendarDays size={size} color={c as string} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Account",
-          tabBarIcon: ({ color: c, size }) => (
-            <CircleUserRound size={size} color={c} strokeWidth={2} />
+          tabBarIcon: ({ color: c, size }: TabIcon) => (
+            <CircleUserRound size={size} color={c as string} strokeWidth={2} />
           ),
         }}
       />

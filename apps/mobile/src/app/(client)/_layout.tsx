@@ -1,4 +1,7 @@
-import { Redirect, Tabs } from "expo-router";
+import { Redirect } from "expo-router";
+import { Tabs } from "expo-router/js-tabs";
+import type { ColorValue } from "react-native";
+
 import { ClipboardList, Building2 } from "lucide-react-native";
 import { useEffect } from "react";
 import { StyleSheet } from "react-native";
@@ -8,6 +11,9 @@ import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
+
+/** What the tab bar hands an icon. Spelled out: SDK 58's js-tabs types do not infer it. */
+type TabIcon = { color: ColorValue; size: number };
 
 export default function ClientLayout() {
   const { session, role, profile } = useAuth();
@@ -59,15 +65,15 @@ export default function ClientLayout() {
         name="site"
         options={{
           title: "My sites",
-          tabBarIcon: ({ color: c, size }) => <Building2 size={size} color={c} strokeWidth={2} />,
+          tabBarIcon: ({ color: c, size }: TabIcon) => <Building2 size={size} color={c as string} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
         name="book"
         options={{
           title: "Book guards",
-          tabBarIcon: ({ color: c, size }) => (
-            <ClipboardList size={size} color={c} strokeWidth={2} />
+          tabBarIcon: ({ color: c, size }: TabIcon) => (
+            <ClipboardList size={size} color={c as string} strokeWidth={2} />
           ),
         }}
       />

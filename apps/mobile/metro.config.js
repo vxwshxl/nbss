@@ -43,9 +43,7 @@ config.resolver.nodeModulesPaths = [
  */
 
 // `@nbss/shared` ships TypeScript source rather than a built dist, so that the web
-// app and this one bundle the same files. Metro handles .ts natively; what it needs
-// is permission to follow the symlink into it, which `unstable_enableSymlinks` gives.
-config.resolver.unstable_enableSymlinks = true;
-config.resolver.unstable_enablePackageExports = true;
+// app and this one bundle the same files. Following its symlink and reading package
+// exports are Metro's defaults since SDK 58, so nothing more is set here.
 
 module.exports = config;

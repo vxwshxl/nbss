@@ -3,6 +3,7 @@ import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { ArrowUp, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -38,7 +39,8 @@ export default function AssistantScreen() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const scroll = useRef<ScrollView>(null);
+  // React Native 0.88: ScrollView is a function component; its ref is the instance type.
+  const scroll = useRef<ScrollViewInstance>(null);
   const nextId = useRef(1);
   const asked = useRef(false);
 

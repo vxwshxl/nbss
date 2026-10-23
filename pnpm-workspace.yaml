@@ -26,3 +26,10 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - esbuild
+
+# One copy of React's types for the whole workspace. Two copies (the app on
+# 19.3 for Expo SDK 58, the site's dependencies on 19.2) make every class
+# component from a library "not a valid JSX component" in whichever app sees
+# the other copy.
+overrides:
+  "@types/react": ~19.3.0
