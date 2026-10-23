@@ -56,6 +56,8 @@ export type Database = {
           device_id: string | null;
           device_flag: string | null;
           check_in_battery: number | null;
+          silent_alerted_at: string | null;
+          silent_staff_alerted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -91,6 +93,8 @@ export type Database = {
           device_id?: string | null;
           device_flag?: string | null;
           check_in_battery?: number | null;
+          silent_alerted_at?: string | null;
+          silent_staff_alerted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -126,6 +130,8 @@ export type Database = {
           device_id?: string | null;
           device_flag?: string | null;
           check_in_battery?: number | null;
+          silent_alerted_at?: string | null;
+          silent_staff_alerted_at?: string | null;
         };
         Relationships: [];
       };
@@ -269,6 +275,7 @@ export type Database = {
           last_seen_at: string;
           approved_by: string | null;
           approved_at: string | null;
+          battery_optimized: boolean | null;
         };
         Insert: {
           id?: string;
@@ -289,6 +296,7 @@ export type Database = {
           last_seen_at?: string;
           approved_by?: string | null;
           approved_at?: string | null;
+          battery_optimized?: boolean | null;
         };
         Update: {
           id?: string;
@@ -309,6 +317,7 @@ export type Database = {
           last_seen_at?: string;
           approved_by?: string | null;
           approved_at?: string | null;
+          battery_optimized?: boolean | null;
         };
         Relationships: [];
       };
@@ -528,8 +537,8 @@ export type Database = {
           token: string;
           profile_id: string | null;
           alert_id: string | null;
-          title: string;
-          body: string;
+          title: string | null;
+          body: string | null;
           data: Json | null;
           priority: string;
           channel_id: string | null;
@@ -548,8 +557,8 @@ export type Database = {
           token: string;
           profile_id?: string | null;
           alert_id?: string | null;
-          title: string;
-          body: string;
+          title?: string | null;
+          body?: string | null;
           data?: Json | null;
           priority?: string;
           channel_id?: string | null;
@@ -568,8 +577,8 @@ export type Database = {
           token?: string;
           profile_id?: string | null;
           alert_id?: string | null;
-          title?: string;
-          body?: string;
+          title?: string | null;
+          body?: string | null;
           data?: Json | null;
           priority?: string;
           channel_id?: string | null;
@@ -1157,6 +1166,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: string;
       };
+      check_silent_guards: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       claim_email_batch: {
         Args: {
           p_limit?: number;
@@ -1413,6 +1426,7 @@ export type Database = {
           p_charging?: boolean;
           p_location_permission?: string;
           p_gps_enabled?: boolean;
+          p_battery_optimized?: boolean;
         };
         Returns: Json;
       };

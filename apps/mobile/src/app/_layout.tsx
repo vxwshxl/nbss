@@ -3,6 +3,9 @@
 // JavaScript runtime with no component tree, and a task defined inside a component
 // would not exist yet. See src/lib/location-task.ts.
 import "@/lib/location-task";
+// The background push handler, for the same reason: the watchdog's wake arrives
+// with no component tree. See src/lib/push-task.ts.
+import { pushType } from "@/lib/push-task";
 
 import {
   Geist_400Regular,
@@ -19,6 +22,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
+import { ensureTracking } from "@/lib/keep-alive";
 import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 import type { ErrorBoundaryProps } from "expo-router";
@@ -80,21 +84,36 @@ export default function RootLayout() {
 
     let cancelled = false;
 
+    // Where a tapped notification leads. SOS opens the alarm; the rest open the
+    // screen the message is about. Guard and staff layouts redirect anyone the
+    // screen is not for, so a wrong guess costs a hop, not a dead end.
+    const open = (data: unknown) => {
+      const sos = asSosPush(data);
+      if (sos) return router.push(`/sos/${sos.alert_id}`);
+      const type = pushType(data);
+      if (type === "duty" || type === "replacement") router.push("/(guard)/duties");
+      else if (type === "resume_tracking") {
+        void ensureTracking();
+        router.push("/(guard)/duty");
+      } else if (type === "silent_guard" || type === "device") router.push("/(staff)/live");
+    };
+
     // Cold start from a tapped notification.
     void Notifications.getLastNotificationResponseAsync().then((response) => {
       if (cancelled || !response) return;
-      const sos = asSosPush(response.notification.request.content.data);
-      if (sos) router.push(`/sos/${sos.alert_id}`);
+      open(response.notification.request.content.data);
     });
 
     const tapped = Notifications.addNotificationResponseReceivedListener((response) => {
-      const sos = asSosPush(response.notification.request.content.data);
-      if (sos) router.push(`/sos/${sos.alert_id}`);
+      open(response.notification.request.content.data);
     });
 
     const arrived = Notifications.addNotificationReceivedListener((notification) => {
-      const sos = asSosPush(notification.request.content.data);
+      const data = notification.request.content.data;
+      const sos = asSosPush(data);
       if (sos) router.push(`/sos/${sos.alert_id}`);
+      // The app is open: restart tracking quietly rather than sending the guard anywhere.
+      else if (pushType(data) === "resume_tracking") void ensureTracking();
     });
 
     return () => {

@@ -166,6 +166,21 @@ export const templates = {
     });
   },
 
+  silent: (d) =>
+    layout({
+      tone: "red",
+      heading: `No signal from ${d.guard}`,
+      intro: `${d.guard} (${d.code}) is checked in at ${d.site}, but their phone has not reported its location for over 20 minutes. They have been asked to open the app. Call them to check they are safe and on post.`,
+      rows: [
+        ["Last heard", istTime(d.since)],
+        ["Guard's phone", d.phone],
+        ["Site", d.site],
+      ],
+      action: { label: "Open Live tracking", href: `${BASE}/console/live` },
+      note: "Usually the app was closed and the phone's battery saver stopped it. If this repeats, ask the guard to set battery to Unrestricted for NBSS Kokrajhar.",
+      text: `No signal from ${d.guard} (${d.code}) at ${d.site} since ${istTime(d.since)}. Phone: ${d.phone ?? "-"}. ${BASE}/console/live`,
+    }),
+
   booking_staff: (d) =>
     layout({
       heading: `New booking ${d.reference}`,

@@ -90,6 +90,7 @@ export async function registerHandset(): Promise<HandsetStatus> {
       Location.getBackgroundPermissionsAsync().catch(() => null),
       Location.hasServicesEnabledAsync().catch(() => null),
     ]);
+    const optimized = Platform.OS === "android" ? await Battery.isBatteryOptimizationEnabledAsync().catch(() => null) : null;
     const permission = bg?.granted ? "always" : fg?.granted ? "foreground" : fg ? "denied" : null;
     const { data, error } = await supabase.rpc("register_handset", {
       p_device_id: id,
@@ -103,6 +104,7 @@ export async function registerHandset(): Promise<HandsetStatus> {
       p_charging: battery.charging ?? undefined,
       p_location_permission: permission ?? undefined,
       p_gps_enabled: services ?? undefined,
+      p_battery_optimized: optimized ?? undefined,
     });
     if (error) {
       console.warn("[device] register_handset failed", error.message);

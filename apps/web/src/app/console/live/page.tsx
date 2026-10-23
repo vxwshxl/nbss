@@ -33,14 +33,14 @@ export default async function LivePage() {
   const [open, positions, sites, devices, sos, due] = await Promise.all([
     supabase
       .from("attendance")
-      .select("id, guard_id, site_id, check_in_at, status, device_flag, device_id, profiles!attendance_guard_id_fkey(full_name, employee_code, phone), sites(name)")
+      .select("id, guard_id, site_id, check_in_at, status, device_flag, device_id, silent_alerted_at, silent_staff_alerted_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone), sites(name)")
       .is("check_out_at", null)
       .order("check_in_at"),
     supabase.from("guard_positions").select("*"),
     supabase.from("sites").select("id, name, lat, lng, geofence_radius_m, polygon").eq("active", true).order("name"),
     supabase
       .from("guard_devices")
-      .select("profile_id, device_id, brand, model, platform, os_version, app_version, status, location_permission, gps_enabled, last_seen_at")
+      .select("profile_id, device_id, brand, model, platform, os_version, app_version, status, location_permission, gps_enabled, battery_optimized, last_seen_at")
       .order("last_seen_at", { ascending: false }),
     supabase.from("sos_alerts").select("raised_by").in("status", ["active", "acknowledged"]),
     supabase
@@ -71,6 +71,7 @@ export default async function LivePage() {
       checkInAt: a.check_in_at ?? now,
       status: a.status,
       deviceFlag: a.device_flag,
+      silentAlertedAt: a.silent_staff_alerted_at ?? a.silent_alerted_at,
       device: d
         ? {
             label: [d.brand, d.model].filter(Boolean).join(" ") || "Unknown phone",
@@ -78,6 +79,7 @@ export default async function LivePage() {
             appVersion: d.app_version,
             permission: d.location_permission,
             gps: d.gps_enabled,
+            batteryOptimized: d.battery_optimized,
             approved: d.status === "approved",
           }
         : null,

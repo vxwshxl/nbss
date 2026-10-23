@@ -15,13 +15,13 @@
   },
   "dependencies": {
     "@remotion/cli": "4.0.529",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "remotion": "4.0.529"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.117.2",
-    "@types/react": "^19.2.18",
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/react": "^19.3.0",
     "playwright-core": "1.63.0",
     "typescript": "^5.9.3"
   }

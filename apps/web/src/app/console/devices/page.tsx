@@ -21,7 +21,7 @@ export default async function DevicesPage() {
   const [devices, flagged] = await Promise.all([
     supabase
       .from("guard_devices")
-      .select("id, profile_id, device_id, platform, brand, model, os_version, app_version, status, battery, charging, location_permission, gps_enabled, first_seen_at, last_seen_at, profiles!guard_devices_profile_id_fkey(full_name, employee_code, role)")
+      .select("id, profile_id, device_id, platform, brand, model, os_version, app_version, status, battery, charging, location_permission, gps_enabled, battery_optimized, first_seen_at, last_seen_at, profiles!guard_devices_profile_id_fkey(full_name, employee_code, role)")
       .order("last_seen_at", { ascending: false }),
     supabase
       .from("attendance")
@@ -53,6 +53,7 @@ export default async function DevicesPage() {
       charging: d.charging,
       permission: d.location_permission,
       gps: d.gps_enabled,
+      batteryOptimized: d.battery_optimized,
       lastSeenAt: d.last_seen_at,
       firstSeenAt: d.first_seen_at,
       sharedWith: (byDevice.get(d.device_id) ?? []).filter((n) => n !== p?.full_name),
@@ -70,7 +71,7 @@ export default async function DevicesPage() {
   }));
 
   const pending = rows.filter((r) => r.status === "pending").length;
-  const noBackground = rows.filter((r) => r.status === "approved" && (r.permission !== "always" || r.gps === false)).length;
+  const noBackground = rows.filter((r) => r.status === "approved" && (r.permission !== "always" || r.gps === false || r.batteryOptimized === true)).length;
 
   return (
     <div className="space-y-6">
@@ -79,7 +80,7 @@ export default async function DevicesPage() {
         <StatCard label="Phones" value={String(rows.length)} hint="Registered by guards" icon={Smartphone} tone="sky" />
         <StatCard label="Waiting for approval" value={String(pending)} hint={pending ? "New or shared phones" : "Every phone is approved"} icon={ShieldCheck} tone={pending ? "amber" : "emerald"} />
         <StatCard label="Check-ins held" value={String(held.length)} hint={held.length ? "From a phone not approved for the guard" : "Nothing held"} icon={AlertTriangle} tone={held.length ? "rose" : "slate"} />
-        <StatCard label="Tracking limited" value={String(noBackground)} hint={noBackground ? "Location not set to all the time" : "All phones track in the background"} icon={MapPinOff} tone={noBackground ? "amber" : "emerald"} />
+        <StatCard label="Tracking limited" value={String(noBackground)} hint={noBackground ? "Location or battery saver will stop tracking" : "All phones track in the background"} icon={MapPinOff} tone={noBackground ? "amber" : "emerald"} />
       </div>
       <DevicesWorkspace devices={rows} flagged={held} />
     </div>

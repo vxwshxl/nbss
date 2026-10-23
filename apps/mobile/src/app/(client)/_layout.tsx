@@ -1,15 +1,23 @@
 import { Redirect, Tabs } from "expo-router";
 import { ClipboardList, Building2 } from "lucide-react-native";
+import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
+import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 
 export default function ClientLayout() {
   const { session, role, profile } = useAuth();
   const insets = useSafeAreaInsets();
+
+  // A client is told when an SOS is raised at their own site (sites.notify_client_on_sos),
+  // which only reaches a closed app by push.
+  useEffect(() => {
+    if (session) void registerForPush();
+  }, [session]);
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
   if (role && role !== "client") return <Redirect href="/" />;

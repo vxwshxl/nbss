@@ -53,12 +53,15 @@ export type DutyGuard = {
   checkInAt: string;
   status: string;
   deviceFlag: string | null;
+  /** When the watchdog last told the guard (and, after 20 min, the supervisors) the phone went silent. */
+  silentAlertedAt: string | null;
   device: {
     label: string;
     platform: string | null;
     appVersion: string | null;
     permission: string | null;
     gps: boolean | null;
+    batteryOptimized: boolean | null;
     approved: boolean;
   } | null;
 };
@@ -390,7 +393,7 @@ function GuardCard({
   onCenter: () => void;
 }) {
   const since = new Date(g.checkInAt).getTime();
-  const warn = g.device && (g.device.permission !== "always" || g.device.gps === false);
+  const warn = g.device && (g.device.permission !== "always" || g.device.gps === false || g.device.batteryOptimized === true);
   return (
     <div className="absolute inset-x-3 bottom-3 z-10 max-h-[calc(100%-4.5rem)] overflow-y-auto rounded-2xl bg-card/98 shadow-xl ring-1 ring-border backdrop-blur sm:right-auto sm:w-[380px]">
       <div className="flex items-start gap-3 p-4 pb-3">
@@ -440,7 +443,15 @@ function GuardCard({
             <LocateOff className="mt-0.5 size-3.5 shrink-0" />
             {g.device?.gps === false
               ? "GPS was switched off on this phone at its last report."
-              : "Location is not set to “Allow all the time”, so tracking stops when the app is closed."}
+              : g.device?.permission !== "always"
+                ? "Location is not set to “Allow all the time”, so tracking stops when the app is closed."
+                : "Battery saver is on for the app, so the phone may stop tracking when the app is closed."}
+          </p>
+        )}
+        {(state === "offline" || state === "stale") && g.silentAlertedAt && (
+          <p className="flex items-start gap-2 rounded-xl bg-rose-500/10 p-2.5 text-rose-800 dark:text-rose-200">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            The phone went quiet. NBSS sent it a wake-up at {istClock(new Date(g.silentAlertedAt).getTime())} and asked the guard to open the app.
           </p>
         )}
         {points <= 1 && (

@@ -81,6 +81,7 @@ export async function clearTrackingState(): Promise<void> {
 const QUEUE_KEY = "nbss.positionQueue";
 const QUEUE_MAX = 1500;
 const BATCH_MAX = 200;
+const STRIKES_KEY = "nbss.positionQueueStrikes";
 
 type QueuedPoint = {
   lat: number;
@@ -164,10 +165,23 @@ export async function flush(): Promise<void> {
           p_device_id: (await cachedDeviceId()) ?? undefined,
         });
         if (error) {
-          // Kept for the next try: no signal, or the token is mid-refresh.
+          // No signal, or the token is mid-refresh: kept for the next try. A refusal
+          // that is not about the network (a batch the server cannot take) is given
+          // three chances and then dropped, so one bad batch can never block every
+          // position after it.
+          const network = /network|fetch|timed? ?out|connection|abort|jwt|token/i.test(error.message);
+          const strikes = network ? 0 : Number((await AsyncStorage.getItem(STRIKES_KEY).catch(() => null)) ?? 0) + 1;
+          if (strikes >= 3) {
+            console.warn("[location] dropping a batch the server refused three times:", error.message);
+            await writeQueue((await readQueue()).slice(batch.length));
+            await AsyncStorage.removeItem(STRIKES_KEY).catch(() => undefined);
+            continue;
+          }
+          await AsyncStorage.setItem(STRIKES_KEY, String(strikes)).catch(() => undefined);
           console.warn("[location] record_positions failed, kept", queue.length, error.message);
           return;
         }
+        await AsyncStorage.removeItem(STRIKES_KEY).catch(() => undefined);
         // Only what was sent is removed: points added while the request was out stay.
         const latest = await readQueue();
         await writeQueue(latest.slice(batch.length));

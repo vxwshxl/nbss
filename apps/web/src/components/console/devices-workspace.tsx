@@ -24,6 +24,8 @@ export type DeviceRow = {
   charging: boolean | null;
   permission: string | null;
   gps: boolean | null;
+  /** Android battery optimisation on: the OS may stop tracking when the app is closed. */
+  batteryOptimized: boolean | null;
   lastSeenAt: string;
   firstSeenAt: string;
   /** Other guards who have signed in on this same phone. */
@@ -103,6 +105,19 @@ export function DevicesWorkspace({ devices, flagged }: { devices: DeviceRow[]; f
       ),
       sortValue: (r) => r.permission ?? "",
       printCell: (r) => r.permission ?? "-",
+    },
+    {
+      header: "Battery saver",
+      cell: (r) =>
+        r.batteryOptimized === true ? (
+          <span className="text-sm font-medium text-amber-700">On · may stop tracking</span>
+        ) : r.batteryOptimized === false ? (
+          <span className="text-sm text-emerald-700">Unrestricted</span>
+        ) : (
+          <span className="text-sm text-muted-foreground">-</span>
+        ),
+      sortValue: (r) => (r.batteryOptimized ? 0 : 1),
+      printCell: (r) => (r.batteryOptimized === true ? "On" : r.batteryOptimized === false ? "Unrestricted" : "-"),
     },
     {
       header: "Battery",

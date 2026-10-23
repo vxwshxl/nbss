@@ -358,46 +358,65 @@ export async function punchOut(handover?: string): Promise<PunchResult> {
 
 export type RaiseResult =
   | { ok: true; alertId: string; notified: number; repeat: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string; offline?: boolean; fix?: { lat: number; lng: number } | null };
+
+/**
+ * A position fast enough for an emergency: a fresh fix if one comes within three
+ * seconds, else the last one the phone knows (minutes old is far better than
+ * nothing), else none. The old path waited up to twelve seconds for GPS indoors.
+ */
+async function quickFix(): Promise<{ lat: number; lng: number; accuracyM: number } | null> {
+  const Location = await import("expo-location");
+  const fresh = await Promise.race([
+    currentFix(),
+    new Promise<null>((r) => setTimeout(() => r(null), 3_000)),
+  ]);
+  const pos = fresh ?? (await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null));
+  return pos ? { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy ?? 999 } : null;
+}
+
+const looksOffline = (msg: string) => /network|fetch|timed? ?out|connection|offline|abort/i.test(msg);
 
 /**
  * Raising the alarm.
  *
  * The position is attached when there is one and the call is made regardless when
  * there is not. A guard indoors with no fix still needs help, and waiting for GPS
- * before telling anybody would be the wrong trade every single time.
+ * before telling anybody would be the wrong trade every single time. A dropped
+ * connection is retried for about twelve seconds; after that the screen offers a
+ * phone call and an SMS, which travel without mobile data.
  */
 export async function raiseSos(kind: SosKind = "other", note?: string): Promise<RaiseResult> {
-  const position = await currentFix();
+  const fix = await quickFix();
 
-  const { data, error } = await supabase.rpc("raise_sos", {
-    p_kind: kind,
-    p_lat: position?.coords.latitude,
-    p_lng: position?.coords.longitude,
-    p_accuracy_m: position?.coords.accuracy ?? undefined,
-    p_note: note,
-  });
+  let lastError = "";
+  for (const wait of [0, 2_000, 4_000, 6_000]) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    const { data, error } = await supabase.rpc("raise_sos", {
+      p_kind: kind,
+      p_lat: fix?.lat,
+      p_lng: fix?.lng,
+      p_accuracy_m: fix?.accuracyM,
+      p_note: note,
+    });
 
-  if (error) return { ok: false, error: error.message };
+    if (!error) {
+      const alert = (data ?? {}) as { alert_id?: string; notified?: number; repeat?: boolean };
+      // Straight to the dense cadence. Wrapped because by now the alert is raised and
+      // colleagues' phones are ringing — a cadence that could not change is not a failure.
+      try {
+        await restartTracking("emergency");
+      } catch (err) {
+        console.warn("[sos] raised, but could not switch to emergency tracking:", err);
+      }
+      return { ok: true, alertId: alert.alert_id ?? "", notified: alert.notified ?? 0, repeat: Boolean(alert.repeat) };
+    }
 
-  const alert = (data ?? {}) as { alert_id?: string; notified?: number; repeat?: boolean };
-
-  // Straight to the dense cadence, without waiting to be told by the next ping. Wrapped
-  // because by this point the alert is raised, the pushes are queued and colleagues'
-  // phones are already ringing — a tracking cadence that could not be changed is not a
-  // reason to tell the guard their SOS failed.
-  try {
-    await restartTracking("emergency");
-  } catch (err) {
-    console.warn("[sos] raised, but could not switch to emergency tracking:", err);
+    lastError = error.message;
+    // A refusal from the database (no site, inactive account) will not change on retry.
+    if (!looksOffline(error.message)) return { ok: false, error: error.message, fix };
   }
-
-  return {
-    ok: true,
-    alertId: alert.alert_id ?? "",
-    notified: alert.notified ?? 0,
-    repeat: Boolean(alert.repeat),
-  };
+  return { ok: false, error: lastError, offline: true, fix };
 }
 
 export async function acknowledgeSos(

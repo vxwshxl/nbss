@@ -1,14 +1,14 @@
 import { Redirect, Tabs } from "expo-router";
 import { CalendarDays, CircleUserRound, MapPinned } from "lucide-react-native";
 import { useEffect } from "react";
-import { StyleSheet } from "react-native";
+import { AppState, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerHandset } from "@/lib/device";
 import { askForegroundOnce } from "@/lib/location";
-import { flush } from "@/lib/location-task";
+import { ensureTracking } from "@/lib/keep-alive";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 
@@ -31,8 +31,16 @@ export default function GuardLayout() {
     if (!session) return;
     // Which phone this is, every launch: the Devices page and the check-in rule read it.
     void askForegroundOnce().then(() => registerHandset());
-    // Anything walked while offline goes up the moment the app is opened again.
-    void flush();
+    // On duty but not tracking (the app was swiped away and the battery saver
+    // stopped it, or the phone restarted): start again now, and every time the
+    // app comes back to the front. Sends anything walked offline, too.
+    void ensureTracking();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void ensureTracking();
+        void registerHandset();
+      }
+    });
     void registerForPush().then((result) => {
       if (!result.ok && result.reason !== "simulator") {
         // Not shown to the guard as an error, because there is nothing useful they can
@@ -41,6 +49,7 @@ export default function GuardLayout() {
         console.warn("[push] not registered:", result.reason, result.detail ?? "");
       }
     });
+    return () => sub.remove();
   }, [session]);
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;

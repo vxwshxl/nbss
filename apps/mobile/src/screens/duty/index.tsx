@@ -38,6 +38,7 @@ import { InfoButton } from "@/components/info";
 import { LiveMap, type MapSite } from "@/components/live-map";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel } from "@/components/panel";
+import { PhoneSetup } from "@/components/phone-setup";
 import { Text } from "@/components/text";
 import { useLivePosition } from "@/hooks/use-live-position";
 import { useLoader } from "@/hooks/use-loader";
@@ -254,12 +255,18 @@ export function Duty() {
     await reload();
   };
 
+  const [sosFailed, setSosFailed] = useState<{ fix: { lat: number; lng: number } | null } | null>(null);
   const doRaiseSos = async () => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+    setMessage({ tone: "bad", text: "Sending SOS…" });
     const result = await raiseSos();
     if (!result.ok) {
       setMessage({ tone: "bad", text: result.error });
+      // No internet: a phone call and an SMS still go through on the mobile network.
+      setSosFailed({ fix: result.fix ?? null });
       return;
     }
+    setMessage(null);
     router.push(`/sos/${result.alertId}`);
   };
 
@@ -460,6 +467,8 @@ export function Duty() {
           </View>
         )}
 
+        <PhoneSetup onDuty={onDuty} />
+
         {(data?.notes ?? []).length > 0 && (
           <Panel tone="amber" title="From the last shift" icon={NotebookPen}>
             {(data?.notes ?? []).map((n) => (
@@ -572,6 +581,32 @@ export function Duty() {
           </Text>
         )}
       </MapSheet>
+
+      {/* ─────────────────────── SOS could not be sent: call and SMS instead */}
+      <Modal visible={!!sosFailed} transparent animationType="fade" onRequestClose={() => setSosFailed(null)}>
+        <Pressable style={styles.noteScrim} onPress={() => setSosFailed(null)}>
+          <Pressable style={styles.dialog} onPress={() => undefined}>
+            <Text variant="title" weight="semibold" tone="danger">
+              SOS not sent: no internet
+            </Text>
+            <Text variant="body" tone="muted">
+              Call the office now, or send an SMS with your location. Both work without mobile data. Keep trying SOS too.
+            </Text>
+            <Button label={`Call office · ${COMPANY.phone}`} icon={Phone} size="lg" fullWidth onPress={callDesk} />
+            <Button
+              label="Send SMS with my location"
+              variant="outline"
+              fullWidth
+              onPress={() => {
+                const where = sosFailed?.fix ? ` Location: https://maps.google.com/?q=${sosFailed.fix.lat.toFixed(5)},${sosFailed.fix.lng.toFixed(5)}` : "";
+                const body = encodeURIComponent(`SOS from ${target?.name ? `${target.name}. ` : ""}Need help now.${where}`);
+                void Linking.openURL(`sms:${tel(COMPANY.phone)}?body=${body}`);
+              }}
+            />
+            <Button label="Try SOS again" variant="outline" fullWidth onPress={() => { setSosFailed(null); void doRaiseSos(); }} />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ─────────────────────── check-out: anything for the next guard? */}
       <Modal visible={handoverOpen} transparent animationType="fade" onRequestClose={() => setHandoverOpen(false)}>

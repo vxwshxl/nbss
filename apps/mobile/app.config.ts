@@ -95,6 +95,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "WAKE_LOCK",
       "VIBRATE",
       "RECEIVE_BOOT_COMPLETED",
+      // Lets the app ask, in one tap, to be left out of battery optimisation:
+      // the setting that decides whether tracking survives the app being closed.
+      "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
     ],
   },
 

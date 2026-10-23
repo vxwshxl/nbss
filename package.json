@@ -34,11 +34,11 @@
     "app:icons": "node scripts/generate-app-icons.mjs"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.112.3",
-    "@types/node": "^22.18.1",
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/node": "^22.20.5",
     "@types/pg": "^8.23.1",
-    "pg": "^8.23.0",
-    "sharp": "^0.35.3",
-    "typescript": "^5.9.2"
+    "pg": "^8.23.1",
+    "sharp": "^0.35.5",
+    "typescript": "^5.9.3"
   }
 }

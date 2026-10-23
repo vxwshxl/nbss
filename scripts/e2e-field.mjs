@@ -416,6 +416,38 @@ async function run() {
     assert(att.worked_minutes === 1470 && att.overtime_minutes === 30, JSON.stringify(att));
   });
 
+  console.log("Watchdog");
+  await check("the phone reports its battery saver, and the console can read it", async () => {
+    await rpc(a.db, "register_handset", { p_device_id: PHONE_A, p_battery_optimized: true });
+    const { data } = await sup.db.from("guard_devices").select("battery_optimized").eq("profile_id", a.id).eq("device_id", PHONE_A).single();
+    assert(data.battery_optimized === true, JSON.stringify(data));
+  });
+  await check("a guard silent for 25 minutes gets a wake push; supervisors are told once", async () => {
+    // Asha back on duty, with a phone that can receive push, then gone quiet.
+    await admin.from("device_tokens").insert({ profile_id: a.id, token: `ExponentPushToken[e2e-${tag}]`, platform: "android" });
+    const p = at(0.0003);
+    const r = await rpc(a.db, "punch_in", { p_site_id: site.id, p_lat: p.lat, p_lng: p.lng, p_accuracy_m: 10, p_device_id: PHONE_A });
+    const quiet = new Date(Date.now() - 25 * 60_000).toISOString();
+    await admin.from("attendance").update({ check_in_at: quiet }).eq("id", r.attendance_id);
+    await pg.query("delete from guard_positions where guard_id = $1", [a.id]);
+    const first = (await pg.query("select check_silent_guards() r")).rows[0].r;
+    assert(first.woken >= 1 && first.escalated >= 1, JSON.stringify(first));
+    const pushes = (await pg.query("select title, data from push_outbox where id > $1 and profile_id = $2 order by id", [firstPush, a.id])).rows;
+    assert(pushes.some((x) => x.title === null && x.data.type === "resume_tracking"), "no silent wake push");
+    assert(pushes.some((x) => x.title === "Location sharing stopped"), "no visible push");
+    const mails = await emails("silent");
+    assert(mails.some((m) => m.data.guard === a.name), "supervisors not emailed");
+    // A second run straight after does nothing new.
+    const again = (await pg.query("select check_silent_guards() r")).rows[0].r;
+    assert(again.woken === 0 && again.escalated === 0, JSON.stringify(again));
+    // The phone speaks again, then falls silent again later: a new silence is a new alert.
+    await rpc(a.db, "record_positions", { p_points: [{ ...at(0.0004), accuracy_m: 9, at: Date.now() - 1000 }], p_device_id: PHONE_A });
+    const quiet2 = (await pg.query("select check_silent_guards() r")).rows[0].r;
+    assert(quiet2.woken === 0, `woke a phone that is reporting: ${JSON.stringify(quiet2)}`);
+    await rpc(a.db, "punch_out", { p_lat: p.lat, p_lng: p.lng, p_accuracy_m: 10 });
+    await admin.from("device_tokens").delete().eq("profile_id", a.id);
+  });
+
   console.log("Bookings");
   await check("a client books guards for a number of days and named shifts", async () => {
     const r = await rpc(client.db, "submit_service_request", {
