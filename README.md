@@ -237,32 +237,38 @@ Create a `.env` in the project root:
 
 ## Deploying
 
-**Vercel / Netlify** — push the repo and set the environment variables above. Note that a
-serverless filesystem is ephemeral: point `NBSS_DATA` at a mounted volume, or swap
-`src/lib/store.ts` for a hosted database.
+Production is **https://nbsskokrajhar.com** on okhrang.core (`187.126.117.188`), behind
+Cloudflare (Full strict) and nginx:
 
-**A normal server** — the whole app runs behind `pnpm start` on any Node 20+ host:
+| | |
+| :-- | :-- |
+| App | `/srv/nbss`, PM2 `nbss` ([ecosystem.config.cjs](ecosystem.config.cjs)), `127.0.0.1:3040` |
+| nginx | [deploy/nginx/nbsskokrajhar.com.conf](deploy/nginx/nbsskokrajhar.com.conf), Let's Encrypt via webroot |
+| Env | `/srv/nbss/.env` on the server (symlinked into `apps/web`), never copied by the deploy |
 
-```ini
-[Unit]
-Description=NBSS website
-After=network.target
+Commit, push, then:
 
-[Service]
-WorkingDirectory=/opt/nbss
-ExecStart=/usr/bin/pnpm start -p 8080
-Environment=NEXT_PUBLIC_BASE_URL=https://nbss.co.in
-Environment=NBSS_ADMIN_PASS=change-me
-Environment=NBSS_DATA=/var/lib/nbss/submissions.json
-Restart=always
-User=nbss
-
-[Install]
-WantedBy=multi-user.target
+```bash
+./deploy/deploy.sh      # builds origin/main on the server and reloads PM2
 ```
 
-Put nginx or Caddy in front for TLS. The app reads `X-Forwarded-For` for the client IP it records
-against each submission.
+Never touch the other projects on that box (birdev, uppl, schoolerp, supadmin) or their ports.
+
+---
+
+## Database
+
+Supabase is self-hosted: the Supafleet tenant `nbss` (database `tenant_nbss`), managed in
+SupAdmin and served at **https://supabase.nbsskokrajhar.com**.
+
+- `pnpm db:migrate`, `db:status`, `db:sql`, `db:types` open an SSH tunnel to the server on
+  their own (`scripts/db.mjs`); you only need SSH access as root.
+- **pg_cron lives in the cluster's `postgres` database**, not in `tenant_nbss`. A migration
+  must not call `cron.schedule`; register jobs from `postgres` with
+  `cron.schedule_in_database('nbss-…', '<schedule>', '<command>', 'tenant_nbss')`.
+- `pnpm db:auth` writes the sign-in code settings (SMTP, 6-digit OTP, templates) into the
+  tenant's `auth.env`. The email template is `apps/web/public/email/auth-code.html`,
+  served by the site, so deploy before running it when the template changes.
 
 ---
 

@@ -1,15 +1,22 @@
 /**
  * Shared database plumbing for the migration and type-generation scripts.
  *
- * The Supabase CLI wants Docker running even to read a remote schema, which is
- * a heavy dependency for two jobs that are really just "run this SQL" and
- * "describe these tables". This connects straight to the project over the
- * session pooler instead.
+ * The database is the Supafleet tenant `tenant_nbss` on okhrang.core. Postgres
+ * is bound to the server's loopback (127.0.0.1:5433), so `connect()` opens an
+ * SSH tunnel to it for the life of the client and closes it on `end()`.
  *
- * Credentials are read from .env at run time and never written into a script.
+ * The password is read from the tenant's own config on the server at connect
+ * time, so the cluster's admin password is never copied into .env.
+ *
+ * One rule the cloud project did not have: pg_cron lives in the cluster's
+ * `postgres` database, not in tenant_nbss. A migration that schedules a job
+ * must use `cron.schedule_in_database(..., 'tenant_nbss')` from there (see
+ * README → Database), not `cron.schedule` here.
  */
 
+import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,31 +47,72 @@ export function readEnv() {
   return env;
 }
 
-/**
- * The session pooler on port 5432, not the transaction pooler on 6543:
- * migrations issue DDL and need a real session, which the transaction pooler
- * does not guarantee.
- */
+const HOST = process.env.NBSS_HOST ?? "root@187.126.117.188";
+
+/** A free local port for the tunnel. */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+    srv.on("error", reject);
+  });
+}
+
+async function waitForPort(port, child) {
+  for (let i = 0; i < 50; i++) {
+    if (child.exitCode !== null) throw new Error("The SSH tunnel to okhrang.core exited.");
+    const open = await new Promise((resolve) => {
+      const sock = net.connect(port, "127.0.0.1", () => (sock.end(), resolve(true)));
+      sock.on("error", () => resolve(false));
+    });
+    if (open) return;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error("Timed out opening the SSH tunnel to okhrang.core.");
+}
+
 export async function connect() {
-  const env = readEnv();
-  const url = env.NEXT_PUBLIC_SUPABASE_URL;
-  const password = env.SUPABASE_DB_PASSWORD;
+  const password = execFileSync(
+    "ssh",
+    [HOST, "sed -n 's/^PG_META_DB_PASSWORD=//p' /root/supafleet/tenants/nbss/meta.env"],
+    { encoding: "utf8" },
+  ).trim();
+  if (!password) throw new Error("Could not read the tenant database password from okhrang.core.");
 
-  if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL is not set in .env");
-  if (!password) throw new Error("SUPABASE_DB_PASSWORD is not set in .env");
-
-  const ref = new URL(url).hostname.split(".")[0];
+  const port = await freePort();
+  const tunnel = spawn(
+    "ssh",
+    ["-N", "-o", "ExitOnForwardFailure=yes", "-L", `${port}:127.0.0.1:5433`, HOST],
+    { stdio: "ignore" },
+  );
+  await waitForPort(port, tunnel);
 
   const client = new pg.Client({
-    host: env.SUPABASE_DB_HOST ?? "aws-0-ap-southeast-1.pooler.supabase.com",
-    port: 5432,
-    user: `postgres.${ref}`,
+    host: "127.0.0.1",
+    port,
+    user: "supabase_admin",
     password,
-    database: "postgres",
-    ssl: { rejectUnauthorized: false },
+    database: "tenant_nbss",
     connectionTimeoutMillis: 15_000,
   });
 
-  await client.connect();
+  const end = client.end.bind(client);
+  client.end = async () => {
+    try {
+      await end();
+    } finally {
+      tunnel.kill();
+    }
+  };
+
+  try {
+    await client.connect();
+  } catch (err) {
+    tunnel.kill();
+    throw err;
+  }
   return client;
 }

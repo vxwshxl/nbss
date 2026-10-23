@@ -5,113 +5,86 @@
  *
  *   node scripts/configure-auth.mjs
  *
- * Needs the Supabase CLI to be logged in (`supabase login`): the Management API
- * token is read from the CLI's keychain entry, never from a file in the repo.
- * SMTP credentials come from .env.
+ * Supabase is the self-hosted Supafleet tenant `nbss` on okhrang.core
+ * (supabase.nbsskokrajhar.com). GoTrue there is configured by env, not by an
+ * API: this rewrites the managed keys in the tenant's auth.env over SSH and
+ * recreates the auth container. Every other key SupAdmin wrote is left alone.
+ *
+ * Self-hosted GoTrue reads email templates from a URL, so the code email is
+ * `apps/web/public/email/auth-code.html`, served by the site itself. Deploy the
+ * site before running this if the template changed.
+ *
+ * SMTP credentials and the sender come from .env.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 import { readEnv } from "./db.mjs";
 
+const HOST = process.env.NBSS_HOST ?? "root@187.126.117.188";
+const TENANT_DIR = "/root/supafleet/tenants/nbss";
+
 const env = readEnv();
-const ref = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0];
-
-function cliToken() {
-  if (process.env.SUPABASE_ACCESS_TOKEN) return process.env.SUPABASE_ACCESS_TOKEN;
-  let raw = execSync('security find-generic-password -s "Supabase CLI" -w', {
-    encoding: "utf8",
-  }).trim();
-  if (raw.startsWith("go-keyring-base64:")) {
-    raw = Buffer.from(raw.slice("go-keyring-base64:".length), "base64").toString("utf8");
-  }
-  return raw;
-}
-
-for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"]) {
+for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "NEXT_PUBLIC_BASE_URL"]) {
   if (!env[key]) throw new Error(`${key} is not set in .env`);
 }
 
-const code = `<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#f3f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171717">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f5;padding:32px 16px">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #ebebeb">
-            <tr>
-              <td style="background:#009164;background-image:linear-gradient(100deg,#009164 10%,#006b4a 90%);padding:22px 28px;color:#ffffff">
-                <div style="font-size:18px;font-weight:700;letter-spacing:-0.01em">NBSS</div>
-                <div style="font-size:12px;opacity:.85;margin-top:2px">National Bodo Security Service</div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:28px">
-                <p style="margin:0 0 6px;font-size:15px;font-weight:600">Your sign-in code</p>
-                <p style="margin:0 0 20px;font-size:14px;color:#5d5d5d">Enter this code to finish signing in. It expires in 10 minutes.</p>
-                <div style="font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#047857;background:#e9f8f1;border-radius:12px;padding:16px 0;text-align:center">{{ .Token }}</div>
-                <p style="margin:22px 0 0;font-size:12px;color:#8a8a8a">If you did not try to sign in, you can ignore this email. Nobody can sign in without the code.</p>
-              </td>
-            </tr>
-          </table>
-          <p style="margin:16px 0 0;font-size:11px;color:#8a8a8a">NBSS · Kokrajhar, Assam</p>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+const site = env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "");
+const template = `${site}/email/auth-code.html`;
 
-const body = {
-  smtp_host: env.SMTP_HOST,
-  smtp_port: String(env.SMTP_PORT),
-  smtp_user: env.SMTP_USER,
-  smtp_pass: env.SMTP_PASS,
-  smtp_admin_email: env.SMTP_FROM,
-  smtp_sender_name: "NBSS",
-  // Seconds between two mails to the same address — the resend cooldown.
-  smtp_max_frequency: 30,
-  // Per hour, across the project. The default of 2 is for the shared test
-  // mailer; with our own relay it only needs to stop a runaway loop.
-  rate_limit_email_sent: 200,
-  mailer_otp_length: 6,
-  mailer_otp_exp: 600,
-  // A code rather than a link, for every sign-in mail: a guard at a gate reads
-  // six digits off a phone far more reliably than they follow a link that
-  // opens the wrong browser.
-  mailer_subjects_magic_link: "{{ .Token }} is your NBSS sign-in code",
-  mailer_templates_magic_link_content: code,
-  mailer_subjects_confirmation: "{{ .Token }} is your NBSS verification code",
-  mailer_templates_confirmation_content: code,
-  mailer_subjects_email_change: "{{ .Token }} confirms your new NBSS email",
-  mailer_templates_email_change_content: code,
-  mailer_subjects_recovery: "{{ .Token }} is your NBSS reset code",
-  mailer_templates_recovery_content: code,
-  // Sessions last until someone signs out or clears their data. Stated
-  // explicitly so a dashboard change does not quietly start logging guards
-  // out mid-shift.
-  sessions_timebox: 0,
-  sessions_inactivity_timeout: 0,
+const settings = {
+  GOTRUE_SITE_URL: site,
+  GOTRUE_URI_ALLOW_LIST: `${site}/**,http://localhost:3000/**`,
+  GOTRUE_SMTP_HOST: env.SMTP_HOST,
+  GOTRUE_SMTP_PORT: String(env.SMTP_PORT),
+  GOTRUE_SMTP_USER: env.SMTP_USER,
+  GOTRUE_SMTP_PASS: env.SMTP_PASS,
+  GOTRUE_SMTP_ADMIN_EMAIL: env.SMTP_FROM,
+  GOTRUE_SMTP_SENDER_NAME: "NBSS",
+  GOTRUE_SMTP_MAX_FREQUENCY: "30s",
+  GOTRUE_RATE_LIMIT_EMAIL_SENT: "200",
+  GOTRUE_MAILER_OTP_LENGTH: "6",
+  GOTRUE_MAILER_OTP_EXP: "600",
+  GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "{{ .Token }} is your NBSS sign-in code",
+  GOTRUE_MAILER_TEMPLATES_MAGIC_LINK: template,
+  GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "{{ .Token }} is your NBSS verification code",
+  GOTRUE_MAILER_TEMPLATES_CONFIRMATION: template,
+  GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: "{{ .Token }} confirms your new NBSS email",
+  GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: template,
+  GOTRUE_MAILER_SUBJECTS_RECOVERY: "{{ .Token }} is your NBSS reset code",
+  GOTRUE_MAILER_TEMPLATES_RECOVERY: template,
+  GOTRUE_SESSIONS_TIMEBOX: "0",
+  GOTRUE_SESSIONS_INACTIVITY_TIMEOUT: "0",
 };
 
-const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {
-  method: "PATCH",
-  headers: {
-    Authorization: `Bearer ${cliToken()}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(body),
-});
-
-if (!res.ok) {
-  console.error(`Failed: ${res.status} ${await res.text()}`);
-  process.exit(1);
+for (const [key, value] of Object.entries(settings)) {
+  if (value.includes("\n")) throw new Error(`${key} must be a single line`);
 }
 
-const after = await res.json();
+// The new values travel on stdin, never on a command line where `ps` would show them.
+const remote = `set -euo pipefail
+cd ${TENANT_DIR}
+new=$(cat)
+keys=$(printf '%s\\n' "$new" | cut -d= -f1 | paste -sd'|')
+{ grep -vE "^($keys)=" auth.env || true; printf '%s\\n' "$new"; } > auth.env.next
+chmod 600 auth.env.next && mv auth.env.next auth.env
+docker compose up -d --force-recreate auth >/dev/null 2>&1
+for i in $(seq 1 30); do
+  [ "$(docker inspect -f '{{.State.Health.Status}}' auth-nbss)" = healthy ] && break
+  sleep 2
+done
+docker inspect -f '{{.State.Health.Status}}' auth-nbss`;
+
+const status = execFileSync("ssh", [HOST, remote], {
+  input: Object.entries(settings).map(([k, v]) => `${k}=${v}`).join("\n"),
+  encoding: "utf8",
+}).trim();
+
 console.log("Auth configured:", {
-  smtp_host: after.smtp_host,
-  smtp_sender: `${after.smtp_sender_name} <${after.smtp_admin_email}>`,
-  otp_length: after.mailer_otp_length,
-  otp_exp_s: after.mailer_otp_exp,
-  email_rate_per_hour: after.rate_limit_email_sent,
+  site,
+  smtp_sender: `NBSS <${env.SMTP_FROM}>`,
+  template,
+  otp_length: 6,
+  otp_exp_s: 600,
+  auth: status,
 });
