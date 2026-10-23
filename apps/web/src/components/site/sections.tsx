@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { Drift, ExpandOnScroll, FadeUp, Parallax } from "@/components/motion/scroll-fx";
 import { RevealWords } from "@/components/motion/reveal-words";
-import { BOOK_HREF, pillars, site } from "@/content/site";
+import { BOOK_HREF, site } from "@/content/site";
 import { cn } from "@/lib/utils";
 
 // Everything said here comes from the company profile. No client names, figures or
@@ -148,43 +148,6 @@ export function HelpSection() {
 
 /* ------------------------------------------------------------------ why */
 
-export function WhySection() {
-  return (
-    <section aria-labelledby="why-title" className="bg-subtle py-24 sm:py-32">
-      <div className="mx-auto grid max-w-[1280px] gap-10 px-4 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        <div className="flex flex-col justify-between gap-10">
-          <p className="eyebrow">Why NBSS</p>
-          <Parallax speed={22} className="relative hidden aspect-[3/4] w-48 rounded-md lg:block">
-            <div className="absolute inset-[-12%]">
-              <Image src="/img/ops-drill.jpg" alt="Guards at drill" fill sizes="200px" className="object-cover" />
-            </div>
-          </Parallax>
-        </div>
-        <div>
-          <FadeUp>
-            <h2 id="why-title" className="display-section text-[clamp(2.25rem,5vw,4.25rem)]">
-              Trained. Uniformed. <span className="text-secondary-fg">Accountable.</span>
-            </h2>
-          </FadeUp>
-          <Parallax speed={14} className="relative mt-10 aspect-[16/10] rounded-md">
-            <div className="absolute inset-[-8%]">
-              <Image src="/img/nbss/training-demo.jpg" alt="A training demonstration" fill sizes="(min-width: 1024px) 60vw, 100vw" className="object-cover" />
-            </div>
-          </Parallax>
-          <ul className="mt-10 divide-y divide-border border-y border-border">
-            {pillars.map((p) => (
-              <li key={p.title} className="grid gap-1 py-5 sm:grid-cols-[16rem_minmax(0,1fr)] sm:gap-6">
-                <span className="font-medium">{p.title}</span>
-                <span className="text-secondary-fg">{p.body}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ------------------------------------------------------------------ cta */
 
 export function CtaSection() {
@@ -202,7 +165,7 @@ export function CtaSection() {
           <br />
           We Will Guard It.
         </h2>
-        <p className="mt-5 max-w-lg text-lg text-ink-fg/75">{site.hours[1]}. Sign in with your email and book guards in two minutes.</p>
+        <p className="mt-5 max-w-lg text-lg text-ink-fg/75">{site.hours[1]}. Sign in with Google and book guards in two minutes.</p>
         <Link href={BOOK_HREF} className={cn(pill, "mt-8 bg-ink-fg text-ink")}>
           Book guards
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />

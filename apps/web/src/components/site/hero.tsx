@@ -28,7 +28,9 @@ export function Hero() {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.from("[data-intro]", { y: 28, opacity: 0, duration: 1, ease: "power3.out", stagger: 0.08, delay: 0.15 });
-        gsap.from("[data-build]", { y: 60, opacity: 0, duration: 1.4, ease: "power3.out", delay: 0.2 });
+        // Slide only: an opacity tween here would hand the scroll timeline below a starting
+        // opacity of 0, and the wall would stay invisible at the top of the page.
+        gsap.from("[data-build]", { y: 60, duration: 1.4, ease: "power3.out", delay: 0.2 });
         gsap.from("[data-strip] > *", { opacity: 0, y: 12, duration: 0.8, delay: 0.9, ease: "power2.out" });
         gsap.from("[data-cam]", { opacity: 0, y: 16, duration: 0.7, delay: 0.5, stagger: 0.12, ease: "power3.out" });
 
@@ -209,7 +211,7 @@ function CameraWall() {
         label="CAM 01 · Main gate"
         priority
       />
-      <Feed src="/img/nbss/team-event.jpg" width={720} height={975} label="CAM 02 · Event duty" position="top" />
+      <Feed src="/img/nbss/team-event.jpg" width={720} height={968} label="CAM 02 · Event duty" />
 
       <div
         data-cam
@@ -248,7 +250,6 @@ function Feed({
   height,
   label,
   className,
-  position = "center",
   priority = false,
 }: {
   src: string;
@@ -256,8 +257,6 @@ function Feed({
   height: number;
   label: string;
   className?: string;
-  /** Only the team photo needs it: its frame stops above the GeoCam stamp at the foot. */
-  position?: "center" | "top";
   priority?: boolean;
 }) {
   return (
@@ -272,7 +271,7 @@ function Feed({
         width={width}
         height={height}
         fetchPriority={priority ? "high" : undefined}
-        className={`size-full object-cover ${position === "top" ? "object-top" : ""}`}
+        className="size-full object-cover"
       />
       <span className="absolute top-[calc(var(--w)*0.02)] left-[calc(var(--w)*0.02)] inline-flex items-center gap-1.5 rounded-full bg-black/45 px-[0.8em] py-[0.35em] font-mono text-[max(8px,calc(var(--w)*0.016))] text-white backdrop-blur-sm">
         <span className="size-[0.6em] animate-pulse rounded-full bg-red-500" />

@@ -100,7 +100,7 @@ export function SiteFooter() {
         </div>
 
         <div className="grid grid-cols-2 gap-x-5 gap-y-8 py-8 sm:gap-x-8 sm:gap-y-12 sm:py-14 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.2fr)]">
-          <div className="col-span-2 lg:col-span-1 lg:max-w-xs">
+          <div className="col-span-2 flex flex-col items-center lg:col-span-1 lg:max-w-xs lg:items-start">
             <Link href="/" aria-label={`${site.shortName} home`} className="inline-flex text-ink-fg">
               <BrandLockup size="md" />
             </Link>
