@@ -5,20 +5,21 @@ import { site } from "@/content/site";
 export const BRAND_SUFFIX = site.name;
 
 /**
- * A note on the link-preview banner, since it is conspicuously absent here.
+ * The link-preview banner, rendered by `src/app/og/route.tsx`.
  *
- * It is not declared in metadata at all. `src/app/opengraph-image.tsx` is a
- * file-convention route, so Next renders a real 1200×630 card and emits
- * `og:image`, its width, its height and `twitter:image` for every route
- * automatically, always resolved against `metadataBase`. A hand-written
- * `openGraph.images` entry here would *override* that — and would be one more
- * absolute URL to keep in step with the deployment, which is exactly how a
- * preview ends up pointing at localhost.
- *
- * So `pageMetadata` sets the card's words and lets the convention supply its
- * picture. A page that genuinely needs a different image (a service page with
- * its own photograph) passes one; everything else inherits.
+ * The URL is relative on purpose: Next resolves it against `metadataBase`, so
+ * it always names the deployment that served the page and never localhost.
+ * Every page sets it explicitly because Next merges `openGraph` shallowly — a
+ * page that set its own `openGraph` without `images` would lose the banner.
+ * A page that genuinely needs a different image passes one.
  */
+export const OG_IMAGE = {
+  url: "/og",
+  width: 1200,
+  height: 630,
+  alt: `${site.name} (${site.shortName}) | ${site.tagline}`,
+  type: "image/jpeg",
+};
 
 /**
  * Metadata for one indexable public page.
@@ -40,11 +41,12 @@ export function pageMetadata({
   title: string;
   description: string;
   path: string;
-  /** Overrides the generated card. Omit to inherit `opengraph-image.tsx`. */
+  /** Overrides the banner. Omit to use `/og`. */
   image?: { url: string; width: number; height: number; alt: string };
   keywords?: string[];
 }): Metadata {
   const fullTitle = `${title} · ${BRAND_SUFFIX}`;
+  const card = image ?? OG_IMAGE;
   return {
     title,
     description,
@@ -57,13 +59,13 @@ export function pageMetadata({
       description,
       url: path,
       locale: "en_IN",
-      ...(image ? { images: [image] } : {}),
+      images: [card],
     },
     twitter: {
       card: "summary_large_image",
       title: fullTitle,
       description,
-      ...(image ? { images: [image.url] } : {}),
+      images: [{ url: card.url, alt: card.alt }],
     },
   };
 }

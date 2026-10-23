@@ -21,6 +21,7 @@ import {
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
 import { SiteMap } from "@/components/console/site-map";
+import { ExcelButton } from "@/components/crm/excel-button";
 import { StatTile } from "@/components/crm/stat";
 import { Card, CardTitle, Pill, Table } from "@/components/crm/ui";
 import { AreaTrend, BarList, Ring } from "@/components/crm/viz";
@@ -240,7 +241,22 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
             )}
           </Card>
           <Card>
-            <CardTitle title="Next seven days" hint="Every rostered shift here, posted and cover" icon={CalendarRange} hue="sky" />
+            <CardTitle
+              title="Next seven days"
+              hint="Every rostered shift here, posted and cover"
+              icon={CalendarRange}
+              hue="sky"
+              right={
+                <ExcelButton
+                  title={`${s.name} roster`}
+                  head={["Guard", "Code", "Starts", "Ends", "Kind", "State"]}
+                  rows={upcoming.map((x) => {
+                    const g = one(x.guard as unknown as { full_name: string; employee_code: string } | null);
+                    return [g?.full_name ?? "", g?.employee_code ?? "", at(x.starts_at), at(x.ends_at), x.posting_id ? "Posted" : "Cover", x.status.replace("_", " ")];
+                  })}
+                />
+              }
+            />
             {upcoming.length === 0 ? (
               <Empty>No shifts in the next seven days.</Empty>
             ) : (
@@ -266,7 +282,31 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
 
       {tab === "attendance" && (
         <Card>
-          <CardTitle title={`Punches · last 30 days · ${rows.length}`} hint="Every check-in at this gate" icon={CalendarCheck} hue="sky" />
+          <CardTitle
+            title={`Punches · last 30 days · ${rows.length}`}
+            hint="Every check-in at this gate"
+            icon={CalendarCheck}
+            hue="sky"
+            right={
+              <ExcelButton
+                title={`${s.name} attendance`}
+                head={["Guard", "Code", "In", "Out", "Worked (min)", "Overtime (min)", "From gate (m)", "Marked"]}
+                rows={rows.map((r) => {
+                  const g = one(r.profiles as unknown as { full_name: string; employee_code: string } | null);
+                  return [
+                    g?.full_name ?? "",
+                    g?.employee_code ?? "",
+                    at(r.check_in_at),
+                    r.check_out_at ? at(r.check_out_at) : "On duty",
+                    r.worked_minutes ?? 0,
+                    r.overtime_minutes ?? 0,
+                    r.check_in_distance_m != null ? Math.round(r.check_in_distance_m) : "",
+                    STATUS[r.status]?.label ?? r.status,
+                  ];
+                })}
+              />
+            }
+          />
           {rows.length === 0 ? (
             <Empty>No one has checked in here in the last 30 days.</Empty>
           ) : (
@@ -301,11 +341,29 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
         </Card>
       )}
 
-      {tab === "guards" && <GuardsHere rows={rows} posted={posted} onDuty={onDutyIds} />}
+      {tab === "guards" && <GuardsHere siteName={s.name} rows={rows} posted={posted} onDuty={onDutyIds} />}
 
       {tab === "sos" && (
         <Card>
-          <CardTitle title={`SOS alerts · ${alerts.length}`} hint="Raised at this site, newest first" icon={Siren} hue="brick" />
+          <CardTitle
+            title={`SOS alerts · ${alerts.length}`}
+            hint="Raised at this site, newest first"
+            icon={Siren}
+            hue="brick"
+            right={
+              <ExcelButton
+                title={`${s.name} SOS`}
+                head={["Raised", "By", "Kind", "State", "Closed"]}
+                rows={alerts.map((a) => [
+                  at(a.raised_at),
+                  one(a.guard as unknown as { full_name: string } | null)?.full_name ?? "",
+                  SOS_KIND_LABEL[a.kind as SosKind] ?? a.kind,
+                  SOS_STATUS_LABEL[a.status as SosStatus] ?? a.status,
+                  at(a.closed_at),
+                ])}
+              />
+            }
+          />
           {alerts.length === 0 ? (
             <Empty>No SOS has ever been raised here.</Empty>
           ) : (
@@ -505,10 +563,12 @@ function Overview({
 }
 
 function GuardsHere({
+  siteName,
   rows,
   posted,
   onDuty,
 }: {
+  siteName: string;
   rows: MonthRow[];
   posted: { guard_id: string; profiles: unknown }[];
   onDuty: Set<string>;
@@ -533,7 +593,19 @@ function GuardsHere({
   return (
     <div className="grid gap-4 @4xl/main:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
       <Card>
-        <CardTitle title={`Guards · ${list.length}`} hint="Posted here, or worked here in the last 30 days" icon={Users} hue="jade" />
+        <CardTitle
+          title={`Guards · ${list.length}`}
+          hint="Posted here, or worked here in the last 30 days"
+          icon={Users}
+          hue="jade"
+          right={
+            <ExcelButton
+              title={`${siteName} guards`}
+              head={["Guard", "Code", "Hours", "Punches", "Late", "Posted", "On duty"]}
+              rows={list.map(([id, g]) => [g.name, g.code, Math.round((g.mins / 60) * 10) / 10, g.punches, g.late, g.posted ? "Yes" : "No", onDuty.has(id) ? "Yes" : "No"])}
+            />
+          }
+        />
         {list.length === 0 ? (
           <Empty>No guard is posted here or has worked here recently.</Empty>
         ) : (

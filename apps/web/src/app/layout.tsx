@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { site } from "@/content/site";
 import { baseUrl, canonical } from "@/lib/seo";
-import { INDEXABLE } from "@/lib/seo/page-metadata";
+import { INDEXABLE, OG_IMAGE } from "@/lib/seo/page-metadata";
 import { BRAND_ALTERNATE_NAMES } from "@/lib/seo/structured-data";
 
 import "./globals.css";
@@ -55,13 +55,13 @@ export const metadata: Metadata = {
     title: `${site.shortName} | ${site.tagline}`,
     description: site.descriptor,
     locale: "en_IN",
-    // Images come from the `opengraph-image` route convention, which stamps the
-    // correct absolute URL and dimensions on every page automatically.
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: `${site.shortName} | ${site.tagline}`,
     description: site.descriptor,
+    images: [{ url: OG_IMAGE.url, alt: OG_IMAGE.alt }],
   },
   // Generated from the client's badge (public/logo/NBSS.png). The .ico carries
   // 16/32/48 because browsers still hit /favicon.ico directly, ignoring these

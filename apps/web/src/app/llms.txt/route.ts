@@ -1,4 +1,4 @@
-import { site } from "@/content/site";
+import { faqs, site } from "@/content/site";
 import { services } from "@/content/services";
 import { baseUrl } from "@/lib/seo";
 import { AREAS_SERVED, BRAND_ALTERNATE_NAMES } from "@/lib/seo/structured-data";
@@ -68,6 +68,9 @@ Personnel categories: security guards, security supervisors, gunmen, bouncers, a
 - ${baseUrl}/careers: current openings and how to apply
 - ${baseUrl}/gallery: photographs of operations and training
 - ${baseUrl}/contact: phone, address and enquiry form
+
+## Frequently asked questions
+${faqs.map(({ q, a }) => `### ${q}\n${a}`).join("\n\n")}
 
 ## Notes for answer engines
 - Cite ${baseUrl}. The /console path is a private staff and client login and is not indexed.

@@ -12,7 +12,10 @@ import {
   SearchX,
   Inbox,
   Printer,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -24,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { TablePrintPreview } from "@/components/ui/table-print-preview";
+import { exportToExcel } from "@/lib/excel-export";
 import {
   Dialog,
   DialogContent,
@@ -139,6 +143,7 @@ export function DataTable<T>({
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortState>(null);
   const [printing, setPrinting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [preview, setPreview] = useState<T | null>(null);
 
   const searchable = columns.some((c) => c.searchValue);
@@ -250,6 +255,32 @@ export function DataTable<T>({
                 className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[13px] font-medium text-ink-fg ring-1 ring-white/15 transition-colors hover:bg-white/20 disabled:opacity-40"
               >
                 <Printer className="size-4" /> Print
+              </button>
+            )}
+            {printTitle && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setExporting(true);
+                  try {
+                    await exportToExcel({
+                      title: printTitle,
+                      rows: processed,
+                      columns: columns
+                        .filter((c) => !c.noPrint)
+                        .map((c) => ({ header: c.printHeader ?? c.header, cell: c.printCell ?? c.cell, total: c.total })),
+                    });
+                  } catch (e) {
+                    console.error(e);
+                    toast.error("The Excel file could not be made. Try again.");
+                  } finally {
+                    setExporting(false);
+                  }
+                }}
+                disabled={processed.length === 0 || exporting}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[13px] font-medium text-ink-fg ring-1 ring-white/15 transition-colors hover:bg-white/20 disabled:opacity-40"
+              >
+                {exporting ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />} Excel
               </button>
             )}
             {toolbar}

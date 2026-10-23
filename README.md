@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/img/nbss-banner.svg" alt="NBSS — National Bodo Security Services" width="100%">
+<img src="docs/og.jpg" alt="NBSS — National Bodo Security Service" width="100%">
 
 <br>
 

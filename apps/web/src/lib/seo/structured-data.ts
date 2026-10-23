@@ -115,7 +115,7 @@ export function siteStructuredData() {
         description: DESCRIPTION,
         slogan: site.tagline,
         telephone: e164(site.phone),
-        image: absoluteUrl("/og.png"),
+        image: absoluteUrl("/og"),
         logo: {
           "@type": "ImageObject",
           url: absoluteUrl("/logo/nbss-512.png"),
