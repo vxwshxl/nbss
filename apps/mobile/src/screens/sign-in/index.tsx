@@ -11,6 +11,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { Nibo } from "@/components/nibo/nibo";
 import { Button, LinkButton } from "@/components/button";
 import { Field, SecretField } from "@/components/field";
+import { GoogleButton } from "@/components/google-button";
 import { Text } from "@/components/text";
 import { useLayout } from "@/hooks/use-breakpoint";
 import { useAuth } from "@/lib/auth";
@@ -29,7 +30,7 @@ type Step = "identify" | "code" | "password";
 const RESEND_SECONDS = 30;
 
 export function SignIn() {
-  const { sendCode, verifyCode, signIn, loading } = useAuth();
+  const { sendCode, verifyCode, signIn, signInWithGoogle, loading } = useAuth();
   const { isTablet } = useLayout();
   const insets = useSafeAreaInsets();
 
@@ -113,6 +114,25 @@ export function SignIn() {
               {notice}
             </Text>
           </View>
+        )}
+
+        {step === "identify" && (
+          <>
+            <GoogleButton
+              loading={loading}
+              onPress={() => {
+                setError(null);
+                void signInWithGoogle().then((r) => r.error && setError(r.error));
+              }}
+            />
+            <View style={styles.orRow}>
+              <View style={styles.rule} />
+              <Text variant="caption" tone="muted">
+                or with email or employee code
+              </Text>
+              <View style={styles.rule} />
+            </View>
+          </>
         )}
 
         {step === "identify" ? (

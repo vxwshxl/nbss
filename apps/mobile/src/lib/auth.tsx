@@ -1,4 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import type { Row } from "@nbss/shared/db";
@@ -27,6 +29,8 @@ type AuthState = {
   sendCode: (identifier: string) => Promise<{ error?: string }>;
   verifyCode: (identifier: string, code: string) => Promise<{ error?: string }>;
   signIn: (identifier: string, secret: string) => Promise<{ error?: string }>;
+  /** Google, as on the website: an account already on the books, or a new client. */
+  signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -200,6 +204,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /**
+   * Sign in with Google: Google's page opens in a secure browser sheet, Supabase
+   * sends it back to this app's own link with a one-time code (PKCE), and the code
+   * is exchanged here for the session. Same accounts and rules as the website's
+   * button (0021): a known email signs into its own account, an unknown one becomes
+   * a client, and staff can never be created this way.
+   */
+  const signInWithGoogle = useCallback(async () => {
+    setLoading(true);
+    try {
+      const redirectTo = Linking.createURL("auth/callback");
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: "select_account" } },
+      });
+      if (error || !data.url) return { error: "Google sign-in is not available right now." };
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== "success") return {};
+
+      const url = new URL(result.url);
+      const params = new URLSearchParams(url.search || url.hash.replace(/^#/, ""));
+      const failure = params.get("error_description") ?? params.get("error");
+      if (failure) return { error: failure.replace(/\+/g, " ") };
+      const code = params.get("code");
+      if (!code) return { error: "Google did not finish signing you in. Try again." };
+
+      const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError || !exchanged.session) return { error: "Google sign-in could not be completed. Try again." };
+
+      // Signed in to Google, but not an NBSS account (an address another profile holds,
+      // or a deactivated one): out again, with a reason, rather than a blank app.
+      const { data: profileRow } = await supabase.from("profiles").select("id, active").eq("id", exchanged.session.user.id).maybeSingle();
+      if (!profileRow?.active) {
+        await supabase.auth.signOut();
+        return { error: "This Google account is not registered with NBSS. Use your email or employee code, or ask the office." };
+      }
+      return {};
+    } catch {
+      return { error: "Could not reach Google. Check your connection and try again." };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     setLoading(true);
     /**
@@ -231,10 +280,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sendCode,
       verifyCode,
       signIn,
+      signInWithGoogle,
       signOut,
       refresh,
     }),
-    [session, profile, loading, sendCode, verifyCode, signIn, signOut, refresh],
+    [session, profile, loading, sendCode, verifyCode, signIn, signInWithGoogle, signOut, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

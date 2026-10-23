@@ -43,7 +43,9 @@ const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/+$/, "");
 
 const settings = {
   GOTRUE_SITE_URL: site,
-  GOTRUE_URI_ALLOW_LIST: `${site}/**,http://localhost:3000/**`,
+  // The app's own link for Google sign-in (nbss://auth/callback), and Expo Go's
+  // (exp://<laptop>:8081/--/auth/callback) while developing.
+  GOTRUE_URI_ALLOW_LIST: `${site}/**,http://localhost:3000/**,nbss://**,exp://**`,
   GOTRUE_SMTP_HOST: env.SMTP_HOST,
   GOTRUE_SMTP_PORT: String(env.SMTP_PORT),
   GOTRUE_SMTP_USER: env.SMTP_USER,

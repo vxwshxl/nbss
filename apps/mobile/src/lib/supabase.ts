@@ -25,6 +25,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // PKCE: Google sign-in returns a one-time code to the app's own link
+    // (nbss://auth/callback), which only this install can exchange for a session.
+    flowType: "pkce",
   },
   realtime: {
     // Positions arrive as one batch every fifteen seconds and SOS events are rare,
