@@ -16,9 +16,9 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
  * The opening sequence, pinned for about 1.4 screens of scroll, set in a control room:
  *   a pale map grid with range rings and a radar sweep behind the headline; the parade
  *   is a live camera feed in a viewfinder (brackets, crosshair, REC, a clock running
- *   through the shift). Scrolling, the headline drifts out, the camera pushes in, a
- *   haze rises over the feed, and N, B, S, S drop in one after another, filled with
- *   the parade, and settle.
+ *   through the shift), fading into the map at its foot. Scrolling, the headline drifts
+ *   out, the camera pushes in and rises, and N, B, S, S drop in one after another,
+ *   filled with the parade, and settle.
  */
 export function Hero() {
   const root = useRef<HTMLElement>(null);
@@ -28,9 +28,9 @@ export function Hero() {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.from("[data-intro]", { y: 28, opacity: 0, duration: 1, ease: "power3.out", stagger: 0.08, delay: 0.15 });
-        gsap.from("[data-build]", { yPercent: 22, duration: 1.8, ease: "power3.out" });
+        gsap.from("[data-build]", { y: 60, opacity: 0, duration: 1.4, ease: "power3.out", delay: 0.2 });
         gsap.from("[data-strip] > *", { opacity: 0, y: 12, duration: 0.8, delay: 0.9, ease: "power2.out" });
-        gsap.from("[data-hud] > *", { opacity: 0, duration: 0.6, delay: 1.1, stagger: 0.08, ease: "power2.out" });
+        gsap.from("[data-cam]", { opacity: 0, y: 16, duration: 0.7, delay: 0.5, stagger: 0.12, ease: "power3.out" });
 
         // The shift clock: 06:00 at rest, into the night as the page scrolls.
         const clock = { m: 6 * 60 };
@@ -55,8 +55,6 @@ export function Hero() {
           .to("[data-strip]", { opacity: 0, duration: 0.12 }, 0)
           .to("[data-build]", { yPercent: -46, scale: 1.18, duration: 0.6 }, 0)
           .to(clock, { m: 22 * 60, duration: 0.5, onUpdate: show }, 0)
-          .to("[data-feed]", { scale: 1.12, duration: 0.5 }, 0)
-          .to("[data-mist]", { yPercent: -36, duration: 0.6 }, 0.05)
           .to("[data-build]", { opacity: 0, duration: 0.18 }, 0.5)
           .set("[data-mark]", { opacity: 1 }, 0.56)
           .fromTo(
@@ -100,85 +98,48 @@ export function Hero() {
         </div>
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(90%_60%_at_50%_30%,rgb(255_255_255/0.55),transparent_65%)]" />
 
-        <div data-copy className="relative z-20 mx-auto flex max-w-5xl flex-col items-center px-4 pt-[max(118px,15svh)] text-center sm:pt-[max(128px,14svh)]">
-          <p data-intro className="text-sm font-semibold text-primary-ink sm:text-base">
-            {site.name} · {site.address.city}
-          </p>
-          <h1 data-intro className="display-hero mt-5 text-[clamp(2.6rem,6.6vw,6rem)] text-ink/90">
-            Your Safety, Our Responsibility
-          </h1>
-          <p data-intro className="mt-4 max-w-2xl text-[clamp(1rem,1.6vw,1.25rem)] text-ink/65">
-            Trained, uniformed and police-verified guards for offices, hospitals, banks, schools, industry and events{" "}
-            <span className="text-ink/90">across Bodoland.</span>
-          </p>
-          <div data-intro className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={BOOK_HREF}
-              className="group inline-flex h-11 items-center gap-2 rounded-full bg-ink pr-4 pl-5 text-sm font-medium text-ink-fg transition-transform duration-[120ms] ease-quick hover:scale-[1.03] active:scale-[0.98]"
-            >
-              Book guards
-              <ArrowRight className="size-4 transition-transform duration-[180ms] ease-quick group-hover:translate-x-0.5" aria-hidden />
-            </Link>
-            <Link
-              href="/services"
-              className="inline-flex h-11 items-center rounded-full bg-white/50 px-5 text-sm font-medium text-ink shadow-[0_0_0_1px_rgb(255_255_255/0.7)] backdrop-blur-md transition-colors hover:bg-white/70"
-            >
-              Our services
-            </Link>
-          </div>
-        </div>
-
-        <div
-          data-build
-          aria-hidden
-          className="absolute top-[68svh] left-1/2 z-10 w-[min(1120px,150vw)] -translate-x-1/2 origin-top will-change-transform sm:top-[66svh] sm:w-[min(1040px,84vw)]"
-        >
-          {/* The parade as a live camera feed, framed in a viewfinder. */}
-          <div className="relative overflow-hidden rounded-[28px] bg-ink shadow-[0_30px_80px_-30px_rgb(6_17_13/0.55)] ring-1 ring-white/50">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              data-feed
-              src="/img/nbss/parade-salute.jpg"
-              alt=""
-              width={1600}
-              height={714}
-              fetchPriority="high"
-              className="h-auto w-full origin-center object-cover [filter:saturate(0.95)_contrast(1.05)]"
-            />
-            <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(to_bottom,rgb(255_255_255/0.035)_0_1px,transparent_1px_3px)]" />
-            <div data-hud className="pointer-events-none absolute inset-0 font-mono text-[11px] text-white sm:text-[13px]">
-              {/* corner brackets */}
-              <span className="absolute top-4 left-4 size-8 border-t-2 border-l-2 border-white/85 sm:top-6 sm:left-6 sm:size-12" />
-              <span className="absolute top-4 right-4 size-8 border-t-2 border-r-2 border-white/85 sm:top-6 sm:right-6 sm:size-12" />
-              <span className="absolute bottom-4 left-4 size-8 border-b-2 border-l-2 border-white/85 sm:bottom-6 sm:left-6 sm:size-12" />
-              <span className="absolute right-4 bottom-4 size-8 border-r-2 border-b-2 border-white/85 sm:right-6 sm:bottom-6 sm:size-12" />
-              {/* crosshair */}
-              <span className="absolute top-1/2 left-1/2 h-8 w-px -translate-1/2 bg-white/60" />
-              <span className="absolute top-1/2 left-1/2 h-px w-8 -translate-1/2 bg-white/60" />
-              <span className="absolute top-6 left-14 flex items-center gap-1.5 sm:top-9 sm:left-20">
-                <span className="size-2 animate-pulse rounded-full bg-red-500" /> REC
-              </span>
-              <span className="absolute top-6 right-14 text-right tabular-nums sm:top-9 sm:right-20">
-                <span data-shift-label className="block text-white/75">Day shift</span>
-                <span data-shift-time className="block text-[15px] font-semibold sm:text-lg">06:00</span>
-              </span>
-              <span className="absolute bottom-6 left-14 sm:bottom-9 sm:left-20">CAM 01 · Main gate · {site.address.city}</span>
+        <div className="relative z-20 mx-auto flex h-full max-w-[1360px] flex-col gap-6 px-4 pt-[max(108px,13svh)] pb-4 sm:px-8 md:pb-16 lg:flex-row lg:items-center lg:gap-12 lg:pt-[max(104px,12svh)] lg:pb-16 [@media(max-height:760px)]:pb-4">
+          <div data-copy className="flex flex-col items-center text-center lg:w-[46%] lg:shrink-0 lg:items-start lg:text-left">
+            <p data-intro className="text-sm font-semibold text-primary-ink sm:text-base">
+              {site.name} · {site.address.city}
+            </p>
+            <h1 data-intro className="display-hero mt-5 text-[clamp(2.6rem,6.6vw,6rem)] text-ink/90 lg:text-[clamp(3rem,4.9vw,5.5rem)]">
+              Your Safety, Our Responsibility
+            </h1>
+            <p data-intro className="mt-4 max-w-2xl text-[clamp(1rem,1.6vw,1.25rem)] text-ink/65 lg:max-w-xl">
+              Trained, uniformed and police-verified guards for offices, hospitals, banks, schools, industry and events{" "}
+              <span className="text-ink/90">across Bodoland.</span>
+            </p>
+            <div data-intro className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+              <Link
+                href={BOOK_HREF}
+                className="group inline-flex h-11 items-center gap-2 rounded-full bg-ink pr-4 pl-5 text-sm font-medium text-ink-fg transition-transform duration-[120ms] ease-quick hover:scale-[1.03] active:scale-[0.98]"
+              >
+                Book guards
+                <ArrowRight className="size-4 transition-transform duration-[180ms] ease-quick group-hover:translate-x-0.5" aria-hidden />
+              </Link>
+              <Link
+                href="/services"
+                className="inline-flex h-11 items-center rounded-full bg-white/50 px-5 text-sm font-medium text-ink shadow-[0_0_0_1px_rgb(255_255_255/0.7)] backdrop-blur-md transition-colors hover:bg-white/70"
+              >
+                Our services
+              </Link>
             </div>
           </div>
-        </div>
 
-        <div
-          data-mist
-          aria-hidden
-          className="absolute inset-x-0 -bottom-[32svh] z-10 h-[64svh] bg-[linear-gradient(to_top,#eef6f2_45%,rgb(238_246_242/0)_88%)] will-change-transform"
-        />
+          {/* What is left of the screen, as a size container: the wall below scales to fit
+              it whole, so neither photo is ever cropped, faded or run off the edge. */}
+          <div className="flex min-h-0 flex-1 items-center justify-center self-stretch [container-type:size] lg:justify-end">
+            <CameraWall />
+          </div>
+        </div>
 
         <div
           data-strip
           aria-hidden
           className="absolute inset-x-0 bottom-0 z-20 h-3 bg-[repeating-linear-gradient(90deg,rgb(6_17_13/0.35)_0_1px,transparent_1px_12px),repeating-linear-gradient(90deg,rgb(6_17_13/0.55)_0_1px,transparent_1px_96px)] opacity-70 [mask-image:linear-gradient(to_top,black,black_50%,transparent)]"
         />
-        <div data-strip className="absolute inset-x-0 bottom-3 z-20 hidden items-end justify-between pr-28 pb-5 pl-8 text-[13px] font-medium text-ink/70 md:flex">
+        <div data-strip className="absolute inset-x-0 bottom-3 z-20 hidden items-end justify-between pr-28 pb-5 pl-8 text-[13px] font-medium text-ink/70 md:flex [@media(max-height:760px)]:hidden">
           <p>Schools · Hospitals · Government offices · Banks · Industry · Events</p>
           <p className="inline-flex items-center gap-2">
             Scroll <ArrowDown className="size-3.5 animate-bounce" aria-hidden />
@@ -215,5 +176,108 @@ export function Hero() {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * The control room's monitor wall: two camera feeds shown whole, plus the shift clock.
+ *
+ * Laid out in units of its own width (`--w`), which is the largest that fits the space
+ * it is given (a size container) in both directions. That keeps both photos at their
+ * true aspect ratio on every screen: nothing is cropped, faded or hidden behind a HUD,
+ * only a small label sits in each corner.
+ *
+ *   ┌───────────────────────────────┐
+ *   │ CAM 01  parade      1600 × 714 │
+ *   ├──────────┬────────────────────┤
+ *   │ CAM 02   │ shift clock        │
+ *   │ team 3:4 │ posts covered      │
+ *   └──────────┴────────────────────┘
+ */
+function CameraWall() {
+  return (
+    <div
+      data-build
+      aria-hidden
+      className="grid w-(--w) origin-center grid-cols-[calc(var(--w)*0.369)_1fr] grid-rows-[calc(var(--w)*0.44625)_calc(var(--w)*0.5)] gap-[calc(var(--w)*0.025)] will-change-transform [--w:min(100cqw,calc(100cqh/0.97125),760px)]"
+    >
+      <Feed
+        className="col-span-2"
+        src="/img/nbss/parade-salute.jpg"
+        width={1600}
+        height={714}
+        label="CAM 01 · Main gate"
+        priority
+      />
+      <Feed src="/img/nbss/team-event.jpg" width={720} height={975} label="CAM 02 · Event duty" position="top" />
+
+      <div
+        data-cam
+        className="flex flex-col justify-between rounded-[calc(var(--w)*0.03)] bg-ink p-[calc(var(--w)*0.035)] font-mono text-white shadow-[0_24px_60px_-28px_rgb(6_17_13/0.6)] ring-1 ring-white/10"
+      >
+        <div className="flex items-center justify-between text-[max(9px,calc(var(--w)*0.018))] tracking-wide text-white/60 uppercase">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-[0.7em] animate-pulse rounded-full bg-red-500" /> Live
+          </span>
+          <span>2 cams</span>
+        </div>
+        <div>
+          <span data-shift-label className="block text-[max(10px,calc(var(--w)*0.022))] text-emerald-300">
+            Day shift
+          </span>
+          <span data-shift-time className="block text-[calc(var(--w)*0.1)] leading-none font-semibold tabular-nums">
+            06:00
+          </span>
+        </div>
+        <ul className="space-y-[0.5em] text-[max(9px,calc(var(--w)*0.018))] text-white/75">
+          <li className="flex items-center gap-1.5">
+            <span className="size-[0.6em] rounded-full bg-emerald-400" /> Main gate · {site.address.city}
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="size-[0.6em] rounded-full bg-emerald-400" /> Event duty · New Delhi
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function Feed({
+  src,
+  width,
+  height,
+  label,
+  className,
+  position = "center",
+  priority = false,
+}: {
+  src: string;
+  width: number;
+  height: number;
+  label: string;
+  className?: string;
+  /** Only the team photo needs it: its frame stops above the GeoCam stamp at the foot. */
+  position?: "center" | "top";
+  priority?: boolean;
+}) {
+  return (
+    <div
+      data-cam
+      className={`relative overflow-hidden rounded-[calc(var(--w)*0.03)] bg-ink shadow-[0_24px_60px_-28px_rgb(6_17_13/0.6)] ring-1 ring-white/60 ${className ?? ""}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        width={width}
+        height={height}
+        fetchPriority={priority ? "high" : undefined}
+        className={`size-full object-cover ${position === "top" ? "object-top" : ""}`}
+      />
+      <span className="absolute top-[calc(var(--w)*0.02)] left-[calc(var(--w)*0.02)] inline-flex items-center gap-1.5 rounded-full bg-black/45 px-[0.8em] py-[0.35em] font-mono text-[max(8px,calc(var(--w)*0.016))] text-white backdrop-blur-sm">
+        <span className="size-[0.6em] animate-pulse rounded-full bg-red-500" />
+        {label}
+      </span>
+    </div>
   );
 }

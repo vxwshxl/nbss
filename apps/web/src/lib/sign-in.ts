@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { isValidEmail } from "@nbss/shared/identity";
 
-import { isValidCode, normaliseCode, type Role } from "@/lib/auth";
+import { homeFor, isValidCode, normaliseCode, type Role } from "@/lib/auth";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
@@ -109,7 +109,29 @@ async function addressTaken(email: string): Promise<boolean> {
   }
 }
 
-async function finish(client: Client, userId: string | undefined): Promise<SignInResult> {
+/**
+ * Where to go after signing in. A `from` inside the console is honoured — the
+ * page there re-checks the role and sends anyone who does not belong back to
+ * their own home — anything else lands on the role's dashboard.
+ */
+export async function landingFor(role: Role, userId: string, from: string): Promise<string> {
+  if (from.startsWith("/console/") && !from.startsWith("//")) return from;
+  // A client with nothing yet goes straight to the booking form. Decided here rather
+  // than by a second redirect on /console/site, which a server action's redirect cannot
+  // follow cleanly.
+  if (role === "client") {
+    const admin = supabaseAdmin();
+    const [{ count: sites }, { count: requests }] = await Promise.all([
+      admin.from("sites").select("id", { count: "exact", head: true }).eq("client_id", userId),
+      admin.from("service_requests").select("id", { count: "exact", head: true }).eq("client_id", userId),
+    ]);
+    if (!sites && !requests) return "/console/book";
+  }
+  return homeFor(role);
+}
+
+/** The signed-in user's role, or a refusal that also signs them out again. */
+export async function finish(client: Client, userId: string | undefined): Promise<SignInResult> {
   if (!userId) return { ok: false, error: REFUSED };
   const { data: profile } = await client
     .from("profiles")

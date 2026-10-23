@@ -21,21 +21,20 @@ copy of it.
 
 ## Before push notifications work
 
-Three things, and an SOS silently reaches nobody until all three are done:
+Pushes leave from the server: `apps/web/scripts/push-worker.mjs` (PM2 `nbss-push` on
+okhrang.core) drains `push_outbox` to Expo every two seconds. Check it with
+`pm2 logs nbss-push`.
 
-1. **`eas init`** — writes `extra.eas.projectId` into the config. Without it
-   `getExpoPushTokenAsync` issues a token against no project and every alert is
-   delivered into a void, with no error anywhere. `registerForPush` returns
-   `{ ok: false, reason: "no_project_id" }` for exactly this case.
-2. **FCM v1 service account** (Android) and an **APNs key** (iOS), uploaded to EAS.
-3. **The Expo access token**, if the project has enhanced push security switched on.
-   It is read from the database, not the environment, because the thing that sends the
-   push is a Postgres function called by pg_cron and there is no process holding an env
-   var at that moment:
+1. **EAS project** — done: `nbss-operations` under the Expo account `vxwshxl`, its
+   projectId set in `app.config.ts`. `registerForPush` returns
+   `{ ok: false, reason: "no_project_id" }` if that is ever lost.
+2. **FCM v1 service account** (Android) and an **APNs key** (iOS), uploaded to EAS
+   (`eas credentials`). Until then an SOS reaches nobody on that platform.
+3. **The Expo access token**, only if the project turns on enhanced push security: put
+   `EXPO_ACCESS_TOKEN=…` in `/srv/nbss/.env` and `pm2 restart nbss-push`.
 
-   ```sh
-   pnpm db:sql "select set_secret('expo_access_token', 'YOUR_TOKEN')"
-   ```
+Builds get the Supabase URL, publishable key and website address from the EAS
+environments `preview` and `production` (`eas env:list`), not from `.env`.
 
 Push cannot be tested on a simulator. `registerForPush` returns `reason: "simulator"`
 rather than failing, so the rest of the app still works there.

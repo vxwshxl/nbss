@@ -14,7 +14,7 @@
 --      written alongside each check-in, so a dispute six months later has
 --      something to read rather than an unexplained row.
 --
--- Applied against the `nbss` project over the session pooler.
+-- Applied to the self-hosted Supafleet tenant `tenant_nbss` with `pnpm db:migrate`.
 -- ===========================================================================
 
 -- btree_gist backs the exclusion constraint that stops a guard being rostered

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { currentProfile, homeFor } from "@/lib/auth";
 
 import { AuthShell } from "./auth-shell";
-import { safeFrom } from "./state";
+import { GOOGLE_ERRORS, safeFrom } from "./state";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = {
@@ -22,10 +22,11 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; error?: string }>;
 }) {
   const [profile, params] = await Promise.all([currentProfile(), searchParams]);
   const from = safeFrom(params.from);
+  const error = params.error ? GOOGLE_ERRORS[params.error] : undefined;
 
   // Already through the door: straight to where the button was going (a
   // client pressing "Book guards" lands on the booking page), else home.
@@ -33,7 +34,7 @@ export default async function LoginPage({
 
   return (
     <AuthShell>
-      <SignInForm from={from} />
+      <SignInForm from={from} error={error} />
     </AuthShell>
   );
 }

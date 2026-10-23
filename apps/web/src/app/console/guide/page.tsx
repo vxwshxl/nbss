@@ -57,7 +57,7 @@ const SECTIONS: Section[] = [
     steps: [
       { cmd: "pnpm db:status", text: "Which migrations in supabase/migrations have run." },
       { cmd: "pnpm db:migrate", text: "Run the ones that have not. Then pnpm db:types to refresh the types." },
-      { cmd: "pnpm db:auth", text: "Push the ZeptoMail SMTP settings and the sign-in code email to Supabase (needs supabase login with the account that owns the project)." },
+      { cmd: "pnpm db:auth", text: "Push the ZeptoMail SMTP settings, the sign-in code email and Google sign-in to Supabase Auth over SSH." },
       { cmd: 'pnpm db:sql "select ..."', text: "Run one query against the live database." },
     ],
   },
@@ -65,7 +65,7 @@ const SECTIONS: Section[] = [
     title: "Roles and sign-in",
     icon: UsersRound,
     hue: "brick",
-    intro: "Everyone signs in at /login with their email or employee code and the 6-digit code mailed to them. A new email becomes a client account on its first code, and lands on the booking form. A PIN or passphrase also works for anyone who has one.",
+    intro: "Everyone signs in at /login with Google, using the account their email is registered under. A Google account nobody has used yet becomes a client account on the spot, and lands on the booking form. Guards and anyone else without Google use their employee code and PIN or password.",
     steps: [
       { text: "Developer: everything an administrator can do, plus making or removing other developers." },
       { text: "Administrator: everything, including users, sites, settings and View as." },
@@ -89,10 +89,10 @@ const SECTIONS: Section[] = [
 
 /** How the work flows through NBSS, step by step: the film's story in words, with where to go. */
 const FLOW: { title: string; where: string; href?: string; text: string }[] = [
-  { title: "A client books", where: "Website → Book guards", text: "They sign in with their email; the first code makes their client account, and the booking form opens straight away." },
+  { title: "A client books", where: "Website → Book guards", text: "They sign in with Google; the first sign-in makes their client account, and the booking form opens straight away." },
   { title: "It lands in Bookings", where: "Bookings", href: "/console/bookings", text: "New requests show first. Open one to call the client, set a quotation and add a note they can read." },
   { title: "Register the site", where: "Sites & geofences", href: "/console/sites", text: "Draw the boundary on the map. A guard can only check in inside it." },
-  { title: "Add the people", where: "Users → Add person", href: "/console/users", text: "Guards get an employee code and PIN for the gate; office staff and clients sign in with an emailed code." },
+  { title: "Add the people", where: "Users → Add person", href: "/console/users", text: "Guards get an employee code and PIN for the gate; office staff and clients sign in with Google." },
   { title: "Roster the posts", where: "Roster", href: "/console/roster", text: "Post guards to sites and shifts. Whoever has not arrived after the grace window shows on the dashboard." },
   { title: "Guards check in", where: "The app → Duty", text: "At the gate they tap check in. The fence decides whether it counts; anything doubtful goes to review." },
   { title: "Review attendance", where: "Attendance", href: "/console/attendance", text: "Approve or reject flagged punches, with a reason that stays on the record." },

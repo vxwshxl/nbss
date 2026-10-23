@@ -29,6 +29,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "NBSS Operations",
   slug: "nbss-operations",
+  owner: "vxwshxl",
   scheme: "nbss",
   version: "1.0.0",
   orientation: "portrait",
@@ -164,8 +165,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: SUPABASE_URL,
     supabasePublishableKey: SUPABASE_PUBLISHABLE_KEY,
     webUrl: WEB_URL,
-    // Filled in by `eas init`. Left absent rather than guessed, because a wrong
-    // projectId makes push tokens silently belong to somebody else's project.
-    eas: (config.extra as { eas?: unknown } | undefined)?.eas,
+    // From `eas init` (Expo account vxwshxl, project nbss-operations). Never guess
+    // it: a wrong projectId makes push tokens silently belong to another project.
+    eas: { projectId: "0d44980c-9bc5-4aff-b18b-28568538db6c" },
   },
 });

@@ -17,7 +17,7 @@ const isDev = process.env.NODE_ENV === "development";
  *
  * `connect-src 'self'` was correct while every query ran on the server. It stops being
  * correct the moment the console subscribes to anything: the realtime channel is a
- * WebSocket to `wss://<ref>.supabase.co/realtime/v1`, and a strict policy blocks it
+ * WebSocket to `wss://supabase.nbsskokrajhar.com/realtime/v1`, and a strict policy blocks it
  * silently — the socket simply never opens and the map never updates, with nothing in the
  * server logs to explain why.
  *

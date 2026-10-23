@@ -11,5 +11,14 @@ module.exports = {
       max_memory_restart: "700M",
       time: true,
     },
+    {
+      // Sends push_outbox to Expo (supabase/migrations/0020_push_worker.sql).
+      name: "nbss-push",
+      cwd: "/srv/nbss/apps/web",
+      script: "scripts/push-worker.mjs",
+      node_args: "--env-file=.env",
+      max_memory_restart: "150M",
+      time: true,
+    },
   ],
 };

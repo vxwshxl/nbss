@@ -14,7 +14,10 @@
  * `apps/web/public/email/auth-code.html`, served by the site itself. Deploy the
  * site before running this if the template changed.
  *
- * SMTP credentials and the sender come from .env.
+ * SMTP credentials, the sender and the Google OAuth client come from .env.
+ *
+ * Google sends people back to `<supabase>/auth/v1/callback` — that exact URL
+ * must be an authorized redirect URI on the OAuth client in Google Cloud.
  */
 
 import { execFileSync } from "node:child_process";
@@ -25,7 +28,10 @@ const HOST = process.env.NBSS_HOST ?? "root@187.126.117.188";
 const TENANT_DIR = "/root/supafleet/tenants/nbss";
 
 const env = readEnv();
-for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"]) {
+for (const key of [
+  "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM",
+  "NEXT_PUBLIC_SUPABASE_URL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
+]) {
   if (!env[key]) throw new Error(`${key} is not set in .env`);
 }
 
@@ -33,6 +39,7 @@ for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FRO
 // fetches the template and builds redirects from this.
 const site = (process.env.NBSS_SITE_URL ?? "https://nbsskokrajhar.com").replace(/\/+$/, "");
 const template = `${site}/email/auth-code.html`;
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/+$/, "");
 
 const settings = {
   GOTRUE_SITE_URL: site,
@@ -55,6 +62,10 @@ const settings = {
   GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: template,
   GOTRUE_MAILER_SUBJECTS_RECOVERY: "{{ .Token }} is your NBSS reset code",
   GOTRUE_MAILER_TEMPLATES_RECOVERY: template,
+  GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true",
+  GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
+  GOTRUE_EXTERNAL_GOOGLE_SECRET: env.GOOGLE_CLIENT_SECRET,
+  GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: `${supabaseUrl}/auth/v1/callback`,
 };
 
 // Sessions never time out. Cloud took 0 for "off"; self-hosted GoTrue refuses to start
@@ -90,5 +101,6 @@ console.log("Auth configured:", {
   template,
   otp_length: 6,
   otp_exp_s: 600,
+  google_redirect: settings.GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI,
   auth: status,
 });
