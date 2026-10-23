@@ -35,7 +35,7 @@ const NBSS = "National Bodo Security Service";
 export const gallery: Photo[] = [
   // ------------------------------------------------- supplied by the client
   {
-    src: "/img/nbss/parade-salute.jpg",
+    src: "/img/nbss/parade-salute.webp",
     alt: "NBSS guards standing at attention in formation, saluting during evening parade",
     caption: "Evening parade: turnout and salute",
     category: "training",
@@ -44,7 +44,7 @@ export const gallery: Photo[] = [
     tall: true,
   },
   {
-    src: "/img/nbss/guards-on-duty.jpg",
+    src: "/img/nbss/guards-on-duty.webp",
     alt: "Three NBSS guards in uniform and reflective harness on duty at the entrance of a public building",
     caption: "Gate duty at a public building, Kokrajhar",
     category: "operations",
@@ -52,7 +52,7 @@ export const gallery: Photo[] = [
     own: true,
   },
   {
-    src: "/img/nbss/parade-night.jpg",
+    src: "/img/nbss/parade-night.webp",
     alt: "A large formation of NBSS guards saluting while an officer takes the parade",
     caption: "Parade inspection, full strength on the ground",
     category: "training",
@@ -60,7 +60,7 @@ export const gallery: Photo[] = [
     own: true,
   },
   {
-    src: "/img/nbss/parade-ranks.jpg",
+    src: "/img/nbss/parade-ranks.webp",
     alt: "NBSS guards drawn up in ranks with batons during parade drill",
     caption: "Drill ranks: bearing, spacing and discipline",
     category: "training",
@@ -68,7 +68,7 @@ export const gallery: Photo[] = [
     own: true,
   },
   {
-    src: "/img/nbss/training-classroom.jpg",
+    src: "/img/nbss/training-classroom.webp",
     alt: "NBSS guards seated for a classroom training session",
     caption: "Classroom session, guards on the mat",
     category: "training",
@@ -76,7 +76,7 @@ export const gallery: Photo[] = [
     own: true,
   },
   {
-    src: "/img/nbss/training-briefing.jpg",
+    src: "/img/nbss/training-briefing.webp",
     alt: "An Assam police officer briefing NBSS guards during an emergency response training session",
     caption: "Emergency response briefing with SDRF Assam",
     category: "training",
@@ -85,7 +85,7 @@ export const gallery: Photo[] = [
     tall: true,
   },
   {
-    src: "/img/nbss/training-demo.jpg",
+    src: "/img/nbss/training-demo.webp",
     alt: "SDRF Assam instructors demonstrating rescue equipment to NBSS guards",
     caption: "Rescue equipment demonstration, SDRF Assam",
     category: "training",
@@ -94,29 +94,29 @@ export const gallery: Photo[] = [
   },
 
   // ---------------------------------------------- licensed stock, attributed
-  { src: "/img/hero-guard.jpg", alt: "A uniformed security guard on duty at a campus gate", caption: "Gate duty, morning shift", category: "operations", credit: "liber(the poet)", licence: "CC BY-SA 2.0" },
-  { src: "/img/ops-team.jpg", alt: "A security team standing in formation", caption: "Shift briefing before deployment", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/ops-fire-training.jpg", alt: "Fire safety training with an extinguisher", caption: "Fire response training", category: "training", credit: "BLM Oregon & Washington", licence: "CC BY-SA 2.0" },
-  { src: "/img/ops-bank.jpg", alt: "A security guard posted outside a bank", caption: "Branch posting, opening drill", category: "operations", credit: "Brad & Ying", licence: "CC BY 2.0" },
-  { src: "/img/services/mall.jpg", alt: "Interior of a shopping mall", caption: "Retail floor, closing sweep", category: "operations", credit: "shankar s.", licence: "CC BY 2.0" },
-  { src: "/img/services/warehouse.jpg", alt: "Warehouse and logistics facility", caption: "Dock supervision, warehouse posting", category: "operations", credit: "tm-md", licence: "CC BY 2.0" },
-  { src: "/img/gallery/kokrajhar-eve.jpg", alt: "Evening at Kokrajhar Medical College", caption: "Evening handover, hospital posting", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/hero-guard.webp", alt: "A uniformed security guard on duty at a campus gate", caption: "Gate duty, morning shift", category: "operations", credit: "liber(the poet)", licence: "CC BY-SA 2.0" },
+  { src: "/img/ops-team.webp", alt: "A security team standing in formation", caption: "Shift briefing before deployment", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/ops-fire-training.webp", alt: "Fire safety training with an extinguisher", caption: "Fire response training", category: "training", credit: "BLM Oregon & Washington", licence: "CC BY-SA 2.0" },
+  { src: "/img/ops-bank.webp", alt: "A security guard posted outside a bank", caption: "Branch posting, opening drill", category: "operations", credit: "Brad & Ying", licence: "CC BY 2.0" },
+  { src: "/img/services/mall.webp", alt: "Interior of a shopping mall", caption: "Retail floor, closing sweep", category: "operations", credit: "shankar s.", licence: "CC BY 2.0" },
+  { src: "/img/services/warehouse.webp", alt: "Warehouse and logistics facility", caption: "Dock supervision, warehouse posting", category: "operations", credit: "tm-md", licence: "CC BY 2.0" },
+  { src: "/img/gallery/kokrajhar-eve.webp", alt: "Evening at Kokrajhar Medical College", caption: "Evening handover, hospital posting", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
 
-  { src: "/img/gallery/aronai.jpg", alt: "An Aronai, the traditional woven Bodo scarf", caption: "The Aronai: the woven band our identity is drawn from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 4.0", tall: true },
-  { src: "/img/gallery/aronai-2.jpg", alt: "Detail of Aronai weaving showing diamond motifs", caption: "Diamond motif, hand-loomed", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bodo-women.jpg", alt: "Bodo women in traditional dokhona", caption: "The community our women guards are recruited from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 3.0" },
-  { src: "/img/gallery/bodo-elder.jpg", alt: "An elderly Bodo man", caption: "Kokrajhar district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/kokrajhar-rail.jpg", alt: "Kokrajhar railway station building", caption: "Kokrajhar station", category: "bodoland", credit: "Wikimedia Commons", licence: "CC0" },
-  { src: "/img/gallery/kokrajhar-med.jpg", alt: "Kokrajhar Medical College and cancer care centre", caption: "Kokrajhar Medical College", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/manas.jpg", alt: "Manas National Park landscape", caption: "Manas: the northern edge of the region", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 3.0", tall: true },
-  { src: "/img/gallery/manas-2.jpg", alt: "Grassland and forest in Manas National Park", caption: "Grassland boundary, Baksa district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/aronai.webp", alt: "An Aronai, the traditional woven Bodo scarf", caption: "The Aronai: the woven band our identity is drawn from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 4.0", tall: true },
+  { src: "/img/gallery/aronai-2.webp", alt: "Detail of Aronai weaving showing diamond motifs", caption: "Diamond motif, hand-loomed", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/bodo-women.webp", alt: "Bodo women in traditional dokhona", caption: "The community our women guards are recruited from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 3.0" },
+  { src: "/img/gallery/bodo-elder.webp", alt: "An elderly Bodo man", caption: "Kokrajhar district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/kokrajhar-rail.webp", alt: "Kokrajhar railway station building", caption: "Kokrajhar station", category: "bodoland", credit: "Wikimedia Commons", licence: "CC0" },
+  { src: "/img/gallery/kokrajhar-med.webp", alt: "Kokrajhar Medical College and cancer care centre", caption: "Kokrajhar Medical College", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/manas.webp", alt: "Manas National Park landscape", caption: "Manas: the northern edge of the region", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 3.0", tall: true },
+  { src: "/img/gallery/manas-2.webp", alt: "Grassland and forest in Manas National Park", caption: "Grassland boundary, Baksa district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
 
-  { src: "/img/gallery/bagurumba-1.jpg", alt: "Bodo women performing the Bagurumba dance", caption: "Bagurumba: the butterfly dance", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bagurumba-2.jpg", alt: "Bagurumba dancers in traditional dokhona", caption: "Festival ground, Bwisagu week", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bagurumba-3.jpg", alt: "A Bagurumba performance in progress", caption: "Crowd management at a cultural meet", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0", tall: true },
-  { src: "/img/gallery/bwisagu.jpg", alt: "Bwisagu festival dance performance", caption: "Bwisagu: the Bodo new year", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bardoi-sikhla.jpg", alt: "Bodo girls performing the Bardoi Sikhla dance", caption: "Bardoi Sikhla, harvest season", category: "community", credit: "Wikimedia Commons", licence: "CC BY 2.0" },
-  { src: "/img/gallery/marigold.jpg", alt: "Marigolds in bloom in Kokrajhar", caption: "Kokrajhar in bloom", category: "community", credit: "Wikimedia Commons", licence: "CC BY 4.0" },
+  { src: "/img/gallery/bagurumba-1.webp", alt: "Bodo women performing the Bagurumba dance", caption: "Bagurumba: the butterfly dance", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/bagurumba-2.webp", alt: "Bagurumba dancers in traditional dokhona", caption: "Festival ground, Bwisagu week", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/bagurumba-3.webp", alt: "A Bagurumba performance in progress", caption: "Crowd management at a cultural meet", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0", tall: true },
+  { src: "/img/gallery/bwisagu.webp", alt: "Bwisagu festival dance performance", caption: "Bwisagu: the Bodo new year", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
+  { src: "/img/gallery/bardoi-sikhla.webp", alt: "Bodo girls performing the Bardoi Sikhla dance", caption: "Bardoi Sikhla, harvest season", category: "community", credit: "Wikimedia Commons", licence: "CC BY 2.0" },
+  { src: "/img/gallery/marigold.webp", alt: "Marigolds in bloom in Kokrajhar", caption: "Kokrajhar in bloom", category: "community", credit: "Wikimedia Commons", licence: "CC BY 4.0" },
 ];
 
 export function photosIn(category?: string): Photo[] {

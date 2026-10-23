@@ -47,7 +47,7 @@ export default function AboutPage() {
         crumb="About"
         title="Safety, protection and peace of mind."
         lede={site.descriptor}
-        image="/img/nbss/parade-night.jpg"
+        image="/img/nbss/parade-night.webp"
       />
 
       <Section>
@@ -86,7 +86,7 @@ export default function AboutPage() {
             <figure>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-app-line-soft bg-muted">
                 <Image
-                  src="/img/gallery/aronai.jpg"
+                  src="/img/gallery/aronai.webp"
                   alt="An Aronai, the traditional woven Bodo scarf, with its diamond motifs"
                   fill
                   sizes="(max-width: 1024px) 100vw, 40vw"

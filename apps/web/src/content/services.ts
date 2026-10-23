@@ -33,7 +33,7 @@ export const services: Service[] = [
     detail:
       "A campus posting is a child-safety posting before it is anything else. Guards on school, college and university sites are police-verified like every other person on our roll, and are briefed on the one rule that matters at a school gate: a child leaves with a listed guardian or does not leave. Women guards handle girls' hostel gates and examination-hall frisking. Vehicle discipline at drop-off and pick-up is part of the duty, not an extra.",
     icon: "book",
-    image: "/img/gallery/kokrajhar-med.jpg",
+    image: "/img/gallery/kokrajhar-med.webp",
     accent: "green",
     featured: true,
     scope: [
@@ -58,7 +58,7 @@ export const services: Service[] = [
     detail:
       "A hospital guard's hardest hour is the one after a bad admission. Casualty postings are briefed on de-escalation and on holding a corridor without raising the temperature of a frightened family. Ward, pharmacy and stores duty runs on attendant passes and visiting-hour discipline rather than on argument. Guards are trained in first-aid support, which on a hospital site is occasionally the difference that counts.",
     icon: "cross",
-    image: "/img/services/hospital.jpg",
+    image: "/img/services/hospital.webp",
     accent: "rust",
     featured: true,
     scope: [
@@ -83,7 +83,7 @@ export const services: Service[] = [
     detail:
       "Government postings are held to the department's paperwork, not to ours. We deploy to the sanctioned manpower schedule, keep the attendance and wage records the department will ask to inspect, and brief personnel on the office's own visitor and grievance procedure before the first shift. Registration under the Government of Assam, GST and labour compliance are in place, and documents are shared when a contract is being finalised.",
     icon: "landmark",
-    image: "/img/nbss/guards-on-duty.jpg",
+    image: "/img/nbss/guards-on-duty.webp",
     accent: "gold",
     featured: true,
     scope: [
@@ -108,7 +108,7 @@ export const services: Service[] = [
     detail:
       "Bank postings run on protocol, not initiative. Opening and closing follow a written sequence, the cash counter and strong-room corridor stay under watch through banking hours, and the alarm check is done and logged daily rather than assumed. Every guard on a bank posting is police-verified and briefed on the branch's specific shutter and alarm arrangement before standing the first shift.",
     icon: "bank",
-    image: "/img/ops-bank.jpg",
+    image: "/img/ops-bank.webp",
     accent: "sky",
     featured: true,
     scope: [
@@ -133,7 +133,7 @@ export const services: Service[] = [
     detail:
       "Hospitality guarding is deliberately quiet. Personnel are groomed and briefed to guest-facing standards, work the lobby and porch without crowding arrivals, and handle banquet and function crowds by anticipating rather than intervening. Guest-floor rounds, key discipline and back-of-house material checks run in the background where the guest does not see them.",
     icon: "bell",
-    image: "/img/gallery/manas.jpg",
+    image: "/img/gallery/manas.webp",
     accent: "gold",
     scope: [
       "Lobby, porch and driveway cover",
@@ -157,7 +157,7 @@ export const services: Service[] = [
     detail:
       "Retail security is loss prevention with a smile fixed on. Floor personnel work bag deposit at entry, tag checks at exit, fitting-room counts and the closing sweep. On mall sites we add parking marshalling, escalator and atrium watch, and a lost-child routine the customer-service desk is briefed on alongside our guards.",
     icon: "cart",
-    image: "/img/services/mall.jpg",
+    image: "/img/services/mall.webp",
     accent: "rust",
     featured: true,
     scope: [
@@ -182,7 +182,7 @@ export const services: Service[] = [
     detail:
       "Industrial loss rarely walks in through the front gate. It leaves through it, on a truck, with paperwork that nearly matches. Our postings on company premises, factories and warehouses are built around gate-pass control, material inward and outward checks, shift-change discipline and a perimeter round that is not run to a timetable anyone watching can predict.",
     icon: "factory",
-    image: "/img/services/warehouse.jpg",
+    image: "/img/services/warehouse.webp",
     accent: "green",
     featured: true,
     scope: [
@@ -207,7 +207,7 @@ export const services: Service[] = [
     detail:
       "A live construction site loses steel, cable and diesel, mostly at night and mostly in small quantities. We man the material gate against the challan, log machinery movement and patrol an unlit, changing site plan. Residential postings are the mirror image of the same discipline: resident-confirmed visitor entry, photo passes for domestic help and vendors, and a night round that actually reaches the back boundary.",
     icon: "helmet",
-    image: "/img/services/construction.jpg",
+    image: "/img/services/construction.webp",
     accent: "gold",
     scope: [
       "Material inward challan verification",
@@ -231,7 +231,7 @@ export const services: Service[] = [
     detail:
       "Event security is planned in the week before, not on the day. We walk the venue, mark entry and exit lanes, fix the barricade line, agree the stage and green-room cordon, and write an evacuation route the organiser signs off. On the day we deploy frisking lanes, pass verification, queue management and a named commander who owns every decision. Close-protection officers for individuals are selected for judgement and discretion rather than size.",
     icon: "flag",
-    image: "/img/gallery/bagurumba-1.jpg",
+    image: "/img/gallery/bagurumba-1.webp",
     accent: "sky",
     featured: true,
     scope: [

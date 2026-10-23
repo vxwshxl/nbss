@@ -61,7 +61,7 @@ export default function ServicesPage() {
         crumb="Services"
         title="We provide security personnel for these sites."
         lede="One thing, done properly: trained, disciplined and police-verified guards, posted where you need them and supervised after they get there."
-        image="/img/nbss/guards-on-duty.jpg"
+        image="/img/nbss/guards-on-duty.webp"
       />
 
       <Section>

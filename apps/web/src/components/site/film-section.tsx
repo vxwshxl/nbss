@@ -95,7 +95,7 @@ export function FilmSection() {
           playsInline
           loop
           preload="metadata"
-          poster="/img/nbss/parade-night.jpg"
+          poster="/img/nbss/parade-night.webp"
           onClick={toggle}
           className="block aspect-video w-full cursor-pointer"
           aria-label="NBSS guards on parade"

@@ -66,7 +66,7 @@ export default function TrainingPage() {
         crumb="Training"
         title="Trained before anyone stands at your gate."
         lede="Six areas, covered before a first posting and revisited afterwards. A guard who freezes at a fire alarm has not been careless. Somebody skipped the training."
-        image="/img/nbss/training-classroom.jpg"
+        image="/img/nbss/training-classroom.webp"
       />
 
       <Section>
@@ -109,7 +109,7 @@ export default function TrainingPage() {
             <figure>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-app-line-soft bg-muted">
                 <Image
-                  src="/img/nbss/parade-ranks.jpg"
+                  src="/img/nbss/parade-ranks.webp"
                   alt="NBSS guards drawn up in ranks with batons during parade drill"
                   fill
                   sizes="(max-width: 1024px) 100vw, 40vw"
@@ -174,7 +174,7 @@ export default function TrainingPage() {
           <Reveal delay={80}>
             <VideoBand
               src="/video/nbss-parade.mp4"
-              poster="/img/nbss/parade-salute.jpg"
+              poster="/img/nbss/parade-salute.webp"
               caption="NBSS parade, Kokrajhar."
             />
           </Reveal>

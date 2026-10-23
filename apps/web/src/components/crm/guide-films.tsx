@@ -41,7 +41,7 @@ export function GuideFilms() {
           </a>
         }
       />
-      <video ref={film} controls preload="metadata" poster="/video/nbss-demo-poster.jpg" className="aspect-video w-full rounded-2xl bg-ink">
+      <video ref={film} controls preload="metadata" poster="/video/nbss-demo-poster.webp" className="aspect-video w-full rounded-2xl bg-ink">
         <source src="/video/nbss-demo.mp4" type="video/mp4" />
       </video>
       <ol className="mt-4 grid gap-2 @2xl/main:grid-cols-2">

@@ -25,7 +25,7 @@ export function AerialSection() {
         </h2>
       </FadeUp>
       <ExpandOnScroll className="relative mt-14 h-[82svh] min-h-[420px]">
-        <Image data-zoom src="/img/nbss/parade-ranks.jpg" alt="NBSS guards standing in ranks on the parade ground" fill sizes="100vw" className="object-cover" />
+        <Image data-zoom src="/img/nbss/parade-ranks.webp" alt="NBSS guards standing in ranks on the parade ground" fill sizes="100vw" className="object-cover" />
       </ExpandOnScroll>
     </section>
   );
@@ -34,11 +34,11 @@ export function AerialSection() {
 /* ------------------------------------------------------------- statement */
 
 const strip = [
-  { src: "/img/nbss/training-briefing.jpg", alt: "A training briefing" },
-  { src: "/img/ops-control-room.jpg", alt: "A control room" },
-  { src: "/img/nbss/guards-on-duty.jpg", alt: "Guards on duty" },
-  { src: "/img/ops-fire-training.jpg", alt: "Fire safety training" },
-  { src: "/img/nbss/training-classroom.jpg", alt: "Guards in a classroom session" },
+  { src: "/img/nbss/training-briefing.webp", alt: "A training briefing" },
+  { src: "/img/ops-control-room.webp", alt: "A control room" },
+  { src: "/img/nbss/guards-on-duty.webp", alt: "Guards on duty" },
+  { src: "/img/ops-fire-training.webp", alt: "Fire safety training" },
+  { src: "/img/nbss/training-classroom.webp", alt: "Guards in a classroom session" },
 ];
 
 export function StatementSection() {
@@ -69,19 +69,19 @@ const help = [
   {
     word: "Guard",
     href: "/services",
-    image: "/img/nbss/guards-on-duty.jpg",
+    image: "/img/nbss/guards-on-duty.webp",
     body: "Trained, uniformed guards for schools, hospitals, government offices, banks, hotels, malls, factories and construction sites.",
   },
   {
     word: "Protect",
     href: "/services/event-vip-protection",
-    image: "/img/nbss/parade-night.jpg",
+    image: "/img/nbss/parade-night.webp",
     body: "Events, gatherings and VIP movement, with access control and crowd handling planned before the day.",
   },
   {
     word: "Supervise",
     href: "/training",
-    image: "/img/ops-control-room.jpg",
+    image: "/img/ops-control-room.webp",
     body: "Attendance at the gate on the app, supervision around the clock and a replacement when a guard cannot report.",
   },
 ];
@@ -155,7 +155,7 @@ export function CtaSection() {
     <section aria-labelledby="cta-title" className="relative isolate overflow-hidden">
       <Parallax speed={18} className="absolute inset-0 -z-10">
         <div className="absolute inset-[-10%]">
-          <Image src="/img/nbss/parade-salute.jpg" alt="" fill sizes="100vw" className="object-cover" />
+          <Image src="/img/nbss/parade-salute.webp" alt="" fill sizes="100vw" className="object-cover" />
         </div>
       </Parallax>
       <div className="absolute inset-0 -z-10 bg-ink/60" />

@@ -57,7 +57,7 @@ export function WhySection() {
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <FadeUp className="relative min-h-[320px] overflow-hidden rounded-3xl ring-1 ring-white/10 sm:col-span-2 lg:col-span-1 lg:col-start-3 lg:row-span-2 lg:row-start-1">
             <Image
-              src="/img/nbss/training-demo.jpg"
+              src="/img/nbss/training-demo.webp"
               alt="An NBSS training demonstration"
               fill
               sizes="(min-width: 1024px) 400px, 100vw"

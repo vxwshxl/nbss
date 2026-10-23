@@ -108,7 +108,7 @@ export default function CareersPage() {
         crumb="Careers"
         title="Honest work, trained properly, supervised well."
         lede="We hire from Kokrajhar, Chirang, Baksa, Udalguri and the districts around them. Freshers are welcome. Training is provided before your first posting."
-        image="/img/nbss/parade-salute.jpg"
+        image="/img/nbss/parade-salute.webp"
       />
 
       <Section>

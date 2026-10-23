@@ -12,7 +12,7 @@ import { site } from "@/content/site";
  * Left: the lockup exactly as `BrandLockup` draws it — the mark, "NBSS", and the
  * two lines under it spread to end where the last S ends. Right: three of the
  * company's own guards (`assets/og/guards.jpg`, cropped from
- * `public/img/nbss/guards-on-duty.jpg`). Never draw the brand another way here.
+ * `public/img/nbss/guards-on-duty.webp`). Never draw the brand another way here.
  *
  * Satori only emits PNG, and a PNG of a photograph lands near a megabyte —
  * past the point where WhatsApp silently drops the preview. So the PNG is

@@ -158,7 +158,7 @@ export function Hero() {
                   data-letter
                   className="text-photo inline-block [filter:contrast(1.2)_saturate(1.15)_drop-shadow(0_10px_24px_rgb(6_17_13/0.35))]"
                   style={{
-                    backgroundImage: "url(/img/nbss/parade-ranks.jpg)",
+                    backgroundImage: "url(/img/nbss/parade-ranks.webp)",
                     backgroundSize: "340% auto",
                     backgroundPosition: `${12 + i * 26}% 40%`,
                   }}
@@ -205,13 +205,13 @@ function CameraWall() {
     >
       <Feed
         className="col-span-2"
-        src="/img/nbss/parade-salute.jpg"
+        src="/img/nbss/parade-salute.webp"
         width={1600}
         height={714}
         label="CAM 01 · Main gate"
         priority
       />
-      <Feed src="/img/nbss/team-event.jpg" width={720} height={968} label="CAM 02 · Event duty" />
+      <Feed src="/img/nbss/team-event.webp" width={720} height={968} label="CAM 02 · Event duty" />
 
       <div
         data-cam

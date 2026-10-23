@@ -32,7 +32,7 @@ export function ErrorScreen({ code, action }: { code: number; action?: React.Rea
       <div className="max-w-xl">
         <p
           className="text-photo display-hero text-[clamp(7rem,26vw,15rem)] leading-[0.85] [filter:contrast(1.15)_saturate(1.1)]"
-          style={{ backgroundImage: "url(/img/nbss/parade-salute.jpg)", backgroundSize: "150%", backgroundPosition: "50% 40%" }}
+          style={{ backgroundImage: "url(/img/nbss/parade-salute.webp)", backgroundSize: "150%", backgroundPosition: "50% 40%" }}
         >
           {code}
         </p>
