@@ -25,11 +25,13 @@ const HOST = process.env.NBSS_HOST ?? "root@187.126.117.188";
 const TENANT_DIR = "/root/supafleet/tenants/nbss";
 
 const env = readEnv();
-for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "NEXT_PUBLIC_BASE_URL"]) {
+for (const key of ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"]) {
   if (!env[key]) throw new Error(`${key} is not set in .env`);
 }
 
-const site = env.NEXT_PUBLIC_BASE_URL.replace(/\/+$/, "");
+// Production, not .env's NEXT_PUBLIC_BASE_URL: locally that is localhost, and GoTrue
+// fetches the template and builds redirects from this.
+const site = (process.env.NBSS_SITE_URL ?? "https://nbsskokrajhar.com").replace(/\/+$/, "");
 const template = `${site}/email/auth-code.html`;
 
 const settings = {
@@ -53,9 +55,11 @@ const settings = {
   GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: template,
   GOTRUE_MAILER_SUBJECTS_RECOVERY: "{{ .Token }} is your NBSS reset code",
   GOTRUE_MAILER_TEMPLATES_RECOVERY: template,
-  GOTRUE_SESSIONS_TIMEBOX: "0",
-  GOTRUE_SESSIONS_INACTIVITY_TIMEOUT: "0",
 };
+
+// Sessions never time out. Cloud took 0 for "off"; self-hosted GoTrue refuses to start
+// on 0 and means "off" by the key being absent, so these are removed, never set.
+const removed = ["GOTRUE_SESSIONS_TIMEBOX", "GOTRUE_SESSIONS_INACTIVITY_TIMEOUT"];
 
 for (const [key, value] of Object.entries(settings)) {
   if (value.includes("\n")) throw new Error(`${key} must be a single line`);
@@ -65,7 +69,7 @@ for (const [key, value] of Object.entries(settings)) {
 const remote = `set -euo pipefail
 cd ${TENANT_DIR}
 new=$(cat)
-keys=$(printf '%s\\n' "$new" | cut -d= -f1 | paste -sd'|')
+keys="$(printf '%s\\n' "$new" | cut -d= -f1 | paste -sd'|')|${removed.join("|")}"
 { grep -vE "^($keys)=" auth.env || true; printf '%s\\n' "$new"; } > auth.env.next
 chmod 600 auth.env.next && mv auth.env.next auth.env
 docker compose up -d --force-recreate auth >/dev/null 2>&1

@@ -15,7 +15,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   alternates: canonical("/"),
   title: {
-    default: `${site.shortName} | Security Agency in Kokrajhar, Assam`,
+    // "NBSS Kokrajhar" is how people search for and say the company; the full
+    // form opens the description, so a share card spells out what NBSS stands for.
+    default: `${site.shortName} ${site.address.city} | ${site.tagline}`,
     template: `%s · ${site.name}`,
   },
   description: site.descriptor,
@@ -52,14 +54,14 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: site.name,
-    title: `${site.shortName} | ${site.tagline}`,
+    title: `${site.shortName} ${site.address.city} | ${site.tagline}`,
     description: site.descriptor,
     locale: "en_IN",
     images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.shortName} | ${site.tagline}`,
+    title: `${site.shortName} ${site.address.city} | ${site.tagline}`,
     description: site.descriptor,
     images: [{ url: OG_IMAGE.url, alt: OG_IMAGE.alt }],
   },

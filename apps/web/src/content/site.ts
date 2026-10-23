@@ -32,7 +32,7 @@ export const site = {
   shortName: COMPANY.shortName,
   tagline: COMPANY.tagline,
   descriptor:
-    "A trusted and professionally managed security service provider headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained and disciplined security personnel to government, corporate, institutional and commercial clients.",
+    "National Bodo Security Service (NBSS) is a trusted, professionally managed security agency headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained, police-verified security personnel to government, corporate, institutional and commercial clients.",
   phone: COMPANY.phone,
   address: {
     label: "Registered Office",
