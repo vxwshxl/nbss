@@ -24,7 +24,7 @@ set -euo pipefail
 cd $DIR
 git fetch -q origin $BRANCH
 git reset -q --hard origin/$BRANCH
-pnpm install --frozen-lockfile --filter @nbss/web... --reporter=silent
+pnpm install --frozen-lockfile --reporter=silent
 NODE_OPTIONS="--max-old-space-size=3072" pnpm build > /tmp/nbss-build.log 2>&1 || { tail -40 /tmp/nbss-build.log; exit 1; }
 pm2 startOrReload ecosystem.config.cjs --update-env >/dev/null
 pm2 save >/dev/null
