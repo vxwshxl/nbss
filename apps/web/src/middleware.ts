@@ -23,6 +23,19 @@ const LOGIN_PATH = "/login";
 /** A year — the same as SESSION_MAX_AGE in lib/supabase/env.ts. */
 const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
 
+/**
+ * The address the browser used. Behind nginx the server listens on
+ * 127.0.0.1:3040, and `request.url` carries that, so a redirect built from it
+ * sent signed-out visitors to https://localhost:3040/login. nginx forwards the
+ * real host and scheme, and those are what a redirect has to point at.
+ */
+function origin(request: NextRequest): string {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (!host) return request.url;
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ?? request.nextUrl.protocol.replace(":", "");
+  return `${proto}://${host}`;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -69,12 +82,12 @@ export async function middleware(request: NextRequest) {
   // mid-stream reaches the browser as a 200 plus a client-side hop, which old
   // bookmarks and the app should not have to follow.
   if (pathname === "/console/login") {
-    return NextResponse.redirect(new URL(`${LOGIN_PATH}${search}`, request.url));
+    return NextResponse.redirect(new URL(`${LOGIN_PATH}${search}`, origin(request)));
   }
 
   if (user) return response;
 
-  const url = new URL(LOGIN_PATH, request.url);
+  const url = new URL(LOGIN_PATH, origin(request));
   if (pathname !== "/console" || search) url.searchParams.set("from", pathname + search);
   return NextResponse.redirect(url);
 }
