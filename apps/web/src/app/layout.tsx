@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   title: {
     // "NBSS Kokrajhar" is how people search for and say the company; the full
     // form opens the description, so a share card spells out what NBSS stands for.
-    default: `${site.shortName} ${site.address.city} | ${site.tagline}`,
+    // Says what and where up front, as a search result is read: the brand, then the service and the place.
+    default: `${site.shortName} ${site.address.city}: Security Guard Agency in Kokrajhar & Assam`,
     template: `%s · ${site.name}`,
   },
   description: site.descriptor,

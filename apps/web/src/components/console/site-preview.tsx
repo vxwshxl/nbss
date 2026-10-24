@@ -23,11 +23,17 @@ import {
   TriangleAlert,
   UserRound,
   Users,
+  Loader2,
+  UserMinus,
+  UserPlus,
 } from "lucide-react";
 
 import { SOS_KIND_LABEL, isLive } from "@nbss/shared/sos";
 
+import { endPosting, savePosting } from "@/app/console/roster/actions";
 import { siteDetail, type SiteDetail } from "@/app/console/sites/preview";
+import { Dropdown } from "@/components/ui/dropdown";
+import { toast } from "sonner";
 import { AttendancePreviewDialog } from "@/components/console/attendance-preview";
 import {
   Field,
@@ -162,6 +168,16 @@ export function SitePreviewDialog({
     });
   }, [site]);
 
+  /** Read the site again after a posting is added or ended. */
+  const reload = () => {
+    if (!site) return;
+    const id = site.id;
+    load(async () => {
+      setData(await siteDetail(id));
+      setLoadedFor(id);
+    });
+  };
+
   const d = data && !("error" in data) && loadedFor === site?.id ? data : null;
   const liveSos = d?.sos.filter((a) => isLive(a.status)) ?? [];
 
@@ -228,7 +244,7 @@ export function SitePreviewDialog({
 
               {d && (
                 <Section
-                  title={`Roster · needs ${d.required ?? "-"} on duty · ${d.posted.length} posted`}
+                  title={`Roster · ${d.required ? `needs ${d.required} on duty` : "needs not set"} · ${d.posted.length} posted`}
                   action={
                     <Link
                       href={`/console/roster?open=${site.id}`}
@@ -253,15 +269,19 @@ export function SitePreviewDialog({
                           phone={p.phone}
                           detail={`${windowLabel(p.starts, p.ends)} · ${p.dates ? datesLabel(p.dates) : daysLabel(p.days)}`}
                           right={
-                            <StatusPill
-                              status={d.onDuty.some((x) => x.id === p.id) ? "on_duty" : "checked_out"}
-                              label={d.onDuty.some((x) => x.id === p.id) ? "On duty" : "Off duty"}
-                            />
+                            <span className="flex items-center gap-2">
+                              <StatusPill
+                                status={d.onDuty.some((x) => x.id === p.id) ? "on_duty" : "checked_out"}
+                                label={d.onDuty.some((x) => x.id === p.id) ? "On duty" : "Off duty"}
+                              />
+                              <RemovePost postingId={p.postingId} name={p.name} onDone={reload} />
+                            </span>
                           }
                         />
                       ))}
                     </ul>
                   )}
+                  <PostGuard siteId={site.id} guards={d.guards} postedHere={d.posted.map((p) => p.id)} onDone={reload} />
                 </Section>
               )}
 
@@ -448,5 +468,126 @@ export function SitePreviewDialog({
       <AttendancePreviewDialog id={punchId} onClose={() => setPunchId(null)} canReview={canReview} staff />
       <SosPreviewDialog id={sosId} onClose={() => setSosId(null)} />
     </>
+  );
+}
+
+const WEEK = [
+  { n: 1, l: "Mon" },
+  { n: 2, l: "Tue" },
+  { n: 3, l: "Wed" },
+  { n: 4, l: "Thu" },
+  { n: 5, l: "Fri" },
+  { n: 6, l: "Sat" },
+  { n: 7, l: "Sun" },
+];
+
+/** Ends a guard's standing post here (their future shifts at this site are withdrawn). */
+function RemovePost({ postingId, name, onDone }: { postingId: string; name: string; onDone: () => void }) {
+  const [busy, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() =>
+        start(async () => {
+          if (!window.confirm(`Remove ${name} from this site? Their upcoming shifts here are withdrawn.`)) return;
+          const r = await endPosting(postingId);
+          if (r.ok) {
+            toast.success(`${name} removed from this site`);
+            onDone();
+          } else toast.error(r.error);
+        })
+      }
+      className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-destructive ring-1 ring-destructive/30 hover:bg-destructive/10 disabled:opacity-50"
+    >
+      {busy ? <Loader2 className="size-3.5 animate-spin" /> : <UserMinus className="size-3.5" />} Remove
+    </button>
+  );
+}
+
+/** Post a guard here without leaving the popup: who, which hours, which days. */
+function PostGuard({
+  siteId,
+  guards,
+  postedHere,
+  onDone,
+}: {
+  siteId: string;
+  guards: { id: string; name: string; code: string; posted: boolean }[];
+  postedHere: string[];
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [guardId, setGuardId] = useState("");
+  const [starts, setStarts] = useState("08:00");
+  const [ends, setEnds] = useState("20:00");
+  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [busy, start] = useTransition();
+  const choices = guards.filter((g) => !postedHere.includes(g.id));
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/40 py-2.5 text-sm font-semibold text-primary-ink hover:bg-primary/5"
+      >
+        <UserPlus className="size-4" /> Post a guard here
+      </button>
+    );
+  }
+  return (
+    <div className="mt-3 space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <Dropdown
+          value={guardId}
+          onValueChange={setGuardId}
+          placeholder="Choose a guard…"
+          searchPlaceholder="Find a guard"
+          options={choices.map((g) => ({ value: g.id, label: `${g.name} · ${g.code}${g.posted ? " (posted elsewhere)" : ""}` }))}
+          className="h-9 bg-card"
+        />
+        <input type="time" value={starts} onChange={(e) => setStarts(e.target.value)} aria-label="Starts" className="h-9 rounded-lg border border-input bg-card px-2 text-sm" />
+        <input type="time" value={ends} onChange={(e) => setEnds(e.target.value)} aria-label="Ends" className="h-9 rounded-lg border border-input bg-card px-2 text-sm" />
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {WEEK.map((w) => {
+          const on = days.includes(w.n);
+          return (
+            <button
+              key={w.n}
+              type="button"
+              onClick={() => setDays(on ? days.filter((x) => x !== w.n) : [...days, w.n].sort())}
+              className={cn("rounded-full px-3 py-1 text-xs font-semibold ring-1", on ? "bg-primary text-white ring-primary" : "bg-card ring-border")}
+            >
+              {w.l}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          disabled={!guardId || busy}
+          onClick={() =>
+            start(async () => {
+              const r = await savePosting({ guardId, siteId, starts, ends, days });
+              if (r.ok) {
+                toast.success("Guard posted here");
+                setOpen(false);
+                setGuardId("");
+                onDone();
+              } else toast.error(r.error);
+            })
+          }
+        >
+          {busy && <Loader2 className="animate-spin" />}
+          Post guard
+        </Button>
+      </div>
+    </div>
   );
 }

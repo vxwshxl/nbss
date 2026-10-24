@@ -205,10 +205,8 @@ export function siteStructuredData() {
               serviceType: s.name,
               url: absoluteUrl(`/services/${s.slug}`),
               provider: { "@id": ORG_ID },
-              areaServed: AREAS_SERVED.map((name) => ({
-                "@type": "AdministrativeArea",
-                name,
-              })),
+              // The business lists every district once; each service just says Assam.
+              areaServed: { "@type": "State", name: "Assam" },
             },
           })),
         },
