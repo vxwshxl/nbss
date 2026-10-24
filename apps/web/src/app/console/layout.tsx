@@ -23,6 +23,7 @@ import { currentSession, homeFor } from "@/lib/auth";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import type { WorkspaceSite } from "@/lib/site-workspace";
 import { site } from "@/content/site";
+import { countSubmissions } from "@/lib/store";
 import { ModeToggle } from "@/components/shell/mode-toggle";
 import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { cookies } from "next/headers";
@@ -92,6 +93,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       ).map((s) => ({ id: s.id, name: s.name, district: s.district, client: s.client_name, active: s.active }))
     : [];
 
+  // Unactioned counts beside menu items: new enquiries (contacted and closed do not count).
+  const badges: Record<string, number> = {};
+  if (staff) {
+    const counts = await countSubmissions().catch(() => null);
+    if (counts?.new) badges["/console/submissions"] = counts.new;
+  }
+
   return (
     <AppShell
       brand={site.shortName}
@@ -109,7 +117,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       mark={<BrandLockup size="sm" priority />}
       sidebarFooter={<WebsiteTag label={`${ROLE_LABEL[profile.role]} console · nbss.co.in`} />}
       companion={{ person: realProfile.id }}
-      nav={<ConsoleNav role={profile.role} sites={sites} />}
+      nav={<ConsoleNav role={profile.role} sites={sites} badges={badges} />}
       sites={staff ? sites : undefined}
       banner={
         impersonating ? (

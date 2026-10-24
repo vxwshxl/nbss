@@ -10,6 +10,7 @@ import {
   FileSpreadsheet,
   Gauge,
   Inbox,
+  KeyRound,
   LayoutDashboard,
   MapPinned,
   NotebookPen,
@@ -82,6 +83,9 @@ export const groups: NavGroup[] = [
         roles: ["admin", "supervisor"],
         exact: true,
       },
+      // The website's forms, right under the dashboard: new ones carry a badge until
+      // someone marks them contacted or closed.
+      { href: "/console/submissions", label: "Enquiries", icon: Inbox, roles: ["admin", "supervisor"] },
       // The guard's and the client's landing screens. Each is that role's
       // entire reason for having a login, so each sits alone at the top rather
       // than inside a section of one.
@@ -146,12 +150,6 @@ export const groups: NavGroup[] = [
         icon: ClipboardList,
         roles: ["admin", "supervisor"],
       },
-      {
-        href: "/console/submissions",
-        label: "Enquiries",
-        icon: Inbox,
-        roles: ["admin", "supervisor"],
-      },
     ],
   },
   {
@@ -169,6 +167,7 @@ export const groups: NavGroup[] = [
     label: "Administration",
     items: [
       { href: "/console/users", label: "Users", icon: Users, roles: ["admin", "supervisor"] },
+      { href: "/console/roles", label: "Roles", icon: KeyRound, roles: ["admin", "supervisor"] },
       { href: "/console/audit", label: "Audit log", icon: ScrollText, roles: ["admin"] },
       { href: "/console/guide", label: "Guide", icon: BookOpen, roles: ["admin"] },
     ],
@@ -204,3 +203,13 @@ export function navIndexFor(role: Role): NavIndexItem[] {
   return CONSOLE_NAV_INDEX.filter((i) => allowed.has(i.href));
 }
 
+
+/** Every page a role can open, by group, for the Roles page. */
+export function pagesFor(role: Role): { group: string; pages: string[] }[] {
+  return groups
+    .map((g) => ({
+      group: g.label ?? "Home",
+      pages: g.items.filter((i) => !i.away && (!i.roles || roleAllowed(role, i.roles))).map((i) => i.label),
+    }))
+    .filter((g) => g.pages.length > 0);
+}
