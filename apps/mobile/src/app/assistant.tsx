@@ -189,7 +189,9 @@ export default function AssistantScreen() {
   return (
     <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* The panel's header: Nibo in a mint tile, name and status, new chat, close. */}
-      <View style={[styles.header, { paddingTop: insets.top + space[2] }]}>
+      {/* On iPhone this screen is a sheet that already starts below the status bar, so
+          reserving the inset again left a band of white; Android shows it full screen. */}
+      <View style={[styles.header, { paddingTop: Platform.OS === "ios" ? space[3] : insets.top + space[2] }]}>
         <View style={styles.headTile}>
           <Nibo size={46} still={!busy} mood={busy ? "think" : "happy"} style={styles.headNibo} />
         </View>
@@ -270,20 +272,15 @@ export default function AssistantScreen() {
           editable={configured}
           accessibilityLabel="Message the assistant"
         />
-        <View style={styles.composerRow}>
-          <Text variant="micro" tone="muted" style={styles.flex}>
-            Answers come from your records. Check anything before you act on it.
-          </Text>
           {busy ? (
             <Pressable accessibilityRole="button" accessibilityLabel="Stop" onPress={() => abort.current?.abort()} style={({ pressed }) => [styles.send, pressed && styles.sendDown]}>
               <Square size={12} color="#fff" fill="#fff" strokeWidth={2.4} />
             </Pressable>
           ) : (
             <Pressable accessibilityRole="button" accessibilityLabel="Send" disabled={!canSend} onPress={() => void send(draft)} style={({ pressed }) => [styles.send, !canSend && styles.sendOff, pressed && styles.sendDown]}>
-              <ArrowUp size={18} color="#fff" strokeWidth={2.2} />
+              <ArrowUp size={20} color="#fff" strokeWidth={2.4} />
             </Pressable>
           )}
-        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -406,7 +403,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", marginTop: space[5], marginHorizontal: -6, alignSelf: "stretch", maxWidth: 420 },
   cell: { width: "50%", padding: 6 },
   prompt: {
-    aspectRatio: 1,
+    aspectRatio: 1.25,
     borderRadius: 24,
     borderWidth: 2,
     borderBottomWidth: 6,
@@ -438,9 +435,11 @@ const styles = StyleSheet.create({
   dots: { flexDirection: "row", gap: 4, paddingVertical: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.mutedForeground },
   error: { flexDirection: "row", alignItems: "flex-start", gap: space[2], borderRadius: radius.xl, backgroundColor: "#cc28261a", paddingHorizontal: 14, paddingVertical: 10, marginTop: 4 },
-  composer: { gap: 10, paddingHorizontal: space[3], paddingTop: space[3], backgroundColor: color.card, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
+  // One row: the box takes the width, the send button sits at its end.
+  composer: { flexDirection: "row", alignItems: "flex-end", gap: space[2], paddingHorizontal: space[3], paddingTop: space[3], backgroundColor: color.card, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.border },
   input: {
-    minHeight: 44,
+    flex: 1,
+    minHeight: 48,
     maxHeight: 160,
     borderRadius: radius.xl,
     borderWidth: 1,
@@ -454,8 +453,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: color.foreground,
   },
-  composerRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
-  send: { width: 36, height: 36, borderRadius: 18, backgroundColor: color.primary, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#005f41" },
+  send: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.primary, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#005f41" },
   sendDown: { borderBottomWidth: 0, transform: [{ translateY: 3 }] },
   sendOff: { opacity: 0.35 },
 });

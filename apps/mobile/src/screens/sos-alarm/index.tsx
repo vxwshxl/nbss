@@ -12,6 +12,7 @@ import { siteChannel, EVENTS } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
 import { Button } from "@/components/button";
+import { SolidButton } from "@/components/solid-button";
 import { circleRing } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet } from "@/components/map-sheet";
@@ -351,28 +352,8 @@ export function SosAlarm({
                   Close this alert
                 </Text>
                 <View style={styles.closeRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={!!busy}
-                    onPress={() => void act("resolved", () => closeSos(alertId, "resolved"))}
-                    style={({ pressed }) => [styles.closeBtn, styles.resolved, pressed && styles.closePressed]}
-                  >
-                    {busy === "resolved" ? <ActivityIndicator color="#fff" /> : <CheckCircle2 size={20} color="#fff" strokeWidth={2.4} />}
-                    <Text variant="label" weight="bold" tone="inherit" style={styles.closeText}>
-                      Resolved
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={!!busy}
-                    onPress={() => void act("false", () => closeSos(alertId, "false_alarm"))}
-                    style={({ pressed }) => [styles.closeBtn, styles.falseAlarm, pressed && styles.closePressed]}
-                  >
-                    {busy === "false" ? <ActivityIndicator color="#fff" /> : <BellOff size={20} color="#fff" strokeWidth={2.4} />}
-                    <Text variant="label" weight="bold" tone="inherit" style={styles.closeText}>
-                      False alarm
-                    </Text>
-                  </Pressable>
+                  <SolidButton label="Resolved" icon={CheckCircle2} tone="green" loading={busy === "resolved"} disabled={!!busy} onPress={() => void act("resolved", () => closeSos(alertId, "resolved"))} />
+                  <SolidButton label="False alarm" icon={BellOff} tone="amber" loading={busy === "false"} disabled={!!busy} onPress={() => void act("false", () => closeSos(alertId, "false_alarm"))} />
                 </View>
               </View>
             )}
@@ -526,10 +507,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: space[2], marginTop: space[3] },
   closeBox: { marginTop: space[4], gap: space[2], padding: space[3], borderRadius: radius.xl, backgroundColor: color.muted },
   closeRow: { flexDirection: "row", gap: space[2] },
-  closeBtn: { flex: 1, minHeight: 52, borderRadius: radius.full, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], borderBottomWidth: 3 },
-  resolved: { backgroundColor: "#059669", borderBottomColor: "#047857" },
-  falseAlarm: { backgroundColor: "#d97706", borderBottomColor: "#b45309" },
-  closePressed: { transform: [{ translateY: 2 }], borderBottomWidth: 1 },
   closeText: { color: "#fff" },
   cancel: { minHeight: 56, borderRadius: radius.full, backgroundColor: "#d97706", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], overflow: "hidden" },
   cancelFill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: "#92400e" },

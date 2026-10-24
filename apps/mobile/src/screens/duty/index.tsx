@@ -11,6 +11,7 @@ import {
   Phone,
   SignalLow,
   TriangleAlert,
+  Users,
 } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -28,14 +29,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY, istTime, tel } from "@nbss/shared/company";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
-import { checkFence, formatDistance, toRing } from "@nbss/shared/geo";
+import { checkFence, distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
 
 import { Button } from "@/components/button";
 import { InfoButton } from "@/components/info";
 import { LiveMap, type MapSite } from "@/components/live-map";
 import { MapSheet } from "@/components/map-sheet";
-import { Panel } from "@/components/panel";
+import { Avatar } from "@/components/avatar";
+import { Panel, PanelRow } from "@/components/panel";
 import { PhoneSetup } from "@/components/phone-setup";
+import { SolidButton } from "@/components/solid-button";
 import { Text } from "@/components/text";
 import { useLivePosition } from "@/hooks/use-live-position";
 import { useLoader } from "@/hooks/use-loader";
@@ -209,6 +212,9 @@ export function Duty() {
     target = distances[0]?.site ?? sites[0];
     targetKind = "nearest";
   }
+
+  // Colleagues checked in at the site this screen is about.
+  const onSite = (areasNow?.friends ?? []).filter((f) => target && f.site_id === target.id);
 
   const verdict = target && fix ? checkFence(toFence(target), fix) : null;
   const inside = verdict?.inside ?? false;
@@ -401,17 +407,10 @@ export function Duty() {
               <View style={[styles.gap2, styles.headActions]}>
                 <View style={styles.row2}>
                   <View style={styles.flex}>
-                    <Button
-                      label="Check out"
-                      icon={Clock3}
-                      variant="outline"
-                      fullWidth
-                      loading={busy === "out"}
-                      onPress={() => setHandoverOpen(true)}
-                    />
+                    <SolidButton label="Check out" icon={Clock3} tone="ink" loading={busy === "out"} onPress={() => setHandoverOpen(true)} />
                   </View>
                   <View style={styles.flex}>
-                    <Button label="Call desk" icon={Phone} variant="outline" fullWidth onPress={callDesk} />
+                    <SolidButton label="Call desk" icon={Phone} tone="green" onPress={callDesk} />
                   </View>
                 </View>
               </View>
@@ -494,6 +493,39 @@ export function Duty() {
               <Figure value={tracking ? "Sharing" : "Off"} label="location" />
             )}
           </View>
+        )}
+
+        {/* Who else is on this site right now: name, how recently heard, how far, Call. */}
+        {target && onSite.length > 0 && (
+          <Panel tone="emerald" title="On site with you" subtitle={`${onSite.length} more at ${target.name}`} icon={Users} bare>
+            {onSite.map((f, i) => {
+              const away = fix && f.lat != null && f.lng != null ? formatDistance(distanceMetres(fix, { lat: f.lat, lng: f.lng })) : null;
+              const mins = f.heard_at ? Math.max(0, Math.round((now - new Date(f.heard_at).getTime()) / 60_000)) : null;
+              return (
+                <PanelRow key={f.id} first={i === 0}>
+                  <Avatar name={f.name} size={36} />
+                  <View style={styles.flex}>
+                    <Text variant="label" weight="semibold" numberOfLines={1}>
+                      {f.name}
+                    </Text>
+                    <Text variant="caption" tone="muted" numberOfLines={1}>
+                      {[f.lat == null || mins == null ? "No signal" : mins < 1 ? "Here now" : `Seen ${mins} min ago`, away && `${away} away`, f.inside === false && "outside the boundary"].filter(Boolean).join(" · ")}
+                    </Text>
+                  </View>
+                  {f.phone ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Call ${f.name}`}
+                      onPress={() => void Linking.openURL(`tel:${tel(f.phone!)}`)}
+                      style={({ pressed }) => [styles.callChip, pressed && styles.pressed]}
+                    >
+                      <Phone size={18} color={color.primaryInk} strokeWidth={2.2} />
+                    </Pressable>
+                  ) : null}
+                </PanelRow>
+              );
+            })}
+          </Panel>
         )}
 
         <PhoneSetup onDuty={onDuty} />
@@ -609,6 +641,8 @@ export function Duty() {
             Finding your position… Step outside if it takes long.
           </Text>
         )}
+        {/* Room at the end so the last row clears the SOS button and the live SOS card. */}
+        <View style={styles.sheetEnd} />
       </MapSheet>
 
       {/* ─────────────────────── SOS could not be sent: call and SMS instead */}
@@ -888,6 +922,8 @@ const styles = StyleSheet.create({
   row2: { flexDirection: "row", gap: space[2] },
   headActions: { marginTop: space[3] },
   pressed: { opacity: 0.7 },
+  sheetEnd: { height: 96 },
+  callChip: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
 
   chipRow: { position: "absolute", top: space[3], right: space[3], alignItems: "flex-end" },
   chip: {

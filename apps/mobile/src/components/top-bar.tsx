@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -53,14 +54,7 @@ export function TopBar({
         <BrandMark size={34} />
 
         <View style={styles.brandText}>
-          <Text variant="label" weight="bold">
-            {COMPANY.shortName}
-          </Text>
-          {/* The console renders the role as the wordmark's secondary line, in exactly
-              this position. */}
-          <Text variant="micro" tone="muted" weight="medium">
-            {ROLE_LABEL[role]}
-          </Text>
+          <Wordmark role={ROLE_LABEL[role]} />
         </View>
 
         {right}
@@ -90,7 +84,35 @@ export function TopBar({
   );
 }
 
+/**
+ * "NBSS" over the role, the role spread to exactly the wordmark's width — as the
+ * website's logo sets "National Bodo Security Service" under "NBSS". The letters are
+ * laid out in a row as wide as the wordmark and spaced evenly, which lines up on every
+ * platform and font size (letter-spacing maths does not: each renderer rounds it
+ * differently, and the last letter wrapped).
+ */
+function Wordmark({ role }: { role: string }) {
+  const [mark, setMark] = useState(0);
+  return (
+    <View style={styles.wordmark}>
+      <Text variant="label" weight="bold" onLayout={(e) => setMark(e.nativeEvent.layout.width)}>
+        {COMPANY.shortName}
+      </Text>
+      <View style={[styles.spread, mark ? { width: mark } : styles.hidden]} accessible accessibilityLabel={role}>
+        {[...role].map((ch, i) => (
+          <Text key={i} variant="micro" tone="muted" weight="medium" importantForAccessibility="no">
+            {ch === " " ? "\u00a0" : ch}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  wordmark: { alignSelf: "flex-start" },
+  spread: { flexDirection: "row", justifyContent: "space-between" },
+  hidden: { opacity: 0 },
   bar: {
     // `bg-background/85 backdrop-blur` on the web. Solid here: a blur over a scrolling
     // list costs a full-screen composite every frame on a mid-range Android, and the
