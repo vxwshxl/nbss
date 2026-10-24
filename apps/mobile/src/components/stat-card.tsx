@@ -148,5 +148,5 @@ const styles = StyleSheet.create({
   text: { marginTop: space[3], flex: 1, justifyContent: "flex-end" },
   absent: { fontSize: 20, lineHeight: 24, color: color.mutedForeground },
   hint: { marginTop: space[1] },
-  cta: { flexDirection: "row", alignItems: "center", gap: space[1.5 as 2], marginTop: space[4] },
+  cta: { flexDirection: "row", alignItems: "center", gap: space[1.5], marginTop: space[4] },
 });

@@ -55,5 +55,5 @@ const styles = StyleSheet.create({
     marginBottom: space[2],
   },
   text: { flex: 1, minWidth: 0 },
-  eyebrow: { marginBottom: space[1.5 as 2] },
+  eyebrow: { marginBottom: space[1.5] },
 });

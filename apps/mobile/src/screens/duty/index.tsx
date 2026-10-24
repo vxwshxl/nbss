@@ -526,7 +526,7 @@ export function Duty() {
             }
           >
             <Text variant="body" tone="muted">
-              Background location, the map and some alerts are off in this build.
+              Only shows in Expo Go. Background location is off here; the installed app has it.
             </Text>
           </Panel>
         )}

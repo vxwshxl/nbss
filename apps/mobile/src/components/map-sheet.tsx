@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius["3xl"],
     ...shadow.raised,
   },
-  grip: { alignItems: "center", paddingTop: space[2], paddingBottom: space[1.5 as 2] },
+  grip: { alignItems: "center", paddingTop: space[2.5], paddingBottom: space[4] },
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: color.border },
   header: { paddingHorizontal: space[5], paddingBottom: space[3] },
   scroll: { flex: 1 },

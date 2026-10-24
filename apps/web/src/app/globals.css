@@ -1538,3 +1538,9 @@ html.lenis, html.lenis body { height: auto; }
 /* Hero map: a post's blip brightens as the sweep passes. */
 @keyframes hero-blip { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
 @media (prefers-reduced-motion: reduce) { [data-radar] { display: none; } }
+
+/* While an SOS is open the alarm Nibo (components/console/sos-alarm.tsx) takes the
+   companion's corner; the everyday companion steps aside until it is closed. */
+body[data-sos-live] [data-nibo] {
+  display: none !important;
+}

@@ -113,7 +113,7 @@ export function CardGrid({
             // on its own at fractional widths.
             flexBasis: `${100 / columns}%`,
             maxWidth: `${100 / columns}%`,
-            padding: space[1.5 as 2],
+            padding: space[1.5],
           }}
         >
           {child}
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     // Negative inset cancels the per-item padding above, so the grid's outer edge lines
     // up with the Panels above and below it.
-    margin: -space[1.5 as 2],
+    margin: -space[1.5],
   },
 });
 

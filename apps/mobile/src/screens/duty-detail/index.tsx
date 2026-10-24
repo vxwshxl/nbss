@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   body: { gap: space[4], paddingBottom: space[10] },
   mapPanel: { height: 220, borderRadius: radius["2xl"], overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: color.lineSoft, backgroundColor: color.muted },
   map: { flex: 1, minHeight: 220 },
-  titleBlock: { gap: space[1.5 as 2] },
+  titleBlock: { gap: space[1.5] },
   inline: { flexDirection: "row", alignItems: "flex-start", gap: space[1] + 2 },
   pills: { flexDirection: "row", gap: space[2], marginTop: space[1] },
   row: { flexDirection: "row", gap: space[2] },
