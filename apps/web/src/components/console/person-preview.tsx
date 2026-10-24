@@ -144,7 +144,12 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
               </p>
             )}
             <div>
-              <p className="mb-2 label-heading">Last 14 days</p>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="label-heading">Last 14 days</p>
+                <Link href={`/console/reports/guard/${p.id}`} className="text-xs font-medium text-primary-ink hover:underline">
+                  Full attendance &amp; Excel
+                </Link>
+              </div>
               <DayStrip days={p.guard.strip} />
               <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
                 {(["present", "late", "absent", "review"] as const).map((s) => (

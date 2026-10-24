@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -46,7 +47,9 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
       header: "Guard",
       cell: (r) => (
         <span className="block">
-          <span className="block font-medium">{r.name}</span>
+          <Link href={`/console/reports/guard/${r.id}?from=${from}&to=${to}`} className="block font-medium text-primary-ink hover:underline">
+            {r.name}
+          </Link>
           <span className="block font-mono text-xs text-muted-foreground">{r.code}</span>
         </span>
       ),
