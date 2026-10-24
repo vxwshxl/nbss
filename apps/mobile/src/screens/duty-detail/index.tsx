@@ -1,18 +1,19 @@
 import { router } from "expo-router";
-import { ArrowLeft, CalendarDays, CalendarX2, Clock, MapPin, Navigation, NotebookPen, UserRoundX } from "lucide-react-native";
+import { ArrowLeft, CalendarDays, CalendarX2, Clock, MapPin, Navigation, NotebookPen, Pause, Play, Route as RouteIcon, UserRoundX } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { toRing } from "@nbss/shared/geo";
+import { distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
 
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { fenceRing } from "@/components/live-map/shared";
-import { MapCanvas } from "@/components/map-canvas";
+import { MapCanvas, type MapPerson } from "@/components/map-canvas";
 import { Panel, PanelRow } from "@/components/panel";
 import { Screen } from "@/components/screen";
+import { SolidButton } from "@/components/solid-button";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
 import { useNow } from "@/hooks/use-now";
@@ -21,10 +22,11 @@ import {
   dutyOutcome,
   handoverNotes,
   myDuty,
-  myTrail,
+  myRoute,
   OUTCOME_LABEL,
   withdrawReplacement,
   type HandoverNote,
+  type RoutePoint,
   type MyDuty,
 } from "@/lib/duty";
 import { AskCover, clock, hm, OUTCOME_TONE } from "@/screens/duties";
@@ -45,7 +47,9 @@ export function DutyDetail({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const now = useNow(60_000);
   const [d, setD] = useState<MyDuty | null | undefined>(undefined);
-  const [trail, setTrail] = useState<{ lat: number; lng: number }[]>([]);
+  const [trail, setTrail] = useState<RoutePoint[]>([]);
+  // Where the playback head is (an index into the route), or null when not playing.
+  const [head, setHead] = useState<number | null>(null);
   const [notes, setNotes] = useState<HandoverNote[]>([]);
   const [asking, setAsking] = useState<MyDuty | null>(null);
   const [note, setNote] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
@@ -59,7 +63,7 @@ export function DutyDetail({ id }: { id: string }) {
       setD(duty);
       if (!duty) return setPulling(false);
       const [t, n] = await Promise.all([
-        duty.attendance?.id ? myTrail(duty.attendance.id) : Promise.resolve([]),
+        duty.attendance?.id ? myRoute(duty.attendance.id) : Promise.resolve([]),
         handoverNotes(duty.site.id),
       ]);
       if (!live) return;
@@ -136,8 +140,9 @@ export function DutyDetail({ id }: { id: string }) {
             <MapCanvas
               style={styles.map}
               fences={[{ id: mapSite.id, name: mapSite.name, ring: fenceRing(mapSite), tone: color.primary }]}
-              trail={trail.length > 1 ? trail : null}
-              frameKey={`${mapSite.id}|${trail.length}`}
+              trail={trail.length > 1 ? (head == null ? trail : trail.slice(0, head + 1)) : null}
+              people={routeMarks(trail, head, !!a?.check_out_at)}
+              frameKey={`${mapSite.id}|${trail.length > 1 ? "route" : "site"}`}
               padding={{ top: 24, right: 24, bottom: 24, left: 24 }}
             />
           ) : (
@@ -200,13 +205,14 @@ export function DutyDetail({ id }: { id: string }) {
           </Panel>
         )}
 
+        {trail.length > 1 && <RoutePanel route={trail} head={head} onHead={setHead} />}
+
         {d && (
           <Panel tone="sky" title="Attendance" icon={Clock} bare>
             <Field first label="Checked in" value={a?.check_in_at ? when(a.check_in_at) : "-"} />
             <Field label="Checked out" value={a?.check_out_at ? when(a.check_out_at) : a?.check_in_at ? "Still on duty" : "-"} />
             <Field label="Worked" value={a?.worked_minutes != null ? hm(a.worked_minutes) : "-"} />
             {a?.overtime_minutes ? <Field label="Overtime" value={hm(a.overtime_minutes)} /> : null}
-            {trail.length > 1 && <Field label="Path recorded" value={`${trail.length} points`} />}
             {a?.device_flag ? <Field label="Phone" value={a.device_flag === "shared_device" ? "Another guard's phone" : "Not your approved phone"} warn /> : null}
             {a?.review_note ? <Field label="Office note" value={a.review_note} /> : null}
           </Panel>
@@ -234,6 +240,139 @@ export function DutyDetail({ id }: { id: string }) {
           setPulls((n) => n + 1);
         }}
       />
+    </View>
+  );
+}
+
+const clockOf = (ms: number) => new Date(ms).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" });
+
+/** Start (S), end (E) and, while playing, where the guard was at that moment. */
+function routeMarks(route: RoutePoint[], head: number | null, ended: boolean): MapPerson[] {
+  if (route.length < 2) return [];
+  const first = route[0]!;
+  const last = route.at(-1)!;
+  const marks: MapPerson[] = [{ id: "start", lat: first.lat, lng: first.lng, tone: "#059669", label: `In ${clockOf(first.at)}` }];
+  if (ended) marks.push({ id: "end", lat: last.lat, lng: last.lng, tone: "#1f2937", label: `Out ${clockOf(last.at)}` });
+  if (head != null) {
+    const h = route[Math.min(head, route.length - 1)]!;
+    // No label: the time is under the bar, and a fixed marker glides instead of being redrawn.
+    marks.push({ id: "head", lat: h.lat, lng: h.lng, tone: "#2563eb", big: true });
+  }
+  return marks;
+}
+
+/**
+ * The duty's route, as the console's Route history shows it: how far, how long, how
+ * much of it outside the boundary, a bar of the shift (green inside, amber outside)
+ * that can be tapped to jump to a moment, and Play to watch it from check-in.
+ */
+function RoutePanel({ route, head, onHead }: { route: RoutePoint[]; head: number | null; onHead: (i: number | null) => void }) {
+  const [playing, setPlaying] = useState(false);
+  const [barW, setBarW] = useState(0);
+  const start = route[0]!.at;
+  const end = route.at(-1)!.at;
+  const span = Math.max(1, end - start);
+
+  let walked = 0;
+  let outside = 0;
+  for (let i = 1; i < route.length; i++) {
+    walked += distanceMetres(route[i - 1]!, route[i]!);
+    if (route[i - 1]!.inside === false) outside += route[i]!.at - route[i - 1]!.at;
+  }
+  // Runs of inside / outside, for the bar.
+  const runs: { inside: boolean; ms: number }[] = [];
+  for (let i = 1; i < route.length; i++) {
+    const inside = route[i - 1]!.inside !== false;
+    const ms = route[i]!.at - route[i - 1]!.at;
+    const lastRun = runs.at(-1);
+    if (lastRun && lastRun.inside === inside) lastRun.ms += ms;
+    else runs.push({ inside, ms });
+  }
+
+  // About twelve seconds from check-in to check-out, however long the shift.
+  useEffect(() => {
+    if (!playing) return;
+    const step = Math.max(1, Math.ceil(route.length / 120));
+    const t = setInterval(() => {
+      const next = (head ?? -1) + step;
+      if (next >= route.length - 1) {
+        onHead(route.length - 1);
+        setPlaying(false);
+      } else onHead(next);
+    }, 100);
+    return () => clearInterval(t);
+  }, [playing, head, route.length, onHead]);
+
+  const at = head != null ? route[Math.min(head, route.length - 1)]! : null;
+  const pos = at ? (at.at - start) / span : 0;
+
+  const jump = (x: number) => {
+    if (!barW) return;
+    const target = start + (Math.max(0, Math.min(barW, x)) / barW) * span;
+    let i = 0;
+    while (i < route.length - 1 && route[i]!.at < target) i++;
+    setPlaying(false);
+    onHead(i);
+  };
+
+  return (
+    <Panel tone="violet" title="Your route" subtitle={`${clockOf(start)} – ${clockOf(end)}`} icon={RouteIcon}>
+      <View style={styles.routeStats}>
+        <RouteStat value={formatDistance(walked)} label="walked" />
+        <RouteStat value={hm(Math.round(span / 60_000))} label="tracked" />
+        <RouteStat value={outside > 60_000 ? hm(Math.round(outside / 60_000)) : "0m"} label="outside" warn={outside > 60_000} />
+      </View>
+
+      <Pressable accessibilityRole="adjustable" accessibilityLabel="Route timeline. Tap to jump to a moment." onPress={(e) => jump(e.nativeEvent.locationX)} onLayout={(e) => setBarW(e.nativeEvent.layout.width)} style={styles.bar}>
+        {runs.map((r, i) => (
+          <View key={i} style={{ flex: r.ms, backgroundColor: r.inside ? "#10b981" : "#f59e0b" }} />
+        ))}
+        {at && <View pointerEvents="none" style={[styles.barHead, { left: `${pos * 100}%` }]} />}
+      </Pressable>
+      <View style={styles.barLegend}>
+        <Text variant="caption" tone="muted">
+          {clockOf(start)}
+        </Text>
+        <Text variant="caption" weight="semibold" tone={at ? "primary" : "muted"}>
+          {at ? `${clockOf(at.at)} · ${at.inside === false ? "outside" : "inside"}` : "Green inside · amber outside"}
+        </Text>
+        <Text variant="caption" tone="muted">
+          {clockOf(end)}
+        </Text>
+      </View>
+
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <SolidButton
+            label={playing ? "Pause" : head != null && head >= route.length - 1 ? "Play again" : "Play route"}
+            icon={playing ? Pause : Play}
+            tone="blue"
+            onPress={() => {
+              if (playing) return setPlaying(false);
+              if (head == null || head >= route.length - 1) onHead(0);
+              setPlaying(true);
+            }}
+          />
+        </View>
+        {head != null && !playing && (
+          <View style={styles.flex}>
+            <Button label="Whole route" variant="outline" fullWidth onPress={() => onHead(null)} />
+          </View>
+        )}
+      </View>
+    </Panel>
+  );
+}
+
+function RouteStat({ value, label, warn }: { value: string; label: string; warn?: boolean }) {
+  return (
+    <View style={styles.routeStat}>
+      <Text variant="bodyLarge" weight="bold" tone={warn ? "danger" : "default"}>
+        {value}
+      </Text>
+      <Text variant="caption" tone="muted">
+        {label}
+      </Text>
     </View>
   );
 }
@@ -284,5 +423,10 @@ const styles = StyleSheet.create({
   fieldLabel: { width: 110 },
   fieldValue: { flex: 1, alignItems: "flex-end", gap: 2 },
   right: { textAlign: "right" },
+  routeStats: { flexDirection: "row", gap: space[2] },
+  routeStat: { flex: 1, alignItems: "center", paddingVertical: space[2], borderRadius: radius.lg, backgroundColor: color.muted },
+  bar: { height: 14, borderRadius: 7, overflow: "hidden", flexDirection: "row", backgroundColor: color.muted },
+  barHead: { position: "absolute", top: 0, bottom: 0, width: 3, marginLeft: -1.5, backgroundColor: "#1d4ed8" },
+  barLegend: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space[2] },
   noteRow: { flexDirection: "column", alignItems: "flex-start", gap: 2 },
 });

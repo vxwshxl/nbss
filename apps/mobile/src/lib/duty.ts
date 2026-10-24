@@ -595,6 +595,15 @@ export async function handoverNotes(siteId: string): Promise<HandoverNote[]> {
   return (data ?? []).map((n) => ({ id: n.id, body: n.body, created_at: n.created_at, author: null }));
 }
 
+export type RoutePoint = { lat: number; lng: number; at: number; inside: boolean | null };
+
+/** One duty's route, check-in to check-out, with the time and fence verdict of each point. */
+export async function myRoute(attendanceId: string): Promise<RoutePoint[]> {
+  const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
+  const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number, boolean | null][];
+  return points.map(([lat, lng, t, , inside]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, inside: inside ?? null }));
+}
+
 /** The path walked since check-in, for the blue line on the duty map. */
 export async function myTrail(attendanceId: string): Promise<{ lat: number; lng: number }[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
