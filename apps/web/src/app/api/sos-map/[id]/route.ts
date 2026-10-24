@@ -120,7 +120,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const fence: Pt[] = site ? (ring && ring.length > 2 ? ring.map(([lng, lat]) => ({ lat, lng })).concat([{ lat: ring[0]![1], lng: ring[0]![0] }]) : circle(site, site.geofence_radius_m)) : [];
   const zoom = fitZoom([pin, ...fence], pin);
 
-  const image = (await google(pin, fence, zoom)) ?? (await osm(pin, fence, zoom));
+  const fromGoogle = await google(pin, fence, zoom);
+  // A Static Maps request Google will bill: counted for the console's Maps usage page.
+  if (fromGoogle) await db.from("map_usage").insert({ kind: "static", path: "/api/sos-map" });
+  const image = fromGoogle ?? (await osm(pin, fence, zoom));
   if (!image) return new NextResponse("Map unavailable", { status: 502 });
   return new NextResponse(image.buffer as ArrayBuffer, {
     headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" },

@@ -48,7 +48,7 @@ export function FloatingSos({ bottom }: { bottom: number }) {
 
   return (
     <>
-    {live.length > 0 && pathname !== "/alerts" && <LiveSosBanner alerts={live} bottom={bottom + SIZE + 12} />}
+    {live.length > 0 && pathname !== "/alerts" && <LiveSosBanner alerts={live} bottom={bottom} />}
     <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
       <Animated.View pointerEvents="none" style={[styles.ring, ring]} />
       <Pressable
@@ -88,7 +88,8 @@ export function FloatingSos({ bottom }: { bottom: number }) {
 }
 
 /**
- * Above the SOS button while an alert is open: who, where, how long ago and how many
+ * Beside the SOS button while an alert is open (it takes the rest of the row, so it
+ * fits any screen width): who, where, how long ago and how many
  * are coming. One tap opens the SOS tab, which shows it on the map. It stays until
  * the alert is resolved or stood down.
  */
@@ -152,14 +153,13 @@ const styles = StyleSheet.create({
   pressed: { transform: [{ scale: 0.96 }] },
   banner: {
     position: "absolute",
-    right: 12,
-    left: 72,
-    maxWidth: 340,
-    alignSelf: "flex-end",
+    // The row the SOS button sits on: from the left gutter to just before the button.
+    left: 16,
+    right: 16 + SIZE + 10,
+    height: SIZE,
     flexDirection: "row",
     alignItems: "center",
     gap: space[3],
-    paddingVertical: space[2.5],
     paddingLeft: space[3],
     paddingRight: space[2.5],
     borderRadius: radius.xl,

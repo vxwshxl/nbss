@@ -8,6 +8,7 @@ import {
   CalendarRange,
   ClipboardList,
   FileSpreadsheet,
+  Gauge,
   Inbox,
   LayoutDashboard,
   MapPinned,
@@ -97,6 +98,7 @@ export const groups: NavGroup[] = [
       { href: "/console/live", label: "Live tracking", icon: Radar, roles: ["admin", "supervisor"] },
       { href: "/console/routes", label: "Route history", icon: Route, roles: ["admin", "supervisor"] },
       { href: "/console/sites", label: "Sites & geofences", icon: MapPinned, roles: ["admin", "supervisor"] },
+      { href: "/console/maps-usage", label: "Maps usage", icon: Gauge, roles: ["admin"] },
     ],
   },
   {

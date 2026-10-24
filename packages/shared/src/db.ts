@@ -477,6 +477,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      map_usage: {
+        Row: {
+          id: number;
+          kind: string;
+          path: string | null;
+          profile_id: string | null;
+          at: string;
+        };
+        Insert: {
+          id?: number;
+          kind: string;
+          path?: string | null;
+          profile_id?: string | null;
+          at?: string;
+        };
+        Update: {
+          id?: number;
+          kind?: string;
+          path?: string | null;
+          profile_id?: string | null;
+          at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -1324,6 +1348,20 @@ export type Database = {
         };
         Returns: string;
       };
+      log_map_load: {
+        Args: {
+          p_kind: string;
+          p_path?: string;
+        };
+        Returns: string;
+      };
+      map_usage_report: {
+        Args: {
+          p_from: string;
+          p_to: string;
+        };
+        Returns: Json;
+      };
       may_read_site_channel: {
         Args: {
           p_topic: string;
@@ -1559,6 +1597,13 @@ export type Database = {
           p_alert_id: string;
         };
         Returns: { profile_id: string; audience: Enums["sos_audience"] }[];
+      };
+      sos_tell_people: {
+        Args: {
+          p_alert_id: string;
+          p_what: string;
+        };
+        Returns: string;
       };
       submit_service_request: {
         Args: {

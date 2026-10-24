@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { Loader2, MapPinOff } from "lucide-react";
 
 import { baseOptions, loadGoogleMaps } from "@/lib/google-maps";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,6 +25,11 @@ export function useGoogleMap(host: RefObject<HTMLDivElement | null>, options?: g
         if (cancelled || !host.current) return;
         const map = new maps.Map(host.current, baseOptions(initial.current));
         setState({ maps, map });
+        // Google bills each map drawn ("Dynamic Maps"); counted for the Maps usage page.
+        // (A Supabase query only runs once awaited or then-ed; a bare `void` would never send it.)
+        void supabaseBrowser()
+          .rpc("log_map_load", { p_kind: "dynamic", p_path: location.pathname })
+          .then(() => undefined);
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {
