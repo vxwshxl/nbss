@@ -72,6 +72,17 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
     if (me) {
       bounds.extend(me);
       if (me.accuracyM && me.accuracyM < 500) drawn.push(new g.Circle({ map, center: me, radius: me.accuracyM, strokeOpacity: 0, fillColor: MAP_COLOR.me, fillOpacity: 0.1 }));
+      if (me.heading != null) {
+        drawn.push(
+          new g.Marker({
+            map,
+            position: me,
+            clickable: false,
+            zIndex: 999,
+            icon: { path: "M 0 0 L -9 -24 A 26 26 0 0 1 9 -24 Z", rotation: me.heading, fillColor: MAP_COLOR.me, fillOpacity: 0.3, strokeOpacity: 0, scale: 1.4 },
+          }),
+        );
+      }
       drawn.push(new g.Marker({ map, position: me, icon: dot(MAP_COLOR.me, 9), zIndex: 1000 }));
     }
     const key = `${frameKey}|${me ? 1 : 0}`;

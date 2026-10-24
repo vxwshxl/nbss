@@ -13,7 +13,7 @@ export type MapSite = MapPoint & {
 
 export type LiveMapProps = {
   /** The phone, as the watch last reported it. */
-  me: (MapPoint & { accuracyM: number }) | null;
+  me: (MapPoint & { accuracyM: number; heading?: number | null }) | null;
   /** The site the guard is heading to, or standing at. */
   site: MapSite | null;
   /** Whether `me` is inside `site`'s boundary — green when it is. */

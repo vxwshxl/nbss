@@ -209,6 +209,8 @@ export function LiveTracking({
       sub: p!.battery != null ? `${p!.battery}%` : undefined,
       color: STATE_COLOR[state],
       live: state === "inside" || state === "outside" || state === "sos",
+      // Only while the phone is reporting: an old direction is worse than none.
+      heading: (state === "inside" || state === "outside" || state === "sos") && p!.heading != null ? p!.heading : null,
     }));
 
   const sel = rows.find((r) => r.g.guardId === selected) ?? null;

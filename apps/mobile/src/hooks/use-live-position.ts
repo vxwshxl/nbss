@@ -6,6 +6,11 @@ export type LiveFix = { lat: number; lng: number; accuracyM: number; at: number 
 
 export type LivePosition = {
   fix: LiveFix | null;
+  /**
+   * Which way the phone is pointing, degrees from north: the compass while the
+   * screen is open (like Google Maps' blue beam), null when it cannot tell.
+   */
+  heading: number | null;
   /** "denied" when the app may not read the location, "off" when GPS itself is off. */
   problem: "denied" | "off" | null;
   /** Asks again, for the button on the "allow location" notice. */
@@ -22,11 +27,13 @@ export type LivePosition = {
 export function useLivePosition(): LivePosition {
   const [fix, setFix] = useState<LiveFix | null>(null);
   const [problem, setProblem] = useState<LivePosition["problem"]>(null);
+  const [heading, setHeading] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       let sub: Location.LocationSubscription | null = null;
+      let compass: Location.LocationSubscription | null = null;
       let gone = false;
 
       void (async () => {
@@ -62,11 +69,23 @@ export function useLivePosition(): LivePosition {
         ).catch(() => null);
         if (gone) watch?.remove();
         else sub = watch;
+
+        // The compass, only while this screen is in front: it is cheap, and it is
+        // what lets the guard see which way they are facing. Rounded to 5° so a
+        // hand's tremor does not re-render the map thirty times a second.
+        const turn = await Location.watchHeadingAsync((h) => {
+          if (gone) return;
+          const deg = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+          if (deg >= 0 && h.accuracy !== 0) setHeading((prev) => (prev !== null && Math.abs(prev - deg) < 5 ? prev : Math.round(deg / 5) * 5));
+        }).catch(() => null);
+        if (gone) turn?.remove();
+        else compass = turn;
       })();
 
       return () => {
         gone = true;
         sub?.remove();
+        compass?.remove();
       };
       // `attempt` is only a trigger: bumping it re-runs the watch after a retry.
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,5 +93,5 @@ export function useLivePosition(): LivePosition {
   );
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
-  return { fix, problem, retry };
+  return { fix, heading, problem, retry };
 }

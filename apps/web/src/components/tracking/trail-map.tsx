@@ -127,14 +127,28 @@ export function TrailMap({
   useEffect(() => {
     if (!maps || !map || points.length === 0) return;
     const at = points[Math.min(head, points.length - 1)]!;
+    // Which way they were walking: from the point before this one (or to the next).
+    const from = points[Math.max(0, head - 1)]!;
+    const to = head > 0 ? at : (points[1] ?? at);
+    const a = head > 0 ? from : at;
+    const bearing = (Math.atan2(
+      Math.sin(((to.lng - a.lng) * Math.PI) / 180) * Math.cos((to.lat * Math.PI) / 180),
+      Math.cos((a.lat * Math.PI) / 180) * Math.sin((to.lat * Math.PI) / 180) -
+        Math.sin((a.lat * Math.PI) / 180) * Math.cos((to.lat * Math.PI) / 180) * Math.cos(((to.lng - a.lng) * Math.PI) / 180),
+    ) * 180) / Math.PI;
+    const moved = a !== to && (a.lat !== to.lat || a.lng !== to.lng);
+    const headHtml = `<span class="gm-head">${moved ? `<i class="gm-dir" style="--r:${Math.round((bearing + 360) % 360)}deg;--c:#2563eb"></i>` : ""}</span>`;
     if (!done.current) {
       done.current = new maps.Polyline({ map, strokeColor: MAP_COLOR.route, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false });
     }
     done.current.setPath(points.slice(0, head + 1));
     if (!headMarker.current) {
-      headMarker.current = createHtmlMarker(maps, { position: at, html: `<span class="gm-head"></span>`, zIndex: 30 });
+      headMarker.current = createHtmlMarker(maps, { position: at, html: headHtml, zIndex: 30 });
       headMarker.current.setMap(map);
-    } else headMarker.current.setPosition(at);
+    } else {
+      headMarker.current.setPosition(at);
+      headMarker.current.setHtml(headHtml);
+    }
   }, [maps, map, points, head]);
 
   useEffect(

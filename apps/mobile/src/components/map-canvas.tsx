@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Platform, StyleSheet, View, type ViewStyle } from "react-native";
 import MapView, { Circle, Marker, Polygon, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 
 import { Text } from "@/components/text";
 import { font } from "@/theme/tokens";
@@ -25,7 +26,8 @@ export type MapPerson = MapPoint & { id: string; label?: string; tone: string };
 export type MapCanvasProps = {
   fences?: MapFence[];
   people?: MapPerson[];
-  me?: (MapPoint & { accuracyM?: number }) | null;
+  /** The phone; `heading` (degrees from north) draws Google Maps' direction beam. */
+  me?: (MapPoint & { accuracyM?: number; heading?: number | null }) | null;
   /** A dashed line, from the guard to where they are heading. */
   route?: [MapPoint, MapPoint] | null;
   /** The path walked since check-in. */
@@ -178,9 +180,31 @@ export function MapCanvas({
           />
         ) : null}
         {me && (
-          <Marker coordinate={{ latitude: me.lat, longitude: me.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} zIndex={1000}>
-            <View style={styles.meHalo}>
-              <View style={styles.meDot} />
+          <Marker
+            coordinate={{ latitude: me.lat, longitude: me.lng }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            // Rotated natively and flat on the map, so the beam keeps pointing the right
+            // way when the map itself is turned, without re-drawing the view.
+            rotation={me.heading ?? 0}
+            flat
+            tracksViewChanges={false}
+            zIndex={1000}
+          >
+            <View style={styles.meBox}>
+              {me.heading != null && (
+                <Svg width={64} height={64} style={StyleSheet.absoluteFill}>
+                  <Defs>
+                    <LinearGradient id="beam" x1="0" y1="1" x2="0" y2="0">
+                      <Stop offset="0" stopColor={MAP_COLOR.me} stopOpacity="0.55" />
+                      <Stop offset="1" stopColor={MAP_COLOR.me} stopOpacity="0" />
+                    </LinearGradient>
+                  </Defs>
+                  <Path d="M32 32 L14 2 A34 34 0 0 1 50 2 Z" fill="url(#beam)" />
+                </Svg>
+              )}
+              <View style={styles.meHalo}>
+                <View style={styles.meDot} />
+              </View>
             </View>
           </Marker>
         )}
@@ -209,6 +233,7 @@ const styles = StyleSheet.create({
   whoDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: "#fff" },
   whoLabel: { marginTop: 2, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },
   whoText: { fontFamily: font.semibold, fontSize: 11, color: "#111" },
+  meBox: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   meHalo: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: alpha(MAP_COLOR.me, 0.2) },
   meDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: MAP_COLOR.me, borderWidth: 3, borderColor: "#fff" },
 });

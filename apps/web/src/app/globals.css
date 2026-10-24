@@ -865,6 +865,41 @@
   font-weight: 500;
   color: #555;
 }
+/* Which way a guard is facing or walking: a pointer that turns around the
+ * avatar (live map) or the playback dot (route history). --r is the heading. */
+.gm-dir {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--r, 0deg));
+  pointer-events: none;
+}
+.gm-dir::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: -27px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 12px solid var(--c);
+  filter: drop-shadow(0 1px 1px oklch(0 0 0 / 0.35));
+}
+.gm-head {
+  position: relative;
+}
+.gm-head .gm-dir::before {
+  top: -22px;
+}
+[data-far] .gm-guard:not([data-selected]) .gm-dir::before {
+  top: -18px;
+  border-left-width: 6px;
+  border-right-width: 6px;
+  border-bottom-width: 9px;
+  left: -6px;
+}
+
 /* Zoomed out (live-map sets [data-far]): dots, no chips, no site labels. */
 [data-far] .gm-guard span,
 [data-far] .gm-pin span,

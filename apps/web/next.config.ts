@@ -53,9 +53,11 @@ const csp = [
   "default-src 'self'",
   `img-src 'self' data: blob: ${GOOGLE_MAPS}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${GOOGLE_MAPS}`,
+  // static.cloudflareinsights.com: Cloudflare's own analytics beacon, which it
+  // injects into every page it proxies; blocked, it only fills the console with errors.
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${GOOGLE_MAPS} https://static.cloudflareinsights.com`,
   "font-src 'self' https://fonts.gstatic.com",
-  `connect-src 'self'${supabaseConnect} ${GOOGLE_MAPS} data: blob:` + (isDev ? " ws: wss:" : ""),
+  `connect-src 'self'${supabaseConnect} ${GOOGLE_MAPS} https://cloudflareinsights.com data: blob:` + (isDev ? " ws: wss:" : ""),
   "frame-src https://*.google.com",
   // The service worker that makes this installable. Same-origin only — it would fall back
   // to script-src anyway, but a worker is the one thing that keeps running after the page

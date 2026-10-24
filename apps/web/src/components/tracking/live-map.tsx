@@ -25,6 +25,8 @@ export type LiveMarker = {
   sub?: string;
   color: string;
   live: boolean;
+  /** Degrees from north: the compass with the app open, else the GPS course while moving. */
+  heading?: number | null;
 };
 
 /**
@@ -104,7 +106,7 @@ export function LiveMap({
       seen.add(g.id);
       const html =
         `<div class="gm-guard" style="--c:${g.color}" ${g.live ? "data-live" : ""} ${selected === g.id ? "data-selected" : ""}>` +
-        `<b>${esc(g.initials)}</b><span>${esc(g.label)}${g.sub ? ` <small>${esc(g.sub)}</small>` : ""}</span></div>`;
+        `<b>${g.heading != null ? `<i class="gm-dir" style="--r:${Math.round(g.heading)}deg"></i>` : ""}${esc(g.initials)}</b><span>${esc(g.label)}${g.sub ? ` <small>${esc(g.sub)}</small>` : ""}</span></div>`;
       const existing = markers.current.get(g.id);
       if (existing) {
         existing.setPosition({ lat: g.lat, lng: g.lng });

@@ -143,8 +143,11 @@ export function Duty() {
   useEffect(() => {
     if (!onDuty || !fix || IS_WEB || fix.at === fedAt.current) return;
     fedAt.current = fix.at;
-    void feedLocations([{ lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracyM, at: fix.at }]);
-  }, [onDuty, fix]);
+    // The compass rides along, so the console's arrow points the way the guard faces
+    // while the app is open; in the background the GPS course is sent instead.
+    void feedLocations([{ lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracyM, heading: live.heading, at: fix.at }]);
+    // A heading change alone sends nothing: the guard above skips a fix already fed.
+  }, [onDuty, fix, live.heading]);
 
   // The blue line of where they have been, refreshed every minute on duty.
   useEffect(() => {
@@ -303,7 +306,7 @@ export function Duty() {
       {/* ───────────────────────────────────────────────────────── the map */}
       <View style={StyleSheet.absoluteFill}>
         <LiveMap
-          me={fix}
+          me={fix ? { ...fix, heading: live.heading } : null}
           site={mapSite}
           inside={inside}
           trail={onDuty ? (data?.trail ?? null) : null}

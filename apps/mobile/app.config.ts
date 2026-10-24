@@ -141,11 +141,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-build-properties",
       {
-        android: {
-          minSdkVersion: 24,
-          compileSdkVersion: 36,
-          targetSdkVersion: 36,
-        },
+        // Android SDK levels are left to Expo: SDK 58's libraries need compileSdk 37,
+        // and a pin here (36, from the MapLibre days) is what broke the first build.
         ios: {
           deploymentTarget: "16.4",
           useFrameworks: "static",
