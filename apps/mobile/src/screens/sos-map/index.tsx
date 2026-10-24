@@ -352,7 +352,16 @@ function AlertCard({ a, distance, now, onClose }: { a: MapAlert; distance: strin
       ) : null}
       <View style={styles.row}>
         <View style={styles.flex}>
-          <Button label="Open SOS" icon={Siren} variant="destructive" fullWidth onPress={() => router.push(`/sos/${a.id}`)} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/sos/${a.id}`)}
+            style={({ pressed }) => [styles.openSos, pressed && styles.pressed]}
+          >
+            <Siren size={18} color="#fff" strokeWidth={2.4} />
+            <Text variant="label" weight="bold" tone="inherit" style={styles.openSosText}>
+              Open SOS map
+            </Text>
+          </Pressable>
         </View>
         {!a.mine && a.raiser_phone ? (
           <View style={styles.flex}>
@@ -426,6 +435,8 @@ const styles = StyleSheet.create({
   sosTagText: { color: "#fff" },
   cardHead: { flexDirection: "row", alignItems: "center", gap: space[3] },
   sosAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.sos, alignItems: "center", justifyContent: "center" },
+  openSos: { height: 44, borderRadius: radius.full, backgroundColor: color.sos, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
+  openSosText: { color: "#fff" },
   iconBtn: { width: 44, height: 44, borderRadius: radius.full, borderWidth: 1, borderColor: color.border, backgroundColor: color.card, alignItems: "center", justifyContent: "center" },
   close: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.muted, alignItems: "center", justifyContent: "center" },
   facts: { flexDirection: "row", flexWrap: "wrap", rowGap: space[2], borderRadius: radius.xl, backgroundColor: color.muted, padding: space[3] },
