@@ -40,7 +40,7 @@ export default async function SoftwareFeePage() {
       <PageHeader eyebrow="Billing" title="Software fee" />
       {test && (
         <p className="-mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="font-bold">Test side.</span> These invoices count test guards and are paid with Razorpay&apos;s test keys: no real money moves.
+          <span className="font-bold">Test side.</span> These invoices count test guards. Paying one is a real Razorpay payment, kept apart from the live bill.
           Switch to Live in the header for the real bill.
         </p>
       )}
@@ -54,7 +54,7 @@ export default async function SoftwareFeePage() {
         <StatCard label="Due now" value={inr(due)} hint={due ? `${rows.filter((r) => r.status === "unpaid").length} month(s) unpaid` : "Nothing outstanding"} icon={CalendarClock} tone={due ? "amber" : "emerald"} />
         <StatCard label="Paid so far" value={inr(paid.reduce((n, r) => n + r.total_paise, 0))} hint={`${paid.length} month(s) settled`} icon={CircleCheckBig} tone="emerald" />
       </div>
-      <FeeWorkspace invoices={rows} settings={s} canEdit={session.realProfile.role === "developer"} online={razorpayConfigured(!!test)} test={!!test} />
+      <FeeWorkspace invoices={rows} settings={s} canEdit={session.realProfile.role === "developer"} online={razorpayConfigured()} test={!!test} />
     </div>
   );
 }

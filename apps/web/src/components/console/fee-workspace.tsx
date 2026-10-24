@@ -154,7 +154,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online, test = false
                   </td>
                   <td className="px-5 py-3 text-right">
                     {inv.status === "unpaid" && inv.total_paise >= 100 && !online && (
-                      <span className="text-xs text-muted-foreground">{test ? "Add Razorpay test keys to pay" : "Online payment not set up"}</span>
+                      <span className="text-xs text-muted-foreground">Online payment not set up</span>
                     )}
                     {inv.status === "unpaid" && online && inv.total_paise >= 100 && (
                       <Button

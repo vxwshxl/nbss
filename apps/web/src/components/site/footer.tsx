@@ -179,11 +179,10 @@ export function SiteFooter() {
               © {new Date().getFullYear()} {site.name}, {site.address.city}, {site.address.state}.
             </p>
             <p className="mt-1 text-[11px] text-ink-fg/40">
-              Software by{" "}
-              <a href="https://bodookhrang.com" target="_blank" rel="noopener noreferrer" className="hover:text-ink-fg">
-                Bodookhrang Tech Private Limited
-              </a>{" "}
-              · GSTIN 18AAMCB2128H1ZP · CIN U58202AS2024PTC025748
+              Developed by Bodo Okhrang Tech Pvt. Ltd.{" "}
+              <a href="https://bodookhrang.com" target="_blank" rel="noopener noreferrer" className="font-bold text-ink-fg/70 hover:text-ink-fg">
+                bodookhrang.com
+              </a>
             </p>
           </div>
           <div className="flex items-center gap-x-5 sm:gap-x-6">

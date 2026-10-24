@@ -10,12 +10,11 @@ import { webhookSignatureValid } from "@/lib/billing/razorpay";
  * Configure in Razorpay → Settings → Webhooks: this URL, event payment.captured.
  */
 export async function POST(req: NextRequest) {
-  // Live and test mode each have their own webhook in Razorpay, each with its own secret.
-  const secrets = [process.env.RAZORPAY_WEBHOOK_SECRET, process.env.RAZORPAY_TEST_WEBHOOK_SECRET].filter((x): x is string => !!x);
-  if (secrets.length === 0) return NextResponse.json({ ok: false }, { status: 503 });
+  // One webhook (live keys) for both sides; the order's notes say which side it was.
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) return NextResponse.json({ ok: false }, { status: 503 });
   const raw = await req.text();
-  const signature = req.headers.get("x-razorpay-signature") ?? "";
-  if (!secrets.some((s) => webhookSignatureValid(raw, signature, s))) {
+  if (!webhookSignatureValid(raw, req.headers.get("x-razorpay-signature") ?? "", secret)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
   let event: { event?: string; payload?: { payment?: { entity?: { id?: string; order_id?: string; notes?: Record<string, string> } } } };
