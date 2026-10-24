@@ -58,14 +58,14 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
     const bounds = new g.LatLngBounds();
     for (const f of fences) {
       const path = f.ring.map(([lng, lat]) => ({ lat, lng }));
-      path.forEach((p) => bounds.extend(p));
-      drawn.push(new g.Polygon({ map, paths: path, strokeColor: f.tone, strokeWeight: 2.5, fillColor: f.tone, fillOpacity: 0.14, clickable: false }));
+      if (f.frame !== false) path.forEach((p) => bounds.extend(p));
+      drawn.push(new g.Polygon({ map, paths: path, strokeColor: f.tone, strokeWeight: f.quiet ? 1.5 : 2.5, fillColor: f.tone, fillOpacity: f.fill ?? (f.quiet ? 0.08 : 0.14), clickable: false }));
     }
     if (trail && trail.length > 1) drawn.push(new g.Polyline({ map, path: trail, strokeColor: MAP_COLOR.me, strokeOpacity: 0.75, strokeWeight: 4 }));
     if (route) drawn.push(new g.Polyline({ map, path: route, strokeOpacity: 0, icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: MAP_COLOR.route, scale: 3 }, offset: "0", repeat: "12px" }] }));
     for (const p of people) {
-      bounds.extend(p);
-      const m = new g.Marker({ map, position: p, icon: dot(p.tone, 8), label: p.label ? { text: p.label, fontSize: "11px", fontWeight: "600", className: "nbss-map-label" } : undefined });
+      if (p.frame !== false) bounds.extend(p);
+      const m = new g.Marker({ map, position: p, icon: dot(p.tone, p.big ? 12 : 8), zIndex: p.big ? 900 : 100, label: p.label ? { text: p.label, fontSize: "11px", fontWeight: "600", className: "nbss-map-label" } : undefined });
       if (onPersonPress) m.addListener("click", () => onPersonPress(p.id));
       drawn.push(m);
     }

@@ -91,7 +91,10 @@ export default function RootLayout() {
       const sos = asSosPush(data);
       if (sos) return router.push(`/sos/${sos.alert_id}`);
       const type = pushType(data);
-      if (type === "duty" || type === "replacement") router.push("/(guard)/duties");
+      const shiftId = (data as { shift_id?: unknown } | null)?.shift_id;
+      if (type === "duty" && typeof shiftId === "string") router.push({ pathname: "/shift/[id]", params: { id: shiftId } });
+      else if (type === "duty" || type === "replacement") router.push("/(guard)/duties");
+      else if (type === "check_in" || type === "check_out") router.push("/(guard)/duty");
       else if (type === "resume_tracking") {
         void ensureTracking();
         router.push("/(guard)/duty");
@@ -145,6 +148,7 @@ export default function RootLayout() {
             <Stack.Screen name="(client)" options={{ headerShown: false }} />
             <Stack.Screen name="(staff)" options={{ headerShown: false }} />
             <Stack.Screen name="assistant" options={{ headerShown: false, presentation: "modal" }} />
+            <Stack.Screen name="shift/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
             <Stack.Screen
               name="sos/[id]"
               options={{

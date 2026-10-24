@@ -20,8 +20,26 @@ import { MAP_COLOR, type MapPoint } from "./live-map/shared";
  * site), so a guard who has panned to look at something is left alone.
  */
 
-export type MapFence = { id: string; name: string; ring: [number, number][]; tone: string };
-export type MapPerson = MapPoint & { id: string; label?: string; tone: string };
+export type MapFence = {
+  id: string;
+  name: string;
+  ring: [number, number][];
+  tone: string;
+  /** Fill strength, 0–1 (default 0.14). Changing it is how an SOS area blinks. */
+  fill?: number;
+  /** A background area: thin line, small label. */
+  quiet?: boolean;
+  /** Left out of the auto-framing (default true). */
+  frame?: boolean;
+};
+export type MapPerson = MapPoint & {
+  id: string;
+  label?: string;
+  tone: string;
+  /** Bigger, ringed dot: the person who raised an SOS. */
+  big?: boolean;
+  frame?: boolean;
+};
 
 export type MapCanvasProps = {
   fences?: MapFence[];
@@ -65,8 +83,8 @@ export function MapCanvas({
 
   const points = useMemo(() => {
     const pts: { latitude: number; longitude: number }[] = [];
-    for (const f of fences) for (const [lng, lat] of f.ring) pts.push({ latitude: lat, longitude: lng });
-    for (const p of people) pts.push({ latitude: p.lat, longitude: p.lng });
+    for (const f of fences) if (f.frame !== false) for (const [lng, lat] of f.ring) pts.push({ latitude: lat, longitude: lng });
+    for (const p of people) if (p.frame !== false) pts.push({ latitude: p.lat, longitude: p.lng });
     if (me) pts.push({ latitude: me.lat, longitude: me.lng });
     return pts;
   }, [fences, people, me]);
@@ -121,17 +139,17 @@ export function MapCanvas({
             key={f.id}
             coordinates={f.ring.map(([lng, lat]) => ({ latitude: lat, longitude: lng }))}
             strokeColor={f.tone}
-            strokeWidth={2.5}
-            fillColor={alpha(f.tone, 0.14)}
+            strokeWidth={f.quiet ? 1.5 : 2.5}
+            fillColor={alpha(f.tone, f.fill ?? (f.quiet ? 0.08 : 0.14))}
           />
         ))}
         {fences.map((f) => {
           const c = centre(f.ring);
           return (
-            <Marker key={`label-${f.id}`} coordinate={c} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
+            <Marker key={`label-${f.id}-${f.tone}`} coordinate={c} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
               <View style={styles.pin}>
-                <View style={[styles.pinLabel, { backgroundColor: f.tone }]}>
-                  <Text style={styles.pinText} numberOfLines={1}>
+                <View style={[styles.pinLabel, f.quiet && styles.pinQuiet, { backgroundColor: f.tone }]}>
+                  <Text style={[styles.pinText, f.quiet && styles.pinTextQuiet]} numberOfLines={1}>
                     {f.name}
                   </Text>
                 </View>
@@ -162,14 +180,21 @@ export function MapCanvas({
 
         {people.map((p) => (
           <Marker
-            key={p.id}
+            key={`${p.id}-${p.tone}-${p.label ?? ""}`}
             coordinate={{ latitude: p.lat, longitude: p.lng }}
-            anchor={{ x: 0.5, y: 0.25 }}
+            anchor={{ x: 0.5, y: p.big ? 0.2 : 0.25 }}
             tracksViewChanges={false}
+            zIndex={p.big ? 900 : 100}
             onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
           >
             <View style={styles.who}>
-              <View style={[styles.whoDot, { backgroundColor: p.tone }]} />
+              {p.big ? (
+                <View style={[styles.bigRing, { borderColor: alpha(p.tone, 0.35) }]}>
+                  <View style={[styles.bigDot, { backgroundColor: p.tone }]} />
+                </View>
+              ) : (
+                <View style={[styles.whoDot, { backgroundColor: p.tone }]} />
+              )}
               {p.label ? (
                 <View style={styles.whoLabel}>
                   <Text style={styles.whoText} numberOfLines={1}>
@@ -240,6 +265,10 @@ const styles = StyleSheet.create({
   pinLabel: { maxWidth: 180, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   pinText: { color: "#fff", fontFamily: font.semibold, fontSize: 12 },
   pinStick: { width: 3, height: 10 },
+  pinQuiet: { paddingHorizontal: 7, paddingVertical: 2, opacity: 0.9 },
+  pinTextQuiet: { fontSize: 10 },
+  bigRing: { width: 40, height: 40, borderRadius: 20, borderWidth: 8, alignItems: "center", justifyContent: "center" },
+  bigDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 3, borderColor: "#fff" },
   who: { alignItems: "center" },
   whoDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: "#fff" },
   whoLabel: { marginTop: 2, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },

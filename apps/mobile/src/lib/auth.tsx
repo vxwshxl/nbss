@@ -19,6 +19,14 @@ import { supabase } from "./supabase";
 
 export type Profile = Row<"profiles">;
 
+/** The Google account's photo, when the guard has signed in with Google (or linked it). */
+export function photoOf(session: Session | null | undefined): string | null {
+  const m = (session?.user.user_metadata ?? {}) as { avatar_url?: unknown; picture?: unknown };
+  const fromIdentity = session?.user.identities?.find((i) => i.provider === "google")?.identity_data as { avatar_url?: unknown; picture?: unknown } | undefined;
+  const url = m.avatar_url ?? m.picture ?? fromIdentity?.avatar_url ?? fromIdentity?.picture;
+  return typeof url === "string" && url.startsWith("https://") ? url : null;
+}
+
 type AuthState = {
   /** null once resolved and nobody is signed in; undefined while still resolving. */
   session: Session | null | undefined;

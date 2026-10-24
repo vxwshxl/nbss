@@ -9,7 +9,9 @@ import {
   BatteryCharging,
   BatteryLow,
   BatteryWarning,
+  BellRing,
   Crosshair,
+  Loader2,
   LocateOff,
   Phone,
   Route,
@@ -24,6 +26,7 @@ import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from 
 import { LiveMap, type LiveMarker, type LiveSite } from "@/components/tracking/live-map";
 import { initials } from "@/lib/ui/initials";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { toast } from "sonner";
 import {
   STATE_CHIP,
   STATE_COLOR,
@@ -453,7 +456,7 @@ function GuardCard({
         {(state === "offline" || state === "stale") && g.silentAlertedAt && (
           <p className="flex items-start gap-2 rounded-xl bg-rose-500/10 p-2.5 text-rose-800 dark:text-rose-200">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            The phone went quiet. NBSS sent it a wake-up at {istClock(new Date(g.silentAlertedAt).getTime())} and asked the guard to open the app.
+            The phone went quiet. NBSS wakes it every few minutes; the last wake-up was at {istClock(new Date(g.silentAlertedAt).getTime())} and asked the guard to open the app.
           </p>
         )}
         {points <= 1 && (
@@ -461,6 +464,9 @@ function GuardCard({
         )}
       </div>
 
+      <div className="px-4 pb-2">
+        <WakeButton guardId={g.guardId} name={g.name} />
+      </div>
       <div className="flex gap-2 px-4 pb-4">
         {g.phone && (
           <a href={`tel:${g.phone}`} className="press inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground">
@@ -478,6 +484,35 @@ function GuardCard({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Wakes the guard's phone now: a silent push that restarts tracking in the
+ * background, and a visible "the office is checking on you" in case it cannot.
+ * The watchdog does the same on its own every few minutes while a phone is quiet.
+ */
+function WakeButton({ guardId, name }: { guardId: string; name: string }) {
+  const [busy, setBusy] = useState(false);
+  const wake = async () => {
+    setBusy(true);
+    const { data, error } = await supabaseBrowser().rpc("wake_guard", { p_guard: guardId });
+    setBusy(false);
+    const r = data as { ok?: boolean; devices?: number; reason?: string } | null;
+    if (error) toast.error(error.message);
+    else if (!r?.ok) toast.error(r?.reason === "not_on_duty" ? `${name} is not checked in.` : "Could not send the wake-up.");
+    else if (!r.devices) toast.error(`${name}'s phone has no notifications registered, so it cannot be woken. Call instead.`);
+    else toast.success(`Wake-up sent to ${name}'s phone.`);
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void wake()}
+      disabled={busy}
+      className="press inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-amber-500/12 px-3 text-sm font-medium text-amber-800 ring-1 ring-amber-500/30 hover:bg-amber-500/20 disabled:opacity-60 dark:text-amber-200"
+    >
+      {busy ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} Wake up phone
+    </button>
   );
 }
 

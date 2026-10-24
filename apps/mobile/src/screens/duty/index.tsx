@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   Clock3,
   LocateFixed,
@@ -28,7 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY, istTime, tel } from "@nbss/shared/company";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
-import { checkFence, formatDistance } from "@nbss/shared/geo";
+import { checkFence, formatDistance, toRing } from "@nbss/shared/geo";
 
 import { Button } from "@/components/button";
 import { InfoButton } from "@/components/info";
@@ -44,6 +44,7 @@ import {
   allSites,
   checkArrival,
   directionsUrl,
+  dutyAreas,
   eta,
   handoverNotes,
   myPost,
@@ -99,26 +100,51 @@ export function Duty() {
   const [askedPermission, setAskedPermission] = useState<PermissionState | null>(null);
 
   const load = useCallback(async () => {
-    const [punch, permission, tracking, post, rostered, all] = await Promise.all([
+    const [punch, permission, tracking, post, rostered, all, areas] = await Promise.all([
       openPunch(),
       checkTracking(),
       isTracking(),
       myPost(),
       rosteredSites(),
       allSites(),
+      dutyAreas(),
     ]);
-    // Your post first, then everywhere else — the roster is the default, not a wall.
+    // Your post first, then the other sites where duties are going on now. Closed
+    // sites and sites with nobody rostered stay off the map; only when there is
+    // nothing at all (no roster yet) is every open site offered.
     const seen = new Set(rostered.map((s) => s.id));
-    const sites = [...rostered, ...all.filter((s) => !seen.has(s.id))];
+    const busy = new Set(areas.areas.map((a) => a.id));
+    const others = all.filter((s) => !seen.has(s.id) && busy.has(s.id));
+    const sites = rostered.length + others.length > 0 ? [...rostered, ...others] : all;
     const noteSite = punch?.site_id ?? post?.siteId ?? null;
     const [notes, trail] = await Promise.all([
       noteSite ? handoverNotes(noteSite) : Promise.resolve([]),
       punch ? myTrail(punch.id) : Promise.resolve([]),
     ]);
-    return { punch, permission, tracking, post, sites, notes, trail };
+    return { punch, permission, tracking, post, sites, notes, trail, areas };
   }, []);
 
   const { data, refreshing, reload } = useLoader(load);
+
+  // Colleagues move: the areas and their dots refresh every 20 s while this tab is open.
+  const crowd = useLoader(dutyAreas);
+  const reloadCrowd = crowd.reload;
+  useFocusEffect(
+    useCallback(() => {
+      const t = setInterval(() => void reloadCrowd(), 20_000);
+      return () => clearInterval(t);
+    }, [reloadCrowd]),
+  );
+  const areasNow = crowd.data ?? data?.areas;
+  const mapAreas: MapSite[] = (areasNow?.areas ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    lat: a.lat,
+    lng: a.lng,
+    radiusM: a.geofence_radius_m,
+    ring: toRing(a.polygon),
+  }));
+  const mapFriends = (areasNow?.friends ?? []).flatMap((f) => (f.lat != null && f.lng != null ? [{ id: f.id, name: f.name, lat: f.lat, lng: f.lng }] : []));
 
   const punch = data?.punch ?? null;
   const post = data?.post ?? null;
@@ -311,6 +337,9 @@ export function Duty() {
           site={mapSite}
           inside={inside}
           trail={onDuty ? (data?.trail ?? null) : null}
+          areas={mapAreas}
+          friends={mapFriends}
+          onFriendPress={() => router.push("/(guard)/alerts")}
           // Re-framed on the recenter button, and when the guard has moved a few
           // hundred metres — the blue dot never walks off the edge on its own.
           frameKey={`${frameKey}:${fix ? `${Math.round(fix.lat * 300)},${Math.round(fix.lng * 300)}` : "-"}`}

@@ -779,6 +779,10 @@ export type Database = {
           replaces_shift: string | null;
           replaced_by_shift: string | null;
           cancel_reason: string | null;
+          notified_at: string | null;
+          reminded_at: string | null;
+          start_nudged_at: string | null;
+          checkout_reminded_at: string | null;
         };
         Insert: {
           id?: string;
@@ -796,6 +800,10 @@ export type Database = {
           replaces_shift?: string | null;
           replaced_by_shift?: string | null;
           cancel_reason?: string | null;
+          notified_at?: string | null;
+          reminded_at?: string | null;
+          start_nudged_at?: string | null;
+          checkout_reminded_at?: string | null;
         };
         Update: {
           id?: string;
@@ -813,6 +821,10 @@ export type Database = {
           replaces_shift?: string | null;
           replaced_by_shift?: string | null;
           cancel_reason?: string | null;
+          notified_at?: string | null;
+          reminded_at?: string | null;
+          start_nudged_at?: string | null;
+          checkout_reminded_at?: string | null;
         };
         Relationships: [];
       };
@@ -1213,6 +1225,14 @@ export type Database = {
         };
         Returns: Json;
       };
+      duty_areas_now: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      duty_reminders: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       enqueue_email: {
         Args: {
           p_to: string;
@@ -1292,16 +1312,53 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
+      ist_clock: {
+        Args: {
+          p: string;
+        };
+        Returns: string;
+      };
+      ist_day: {
+        Args: {
+          p: string;
+        };
+        Returns: string;
+      };
       may_read_site_channel: {
         Args: {
           p_topic: string;
         };
         Returns: boolean;
       };
+      my_attendance_json: {
+        Args: {
+          p_att: string;
+        };
+        Returns: Json;
+      };
       my_duties: {
         Args: {
           p_days_back?: number;
           p_days_ahead?: number;
+        };
+        Returns: Json;
+      };
+      my_duties_between: {
+        Args: {
+          p_from: string;
+          p_to: string;
+        };
+        Returns: Json;
+      };
+      my_duty: {
+        Args: {
+          p_id: string;
+        };
+        Returns: Json;
+      };
+      my_duty_json: {
+        Args: {
+          p_shift: string;
         };
         Returns: Json;
       };
@@ -1532,6 +1589,21 @@ export type Database = {
           p_site_id: string;
         };
         Returns: Enums["tracking_mode"];
+      };
+      wake_guard: {
+        Args: {
+          p_guard: string;
+        };
+        Returns: Json;
+      };
+      wake_phone: {
+        Args: {
+          p_attendance: string;
+          p_guard: string;
+          p_site: string;
+          p_by_office: boolean;
+        };
+        Returns: number;
       };
       withdraw_replacement_request: {
         Args: {

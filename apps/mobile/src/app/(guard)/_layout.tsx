@@ -2,14 +2,15 @@ import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
 import type { ColorValue } from "react-native";
 
-import { CalendarDays, CircleUserRound, MapPinned, Siren } from "lucide-react-native";
+import { CalendarDays, MapPinned, Siren } from "lucide-react-native";
 import { useEffect } from "react";
 import { AppState, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Avatar } from "@/components/avatar";
 import { FloatingSos } from "@/components/floating-sos";
 import { TopBar } from "@/components/top-bar";
-import { useAuth } from "@/lib/auth";
+import { photoOf, useAuth } from "@/lib/auth";
 import { registerHandset } from "@/lib/device";
 import { askForegroundOnce } from "@/lib/location";
 import { ensureTracking } from "@/lib/keep-alive";
@@ -33,6 +34,7 @@ type TabIcon = { color: ColorValue; size: number };
 export default function GuardLayout() {
   const { session, role, profile } = useAuth();
   const insets = useSafeAreaInsets();
+  const photo = photoOf(session);
 
   useEffect(() => {
     if (!session) return;
@@ -73,7 +75,7 @@ export default function GuardLayout() {
          * is why every screen underneath passes `topInset={false}` to <Screen>.
          */
         header: () => (
-          <TopBar role={role ?? "guard"} name={profile?.full_name ?? "-"} />
+          <TopBar role={role ?? "guard"} name={profile?.full_name ?? "-"} account={false} />
         ),
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
@@ -87,8 +89,8 @@ export default function GuardLayout() {
           backgroundColor: color.card,
           borderTopColor: color.lineSoft,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: 58 + insets.bottom,
-          paddingBottom: insets.bottom + 6,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
           paddingTop: 6,
         },
         // Geist, so the tab bar does not betray the system font under a screen full of it.
@@ -124,14 +126,15 @@ export default function GuardLayout() {
         name="profile"
         options={{
           title: "Me",
-          tabBarIcon: ({ color: c, size }: TabIcon) => (
-            <CircleUserRound size={size} color={c as string} strokeWidth={2} />
+          // The guard's own face (their Google photo, or initials) where the icon would be.
+          tabBarIcon: ({ focused, size }: TabIcon & { focused: boolean }) => (
+            <Avatar name={profile?.full_name ?? "?"} uri={photo} size={size} ring={focused ? color.primary : undefined} />
           ),
         }}
       />
     </Tabs>
       {/* On every tab, above the tab bar: hold for help from wherever the guard is. */}
-      <FloatingSos bottom={58 + insets.bottom + 14} />
+      <FloatingSos bottom={64 + insets.bottom + 14} />
     </View>
   );
 }

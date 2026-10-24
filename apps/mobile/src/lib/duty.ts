@@ -487,18 +487,30 @@ export async function liveAlerts(): Promise<LiveAlert[]> {
 
 export type MyDuty = {
   id: string;
+  /** "off_roster": a check-in with no rostered duty behind it (history only). */
+  kind?: "shift" | "off_roster";
   starts_at: string;
   ends_at: string;
   status: "scheduled" | "in_progress" | "completed" | "missed" | "cancelled";
   shift_type: string | null;
   cancel_reason: string | null;
-  site: Pick<Site, "id" | "name" | "address" | "district" | "lat" | "lng" | "geofence_radius_m" | "polygon" | "max_accuracy_m">;
+  notes?: string | null;
+  site: Pick<Site, "id" | "name" | "address" | "district" | "lat" | "lng" | "geofence_radius_m" | "polygon" | "max_accuracy_m"> & { active?: boolean };
   /** Who took this duty over, when it was handed to someone else. */
   replaced_by: string | null;
   /** Whose duty this is, when this guard is covering it. */
   replacing: string | null;
   request: { id: string; status: "open" | "assigned" | "declined" | "withdrawn"; reason: string | null } | null;
-  attendance: { id: string; check_in_at: string | null; check_out_at: string | null; worked_minutes: number | null; status: string } | null;
+  attendance: {
+    id: string;
+    check_in_at: string | null;
+    check_out_at: string | null;
+    worked_minutes: number | null;
+    overtime_minutes?: number | null;
+    status: string;
+    device_flag?: string | null;
+    review_note?: string | null;
+  } | null;
 };
 
 /** The guard's duties from a week back to two weeks ahead, in order. */
@@ -509,6 +521,54 @@ export async function myDuties(): Promise<MyDuty[]> {
     return [];
   }
   return (data ?? []) as unknown as MyDuty[];
+}
+
+/** Every duty and check-in between two IST dates (YYYY-MM-DD, inclusive): the history. */
+export async function dutiesBetween(from: string, to: string): Promise<MyDuty[]> {
+  const { data, error } = await supabase.rpc("my_duties_between", { p_from: from, p_to: to });
+  if (error) {
+    console.warn("[duty] my_duties_between failed", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as MyDuty[];
+}
+
+/** One duty (or off-roster check-in) in full, for the detail screen. */
+export async function myDuty(id: string): Promise<MyDuty | null> {
+  const { data, error } = await supabase.rpc("my_duty", { p_id: id });
+  if (error) console.warn("[duty] my_duty failed", error.message);
+  return (data ?? null) as unknown as MyDuty | null;
+}
+
+/**
+ * What happened to a duty, in the console register's words: a duty that ended with
+ * no check-in is Absent; one handed to another guard is Replaced (not held against
+ * this guard). The same rules as /console/reports/guard/[id], so the two agree.
+ */
+export type DutyOutcome = "present" | "late" | "absent" | "replaced" | "upcoming" | "not_arrived" | "pending_review" | "rejected" | "on_duty";
+
+export const OUTCOME_LABEL: Record<DutyOutcome, string> = {
+  present: "Present",
+  late: "Late",
+  absent: "Absent",
+  replaced: "Replaced",
+  upcoming: "Upcoming",
+  not_arrived: "Not arrived",
+  pending_review: "Needs review",
+  rejected: "Rejected",
+  on_duty: "On duty",
+};
+
+export function dutyOutcome(d: MyDuty, now: number): DutyOutcome {
+  const a = d.attendance;
+  if (d.replaced_by && !a?.check_in_at) return "replaced";
+  if (a?.check_in_at) {
+    if (!a.check_out_at) return "on_duty";
+    return (["present", "late", "pending_review", "rejected"].includes(a.status) ? a.status : "present") as DutyOutcome;
+  }
+  if (new Date(d.ends_at).getTime() < now) return "absent";
+  if (new Date(d.starts_at).getTime() <= now) return "not_arrived";
+  return "upcoming";
 }
 
 export async function requestReplacement(shiftId: string, reason?: string): Promise<{ ok: boolean; error?: string }> {
@@ -540,4 +600,66 @@ export async function myTrail(attendanceId: string): Promise<{ lat: number; lng:
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
   const points = ((data as { points?: [number, number][] } | null)?.points ?? []) as [number, number][];
   return points.map(([lat, lng]) => ({ lat: Number(lat), lng: Number(lng) }));
+}
+
+/* ─────────────────────────────────────────── areas, colleagues and SOS on the map ── */
+
+export type DutyArea = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  geofence_radius_m: number;
+  polygon: unknown;
+  on_duty: number;
+  rostered: number;
+  /** The caller is rostered here today, or checked in here. */
+  mine: boolean;
+  sos: boolean;
+};
+
+export type Friend = {
+  id: string;
+  name: string;
+  code: string;
+  phone: string | null;
+  site_id: string;
+  site_name: string;
+  check_in_at: string;
+  lat: number | null;
+  lng: number | null;
+  heading: number | null;
+  battery: number | null;
+  inside: boolean | null;
+  heard_at: string | null;
+};
+
+export type MapAlert = {
+  id: string;
+  site_id: string;
+  site_name: string;
+  kind: SosKind;
+  status: "active" | "acknowledged";
+  raised_at: string;
+  note: string | null;
+  raised_by: string;
+  raiser_name: string;
+  raiser_phone: string | null;
+  mine: boolean;
+  lat: number | null;
+  lng: number | null;
+  responders: number;
+};
+
+export type DutyAreas = { areas: DutyArea[]; friends: Friend[]; alerts: MapAlert[] };
+
+/** Where duties are going on, who is on duty with this guard, and the open SOS they may see. */
+export async function dutyAreas(): Promise<DutyAreas> {
+  const { data, error } = await supabase.rpc("duty_areas_now");
+  if (error) {
+    console.warn("[duty] duty_areas_now failed", error.message);
+    return { areas: [], friends: [], alerts: [] };
+  }
+  const d = (data ?? {}) as Partial<DutyAreas>;
+  return { areas: d.areas ?? [], friends: d.friends ?? [], alerts: d.alerts ?? [] };
 }

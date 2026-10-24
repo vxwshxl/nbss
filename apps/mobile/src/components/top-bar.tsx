@@ -30,11 +30,14 @@ export function TopBar({
   name,
   onPressAccount,
   right,
+  account = true,
 }: {
   role: Role;
   name: string;
   onPressAccount?: () => void;
   right?: React.ReactNode;
+  /** Off where the tab bar already carries the person (a guard's "Me" tab). */
+  account?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { gutter, contentMaxWidth } = useLayout();
@@ -71,6 +74,7 @@ export function TopBar({
           <Nibo size={30} still style={styles.askNibo} />
         </Pressable>
 
+        {account && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Your account"
@@ -80,6 +84,7 @@ export function TopBar({
         >
           <Avatar name={name} size={34} />
         </Pressable>
+        )}
       </View>
     </View>
   );

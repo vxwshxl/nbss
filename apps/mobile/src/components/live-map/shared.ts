@@ -24,6 +24,11 @@ export type LiveMapProps = {
   padding: { top: number; right: number; bottom: number; left: number };
   /** The path walked since check-in, while on duty. */
   trail?: MapPoint[] | null;
+  /** Other sites where duties are going on now: faint, for context, not framed. */
+  areas?: MapSite[];
+  /** Colleagues on duty with this guard, as small green dots with first names. */
+  friends?: (MapPoint & { id: string; name: string })[];
+  onFriendPress?: (id: string) => void;
 };
 
 /** Google draws its own credit on the map, so there is nothing extra to show. */

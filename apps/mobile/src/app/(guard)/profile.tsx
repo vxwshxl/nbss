@@ -9,10 +9,11 @@ import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { InfoButton } from "@/components/info";
 import { PageHeader } from "@/components/page-header";
+import { PermissionsPanel } from "@/components/permissions-panel";
 import { Panel } from "@/components/panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
-import { useAuth } from "@/lib/auth";
+import { photoOf, useAuth } from "@/lib/auth";
 import { WEB_URL } from "@/lib/config";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO } from "@/lib/runtime";
 import { color, space } from "@/theme/tokens";
@@ -27,7 +28,7 @@ import { color, space } from "@/theme/tokens";
  * nobody.
  */
 export default function ProfileRoute() {
-  const { profile, signOut, loading } = useAuth();
+  const { profile, session, signOut, loading } = useAuth();
 
   return (
     <Screen contentStyle={styles.body} topInset={false} bottomInset={false}>
@@ -35,7 +36,7 @@ export default function ProfileRoute() {
 
       <Panel tone="indigo" title="Details" icon={CircleUserRound}>
         <View style={styles.identity}>
-          <Avatar name={profile?.full_name ?? "?"} size={52} />
+          <Avatar name={profile?.full_name ?? "?"} uri={photoOf(session)} size={52} />
           <View style={styles.identityText}>
             <Text variant="bodyLarge" weight="semibold">
               {profile?.full_name ?? "-"}
@@ -83,6 +84,8 @@ export default function ProfileRoute() {
           Shared only while you are checked in. Never off duty.
         </Text>
       </Panel>
+
+      <PermissionsPanel />
 
       <Panel
         tone="slate"

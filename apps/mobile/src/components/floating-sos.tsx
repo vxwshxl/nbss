@@ -8,11 +8,11 @@ import { Text } from "@/components/text";
 import { raiseSos } from "@/lib/duty";
 import { color, shadow } from "@/theme/tokens";
 
-const HOLD_MS = 2000;
+const HOLD_MS = 3000;
 
 /**
  * The panic button, on every guard screen: round, red, bottom-right, just above
- * the tab bar. Held for two seconds (a ring fills while held) it raises the SOS
+ * the tab bar. Held for three seconds (a ring fills while held) it raises the SOS
  * and opens the map of who is coming; a quick tap only opens the SOS page, so a
  * phone in a pocket cannot raise one by brushing against it.
  */
@@ -24,8 +24,8 @@ export function FloatingSos({ bottom }: { bottom: number }) {
 
   const ring = useAnimatedStyle(() => ({ transform: [{ scale: 1 + progress.get() * 0.45 }], opacity: 0.35 * (1 - progress.get() * 0.4) }));
 
-  // Hidden on the SOS page itself, which has its own button, and on the alarm map.
-  if (pathname.startsWith("/sos") || pathname === "/alerts") return null;
+  // Hidden on an alert's own map, which is already about an SOS.
+  if (pathname.startsWith("/sos")) return null;
 
   const fire = async () => {
     fired.current = true;
@@ -44,7 +44,7 @@ export function FloatingSos({ bottom }: { bottom: number }) {
       <Animated.View pointerEvents="none" style={[styles.ring, ring]} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="SOS. Hold for two seconds to call for help"
+        accessibilityLabel="SOS. Hold for three seconds to call for help"
         delayLongPress={HOLD_MS}
         onPressIn={() => {
           fired.current = false;
@@ -63,9 +63,14 @@ export function FloatingSos({ bottom }: { bottom: number }) {
         {busy ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text variant="label" weight="bold" style={styles.label}>
-            SOS
-          </Text>
+          <View style={styles.center}>
+            <Text variant="label" weight="bold" style={styles.label}>
+              SOS
+            </Text>
+            <Text weight="semibold" style={styles.hint}>
+              HOLD 3s
+            </Text>
+          </View>
         )}
       </Pressable>
     </View>
@@ -88,5 +93,7 @@ const styles = StyleSheet.create({
     ...shadow.raised,
   },
   pressed: { transform: [{ scale: 0.96 }] },
-  label: { color: "#fff", letterSpacing: 1, fontSize: 16 },
+  center: { alignItems: "center" },
+  label: { color: "#fff", letterSpacing: 1, fontSize: 16, lineHeight: 18 },
+  hint: { color: "#ffffffcc", fontSize: 8, lineHeight: 10, letterSpacing: 0.5 },
 });
