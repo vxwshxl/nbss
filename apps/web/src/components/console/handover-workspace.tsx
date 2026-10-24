@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { addHandoverNote } from "@/app/console/handover/actions";
 import { istDateTime } from "@/components/console/preview-kit";
 import { Button } from "@/components/ui/button";
+import { Dropdown } from "@/components/ui/dropdown";
 import { Textarea } from "@/components/ui/textarea";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
@@ -38,14 +39,13 @@ export function HandoverWorkspace({ notes, sites }: { notes: HandoverNote[]; sit
         <header className="flex flex-wrap items-center gap-3 border-b border-app-line-soft px-4 py-3">
           <NotebookPen className="size-4 text-amber-600" />
           <h2 className="flex-1 font-semibold">{shown.length} note{shown.length === 1 ? "" : "s"}, last 30 days</h2>
-          <select value={site} onChange={(e) => setSite(e.target.value)} className="h-9 rounded-full bg-muted/70 px-3 text-sm ring-1 ring-border/60 outline-none" aria-label="Site">
-            <option value="">All sites</option>
-            {sites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <Dropdown
+            value={site}
+            onValueChange={setSite}
+            options={[{ value: "", label: "All sites" }, ...sites.map((s) => ({ value: s.id, label: s.name }))]}
+            searchPlaceholder="Find a site"
+            className="h-9 w-48 rounded-full"
+          />
         </header>
         {shown.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">No handover notes yet. Guards add one when they check out.</p>
@@ -71,14 +71,14 @@ export function HandoverWorkspace({ notes, sites }: { notes: HandoverNote[]; sit
 
       <aside className="h-fit space-y-3 rounded-2xl border border-app-line bg-card p-4">
         <h2 className="font-semibold">Leave a note for the next guard</h2>
-        <select value={site} onChange={(e) => setSite(e.target.value)} className="h-10 w-full rounded-xl bg-muted/70 px-3 text-sm ring-1 ring-border/60 outline-none" aria-label="Site for the note">
-          <option value="">Choose a site…</option>
-          {sites.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <Dropdown
+          value={site}
+          onValueChange={setSite}
+          placeholder="Choose a site…"
+          options={sites.map((s) => ({ value: s.id, label: s.name }))}
+          searchPlaceholder="Find a site"
+          className="h-10 rounded-xl"
+        />
         <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} placeholder="e.g. Visitors for the wedding arrive from 5 pm. Keep gate 1 open." />
         <Button
           className="w-full"

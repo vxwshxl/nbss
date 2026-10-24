@@ -36,6 +36,7 @@ export function Dropdown({
   disabled,
   id,
   className,
+  searchPlaceholder,
 }: {
   options: DropdownOption[];
   name?: string;
@@ -46,6 +47,8 @@ export function Dropdown({
   disabled?: boolean;
   id?: string;
   className?: string;
+  /** The list's search field (on whenever there is more than one option) reads this. */
+  searchPlaceholder?: string;
 }) {
   const [internal, setInternal] = React.useState(defaultValue ?? "");
   const isControlled = value !== undefined;
@@ -68,7 +71,7 @@ export function Dropdown({
         <SelectTrigger id={id} className={cn("w-full", className)}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent searchPlaceholder={searchPlaceholder}>
           {options.map((o) => {
             const v = o.value === "" ? EMPTY : o.value;
             return (
