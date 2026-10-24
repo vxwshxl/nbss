@@ -25,7 +25,7 @@ import { color, radius, space } from "@/theme/tokens";
  * six-digit code mailed to them or with the password / PIN they already hold.
  * Nobody picks a role; the profile decides where they land (app/index.tsx).
  */
-type Step = "identify" | "code" | "password";
+type Step = "staff" | "identify" | "code" | "password";
 
 const RESEND_SECONDS = 30;
 
@@ -34,7 +34,11 @@ export function SignIn() {
   const { isTablet } = useLayout();
   const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState<Step>("identify");
+  // Staff (guards and the office) sign in with employee code + PIN; clients by email.
+  const [step, setStep] = useState<Step>("staff");
+  const [number, setNumber] = useState("");
+  const custom = /[^0-9]/.test(number);
+  const staffCode = custom ? number.trim() : number ? `NBSS-${number}` : "";
   const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState("");
   const [secret, setSecret] = useState("");
@@ -75,12 +79,14 @@ export function SignIn() {
 
   const submitPassword = async () => {
     setError(null);
-    const result = await signIn(identifier, secret);
+    const result = await signIn(step === "staff" ? staffCode : identifier, secret);
     if (result.error) setError(result.error);
   };
 
   const heading =
-    step === "code"
+    step === "staff"
+      ? { title: "Sign in", sub: "With the employee code and PIN the office gave you." }
+      : step === "code"
       ? { title: "Check your email", sub: "Enter the 6-digit code we sent you." }
       : step === "password"
         ? { title: "Enter your password", sub: "Your password or PIN." }
@@ -116,6 +122,48 @@ export function SignIn() {
           </View>
         )}
 
+        {step === "staff" && (
+          <>
+            <Field
+              label="Employee code"
+              prefix={custom ? undefined : "NBSS-"}
+              placeholder={custom ? "Employee code" : "012"}
+              value={number}
+              onChangeText={(v) => {
+                setNumber(v.replace(/^nbss-/i, ""));
+                setError(null);
+              }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              spellCheck={false}
+              autoComplete="username"
+              keyboardType={custom ? "default" : "number-pad"}
+              autoFocus
+            />
+            <SecretField
+              label="PIN"
+              placeholder="4-digit PIN"
+              value={secret}
+              onChangeText={(value) => {
+                setSecret(value);
+                setError(null);
+              }}
+              returnKeyType="go"
+              onSubmitEditing={() => void submitPassword()}
+            />
+            <Button
+              label="Sign in"
+              size="lg"
+              fullWidth
+              icon={ArrowRight}
+              iconEnd
+              loading={loading}
+              disabled={!staffCode || !secret}
+              onPress={() => void submitPassword()}
+            />
+          </>
+        )}
+
         {step === "identify" && (
           <>
             <GoogleButton
@@ -128,7 +176,7 @@ export function SignIn() {
             <View style={styles.orRow}>
               <View style={styles.rule} />
               <Text variant="caption" tone="muted">
-                or with email or employee code
+                or with your email
               </Text>
               <View style={styles.rule} />
             </View>
@@ -152,7 +200,7 @@ export function SignIn() {
             returnKeyType="go"
             onSubmitEditing={() => void requestCode()}
           />
-        ) : (
+        ) : step === "staff" ? null : (
           <View style={styles.who}>
             <Text variant="label" weight="medium" numberOfLines={1} style={styles.whoText}>
               {identifier.trim()}
@@ -258,7 +306,29 @@ export function SignIn() {
           </Text>
           <View style={styles.rule} />
         </View>
-        {step === "password" ? (
+        {step === "staff" ? (
+          <Button
+            label="I'm a client: sign in with email"
+            variant="outline"
+            icon={Mail}
+            fullWidth
+            onPress={() => {
+              setError(null);
+              setStep("identify");
+            }}
+          />
+        ) : step === "identify" ? (
+          <Button
+            label="Employee code and PIN"
+            variant="outline"
+            icon={KeyRound}
+            fullWidth
+            onPress={() => {
+              setError(null);
+              setStep("staff");
+            }}
+          />
+        ) : step === "password" ? (
           <Button
             label="Email me a code instead"
             variant="outline"

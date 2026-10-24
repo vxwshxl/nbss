@@ -18,6 +18,7 @@ export function Field({
   hint,
   error,
   right,
+  prefix,
   style,
   ...rest
 }: TextInputProps & {
@@ -25,6 +26,8 @@ export function Field({
   hint?: string;
   error?: string;
   right?: React.ReactNode;
+  /** Fixed text before what is typed, e.g. "NBSS-". */
+  prefix?: string;
 }) {
   const [focused, setFocused] = useState(false);
 
@@ -41,8 +44,13 @@ export function Field({
           Boolean(error) && styles.boxError,
         ]}
       >
+        {prefix ? (
+          <Text weight="semibold" mono tone="muted" style={styles.prefix}>
+            {prefix}
+          </Text>
+        ) : null}
         <TextInput
-          style={[styles.input, style]}
+          style={[styles.input, prefix ? styles.afterPrefix : null, style]}
           placeholderTextColor={color.mutedForeground}
           onFocus={(e) => {
             setFocused(true);
@@ -100,6 +108,8 @@ export function SecretField({
 }
 
 const styles = StyleSheet.create({
+  afterPrefix: { paddingLeft: 1 },
+  prefix: { fontSize: 16 },
   wrap: { gap: space[2] },
   box: {
     flexDirection: "row",

@@ -5,7 +5,6 @@ import { useFormStatus } from "react-dom";
 import { AlertCircle, ArrowLeft, ArrowRight, IdCard, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -83,7 +82,42 @@ function Submit() {
   );
 }
 
-/** Employee code and password or PIN, for staff whose login has no Google account. */
+/**
+ * The employee code as it is printed: "NBSS-" fixed, the number typed after it. A code
+ * from before (TEST-ADMIN) or an email still works: typing a letter, "-" or "@" drops
+ * the prefix and the field takes the whole thing as written.
+ */
+function CodeField({ defaultValue }: { defaultValue?: string }) {
+  const initial = (defaultValue ?? "").replace(/^NBSS-/i, "");
+  const [value, setValue] = useState(initial);
+  const custom = /[^0-9]/.test(value);
+  const identifier = custom ? value.trim() : value ? `NBSS-${value}` : "";
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="identifier-input">Employee code</Label>
+      <div className="flex h-11 items-center overflow-hidden rounded-xl border border-input bg-background transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+        {!custom && <span className="flex h-full items-center bg-muted px-3.5 font-mono text-[15px] font-semibold tracking-wider text-muted-foreground">NBSS-</span>}
+        <input
+          id="identifier-input"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={custom ? "Employee code or email" : "012"}
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          inputMode={custom ? "text" : "numeric"}
+          required
+          autoFocus
+          className="h-full min-w-0 flex-1 bg-transparent px-3.5 font-mono text-[15px] tracking-wider outline-none"
+        />
+      </div>
+      <input type="hidden" name="identifier" value={identifier} />
+    </div>
+  );
+}
+
+/** Employee code and PIN, for staff whose login has no Google account. */
 function StaffForm({ from, onBack }: { from: string; onBack: () => void }) {
   const [state, action] = useActionState<SignInState, FormData>(signInAction, initialSignInState);
 
@@ -93,31 +127,18 @@ function StaffForm({ from, onBack }: { from: string; onBack: () => void }) {
         <input type="hidden" name="from" value={from} />
         {state.error && <Alert>{state.error}</Alert>}
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="identifier">Employee code or email</Label>
-          <Input
-            id="identifier"
-            name="identifier"
-            defaultValue={state.identifier}
-            placeholder="Your employee code"
-            autoComplete="username"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            required
-            autoFocus
-            className="h-11 rounded-xl text-[15px]"
-          />
-        </div>
+        <CodeField defaultValue={state.identifier} />
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="secret">Password or PIN</Label>
+          <Label htmlFor="secret">PIN</Label>
           <PasswordInput
             id="secret"
             name="secret"
             autoComplete="current-password"
+            inputMode="numeric"
+            placeholder="4-digit PIN"
             required
-            className="h-11 rounded-xl text-[15px]"
+            className="h-11 rounded-xl text-[15px] tracking-[0.3em] placeholder:tracking-normal"
           />
         </div>
 
@@ -147,7 +168,7 @@ export function SignInForm({ from, error }: { from: string; error?: string }) {
       <div className="mb-7 text-center">
         <h1 className="font-display text-[32px] leading-tight font-extrabold tracking-[-0.025em]">Login</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          {staff ? "With the employee code and password or PIN you were given." : "to your NBSS account"}
+          {staff ? "With the employee code and PIN the office gave you." : "to your NBSS account"}
         </p>
       </div>
 

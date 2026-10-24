@@ -150,8 +150,9 @@ export function pinPassword(secret: string): string {
   return isShortPin(secret) ? `nbss-pin-${secret}` : secret;
 }
 
-/** "42", "042" or "nbss-042" all mean NBSS-042; any other code is kept as written. */
+/** "42", "042", "NBSS-42" and "nbss-042" all mean NBSS-042; any other code is kept as written. */
 export function expandEmployeeCode(raw: string): string {
   const code = raw.trim().toUpperCase().replace(/\s+/g, "");
-  return /^\d{1,6}$/.test(code) ? `${EMPLOYEE_PREFIX}${code.padStart(3, "0")}` : code;
+  const n = /^(?:NBSS-)?(\d{1,6})$/.exec(code)?.[1];
+  return n ? `${EMPLOYEE_PREFIX}${n.padStart(3, "0")}` : code;
 }
