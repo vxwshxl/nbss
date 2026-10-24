@@ -18,7 +18,7 @@ import {
 } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Book guards: Kokrajhar, Bodoland Territorial Region",
+  title: "Book guards anywhere in Assam: Kokrajhar and the BTR",
   description:
     "Book trained, police-verified security guards for your site. Tell the deployment desk the district, the site type and the headcount, and a field officer surveys the site before any number is quoted.",
   path: "/contact",

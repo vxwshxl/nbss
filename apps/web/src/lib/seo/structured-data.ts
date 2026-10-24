@@ -20,7 +20,7 @@
  * this site cannot be the answer for.
  */
 
-import { site, tel } from "@/content/site";
+import { site, tel, ASSAM_DISTRICTS, BTR_DISTRICTS } from "@/content/site";
 import { services } from "@/content/services";
 import { baseUrl, absoluteUrl } from "@/lib/seo";
 
@@ -54,16 +54,11 @@ export const BRAND_ALTERNATE_NAMES = [
  * Chirang", and `areaServed: Assam` does not answer it.
  */
 export const AREAS_SERVED = [
-  "Kokrajhar",
-  "Chirang",
-  "Baksa",
-  "Udalguri",
-  "Tamulpur",
-  "Bongaigaon",
-  "Dhubri",
-  "Goalpara",
   "Bodoland Territorial Region",
-  "Lower Assam",
+  ...BTR_DISTRICTS,
+  "Assam",
+  ...ASSAM_DISTRICTS.map((d) => d.replace(/ \(.*\)$/, "")),
+  "Guwahati",
 ];
 
 /**
@@ -79,7 +74,7 @@ const DESCRIPTION =
   `personnel (guards, supervisors, gunmen, bouncers and housekeeping staff) to ` +
   `schools and colleges, hospitals, government offices, banks and ATMs, hotels, retail ` +
   `and malls, industrial plants and warehouses, construction and residential sites, and ` +
-  `events, across the BTR and lower Assam.`;
+  `events, across Assam, first and foremost the Bodoland Territorial Region.`;
 
 /** E.164, as schema.org expects — not the human-readable spacing. */
 const e164 = (n: string) => tel(n);

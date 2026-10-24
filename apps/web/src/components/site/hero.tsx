@@ -110,7 +110,7 @@ export function Hero() {
             </h1>
             <p data-intro className="mt-4 max-w-2xl text-[clamp(1rem,1.6vw,1.25rem)] text-ink/65 lg:max-w-xl">
               Trained, uniformed and police-verified guards for offices, hospitals, banks, schools, industry and events{" "}
-              <span className="text-ink/90">across Bodoland.</span>
+              <span className="text-ink/90">across Assam,</span> with the <span className="font-semibold text-primary-ink">Bodoland Territorial Region</span> at our heart.
             </p>
             <div data-intro className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <Link

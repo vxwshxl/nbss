@@ -37,6 +37,8 @@ export const metadata: Metadata = {
     "security guard agency Assam",
     "security services Bodoland",
     "security agency BTR",
+    "security agency Guwahati",
+    "security guard agency in Assam",
     "security guard supply Kokrajhar",
     "bank security guard Assam",
     "hospital security agency Assam",

@@ -105,7 +105,7 @@ export function SiteFooter() {
               <BrandLockup size="md" />
             </Link>
             <p className="mt-6 hidden text-[15px] leading-relaxed text-ink-fg/55 lg:block">
-              Trained and disciplined security personnel for government, corporate, institutional and commercial clients across Bodoland and Assam.
+              Trained and disciplined security personnel for government, corporate, institutional and commercial clients across Assam, rooted in the Bodoland Territorial Region.
             </p>
           </div>
 

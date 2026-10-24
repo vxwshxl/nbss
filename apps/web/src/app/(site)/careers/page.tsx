@@ -26,9 +26,9 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Careers: join NBSS in Kokrajhar and the BTR districts",
+  title: "Careers: join NBSS in Kokrajhar, the BTR and across Assam",
   description:
-    "Security guards, lady guards, supervisors and field officers in Kokrajhar, Chirang, Baksa and Udalguri. Freshers welcome. Training is provided before your first posting, and we never charge a fee for a job.",
+    "Security guards, lady guards, supervisors and field officers in Kokrajhar, Chirang, Baksa, Udalguri, Tamulpur and across Assam. Freshers welcome. Training is provided before your first posting, and we never charge a fee for a job.",
   path: "/careers",
   keywords: [
     "security guard jobs Kokrajhar",

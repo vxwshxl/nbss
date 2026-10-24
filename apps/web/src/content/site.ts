@@ -32,7 +32,7 @@ export const site = {
   shortName: COMPANY.shortName,
   tagline: COMPANY.tagline,
   descriptor:
-    "National Bodo Security Service (NBSS) is a trusted, professionally managed security agency headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained, police-verified security personnel to government, corporate, institutional and commercial clients.",
+    "National Bodo Security Service (NBSS) is a trusted, professionally managed security agency headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained, police-verified security personnel to government, corporate, institutional and commercial clients across Assam, with the Bodoland Territorial Region at its heart.",
   phone: COMPANY.phone,
   /** Confirmed by the client. Enquiries from the contact form are mailed here too. */
   email: "support@nbsskokrajhar.com",
@@ -135,7 +135,7 @@ export type Stat = {
  */
 export const stats: Stat[] = [
   { value: "24", suffix: "×7", label: "Monitoring & supervision", note: "Every day of the year" },
-  { value: "6", suffix: "+", label: "Districts served", note: "BTC and lower Assam" },
+  { value: "35", suffix: "", label: "Districts of Assam", note: "The whole state, BTR first" },
   { value: "100", suffix: "%", label: "Police verified", note: "Every guard, before posting" },
   { value: "9", suffix: "", label: "Sectors covered", note: "Banks to construction sites" },
   { value: "6", suffix: "", label: "Training areas", note: "Completed before first duty" },
@@ -213,21 +213,54 @@ export type District = {
   core: boolean;
 };
 
-/** The districts named in the client's "Client Support & Availability". */
+/**
+ * Where NBSS deploys: every district of Assam. The Bodoland Territorial Region is home
+ * (head office, recruiting, supervision closest at hand) and is listed first and
+ * marked `core`; the rest of the state follows.
+ */
+export const BTR_DISTRICTS = ["Kokrajhar", "Chirang", "Baksa", "Udalguri", "Tamulpur"] as const;
+
+export const ASSAM_DISTRICTS = [
+  "Kamrup Metropolitan (Guwahati)",
+  "Kamrup",
+  "Bongaigaon",
+  "Barpeta",
+  "Bajali",
+  "Dhubri",
+  "South Salmara-Mankachar",
+  "Goalpara",
+  "Nalbari",
+  "Darrang",
+  "Sonitpur",
+  "Biswanath",
+  "Nagaon",
+  "Hojai",
+  "Morigaon",
+  "Golaghat",
+  "Jorhat",
+  "Majuli",
+  "Sivasagar",
+  "Charaideo",
+  "Dibrugarh",
+  "Tinsukia",
+  "Lakhimpur",
+  "Dhemaji",
+  "Karbi Anglong",
+  "West Karbi Anglong",
+  "Dima Hasao",
+  "Cachar",
+  "Hailakandi",
+  "Sribhumi (Karimganj)",
+] as const;
+
 export const coverage: District[] = [
-  { name: "Kokrajhar", region: "Bodoland Territorial Council: head office", core: true },
-  { name: "Chirang", region: "Bodoland Territorial Council", core: true },
-  { name: "Baksa", region: "Bodoland Territorial Council", core: true },
-  { name: "Udalguri", region: "Bodoland Territorial Council", core: true },
-  { name: "Bongaigaon", region: "Lower Assam", core: false },
-  { name: "Barpeta", region: "Lower Assam", core: false },
+  { name: "Kokrajhar", region: "BTR · head office", core: true },
+  ...BTR_DISTRICTS.slice(1).map((name) => ({ name, region: "Bodoland Territorial Region", core: true })),
+  ...ASSAM_DISTRICTS.map((name) => ({ name, region: "Assam", core: false })),
 ];
 
-/** District names accepted by the quote form, plus the catch-all option. */
-export const districtOptions: string[] = [
-  ...coverage.map((d) => d.name),
-  "Another nearby district",
-];
+/** District names accepted by the booking and quote forms: all of Assam, BTR first. */
+export const districtOptions: string[] = coverage.map((d) => d.name);
 
 export type Person = { name: string; role: string; bio: string };
 
