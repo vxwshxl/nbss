@@ -1,71 +1,62 @@
+import { router } from "expo-router";
+import { LocateFixed, SatelliteDish, Siren } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 import { istTime } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
-import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
+import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
-import { Map as MapIcon, Radio, Siren, SatelliteDish, WifiOff } from "lucide-react-native";
 
-import { Button } from "@/components/button";
 import { MAP_COLOR, fenceRing } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
-import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/page-header";
+import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
-import { CardGrid, Screen } from "@/components/screen";
-import { StatCard } from "@/components/stat-card";
+import { SolidButton } from "@/components/solid-button";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
-import { useLayout } from "@/hooks/use-breakpoint";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
 import { allSites, liveAlerts, toFence } from "@/lib/duty";
 import { supabase } from "@/lib/supabase";
-import { color, space } from "@/theme/tokens";
-import { router } from "expo-router";
+import { color, radius, shadow, space } from "@/theme/tokens";
 
 /**
- * What a supervisor sees on their phone: who is out there, and anything on fire.
+ * What a supervisor sees on their phone, laid out like the guard's Duty screen: every
+ * site and every guard on duty on a full-screen map, and a sheet over it with the
+ * counts, any live SOS, and the list of who is out there.
  *
- * Positions arrive as one broadcast every fifteen seconds rather than a row at a time.
- * That is the single most important cost decision in this system — Postgres Changes bills
- * per row per subscriber, so streaming two hundred guards' pings to three watching
- * supervisors would multiply into millions of messages a month. `broadcast_positions()`
- * assembles one message for everyone instead, so the bill tracks the number of people
- * watching rather than the number of guards walking about. See 0005.
- *
- * The map itself is the next piece; this is the same feed rendered as a list, which is
- * what a supervisor mostly wants anyway — "is anybody out of contact".
+ * Positions arrive over the live-map channel: each one the moment it is stored (0034),
+ * plus a 15-second batch to catch up. Both are merged per guard, so one guard's update
+ * never replaces everyone else's.
  */
 export default function LiveRoute() {
-  const { statColumns } = useLayout();
-
-  const [batch, setBatch] = useState<PositionBatch | null>(null);
-
+  const [positions, setPositions] = useState<Record<string, LivePosition>>({});
+  const [lastAt, setLastAt] = useState<string | null>(null);
+  const [sheetH, setSheetH] = useState(0);
+  const [frame, setFrame] = useState(0);
   const { data: alerts = [], refreshing, reload, refresh } = useLoader(liveAlerts);
-
-  // Ticks on its own, so a guard whose phone died goes amber without waiting for a batch
-  // that is never coming. See the comment in use-now.ts.
+  // Ticks on its own, so a guard whose phone died goes amber without waiting for a batch.
   const now = useNow();
 
   useEffect(() => {
     const channel = supabase
       .channel(LIVE_MAP_CHANNEL, { config: { private: true } })
       .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
-        setBatch(payload as PositionBatch);
+        const batch = payload as PositionBatch;
+        setLastAt(batch.at);
+        setPositions((cur) => {
+          const next = { ...cur };
+          for (const p of batch.positions ?? []) next[p.guard_id] = { ...next[p.guard_id], ...p };
+          return next;
+        });
       })
-      .on("broadcast", { event: EVENTS.sos }, () => {
-        void reload();
-      })
+      .on("broadcast", { event: EVENTS.sos }, () => void reload())
       .subscribe();
-
     return () => {
       void supabase.removeChannel(channel);
     };
   }, [reload]);
-
-  const positions = useMemo(() => batch?.positions ?? [], [batch]);
 
   // Sites for the map, and every guard's name, so a row reads as a person.
   const { data: board } = useLoader(
@@ -79,6 +70,7 @@ export default function LiveRoute() {
   );
   const nameOf = (id: string) => board?.names.get(id)?.full_name ?? "Guard";
 
+  const list = useMemo(() => Object.values(positions), [positions]);
   const fences = useMemo<MapFence[]>(
     () =>
       (board?.sites ?? []).map((s) => ({
@@ -86,144 +78,137 @@ export default function LiveRoute() {
         name: s.name,
         ring: fenceRing({ id: s.id, name: s.name, lat: s.lat, lng: s.lng, radiusM: s.geofence_radius_m, ring: toFence(s).ring ?? null }),
         tone: color.primary,
+        quiet: true,
       })),
     [board],
   );
   const dots = useMemo<MapPerson[]>(
     () =>
-      positions.map((p) => ({
+      list.map((p) => ({
         id: p.guard_id,
         lat: p.lat,
         lng: p.lng,
         label: board?.names.get(p.guard_id)?.full_name.split(" ")[0],
         tone: p.mode === "emergency" ? color.destructive : p.inside_fence ? MAP_COLOR.inside : MAP_COLOR.outside,
       })),
-    [positions, board],
+    [list, board],
   );
 
+  const quiet = list.filter((p) => freshness(new Date(p.recorded_at).getTime(), now) !== "live").length;
+  const inside = list.filter((p) => p.inside_fence).length;
+
   return (
-    <Screen
-      topInset={false}
-      bottomInset={false}
-      contentStyle={styles.body}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          tintColor={color.primary}
-          onRefresh={() => void refresh()}
-        />
-      }
-    >
-      <PageHeader eyebrow="Operations" title="Live" />
+    <View style={styles.root}>
+      <View style={StyleSheet.absoluteFill}>
+        <MapCanvas fences={fences} people={dots} frameKey={board ? `sites|${frame}` : ""} padding={{ top: 24, right: 24, bottom: sheetH + 16, left: 24 }} />
+      </View>
 
-      <CardGrid columns={statColumns}>
-        <StatCard
-          label="On duty"
-          value={String(positions.length)}
-          hint={batch ? `As at ${istTime(batch.at)}` : "Connecting…"}
-          icon={Radio}
-          tone={positions.length ? "emerald" : "slate"}
-        />
-        <StatCard
-          label="Live alerts"
-          value={String(alerts.length)}
-          hint={alerts.length ? "Needs answering" : "Nothing outstanding"}
-          icon={Siren}
-          tone={alerts.length ? "rose" : "slate"}
-        />
-        <StatCard
-          label="Inside boundary"
-          value={String(positions.filter((p) => p.inside_fence).length)}
-          hint="Of those reporting"
-          icon={SatelliteDish}
-          tone="teal"
-        />
-        <StatCard
-          label="Out of contact"
-          value={String(
-            positions.filter((p) => freshness(new Date(p.recorded_at).getTime(), now) !== "live")
-              .length,
-          )}
-          hint="No recent ping"
-          icon={WifiOff}
-          tone="amber"
-        />
-      </CardGrid>
-      <Panel tone="teal" icon={MapIcon} title="Map" subtitle="Every site, and every guard on duty" bare>
-        <View style={styles.map}>
-          <MapCanvas fences={fences} people={dots} frameKey={board ? "sites" : ""} />
-        </View>
-      </Panel>
-
-      {alerts.length > 0 && (
-        <Panel tone="rose" title={`${alerts.length} live alert${alerts.length > 1 ? "s" : ""}`} icon={Siren}>
-          {alerts.map((alert) => (
-            <View key={alert.id} style={styles.alert}>
-              <View style={styles.alertText}>
-                <Text weight="semibold" variant="body" tone="danger">
-                  {SOS_KIND_LABEL[alert.kind]} · {alert.site_name ?? "Unknown site"}
-                </Text>
-                <Text variant="caption" tone="muted">
-                  {alert.raiser_name ?? "A guard"} ·{" "}
-                  {istTime(alert.raised_at)}
-
-                </Text>
-              </View>
-              <Button label="Open" variant="destructive" onPress={() => router.push(`/sos/${alert.id}`)} />
-            </View>
-          ))}
-        </Panel>
-      )}
-
-      <Panel
-        tone="indigo"
-        icon={SatelliteDish}
-        title={`${positions.length} on duty`}
-        subtitle={
-          batch ? `Updated ${istTime(batch.at)}` : "Waiting for the next position batch…"
+      <MapSheet
+        initial="half"
+        onSnap={(_, px) => setSheetH(px)}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh()} />}
+        floating={
+          <View style={styles.floatRow} pointerEvents="box-none">
+            <Pressable accessibilityRole="button" accessibilityLabel="Show every site" onPress={() => setFrame((k) => k + 1)} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
+              <LocateFixed size={22} color={color.primary} strokeWidth={2.2} />
+            </Pressable>
+          </View>
         }
-        bare
+        header={
+          <View style={styles.headGap}>
+            <Text variant="label" weight="semibold" tone="primary">
+              Live{lastAt ? ` · updated ${istTime(lastAt)}` : " · connecting…"}
+            </Text>
+            <Text variant="title" weight="semibold">
+              {list.length} on duty
+            </Text>
+            <View style={styles.counts}>
+              <Count value={inside} label="inside" tone="#059669" />
+              <Count value={list.length - inside} label="outside" tone="#d97706" />
+              <Count value={quiet} label="no signal" tone="#64748b" />
+              <Count value={alerts.length} label="SOS" tone={color.sos} />
+            </View>
+          </View>
+        }
       >
-        {positions.length === 0 ? (
-          <EmptyState
-            icon={SatelliteDish}
-            title={batch ? "Nobody is on duty." : "Connecting…"}
-            body="Positions arrive every fifteen seconds while guards are checked in."
-          />
-        ) : (
-          positions.map((position) => {
-            const age = freshness(new Date(position.recorded_at).getTime(), now);
-            return (
-              <PanelRow key={position.guard_id}>
-                <View style={styles.rowText}>
-                  <Text weight="semibold" variant="body">
-                    {nameOf(position.guard_id)}
+        {alerts.length > 0 && (
+          <Panel tone="rose" title={`${alerts.length} live SOS`} icon={Siren}>
+            {alerts.map((alert) => (
+              <View key={alert.id} style={styles.alert}>
+                <View style={styles.flex}>
+                  <Text weight="semibold" variant="body" tone="danger">
+                    {SOS_KIND_LABEL[alert.kind]} · {alert.site_name ?? "Unknown site"}
                   </Text>
-                  <Text variant="caption" tone="muted" mono>
-                    {position.inside_fence ? "Inside the boundary" : `${Math.round(position.distance_m ?? 0)} m out`}
-                    {position.battery !== null ? ` · ${position.battery}%` : ""}
+                  <Text variant="caption" tone="muted">
+                    {alert.raiser_name ?? "A guard"} · {istTime(alert.raised_at)}
                   </Text>
                 </View>
-                <StatusPill
-                  tone={age}
-                  label={age === "live" ? "Live" : age === "stale" ? "No signal" : "Out of contact"}
-                />
-              </PanelRow>
-            );
-          })
+                <View style={styles.open}>
+                  <SolidButton label="Open" icon={Siren} tone="red" onPress={() => router.push(`/sos/${alert.id}`)} />
+                </View>
+              </View>
+            ))}
+          </Panel>
         )}
-      </Panel>
 
-    </Screen>
+        <Panel tone="indigo" icon={SatelliteDish} title={`${list.length} on duty`} subtitle="Newest positions first" bare>
+          {list.length === 0 ? (
+            <PanelRow first>
+              <Text variant="label" tone="muted">
+                {lastAt ? "Nobody is on duty." : "Connecting… positions arrive as guards move."}
+              </Text>
+            </PanelRow>
+          ) : (
+            [...list]
+              .sort((a, b) => (b.received_at ?? b.recorded_at).localeCompare(a.received_at ?? a.recorded_at))
+              .map((p, i) => {
+                const age = freshness(new Date(p.recorded_at).getTime(), now);
+                return (
+                  <PanelRow key={p.guard_id} first={i === 0}>
+                    <View style={styles.flex}>
+                      <Text weight="semibold" variant="body">
+                        {nameOf(p.guard_id)}
+                      </Text>
+                      <Text variant="caption" tone="muted" mono>
+                        {p.inside_fence ? "Inside the boundary" : `${Math.round(p.distance_m ?? 0)} m out`}
+                        {p.battery !== null ? ` · ${p.battery}%` : ""}
+                      </Text>
+                    </View>
+                    <StatusPill tone={age} label={age === "live" ? "Live" : age === "stale" ? "No signal" : "Out of contact"} />
+                  </PanelRow>
+                );
+              })
+          )}
+        </Panel>
+        <View style={styles.sheetEnd} />
+      </MapSheet>
+    </View>
+  );
+}
+
+function Count({ value, label, tone }: { value: number; label: string; tone: string }) {
+  return (
+    <View style={styles.count}>
+      <Text variant="bodyLarge" weight="bold" tone="inherit" style={{ color: tone }}>
+        {value}
+      </Text>
+      <Text variant="caption" tone="muted">
+        {label}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // No padding here: <Screen> owns the gutter, and it grows on a tablet. A padding of its
-  // own would double up and stop the layout being responsive.
-  body: { gap: space[6] },
+  root: { flex: 1, backgroundColor: color.appBg },
+  flex: { flex: 1, minWidth: 0, gap: 2 },
+  headGap: { gap: 4 },
+  pressed: { opacity: 0.7 },
+  counts: { flexDirection: "row", gap: space[2], marginTop: space[2] },
+  count: { flex: 1, alignItems: "center", paddingVertical: space[2], borderRadius: radius.lg, backgroundColor: color.muted },
   alert: { flexDirection: "row", alignItems: "center", gap: space[3] },
-  alertText: { flex: 1, gap: 2 },
-  rowText: { flex: 1, gap: 2 },
-  map: { height: 320, overflow: "hidden", borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  open: { width: 120 },
+  floatRow: { flexDirection: "row", justifyContent: "flex-end" },
+  fab: { width: 52, height: 52, borderRadius: 26, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
+  sheetEnd: { height: 48 },
 });

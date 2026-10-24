@@ -9,7 +9,7 @@ import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Text } from "@/components/text";
 import { useNow } from "@/hooks/use-now";
-import { raiseSos, type MapAlert } from "@/lib/duty";
+import { closeSos, raiseSos, type MapAlert } from "@/lib/duty";
 import { useLiveFeed } from "@/lib/live-feed";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
@@ -20,6 +20,9 @@ const HOLD_MS = 3000;
  * the tab bar. Held for three seconds (a ring fills while held) it raises the SOS
  * and opens the map of who is coming; a quick tap only opens the SOS page, so a
  * phone in a pocket cannot raise one by brushing against it.
+ *
+ * While the guard's own SOS is live it turns amber and reads STOP: the same
+ * three-second hold cancels it, recorded as a false alarm.
  */
 export function FloatingSos({ bottom }: { bottom: number }) {
   const pathname = usePathname();
@@ -28,7 +31,10 @@ export function FloatingSos({ bottom }: { bottom: number }) {
   const fired = useRef(false);
 
   const ring = useAnimatedStyle(() => ({ transform: [{ scale: 1 + progress.get() * 0.45 }], opacity: 0.35 * (1 - progress.get() * 0.4) }));
-  const live = useLiveFeed().data?.alerts ?? [];
+  const feed = useLiveFeed();
+  const live = feed.data?.alerts ?? [];
+  // My own SOS is live: the same button, held the same way, stops it (as a false alarm).
+  const mine = live.find((a) => a.mine) ?? null;
 
   // Hidden on an alert's own map, which is already about an SOS.
   if (pathname.startsWith("/sos")) return null;
@@ -36,6 +42,14 @@ export function FloatingSos({ bottom }: { bottom: number }) {
   const fire = async () => {
     fired.current = true;
     setBusy(true);
+    if (mine) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      await closeSos(mine.id, "false_alarm");
+      await feed.reload();
+      setBusy(false);
+      progress.set(withTiming(0, { duration: 200 }));
+      return;
+    }
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
     const r = await raiseSos();
     setBusy(false);
@@ -50,10 +64,10 @@ export function FloatingSos({ bottom }: { bottom: number }) {
     <>
     {live.length > 0 && pathname !== "/alerts" && <LiveSosBanner alerts={live} bottom={bottom} />}
     <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
-      <Animated.View pointerEvents="none" style={[styles.ring, ring]} />
+      <Animated.View pointerEvents="none" style={[styles.ring, mine && styles.stopRing, ring]} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="SOS. Hold for three seconds to call for help"
+        accessibilityLabel={mine ? "Your SOS is live. Hold for three seconds to stop it" : "SOS. Hold for three seconds to call for help"}
         delayLongPress={HOLD_MS}
         onPressIn={() => {
           fired.current = false;
@@ -67,14 +81,14 @@ export function FloatingSos({ bottom }: { bottom: number }) {
         }}
         onLongPress={() => void fire()}
         onPress={() => router.push("/(guard)/alerts")}
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.button, mine && styles.stop, pressed && styles.pressed]}
       >
         {busy ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <View style={styles.center}>
             <Text variant="label" weight="bold" style={styles.label}>
-              SOS
+              {mine ? "STOP" : "SOS"}
             </Text>
             <Text weight="semibold" style={styles.hint}>
               HOLD 3s
@@ -151,6 +165,9 @@ const styles = StyleSheet.create({
     ...shadow.raised,
   },
   pressed: { transform: [{ scale: 0.96 }] },
+  // Amber while your own SOS is live: plainly not the red "raise" button any more.
+  stop: { backgroundColor: "#d97706" },
+  stopRing: { backgroundColor: "#d97706" },
   banner: {
     position: "absolute",
     // The row the SOS button sits on: from the left gutter to just before the button.

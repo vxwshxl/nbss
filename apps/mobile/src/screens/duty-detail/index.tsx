@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { ArrowLeft, CalendarDays, CalendarX2, Clock, MapPin, Navigation, NotebookPen, Pause, Play, Route as RouteIcon, UserRoundX } from "lucide-react-native";
+import { ArrowLeft, CalendarDays, CalendarX2, Clock, LocateFixed, Navigation, NotebookPen, Pause, Play, Route as RouteIcon, UserRoundX } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,8 +11,8 @@ import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { fenceRing } from "@/components/live-map/shared";
 import { MapCanvas, type MapPerson } from "@/components/map-canvas";
+import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
-import { Screen } from "@/components/screen";
 import { SolidButton } from "@/components/solid-button";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
@@ -30,7 +30,7 @@ import {
   type MyDuty,
 } from "@/lib/duty";
 import { AskCover, clock, hm, OUTCOME_TONE } from "@/screens/duties";
-import { color, radius, space } from "@/theme/tokens";
+import { color, radius, shadow, space } from "@/theme/tokens";
 
 const IST = "Asia/Kolkata";
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { timeZone: IST, weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -55,6 +55,8 @@ export function DutyDetail({ id }: { id: string }) {
   const [note, setNote] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [pulls, setPulls] = useState(0);
   const [pulling, setPulling] = useState(false);
+  const [sheetH, setSheetH] = useState(0);
+  const [frame, setFrame] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -118,12 +120,40 @@ export function DutyDetail({ id }: { id: string }) {
     setPulls((n) => n + 1);
   };
 
+  const marks = routeMarks(trail, head, !!a?.check_out_at);
+
   return (
     <View style={styles.fill}>
-      {header}
-      <Screen
-        topInset={false}
-        contentStyle={styles.body}
+      {/* The map fills the screen, as on Duty; the sheet slides over it. */}
+      <View style={StyleSheet.absoluteFill}>
+        {mapSite ? (
+          <MapCanvas
+            fences={[{ id: mapSite.id, name: mapSite.name, ring: fenceRing(mapSite), tone: color.primary }]}
+            trail={trail.length > 1 ? (head == null ? trail : trail.slice(0, head + 1)) : null}
+            people={marks}
+            frameKey={`${mapSite.id}|${trail.length > 1 ? "route" : "site"}|${frame}`}
+            padding={{ top: insets.top + 72, right: 32, bottom: sheetH + 24, left: 32 }}
+          />
+        ) : null}
+      </View>
+
+      {/* Back, and which duty this is, floating over the map. */}
+      <View style={[styles.topFloat, { top: insets.top + space[2] }]} pointerEvents="box-none">
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={back} hitSlop={8} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
+          <ArrowLeft size={20} color={color.foreground} strokeWidth={2} />
+        </Pressable>
+        {d && (
+          <View style={styles.titlePill}>
+            <Text variant="caption" weight="bold" numberOfLines={1}>
+              {longDate(d.starts_at)}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <MapSheet
+        initial="half"
+        onSnap={(_, px) => setSheetH(px)}
         refreshControl={
           <RefreshControl
             refreshing={pulling}
@@ -134,42 +164,43 @@ export function DutyDetail({ id }: { id: string }) {
             tintColor={color.primary}
           />
         }
-      >
-        <View style={styles.mapPanel}>
-          {mapSite ? (
-            <MapCanvas
-              style={styles.map}
-              fences={[{ id: mapSite.id, name: mapSite.name, ring: fenceRing(mapSite), tone: color.primary }]}
-              trail={trail.length > 1 ? (head == null ? trail : trail.slice(0, head + 1)) : null}
-              people={routeMarks(trail, head, !!a?.check_out_at)}
-              frameKey={`${mapSite.id}|${trail.length > 1 ? "route" : "site"}`}
-              padding={{ top: 24, right: 24, bottom: 24, left: 24 }}
-            />
-          ) : (
-            <View style={styles.map} />
-          )}
-        </View>
-
-        {d && outcome && (
-          <View style={styles.titleBlock}>
-            <Text variant="sectionTitle" weight="semibold">
-              {d.site.name}
-            </Text>
-            {d.site.address ? (
-              <View style={styles.inline}>
-                <MapPin size={14} color={color.mutedForeground} strokeWidth={2} />
-                <Text variant="label" tone="muted" style={styles.flex}>
-                  {[d.site.address, d.site.district].filter(Boolean).join(", ")}
-                </Text>
-              </View>
-            ) : null}
-            <View style={styles.pills}>
-              <StatusPill tone={OUTCOME_TONE[outcome]} label={outcome === "on_duty" ? "On duty now" : OUTCOME_LABEL[outcome]} />
-              {d.site.active === false && <StatusPill tone="neutral" label="Site closed" />}
-            </View>
+        floating={
+          <View style={styles.floatRow} pointerEvents="box-none">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back to the whole route"
+              onPress={() => setFrame((k) => k + 1)}
+              style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+            >
+              <LocateFixed size={22} color={color.primary} strokeWidth={2.2} />
+            </Pressable>
           </View>
-        )}
-
+        }
+        header={
+          <View style={styles.headGap}>
+            {d && outcome ? (
+              <>
+                <Text variant="title" weight="semibold" numberOfLines={1}>
+                  {d.site.name}
+                </Text>
+                <Text variant="caption" tone="muted" numberOfLines={1}>
+                  {[d.kind === "off_roster" ? "Not on the roster" : type, d.kind !== "off_roster" ? `${clock(d.starts_at)} – ${clock(d.ends_at)}` : null].filter(Boolean).join(" · ")}
+                </Text>
+                <View style={styles.pills}>
+                  <StatusPill tone={OUTCOME_TONE[outcome]} label={outcome === "on_duty" ? "On duty now" : OUTCOME_LABEL[outcome]} />
+                  {d.site.active === false && <StatusPill tone="neutral" label="Site closed" />}
+                </View>
+                {/* The route's controls stay in sight above the fold, whatever the sheet does. */}
+                {trail.length > 1 && <RouteControls route={trail} head={head} onHead={setHead} />}
+              </>
+            ) : (
+              <Text variant="label" tone="muted">
+                Loading…
+              </Text>
+            )}
+          </View>
+        }
+      >
         {note && (
           <Panel tone={note.tone === "ok" ? "emerald" : "rose"}>
             <Text variant="body">{note.text}</Text>
@@ -193,19 +224,20 @@ export function DutyDetail({ id }: { id: string }) {
           </View>
         )}
 
+        {trail.length > 1 && <RouteSummary route={trail} />}
+
         {d && (
           <Panel tone="emerald" title="Shift" icon={CalendarDays} bare>
             <Field first label="Date" value={longDate(d.starts_at)} />
             <Field label="Duty" value={d.kind === "off_roster" ? "Not on the roster" : (type ?? "Duty")} />
             {d.kind !== "off_roster" && <Field label="Time" value={`${clock(d.starts_at)} – ${clock(d.ends_at)}`} />}
+            {d.site.address ? <Field label="Address" value={[d.site.address, d.site.district].filter(Boolean).join(", ")} /> : null}
             {d.replacing && <Field label="Covering for" value={d.replacing} />}
             {d.replaced_by && <Field label="Handed to" value={d.replaced_by} />}
             {d.request && <Field label="Cover request" value={REQUEST_LABEL[d.request.status]} sub={d.request.reason ?? undefined} />}
             {d.notes ? <Field label="Note" value={d.notes} /> : null}
           </Panel>
         )}
-
-        {trail.length > 1 && <RoutePanel route={trail} head={head} onHead={setHead} />}
 
         {d && (
           <Panel tone="sky" title="Attendance" icon={Clock} bare>
@@ -230,7 +262,8 @@ export function DutyDetail({ id }: { id: string }) {
             ))}
           </Panel>
         )}
-      </Screen>
+        <View style={styles.sheetEnd} />
+      </MapSheet>
 
       <AskCover
         duty={asking}
@@ -261,25 +294,43 @@ function routeMarks(route: RoutePoint[], head: number | null, ended: boolean): M
   return marks;
 }
 
-/**
- * The duty's route, as the console's Route history shows it: how far, how long, how
- * much of it outside the boundary, a bar of the shift (green inside, amber outside)
- * that can be tapped to jump to a moment, and Play to watch it from check-in.
- */
-function RoutePanel({ route, head, onHead }: { route: RoutePoint[]; head: number | null; onHead: (i: number | null) => void }) {
-  const [playing, setPlaying] = useState(false);
-  const [barW, setBarW] = useState(0);
-  const start = route[0]!.at;
-  const end = route.at(-1)!.at;
-  const span = Math.max(1, end - start);
-
+/** Distance walked and time outside the boundary, from the route's points. */
+function routeTotals(route: RoutePoint[]) {
   let walked = 0;
   let outside = 0;
   for (let i = 1; i < route.length; i++) {
     walked += distanceMetres(route[i - 1]!, route[i]!);
     if (route[i - 1]!.inside === false) outside += route[i]!.at - route[i - 1]!.at;
   }
-  // Runs of inside / outside, for the bar.
+  return { walked, outside, span: Math.max(1, route.at(-1)!.at - route[0]!.at) };
+}
+
+/** The route in figures: how far, how long, how much of it outside the boundary. */
+function RouteSummary({ route }: { route: RoutePoint[] }) {
+  const { walked, outside, span } = routeTotals(route);
+  return (
+    <Panel tone="violet" title="Your route" subtitle={`${clockOf(route[0]!.at)} – ${clockOf(route.at(-1)!.at)}`} icon={RouteIcon}>
+      <View style={styles.routeStats}>
+        <RouteStat value={formatDistance(walked)} label="walked" />
+        <RouteStat value={hm(Math.round(span / 60_000))} label="tracked" />
+        <RouteStat value={outside > 60_000 ? hm(Math.round(outside / 60_000)) : "0m"} label="outside" warn={outside > 60_000} />
+      </View>
+    </Panel>
+  );
+}
+
+/**
+ * Playback, kept in the sheet's header so it never scrolls away: a bar of the shift
+ * (green inside, amber outside) to tap to jump to a moment, and Play to watch the
+ * route from check-in, as the console's Route history does.
+ */
+function RouteControls({ route, head, onHead }: { route: RoutePoint[]; head: number | null; onHead: (i: number | null) => void }) {
+  const [playing, setPlaying] = useState(false);
+  const [barW, setBarW] = useState(0);
+  const start = route[0]!.at;
+  const end = route.at(-1)!.at;
+  const span = Math.max(1, end - start);
+
   const runs: { inside: boolean; ms: number }[] = [];
   for (let i = 1; i < route.length; i++) {
     const inside = route[i - 1]!.inside !== false;
@@ -316,13 +367,7 @@ function RoutePanel({ route, head, onHead }: { route: RoutePoint[]; head: number
   };
 
   return (
-    <Panel tone="violet" title="Your route" subtitle={`${clockOf(start)} – ${clockOf(end)}`} icon={RouteIcon}>
-      <View style={styles.routeStats}>
-        <RouteStat value={formatDistance(walked)} label="walked" />
-        <RouteStat value={hm(Math.round(span / 60_000))} label="tracked" />
-        <RouteStat value={outside > 60_000 ? hm(Math.round(outside / 60_000)) : "0m"} label="outside" warn={outside > 60_000} />
-      </View>
-
+    <View style={styles.routeBox}>
       <Pressable accessibilityRole="adjustable" accessibilityLabel="Route timeline. Tap to jump to a moment." onPress={(e) => jump(e.nativeEvent.locationX)} onLayout={(e) => setBarW(e.nativeEvent.layout.width)} style={styles.bar}>
         {runs.map((r, i) => (
           <View key={i} style={{ flex: r.ms, backgroundColor: r.inside ? "#10b981" : "#f59e0b" }} />
@@ -340,7 +385,6 @@ function RoutePanel({ route, head, onHead }: { route: RoutePoint[]; head: number
           {clockOf(end)}
         </Text>
       </View>
-
       <View style={styles.row}>
         <View style={styles.flex}>
           <SolidButton
@@ -360,7 +404,7 @@ function RoutePanel({ route, head, onHead }: { route: RoutePoint[]; head: number
           </View>
         )}
       </View>
-    </Panel>
+    </View>
   );
 }
 
@@ -410,7 +454,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: color.lineSoft,
   },
-  back: { width: 38, height: 38, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: color.muted },
+  back: { width: 38, height: 38, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: color.card, ...shadow.card },
   pressed: { opacity: 0.6 },
   body: { gap: space[4], paddingBottom: space[10] },
   mapPanel: { height: 220, borderRadius: radius["2xl"], overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: color.lineSoft, backgroundColor: color.muted },
@@ -423,6 +467,13 @@ const styles = StyleSheet.create({
   fieldLabel: { width: 110 },
   fieldValue: { flex: 1, alignItems: "flex-end", gap: 2 },
   right: { textAlign: "right" },
+  topFloat: { position: "absolute", left: space[4], right: space[4], flexDirection: "row", alignItems: "center", gap: space[2] },
+  titlePill: { flexShrink: 1, height: 38, justifyContent: "center", paddingHorizontal: space[3], borderRadius: radius.full, backgroundColor: color.card, ...shadow.card },
+  floatRow: { flexDirection: "row", justifyContent: "flex-end" },
+  fab: { width: 52, height: 52, borderRadius: 26, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
+  headGap: { gap: 4 },
+  routeBox: { gap: space[2], marginTop: space[3] },
+  sheetEnd: { height: 48 },
   routeStats: { flexDirection: "row", gap: space[2] },
   routeStat: { flex: 1, alignItems: "center", paddingVertical: space[2], borderRadius: radius.lg, backgroundColor: color.muted },
   bar: { height: 14, borderRadius: 7, overflow: "hidden", flexDirection: "row", backgroundColor: color.muted },
