@@ -284,7 +284,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
               )}
               {live && (
                 <>
-                  <Button variant="outline" size="sm" disabled={saving} onClick={() => finish("false_alarm")}>
+                  <Button size="sm" disabled={saving} onClick={() => finish("false_alarm")} className="bg-amber-600 text-white shadow-sm hover:bg-amber-700">
                     <BellOff data-icon="inline-start" />
                     False alarm
                   </Button>
@@ -294,7 +294,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
                       I&apos;m on the way
                     </Button>
                   )}
-                  <Button size="sm" disabled={saving} onClick={() => finish("resolved")}>
+                  <Button size="sm" disabled={saving} onClick={() => finish("resolved")} className="bg-emerald-600 text-white shadow-sm hover:bg-emerald-700">
                     <CheckCircle2 data-icon="inline-start" />
                     Resolved
                   </Button>

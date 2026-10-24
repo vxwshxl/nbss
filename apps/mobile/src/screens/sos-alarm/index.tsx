@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { ArrowLeft, CheckCircle2, LocateFixed, MapPin, Navigation, Phone, Siren, UserRoundX } from "lucide-react-native";
+import { ArrowLeft, BellOff, CheckCircle2, LocateFixed, MapPin, Navigation, Phone, Siren, UserRoundX } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -278,12 +278,33 @@ export function SosAlarm({ alertId }: { alertId: string }) {
               )}
             </View>
             {canClose && (
-              <View style={styles.actions}>
-                <View style={styles.flex}>
-                  <Button label="Resolved" icon={CheckCircle2} variant="outline" fullWidth loading={busy === "resolved"} onPress={() => void act("resolved", () => closeSos(alertId, "resolved"))} />
-                </View>
-                <View style={styles.flex}>
-                  <Button label="False alarm" variant="outline" fullWidth loading={busy === "false"} onPress={() => void act("false", () => closeSos(alertId, "false_alarm"))} />
+              <View style={styles.closeBox}>
+                <Text variant="micro" weight="bold" tone="muted" uppercase>
+                  Close this alert
+                </Text>
+                <View style={styles.closeRow}>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!!busy}
+                    onPress={() => void act("resolved", () => closeSos(alertId, "resolved"))}
+                    style={({ pressed }) => [styles.closeBtn, styles.resolved, pressed && styles.closePressed]}
+                  >
+                    {busy === "resolved" ? <ActivityIndicator color="#fff" /> : <CheckCircle2 size={20} color="#fff" strokeWidth={2.4} />}
+                    <Text variant="label" weight="bold" tone="inherit" style={styles.closeText}>
+                      Resolved
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!!busy}
+                    onPress={() => void act("false", () => closeSos(alertId, "false_alarm"))}
+                    style={({ pressed }) => [styles.closeBtn, styles.falseAlarm, pressed && styles.closePressed]}
+                  >
+                    {busy === "false" ? <ActivityIndicator color="#fff" /> : <BellOff size={20} color="#fff" strokeWidth={2.4} />}
+                    <Text variant="label" weight="bold" tone="inherit" style={styles.closeText}>
+                      False alarm
+                    </Text>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -386,6 +407,13 @@ const styles = StyleSheet.create({
   headGap: { gap: 4 },
   note: { marginTop: space[1], fontStyle: "italic" },
   actions: { flexDirection: "row", gap: space[2], marginTop: space[3] },
+  closeBox: { marginTop: space[4], gap: space[2], padding: space[3], borderRadius: radius.xl, backgroundColor: color.muted },
+  closeRow: { flexDirection: "row", gap: space[2] },
+  closeBtn: { flex: 1, minHeight: 52, borderRadius: radius.full, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], borderBottomWidth: 3 },
+  resolved: { backgroundColor: "#059669", borderBottomColor: "#047857" },
+  falseAlarm: { backgroundColor: "#d97706", borderBottomColor: "#b45309" },
+  closePressed: { transform: [{ translateY: 2 }], borderBottomWidth: 1 },
+  closeText: { color: "#fff" },
 
   section: { gap: space[2] },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.xl, borderWidth: 1, borderColor: color.lineSoft, backgroundColor: color.card },
