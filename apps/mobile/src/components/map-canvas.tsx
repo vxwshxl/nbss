@@ -72,17 +72,27 @@ export function MapCanvas({
   }, [fences, people, me]);
 
   const drawn = points.length > 0;
-  const key = drawn ? `${frameKey}|${me ? 1 : 0}` : null;
+  // Re-framed when the visible area changes too (the sheet snapping up or down),
+  // so "centre on me" means the centre of what is actually visible above it.
+  const key = drawn ? `${frameKey}|${me ? 1 : 0}|${Math.round((padding?.bottom ?? 0) / 24)}` : null;
 
   const frame = () => {
     if (!map.current || !ready.current || !key || framed.current === key || points.length === 0) return;
     framed.current = key;
-    const edge = padding ?? { top: 60, right: 40, bottom: 60, left: 40 };
-    if (points.length === 1) {
-      map.current.animateCamera({ center: points[0]!, zoom: 17 }, { duration: 400 });
-    } else {
-      map.current.fitToCoordinates(points, { edgePadding: edge, animated: true });
-    }
+    // `mapPadding` already reserves the space under the sheet and the top bar, so
+    // the fit only adds a small margin. Passing the same padding twice (as before)
+    // counted the sheet twice and pushed everything up, off centre.
+    const margin = padding ? { top: 24, right: 24, bottom: 24, left: 24 } : { top: 60, right: 40, bottom: 60, left: 40 };
+    // One point is framed as a ~90 m box around it rather than a camera centre:
+    // a camera centre ignores the padding on iOS, a fitted box respects it on both.
+    const coords =
+      points.length === 1
+        ? [
+            { latitude: points[0]!.latitude - 0.0008, longitude: points[0]!.longitude - 0.0008 },
+            { latitude: points[0]!.latitude + 0.0008, longitude: points[0]!.longitude + 0.0008 },
+          ]
+        : points;
+    map.current.fitToCoordinates(coords, { edgePadding: margin, animated: true });
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

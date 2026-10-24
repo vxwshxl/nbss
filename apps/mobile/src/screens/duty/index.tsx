@@ -1,7 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import {
-  Check,
   Clock3,
   LocateFixed,
   NotebookPen,
@@ -10,7 +9,6 @@ import {
   MapPinOff,
   Navigation,
   Phone,
-  SatelliteDish,
   SignalLow,
   TriangleAlert,
 } from "lucide-react-native";
@@ -708,25 +706,25 @@ function StatusChip({
       text = onDuty ? `Outside the boundary · ${formatDistance(remainingM)}` : `${formatDistance(remainingM)} to your post`;
     }
   }
-  const Icon = tone === "good" ? Check : tone === "idle" ? SatelliteDish : tone === "bad" ? MapPinOff : Navigation;
-  const bg = { good: color.primary, warn: "#b45309", bad: color.destructive, idle: color.card }[tone];
-  const ink = tone === "idle" ? color.foreground : "#ffffff";
+  // Small, in the top-right corner, like a phone's own status icons: a coloured
+  // dot and the GPS accuracy. The full sentence ("Inside the boundary", "120 m to
+  // your post") is already in the sheet; here it is only read out to screen readers.
+  // A problem the guard can fix keeps a short word, because a dot alone would not say what to do.
+  const dot = { good: color.primary, warn: "#d97706", bad: color.destructive, idle: color.mutedForeground }[tone];
+  const short = problem === "denied" ? "Allow location" : problem === "off" ? "GPS off" : !hasFix ? "GPS…" : accuracyM !== null ? `±${Math.round(accuracyM)} m` : "GPS";
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${text}${hasFix && accuracyM !== null ? `, accurate to ${Math.round(accuracyM)} metres` : ""}`}
       onPress={problem ? onPress : undefined}
-      style={[styles.chip, { backgroundColor: bg }]}
+      hitSlop={8}
+      style={styles.chip}
     >
-      <Icon size={16} color={ink} strokeWidth={2.4} />
-      <Text variant="label" weight="semibold" style={{ color: ink }} numberOfLines={1}>
-        {text}
+      <View style={[styles.chipDot, { backgroundColor: dot }]} />
+      <Text variant="caption" weight="semibold" mono numberOfLines={1} style={{ color: problem ? color.destructive : color.foreground }}>
+        {short}
       </Text>
-      {hasFix && accuracyM !== null && !problem && (
-        <Text variant="caption" style={[styles.chipAcc, { color: ink }]}>
-          ±{Math.round(accuracyM)} m
-        </Text>
-      )}
     </Pressable>
   );
 }
@@ -863,18 +861,18 @@ const styles = StyleSheet.create({
   headActions: { marginTop: space[3] },
   pressed: { opacity: 0.7 },
 
-  chipRow: { position: "absolute", top: space[3], left: space[4], right: space[4], alignItems: "center" },
+  chipRow: { position: "absolute", top: space[3], right: space[3], alignItems: "flex-end" },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space[2],
-    maxWidth: "100%",
-    paddingHorizontal: space[4],
-    paddingVertical: space[2.5],
+    gap: 6,
+    height: 30,
+    paddingHorizontal: space[3],
     borderRadius: radius.full,
-    ...shadow.raised,
+    backgroundColor: color.card,
+    ...shadow.card,
   },
-  chipAcc: { opacity: 0.8 },
+  chipDot: { width: 9, height: 9, borderRadius: 5 },
   credit: { position: "absolute", left: space[2], backgroundColor: "#ffffffb3", paddingHorizontal: 4, borderRadius: 3 },
 
   floatRow: { flexDirection: "row", justifyContent: "flex-end" },
