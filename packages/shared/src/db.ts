@@ -972,6 +972,111 @@ export type Database = {
         };
         Relationships: [];
       };
+      software_fee_invoices: {
+        Row: {
+          id: string;
+          number: string;
+          period: string;
+          guards: number;
+          per_guard_paise: number;
+          amount_paise: number;
+          gst_percent: number;
+          gst_paise: number;
+          total_paise: number;
+          status: string;
+          due_on: string;
+          paid_at: string | null;
+          paid_by: string | null;
+          razorpay_order_id: string | null;
+          razorpay_payment_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          number: string;
+          period: string;
+          guards?: number;
+          per_guard_paise: number;
+          amount_paise: number;
+          gst_percent?: number;
+          gst_paise?: number;
+          total_paise: number;
+          status?: string;
+          due_on: string;
+          paid_at?: string | null;
+          paid_by?: string | null;
+          razorpay_order_id?: string | null;
+          razorpay_payment_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          number?: string;
+          period?: string;
+          guards?: number;
+          per_guard_paise?: number;
+          amount_paise?: number;
+          gst_percent?: number;
+          gst_paise?: number;
+          total_paise?: number;
+          status?: string;
+          due_on?: string;
+          paid_at?: string | null;
+          paid_by?: string | null;
+          razorpay_order_id?: string | null;
+          razorpay_payment_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      software_fee_settings: {
+        Row: {
+          id: boolean;
+          per_guard_paise: number;
+          gst_percent: number;
+          billing_start: string;
+          due_day: number;
+          seller_name: string;
+          seller_gstin: string | null;
+          seller_address: string | null;
+          buyer_name: string;
+          buyer_gstin: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: boolean;
+          per_guard_paise?: number;
+          gst_percent?: number;
+          billing_start?: string;
+          due_day?: number;
+          seller_name?: string;
+          seller_gstin?: string | null;
+          seller_address?: string | null;
+          buyer_name?: string;
+          buyer_gstin?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: boolean;
+          per_guard_paise?: number;
+          gst_percent?: number;
+          billing_start?: string;
+          due_day?: number;
+          seller_name?: string;
+          seller_gstin?: string | null;
+          seller_address?: string | null;
+          buyer_name?: string;
+          buyer_gstin?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       sos_acknowledgements: {
         Row: {
           alert_id: string;
@@ -1345,6 +1450,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
+      is_billing_viewer: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       is_developer: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
@@ -1608,6 +1717,10 @@ export type Database = {
           p_site: string;
         };
         Returns: boolean;
+      };
+      software_fee_sync: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
       };
       sos_map: {
         Args: {

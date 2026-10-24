@@ -55,10 +55,10 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // static.cloudflareinsights.com: Cloudflare's own analytics beacon, which it
   // injects into every page it proxies; blocked, it only fills the console with errors.
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${GOOGLE_MAPS} https://static.cloudflareinsights.com`,
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${GOOGLE_MAPS} https://static.cloudflareinsights.com https://checkout.razorpay.com`,
   "font-src 'self' https://fonts.gstatic.com",
-  `connect-src 'self'${supabaseConnect} ${GOOGLE_MAPS} https://cloudflareinsights.com data: blob:` + (isDev ? " ws: wss:" : ""),
-  "frame-src https://*.google.com",
+  `connect-src 'self'${supabaseConnect} ${GOOGLE_MAPS} https://cloudflareinsights.com https://*.razorpay.com data: blob:` + (isDev ? " ws: wss:" : ""),
+  "frame-src https://*.google.com https://api.razorpay.com https://checkout.razorpay.com",  // Razorpay checkout (software fee)
   // The service worker that makes this installable. Same-origin only — it would fall back
   // to script-src anyway, but a worker is the one thing that keeps running after the page
   // is closed, so its policy is worth stating rather than inheriting.
