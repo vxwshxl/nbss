@@ -20,6 +20,7 @@ import { useLivePosition } from "@/hooks/use-live-position";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
 import { useAuth } from "@/lib/auth";
+import { useOptionalLiveFeed } from "@/lib/live-feed";
 import { acknowledgeSos, closeSos, directionsUrl } from "@/lib/duty";
 import { supabase } from "@/lib/supabase";
 import { color, radius, shadow, space } from "@/theme/tokens";
@@ -114,12 +115,21 @@ export function SosAlarm({
       .channel(siteChannel(siteId), { config: { private: true } })
       .on("broadcast", { event: EVENTS.sos }, () => void reload())
       .subscribe();
-    const t = setInterval(() => void reload(), 10_000);
+    // Responders walking towards the alert: their positions come in 15 s batches.
+    const t = setInterval(() => void reload(), 30_000);
     return () => {
       clearInterval(t);
       void supabase.removeChannel(channel);
     };
   }, [siteId, reload]);
+
+  // In the guard app the live feed hears about every answer and close on the guard's
+  // own channel (on duty or not); this screen follows it.
+  const feed = useOptionalLiveFeed();
+  const feedData = feed?.data;
+  useEffect(() => {
+    if (feedData) void reload();
+  }, [feedData, reload]);
 
   const alert = data?.alert;
   const isOpen = alert ? isLive(alert.status) : false;

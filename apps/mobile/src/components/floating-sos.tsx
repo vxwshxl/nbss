@@ -1,16 +1,16 @@
 import * as Haptics from "expo-haptics";
 import { router, usePathname } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Text } from "@/components/text";
 import { useNow } from "@/hooks/use-now";
-import { dutyAreas, raiseSos, type MapAlert } from "@/lib/duty";
-import { Notifications } from "@/lib/push";
+import { raiseSos, type MapAlert } from "@/lib/duty";
+import { useLiveFeed } from "@/lib/live-feed";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 const HOLD_MS = 3000;
@@ -28,7 +28,7 @@ export function FloatingSos({ bottom }: { bottom: number }) {
   const fired = useRef(false);
 
   const ring = useAnimatedStyle(() => ({ transform: [{ scale: 1 + progress.get() * 0.45 }], opacity: 0.35 * (1 - progress.get() * 0.4) }));
-  const live = useLiveSos();
+  const live = useLiveFeed().data?.alerts ?? [];
 
   // Hidden on an alert's own map, which is already about an SOS.
   if (pathname.startsWith("/sos")) return null;
@@ -85,35 +85,6 @@ export function FloatingSos({ bottom }: { bottom: number }) {
     </View>
     </>
   );
-}
-
-/**
- * The open SOS this guard may see (their own, or one they were sent), kept fresh:
- * every 20 seconds, when the app comes back to the front, and the moment an SOS
- * push arrives.
- */
-function useLiveSos(): MapAlert[] {
-  const [alerts, setAlerts] = useState<MapAlert[]>([]);
-  const load = useCallback(() => {
-    void dutyAreas().then((d) => setAlerts(d.alerts));
-  }, []);
-  useEffect(() => {
-    let live = true;
-    void dutyAreas().then((d) => live && setAlerts(d.alerts));
-    const t = setInterval(load, 20_000);
-    const app = AppState.addEventListener("change", (s) => s === "active" && load());
-    const push = Notifications?.addNotificationReceivedListener((n) => {
-      const type = (n.request.content.data as { type?: string } | null)?.type;
-      if (type === "sos") load();
-    });
-    return () => {
-      live = false;
-      clearInterval(t);
-      app.remove();
-      push?.remove();
-    };
-  }, [load]);
-  return alerts;
 }
 
 /**

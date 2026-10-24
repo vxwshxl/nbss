@@ -14,9 +14,10 @@ import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
 import { Text } from "@/components/text";
 import { useLivePosition } from "@/hooks/use-live-position";
-import { useLoader } from "@/hooks/use-loader";
+import { useNow } from "@/hooks/use-now";
 import { useAuth } from "@/lib/auth";
-import { directionsUrl, dutyAreas, type Friend } from "@/lib/duty";
+import { directionsUrl, type Friend } from "@/lib/duty";
+import { useLiveFeed } from "@/lib/live-feed";
 import { currentFix } from "@/lib/location";
 import { SosAlarm } from "@/screens/sos-alarm";
 import { color, radius, shadow, space } from "@/theme/tokens";
@@ -48,21 +49,17 @@ const first = (name: string) => name.split(/\s+/)[0] ?? name;
 export function SosMap({ failed }: { failed?: string }) {
   const { profile } = useAuth();
   const live = useLivePosition();
-  const { data, refreshing, reload, refresh } = useLoader(dutyAreas);
+  const { data, refreshing, reload, refresh } = useLiveFeed();
   const [pickedAlert, setPickedAlert] = useState<string | null>(null);
   const [pickedFriend, setPickedFriend] = useState<string | null>(null);
   const [frameKey, setFrameKey] = useState(0);
   const [sheetH, setSheetH] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
+  const now = useNow(30_000);
 
+  // Fresh on arrival; after that the live feed keeps it current.
   useFocusEffect(
     useCallback(() => {
       void reload();
-      const t = setInterval(() => {
-        void reload();
-        setNow(Date.now());
-      }, 10_000);
-      return () => clearInterval(t);
     }, [reload]),
   );
 

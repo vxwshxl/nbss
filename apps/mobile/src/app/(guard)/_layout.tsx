@@ -12,6 +12,7 @@ import { FloatingSos } from "@/components/floating-sos";
 import { TopBar } from "@/components/top-bar";
 import { photoOf, useAuth } from "@/lib/auth";
 import { registerHandset } from "@/lib/device";
+import { LiveFeedProvider } from "@/lib/live-feed";
 import { askForegroundOnce } from "@/lib/location";
 import { ensureTracking } from "@/lib/keep-alive";
 import { registerForPush } from "@/lib/push";
@@ -65,6 +66,7 @@ export default function GuardLayout() {
   if (role && role !== "guard") return <Redirect href="/" />;
 
   return (
+    <LiveFeedProvider>
     <View style={styles.fill}>
     <Tabs
       screenOptions={{
@@ -136,6 +138,7 @@ export default function GuardLayout() {
       {/* On every tab, above the tab bar: hold for help from wherever the guard is. */}
       <FloatingSos bottom={64 + insets.bottom + 14} />
     </View>
+    </LiveFeedProvider>
   );
 }
 

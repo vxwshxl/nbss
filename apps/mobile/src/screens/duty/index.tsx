@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import {
   Clock3,
   LocateFixed,
@@ -65,6 +65,7 @@ import {
   requestTracking,
   type PermissionState,
 } from "@/lib/location";
+import { useLiveFeed } from "@/lib/live-feed";
 import { feedLocations, sendHeading } from "@/lib/location-task";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO, IS_WEB, runtimeLimitation } from "@/lib/runtime";
 import { color, radius, shadow, space } from "@/theme/tokens";
@@ -126,16 +127,8 @@ export function Duty() {
 
   const { data, refreshing, reload, refresh } = useLoader(load);
 
-  // Colleagues move: the areas and their dots refresh every 20 s while this tab is open.
-  const crowd = useLoader(dutyAreas);
-  const reloadCrowd = crowd.reload;
-  useFocusEffect(
-    useCallback(() => {
-      const t = setInterval(() => void reloadCrowd(), 20_000);
-      return () => clearInterval(t);
-    }, [reloadCrowd]),
-  );
-  const areasNow = crowd.data ?? data?.areas;
+  // Colleagues and SOS, from the live feed: pushed over the socket, not polled.
+  const areasNow = useLiveFeed().data ?? data?.areas;
   const mapAreas: MapSite[] = (areasNow?.areas ?? []).map((a) => ({
     id: a.id,
     name: a.name,
