@@ -69,7 +69,7 @@ import {
   type PermissionState,
 } from "@/lib/location";
 import { useLiveFeed } from "@/lib/live-feed";
-import { feedLocations, sendHeading } from "@/lib/location-task";
+import { feedLocations, sendHeading, syncStatus } from "@/lib/location-task";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO, IS_WEB, runtimeLimitation } from "@/lib/runtime";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
@@ -528,6 +528,8 @@ export function Duty() {
           </Panel>
         )}
 
+        {onDuty && !IS_WEB && <LastSynced />}
+
         <PhoneSetup onDuty={onDuty} />
 
         {(data?.notes ?? []).length > 0 && (
@@ -720,6 +722,39 @@ export function Duty() {
 }
 
 /* ──────────────────────────────────────────────────────────────── pieces */
+
+/**
+ * When the office last heard from this phone, so nobody has to guess whether tracking is
+ * working: green within 3 minutes, amber within 10, red after that, and how many points
+ * are waiting to be sent when the phone has no signal.
+ */
+function LastSynced() {
+  const now = useNow(15_000);
+  const [s, setS] = useState<{ lastSyncAt: number | null; queued: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void syncStatus().then((x) => live && setS(x));
+    return () => {
+      live = false;
+    };
+  }, [now]);
+  if (!s) return null;
+  const mins = s.lastSyncAt ? Math.max(0, Math.round((now - s.lastSyncAt) / 60_000)) : null;
+  const tone = mins == null ? color.destructive : mins <= 3 ? color.live : mins <= 10 ? color.stale : color.destructive;
+  return (
+    <View style={styles.synced}>
+      <View style={[styles.syncDot, { backgroundColor: tone }]} />
+      <Text variant="label" weight="semibold" style={styles.flex}>
+        {s.lastSyncAt ? `Last synced ${istTime(new Date(s.lastSyncAt))} · ${mins! < 1 ? "just now" : `${mins} min ago`}` : "Not synced yet"}
+      </Text>
+      {s.queued > 0 && (
+        <Text variant="caption" weight="semibold" tone="danger">
+          {s.queued} waiting
+        </Text>
+      )}
+    </View>
+  );
+}
 
 function Figure({ value, label, strong }: { value: string; label: string; strong?: boolean }) {
   return (
@@ -923,6 +958,8 @@ const styles = StyleSheet.create({
   headActions: { marginTop: space[3] },
   pressed: { opacity: 0.7 },
   sheetEnd: { height: 96 },
+  synced: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[3], paddingVertical: space[2.5], borderRadius: radius.xl, backgroundColor: color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: color.lineSoft },
+  syncDot: { width: 10, height: 10, borderRadius: 5 },
   callChip: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
 
   chipRow: { position: "absolute", top: space[3], right: space[3], alignItems: "flex-end" },

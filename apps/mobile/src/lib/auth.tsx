@@ -97,11 +97,15 @@ async function viaServer(
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [profile, setProfile] = useState<Profile | null>(null);
+  // Whose profile has been looked up. Until it matches the session's user, the app is
+  // still checking, and says so (session undefined) rather than flash the sign-in page.
+  const [checkedFor, setCheckedFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadProfile = useCallback(async (userId: string | undefined) => {
     if (!userId) {
       setProfile(null);
+      setCheckedFor(null);
       return;
     }
     const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -109,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // A deactivated profile means no access even though the auth user still exists —
     // deactivating a guard should never require deleting their attendance history.
     setProfile(data && data.active ? data : null);
+    setCheckedFor(userId);
   }, []);
 
   useEffect(() => {
@@ -279,9 +284,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadProfile(data.session?.user.id);
   }, [loadProfile]);
 
+  // Signed in but the profile not looked up yet: still checking, as far as screens know.
+  const settled = session && checkedFor !== session.user.id ? undefined : session;
+
   const value = useMemo<AuthState>(
     () => ({
-      session,
+      session: settled,
       profile,
       role: profile?.role ?? null,
       loading,
@@ -292,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       refresh,
     }),
-    [session, profile, loading, sendCode, verifyCode, signIn, signInWithGoogle, signOut, refresh],
+    [settled, profile, loading, sendCode, verifyCode, signIn, signInWithGoogle, signOut, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

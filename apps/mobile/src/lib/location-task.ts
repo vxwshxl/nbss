@@ -82,6 +82,18 @@ const QUEUE_KEY = "nbss.positionQueue";
 const QUEUE_MAX = 1500;
 const BATCH_MAX = 200;
 const STRIKES_KEY = "nbss.positionQueueStrikes";
+/** When the server last took something from this phone (a position or a heading). */
+const LAST_SYNC_KEY = "nbss.lastSyncAt";
+
+async function markSynced(): Promise<void> {
+  await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now())).catch(() => undefined);
+}
+
+/** For the duty screen's "Last synced": when, and how many points are still waiting. */
+export async function syncStatus(): Promise<{ lastSyncAt: number | null; queued: number }> {
+  const [at, queue] = await Promise.all([AsyncStorage.getItem(LAST_SYNC_KEY).catch(() => null), readQueue()]);
+  return { lastSyncAt: at ? Number(at) : null, queued: queue.length };
+}
 
 type QueuedPoint = {
   lat: number;
@@ -166,6 +178,7 @@ export function sendHeading(deg: number | null): void {
   headingSent = { deg, at: now };
   void supabase.rpc("record_heading", { p_heading: Math.round(deg) }).then(({ error }) => {
     if (error) headingSent = { deg: -999, at: now };
+    else void markSynced();
   });
 }
 
@@ -200,6 +213,7 @@ export async function flush(): Promise<void> {
           return;
         }
         await AsyncStorage.removeItem(STRIKES_KEY).catch(() => undefined);
+        await markSynced();
         // Only what was sent is removed: points added while the request was out stay.
         const latest = await readQueue();
         await writeQueue(latest.slice(batch.length));

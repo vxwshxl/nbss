@@ -1,3 +1,4 @@
+import { Splash } from "@/components/splash";
 import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
 import type { ColorValue } from "react-native";
@@ -63,6 +64,7 @@ export default function GuardLayout() {
     return () => sub.remove();
   }, [session]);
 
+  if (session === undefined) return <Splash />;
   if (!session) return <Redirect href="/(auth)/sign-in" />;
   if (role && role !== "guard") return <Redirect href="/" />;
 

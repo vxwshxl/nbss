@@ -1,5 +1,6 @@
 import { Redirect, Stack } from "expo-router";
 
+import { Splash } from "@/components/splash";
 import { useAuth } from "@/lib/auth";
 import { color } from "@/theme/tokens";
 
@@ -7,6 +8,7 @@ import { color } from "@/theme/tokens";
 export default function AuthLayout() {
   const { session, profile } = useAuth();
 
+  if (session === undefined) return <Splash />;
   if (session && profile) return <Redirect href="/" />;
 
   return (

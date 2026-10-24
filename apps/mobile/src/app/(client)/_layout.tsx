@@ -1,3 +1,4 @@
+import { Splash } from "@/components/splash";
 import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
 import type { ColorValue } from "react-native";
@@ -25,6 +26,7 @@ export default function ClientLayout() {
     if (session) void registerForPush();
   }, [session]);
 
+  if (session === undefined) return <Splash />;
   if (!session) return <Redirect href="/(auth)/sign-in" />;
   if (role && role !== "client") return <Redirect href="/" />;
 

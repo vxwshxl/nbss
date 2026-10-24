@@ -1,3 +1,4 @@
+import { Splash } from "@/components/splash";
 import { Redirect, Stack } from "expo-router";
 import { useEffect } from "react";
 
@@ -26,6 +27,7 @@ export default function StaffLayout() {
     void registerForPush();
   }, [session]);
 
+  if (session === undefined) return <Splash />;
   if (!session) return <Redirect href="/(auth)/sign-in" />;
   if (role && !isStaff(role)) return <Redirect href="/" />;
 

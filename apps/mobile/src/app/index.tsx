@@ -1,8 +1,7 @@
 import { Redirect } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Splash } from "@/components/splash";
 
 import { useAuth } from "@/lib/auth";
-import { color } from "@/theme/tokens";
 
 /**
  * Where a launch lands, decided by role.
@@ -18,13 +17,7 @@ import { color } from "@/theme/tokens";
 export default function Index() {
   const { session, profile, role } = useAuth();
 
-  if (session === undefined) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={color.primary} />
-      </View>
-    );
-  }
+  if (session === undefined) return <Splash />;
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
 
@@ -45,7 +38,3 @@ export default function Index() {
       return <Redirect href="/(auth)/sign-in" />;
   }
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: color.appBg },
-});
