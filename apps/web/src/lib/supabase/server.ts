@@ -5,6 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 
 import { SESSION_MAX_AGE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, secretKey } from "./env";
+import { DATA_MODE_COOKIE, DATA_MODE_HEADER, parseMode } from "@/lib/mode/shared";
+
 import type { Database } from "./types";
 
 /**
@@ -48,6 +50,8 @@ export async function supabaseServer() {
 
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookieOptions: { maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
+    // Test / Live: the database honours it for developers only (0036).
+    global: { headers: { [DATA_MODE_HEADER]: parseMode(store.get(DATA_MODE_COOKIE)?.value) } },
     cookies: {
       getAll() {
         return store.getAll();

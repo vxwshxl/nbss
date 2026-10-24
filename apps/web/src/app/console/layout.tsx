@@ -23,6 +23,9 @@ import { currentSession, homeFor } from "@/lib/auth";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import type { WorkspaceSite } from "@/lib/site-workspace";
 import { site } from "@/content/site";
+import { ModeToggle } from "@/components/shell/mode-toggle";
+import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
+import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
   title: { default: "Console", template: `%s · ${site.shortName} Console` },
@@ -55,6 +58,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const { profile, realProfile, impersonating } = session;
   const persona = personaFor(profile.role);
   const canImpersonate = realProfile.role === "developer";
+  // Test / Live: a developer's switch. Everyone else sees their own side.
+  const mode = parseMode((await cookies()).get(DATA_MODE_COOKIE)?.value);
 
   // The impersonation picker needs the roster. Only a developer ever sees it, so
   // it is only fetched for one — and on the admin client, because a developer
@@ -67,6 +72,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           .select("id, employee_code, full_name, role")
           .eq("active", true)
           .neq("id", realProfile.id)
+          // View as: only the people on the side being looked at.
+          .eq("is_test", mode === "test")
           .order("full_name")
       ).data ?? [])
     : [];
@@ -124,12 +131,15 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       topbarRight={
+        <>
+        {canImpersonate && <ModeToggle mode={mode} />}
         <UserMenu
           name={profile.full_name}
           code={profile.employee_code}
           roleLabel={ROLE_LABEL[profile.role]}
           signOut={signOut}
         />
+        </>
       }
     >
       <RealtimeRefresher

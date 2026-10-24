@@ -518,6 +518,7 @@ export type Database = {
           pin_reset_by: string | null;
           last_seen_at: string | null;
           email: string | null;
+          is_test: boolean;
         };
         Insert: {
           id: string;
@@ -535,6 +536,7 @@ export type Database = {
           pin_reset_by?: string | null;
           last_seen_at?: string | null;
           email?: string | null;
+          is_test?: boolean;
         };
         Update: {
           id?: string;
@@ -552,6 +554,7 @@ export type Database = {
           pin_reset_by?: string | null;
           last_seen_at?: string | null;
           email?: string | null;
+          is_test?: boolean;
         };
         Relationships: [];
       };
@@ -919,6 +922,7 @@ export type Database = {
           client_id: string | null;
           notify_client_on_sos: boolean;
           guards_required: number | null;
+          is_test: boolean;
         };
         Insert: {
           id?: string;
@@ -941,6 +945,7 @@ export type Database = {
           client_id?: string | null;
           notify_client_on_sos?: boolean;
           guards_required?: number | null;
+          is_test?: boolean;
         };
         Update: {
           id?: string;
@@ -963,6 +968,7 @@ export type Database = {
           client_id?: string | null;
           notify_client_on_sos?: boolean;
           guards_required?: number | null;
+          is_test?: boolean;
         };
         Relationships: [];
       };
@@ -1110,6 +1116,7 @@ export type Database = {
           experience: string | null;
           user_agent: string | null;
           remote_ip: string | null;
+          is_test: boolean;
         };
         Insert: {
           id: string;
@@ -1134,6 +1141,7 @@ export type Database = {
           experience?: string | null;
           user_agent?: string | null;
           remote_ip?: string | null;
+          is_test?: boolean;
         };
         Update: {
           id?: string;
@@ -1158,6 +1166,7 @@ export type Database = {
           experience?: string | null;
           user_agent?: string | null;
           remote_ip?: string | null;
+          is_test?: boolean;
         };
         Relationships: [];
       };
@@ -1236,6 +1245,10 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Json;
       };
+      data_test_view: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       device_flag_for: {
         Args: {
           p_guard: string;
@@ -1291,6 +1304,10 @@ export type Database = {
           p_data: Json;
         };
         Returns: number;
+      };
+      event_scope: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
       };
       expire_stale_sos: {
         Args: Record<PropertyKey, never>;
@@ -1417,6 +1434,12 @@ export type Database = {
           ring: Json;
           p_lat: number;
           p_lng: number;
+        };
+        Returns: boolean;
+      };
+      profile_is_test: {
+        Args: {
+          p_profile: string;
         };
         Returns: boolean;
       };
@@ -1579,6 +1602,12 @@ export type Database = {
           p_lng: number;
         };
         Returns: { inside: boolean; distance_m: number }[];
+      };
+      site_is_test: {
+        Args: {
+          p_site: string;
+        };
+        Returns: boolean;
       };
       sos_map: {
         Args: {
