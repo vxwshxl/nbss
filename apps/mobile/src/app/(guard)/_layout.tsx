@@ -2,11 +2,12 @@ import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
 import type { ColorValue } from "react-native";
 
-import { CalendarDays, CircleUserRound, MapPinned } from "lucide-react-native";
+import { CalendarDays, CircleUserRound, MapPinned, Siren } from "lucide-react-native";
 import { useEffect } from "react";
-import { AppState, StyleSheet } from "react-native";
+import { AppState, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FloatingSos } from "@/components/floating-sos";
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth";
 import { registerHandset } from "@/lib/device";
@@ -62,6 +63,7 @@ export default function GuardLayout() {
   if (role && role !== "guard") return <Redirect href="/" />;
 
   return (
+    <View style={styles.fill}>
     <Tabs
       screenOptions={{
         /**
@@ -96,7 +98,7 @@ export default function GuardLayout() {
     >
       {/* The same lucide icons the console's nav uses, from lucide-react-native — the
           packages are pinned to the same version, so these are the identical glyphs. */}
-      {/* Three tabs and no more: the map with the one thing to do, the roster, and the account. */}
+      {/* Four tabs: the map with the one thing to do, the roster, open SOS alerts, and the account. */}
       <Tabs.Screen
         name="duty"
         options={{
@@ -112,14 +114,26 @@ export default function GuardLayout() {
         }}
       />
       <Tabs.Screen
+        name="alerts"
+        options={{
+          title: "SOS",
+          tabBarIcon: ({ color: c, size }: TabIcon) => <Siren size={size} color={c as string} strokeWidth={2} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
-          title: "Account",
+          title: "Me",
           tabBarIcon: ({ color: c, size }: TabIcon) => (
             <CircleUserRound size={size} color={c as string} strokeWidth={2} />
           ),
         }}
       />
     </Tabs>
+      {/* On every tab, above the tab bar: hold for help from wherever the guard is. */}
+      <FloatingSos bottom={58 + insets.bottom + 14} />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

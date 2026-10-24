@@ -96,6 +96,9 @@ export async function isTracking(): Promise<boolean> {
 export async function startTracking(mode: TrackingMode = "on_duty"): Promise<void> {
   const policy = policyFor(mode);
   await writeMode(mode);
+  // Expo Go and the browser have no background location service: asking for one
+  // throws ("UIBackgroundModes" on iOS). The open duty screen sends positions there.
+  if (!CAN_TRACK_IN_BACKGROUND) return;
 
   if (await isTracking()) return;
 
@@ -158,6 +161,7 @@ export async function stopTracking(): Promise<void> {
  */
 export async function restartTracking(mode: TrackingMode): Promise<void> {
   await writeMode(mode);
+  if (!CAN_TRACK_IN_BACKGROUND) return;
   if (await isTracking()) {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => undefined);
   }

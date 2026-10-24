@@ -193,14 +193,15 @@ export function MapCanvas({
           <Marker
             coordinate={{ latitude: me.lat, longitude: me.lng }}
             anchor={{ x: 0.5, y: 0.5 }}
-            // Rotated natively and flat on the map, so the beam keeps pointing the right
-            // way when the map itself is turned, without re-drawing the view.
-            rotation={me.heading ?? 0}
-            flat
-            tracksViewChanges={false}
+            // Android (Google Maps): rotated natively and flat, so the beam stays right when
+            // the map is turned. iOS (Apple Maps) ignores `rotation`, so there the view
+            // turns itself and is redrawn as the compass moves — one marker, cheap.
+            rotation={Platform.OS === "android" ? (me.heading ?? 0) : undefined}
+            flat={Platform.OS === "android"}
+            tracksViewChanges={Platform.OS !== "android"}
             zIndex={1000}
           >
-            <View style={styles.meBox}>
+            <View style={[styles.meBox, Platform.OS !== "android" && me.heading != null && { transform: [{ rotate: `${me.heading}deg` }] }]}>
               {me.heading != null && (
                 <Svg width={64} height={64} style={StyleSheet.absoluteFill}>
                   <Defs>

@@ -1479,6 +1479,12 @@ export type Database = {
         };
         Returns: { inside: boolean; distance_m: number }[];
       };
+      sos_map: {
+        Args: {
+          p_alert_id: string;
+        };
+        Returns: Json;
+      };
       sos_people: {
         Args: {
           p_alert_id: string;

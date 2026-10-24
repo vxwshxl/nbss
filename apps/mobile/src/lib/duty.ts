@@ -6,7 +6,7 @@ import type * as Location from "expo-location";
 import { batteryState, deviceId } from "./device";
 import { currentFix, restartTracking, startTracking, stopTracking } from "./location";
 import { flush } from "./location-task";
-import { IS_WEB } from "./runtime";
+import { CAN_TRACK_IN_BACKGROUND, IS_WEB } from "./runtime";
 import { supabase } from "./supabase";
 
 /**
@@ -278,7 +278,9 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
    */
   // The browser preview has no background location at all, so there is nothing to
   // start and nothing to warn about — guards carry the native app.
-  let tracking: boolean | undefined = IS_WEB ? undefined : true;
+  // Where there is no background service (Expo Go) the screen's own fixes are the
+  // only source, and the "Test build" notice on the duty screen already says so.
+  let tracking: boolean | undefined = IS_WEB || !CAN_TRACK_IN_BACKGROUND ? undefined : true;
   if (!IS_WEB) {
     try {
       await startTracking(punch.mode ?? "on_duty");

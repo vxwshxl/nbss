@@ -1,6 +1,6 @@
 "use client";
 
-import { BellOff, Siren } from "lucide-react";
+import { BellOff, MapPin, Siren, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -43,42 +43,26 @@ export function SosAlarm() {
     const show = (a: Alert) => {
       toast.custom(
         (t) => (
-          <div className="w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border-2 border-danger/40 bg-elevated shadow-e3">
-            <div className="flex items-center gap-3 bg-danger px-4 py-2.5 text-white">
-              <Siren className="size-5 animate-pulse" />
-              <p className="flex-1 text-sm font-semibold">SOS · {SOS_KIND_LABEL[a.kind] ?? "Emergency"}</p>
-            </div>
-            <div className="px-4 py-3">
-              <p className="text-[15px] font-semibold">{a.site}</p>
-              <p className="text-[13px] text-secondary-fg">Raised by {a.guard}. Guards inside the fence and the client have been alerted.</p>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    silenced.current.add(a.id);
-                    sync();
-                    setOpen(a.id);
-                    toast.dismiss(t);
-                  }}
-                  className="inline-flex h-9 flex-1 items-center justify-center rounded-full bg-ink px-4 text-sm font-medium text-ink-fg"
-                >
-                  Open
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    silenced.current.add(a.id);
-                    sync();
-                  }}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-border px-3 text-sm font-medium hover:bg-muted"
-                >
-                  <BellOff className="size-4" /> Silence
-                </button>
-              </div>
-            </div>
-          </div>
+          <SosCard
+            alert={a}
+            onOpen={() => {
+              silenced.current.add(a.id);
+              sync();
+              setOpen(a.id);
+              toast.dismiss(t);
+            }}
+            onSilence={() => {
+              silenced.current.add(a.id);
+              sync();
+            }}
+          />
         ),
-        { id: `sos:${a.id}`, duration: Infinity },
+        {
+          id: `sos:${a.id}`,
+          duration: Infinity,
+          // The Toaster's ink-pill styling (dark fill, white text) would wash this card out.
+          classNames: { toast: "!w-auto !bg-transparent !p-0 !shadow-none !ring-0" },
+        },
       );
 
       if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
@@ -171,6 +155,56 @@ export function SosAlarm() {
   }, []);
 
   return <SosPreviewDialog id={open} onClose={() => setOpen(null)} />;
+}
+
+/** The notification card: who, where, and two clear buttons. Silence turns into a quiet "Silenced". */
+function SosCard({ alert: a, onOpen, onSilence }: { alert: Alert; onOpen: () => void; onSilence: () => void }) {
+  const [quiet, setQuiet] = useState(false);
+  return (
+    <div role="alert" className="w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white text-[#111827] shadow-e3 ring-2 ring-danger">
+      <div className="flex items-center gap-2.5 bg-danger px-4 py-3 text-white">
+        <span className="grid size-8 place-items-center rounded-full bg-white/20">
+          <Siren className="size-[18px] animate-pulse" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/80">SOS alert</p>
+          <p className="truncate text-[15px] font-semibold leading-5">{SOS_KIND_LABEL[a.kind] ?? "Emergency"}</p>
+        </div>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-danger">Live</span>
+      </div>
+      <div className="space-y-1.5 px-4 pt-3.5">
+        <p className="flex items-center gap-2 text-[15px] font-semibold">
+          <MapPin className="size-4 shrink-0 text-danger" />
+          <span className="truncate">{a.site}</span>
+        </p>
+        <p className="flex items-center gap-2 text-[13px] text-[#374151]">
+          <UserRound className="size-4 shrink-0 text-[#6b7280]" />
+          <span className="truncate">Raised by {a.guard}</span>
+        </p>
+        <p className="text-[12px] leading-snug text-[#6b7280]">Guards inside the fence and the client have been alerted.</p>
+      </div>
+      <div className="flex gap-2 p-4 pt-3.5">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="inline-flex h-10 flex-1 items-center justify-center rounded-full bg-danger px-4 text-sm font-semibold text-white shadow-sm transition-[filter] hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+        >
+          Open alert
+        </button>
+        <button
+          type="button"
+          disabled={quiet}
+          onClick={() => {
+            setQuiet(true);
+            onSilence();
+          }}
+          className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[#d1d5db] bg-white px-4 text-sm font-semibold text-[#111827] transition-colors hover:bg-[#f3f4f6] disabled:cursor-default disabled:border-transparent disabled:bg-[#f3f4f6] disabled:text-[#6b7280]"
+        >
+          <BellOff className="size-4" /> {quiet ? "Silenced" : "Silence"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /** A two-tone siren from the Web Audio API: no file to load, and it cannot be cached stale. */

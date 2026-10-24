@@ -1,348 +1,394 @@
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
+import { ArrowLeft, CheckCircle2, LocateFixed, MapPin, Navigation, Phone, Siren, UserRoundX } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { distanceMetres, formatDistance } from "@nbss/shared/geo";
+import { distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
 import { isStaff } from "@nbss/shared/identity";
-import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 import { siteChannel, EVENTS } from "@nbss/shared/realtime";
+import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
 import { Button } from "@/components/button";
+import { circleRing } from "@/components/live-map/shared";
+import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
+import { MapSheet } from "@/components/map-sheet";
 import { Text } from "@/components/text";
+import { useLivePosition } from "@/hooks/use-live-position";
 import { useLoader } from "@/hooks/use-loader";
+import { useNow } from "@/hooks/use-now";
 import { useAuth } from "@/lib/auth";
-import { acknowledgeSos, closeSos } from "@/lib/duty";
-import { currentFix } from "@/lib/location";
+import { acknowledgeSos, closeSos, directionsUrl } from "@/lib/duty";
 import { supabase } from "@/lib/supabase";
-import { color, radius, space } from "@/theme/tokens";
+import { color, radius, shadow, space } from "@/theme/tokens";
 
-type Alert = {
+type Person = {
   id: string;
-  site_id: string;
-  raised_by: string;
-  kind: SosKind;
-  note: string | null;
+  name: string;
+  phone: string | null;
+  role: "raiser" | "responder" | "guard" | "staff";
+  response: "responding" | "on_scene" | "cannot_respond" | null;
   lat: number | null;
   lng: number | null;
-  status: SosStatus;
-  raised_at: string;
-  raiser_name: string | null;
-  site_name: string | null;
+  heard_at: string | null;
+  distance_m: number | null;
 };
 
-type Responder = { name: string; response: string; distanceM: number | null };
+type SosMap = {
+  alert: {
+    id: string;
+    status: SosStatus;
+    kind: SosKind;
+    note: string | null;
+    lat: number | null;
+    lng: number | null;
+    raised_at: string;
+    raised_by: string;
+    closing_note: string | null;
+  };
+  site: { id: string; name: string; lat: number; lng: number; radius_m: number; polygon: unknown };
+  people: Person[];
+};
+
+const RESPONSE_LABEL: Record<NonNullable<Person["response"]>, string> = {
+  responding: "On the way",
+  on_scene: "On scene",
+  cannot_respond: "Can't come",
+};
+
+const TONE = { sos: color.sos, help: "#059669", guard: "#64748b" };
+
+const IST = "Asia/Kolkata";
+const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" });
+const first = (name: string) => name.split(" ")[0] ?? name;
 
 /**
- * The alarm.
+ * The SOS, as a map.
  *
- * Deliberately the least decorated screen in the app. Everything on it is either
- * information somebody running towards a colleague needs, or a button they will press —
- * there is no navigation, no tab bar, and the route is declared `gestureEnabled: false`
- * so it cannot be swiped away by a hand that is busy.
+ * Everyone who matters to this alert is on it: the guard who raised it (red), the
+ * people answering (green, with how far away they are — the nearest help first),
+ * the other guards on the site (grey) and you (blue). The sheet below says who is
+ * coming and has the one or two buttons this person needs; it refreshes every ten
+ * seconds and the moment anyone answers.
  *
- * Two audiences see it and they need opposite things. The guard who raised it needs to
- * know somebody is coming and to be able to stand it down. Everybody else needs to know
- * where to go and to be able to say they are on their way. The same screen answers both
- * because in an emergency there is no time to have learnt two.
+ * Still not swipe-dismissable (the route is `gestureEnabled: false`), but there is a
+ * Back button: a responder may need to open Directions or the dialler and come back.
  */
 export function SosAlarm({ alertId }: { alertId: string }) {
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const [myDistance, setMyDistance] = useState<number | null>(null);
+  const live = useLivePosition();
+  const now = useNow(15_000);
   const [busy, setBusy] = useState<string | null>(null);
-
-  const pulse = useSharedValue(0);
+  const [frame, setFrame] = useState(0);
+  const [sheetH, setSheetH] = useState(0);
   const buzzed = useRef(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from("sos_alerts")
-      .select("*, profiles!sos_alerts_raised_by_fkey(full_name), sites(name)")
-      .eq("id", alertId)
-      .maybeSingle();
-
-    if (!data) return { alert: null, responders: [] as Responder[] };
-
-    const { profiles, sites, ...row } = data as typeof data & {
-      profiles?: { full_name: string } | { full_name: string }[] | null;
-      sites?: { name: string } | { name: string }[] | null;
-    };
-    const raiser = Array.isArray(profiles) ? profiles[0] : profiles;
-    const site = Array.isArray(sites) ? sites[0] : sites;
-
-    // Names come from sos_people (0015): a guard may not read other profiles, so a
-    // join here gave them "Someone" for every responder and no name on the alert.
-    const { data: people } = await supabase.rpc("sos_people", { p_alert_id: alertId });
-    const raiserRow = (people ?? []).find((p) => p.kind === "raiser");
-
-    return {
-      alert: {
-        ...(row as Omit<Alert, "raiser_name" | "site_name">),
-        raiser_name: raiserRow?.full_name ?? raiser?.full_name ?? null,
-        site_name: site?.name ?? null,
-      } as Alert,
-      responders: (people ?? [])
-        .filter((p) => p.kind === "responder")
-        .map((p) => ({
-          name: p.full_name ?? "Someone",
-          response: p.response,
-          distanceM: p.distance_m ?? null,
-        })),
-    };
+    const { data } = await supabase.rpc("sos_map", { p_alert_id: alertId });
+    return (data as unknown as SosMap | null) ?? null;
   }, [alertId]);
+  const { data, reload, refreshing } = useLoader(load);
 
-  const { data, reload } = useLoader(load);
-  // `undefined` while the first read is in flight, `null` once it has come back empty.
-  // The screen shows a spinner for the first and "not available" for the second.
-  const alert = data === undefined ? undefined : data.alert;
-  const responders = data?.responders ?? [];
-
-  /**
-   * Live updates, over the site's own channel.
-   *
-   * `raise_sos`, `acknowledge_sos` and `close_sos` all publish to `site:<id>`, so the
-   * screen learns that somebody answered without polling. The channel is private and
-   * `may_read_site_channel` in 0005 decides who may hear it — staff, and any guard
-   * currently punched in at that site.
-   */
+  // The site's channel (raise, answer, close) for an instant refresh, and a slow
+  // re-read behind it for responders moving towards the alert.
+  const siteId = data?.site.id;
   useEffect(() => {
-    if (!alert?.site_id) return;
-
+    if (!siteId) return;
     const channel = supabase
-      .channel(siteChannel(alert.site_id), { config: { private: true } })
-      .on("broadcast", { event: EVENTS.sos }, () => {
-        void reload();
-      })
+      .channel(siteChannel(siteId), { config: { private: true } })
+      .on("broadcast", { event: EVENTS.sos }, () => void reload())
       .subscribe();
-
+    const t = setInterval(() => void reload(), 10_000);
     return () => {
+      clearInterval(t);
       void supabase.removeChannel(channel);
     };
-  }, [alert?.site_id, reload]);
+  }, [siteId, reload]);
 
-  /** How far this phone is from the alert, so the responder list can be honest. */
+  const alert = data?.alert;
+  const isOpen = alert ? isLive(alert.status) : false;
   useEffect(() => {
-    if (!alert?.lat || !alert?.lng) return;
-    void currentFix().then((fix) => {
-      if (!fix) return;
-      setMyDistance(
-        distanceMetres(
-          { lat: alert.lat as number, lng: alert.lng as number },
-          { lat: fix.coords.latitude, lng: fix.coords.longitude },
-        ),
-      );
-    });
-  }, [alert?.lat, alert?.lng]);
-
-  // The background breathes while the alarm is live and stops when it is closed, so the
-  // screen's state is legible from across a room.
-  const live = alert ? isLive(alert.status) : false;
-
-  useEffect(() => {
-    if (!live) {
-      pulse.set(withTiming(0, { duration: 300 }));
-      return;
-    }
-    pulse.set(
-      withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true),
-    );
-  }, [live, pulse]);
-
-  // One heavy buzz on arrival, not a loop. The push that brought the phone here already
-  // played the alarm sound; a second continuous vibration just makes the screen hard to
-  // read and drains a battery that may be needed.
-  useEffect(() => {
-    if (!live || buzzed.current) return;
+    if (!isOpen || buzzed.current) return;
     buzzed.current = true;
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-  }, [live]);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+  }, [isOpen]);
 
-  const backgroundStyle = useAnimatedStyle(() => ({
-    backgroundColor: pulse.get() > 0.5 ? color.sos : color.sosDeep,
-    opacity: 1,
-  }));
+  const people = useMemo(() => data?.people ?? [], [data]);
+  const raiser = people.find((p) => p.role === "raiser") ?? null;
+  const responders = people.filter((p) => p.role === "responder");
+  const coming = responders.filter((p) => p.response !== "cannot_respond");
+  const others = people.filter((p) => p.role === "guard" || p.role === "staff");
+  const me = profile ? people.find((p) => p.id === profile.id) : undefined;
 
-  if (alert === undefined) {
+  const fix = live.fix;
+  const where = alert?.lat != null && alert.lng != null ? { lat: alert.lat, lng: alert.lng } : raiser?.lat != null && raiser.lng != null ? { lat: raiser.lat, lng: raiser.lng } : null;
+  const myDistance = fix && where ? distanceMetres(where, fix) : null;
+
+  const fences: MapFence[] = useMemo(() => {
+    if (!data) return [];
+    const ring = toRing(data.site.polygon);
+    return [
+      {
+        id: data.site.id,
+        name: data.site.name,
+        ring: ring && ring.length > 2 ? (ring as [number, number][]) : circleRing({ lat: data.site.lat, lng: data.site.lng }, data.site.radius_m),
+        tone: isOpen ? color.sos : color.primary,
+      },
+    ];
+  }, [data, isOpen]);
+
+  const markers: MapPerson[] = useMemo(() => {
+    const out: MapPerson[] = [];
+    for (const p of people) {
+      if (p.lat == null || p.lng == null) continue;
+      // You are the blue dot; the raiser stays a red pin even when it is you.
+      if (p.id === profile?.id && p.role !== "raiser") continue;
+      const tone = p.role === "raiser" ? TONE.sos : p.role === "responder" && p.response !== "cannot_respond" ? TONE.help : TONE.guard;
+      const label =
+        p.role === "raiser"
+          ? `SOS · ${first(p.name)}`
+          : p.role === "responder" && p.response !== "cannot_respond"
+            ? `${first(p.name)}${p.distance_m != null ? ` · ${formatDistance(p.distance_m)}` : ""}`
+            : first(p.name);
+      out.push({ id: p.id, lat: p.lat, lng: p.lng, tone, label });
+    }
+    return out;
+  }, [people, profile?.id]);
+
+  if (data === undefined) {
     return (
-      <View style={[styles.root, styles.center, { backgroundColor: color.sosDeep }]}>
-        <ActivityIndicator color="#fff" />
+      <View style={[styles.root, styles.center]}>
+        <ActivityIndicator color={color.sos} />
       </View>
     );
   }
-
-  if (alert === null) {
+  if (!data || !alert) {
     return (
-      <View style={[styles.root, styles.center, { backgroundColor: color.appBg, paddingTop: insets.top }]}>
+      <View style={[styles.root, styles.center, { paddingTop: insets.top }]}>
         <Text weight="semibold" variant="bodyLarge">
           That alert is not available.
         </Text>
-        <Text variant="caption" tone="muted" style={styles.centered}>
+        <Text variant="caption" tone="muted" style={styles.centred}>
           It may have been closed, or it was not sent to you.
         </Text>
-        <Button label="Back" variant="secondary" onPress={() => router.back()} />
+        <Button label="Back" variant="secondary" onPress={leave} />
       </View>
     );
   }
 
   const mine = alert.raised_by === profile?.id;
-  const iResponded = responders.some((r) => r.name === profile?.full_name);
+  const canClose = isOpen && (mine || (profile ? isStaff(profile.role) : false));
+  const answered = me?.response ?? null;
+
+  const act = async (key: string, fn: () => Promise<unknown>) => {
+    setBusy(key);
+    await fn();
+    setBusy(null);
+    await reload();
+  };
+
+  const statusLine = !isOpen
+    ? `${SOS_STATUS_LABEL[alert.status]}${alert.closing_note ? ` · ${alert.closing_note}` : ""}`
+    : coming.length === 0
+      ? "Waiting for someone to answer"
+      : `${coming.length} ${coming.length === 1 ? "person" : "people"} coming${coming[0]?.distance_m != null ? ` · nearest ${formatDistance(coming[0].distance_m)}` : ""}`;
 
   return (
-    <Animated.View style={[styles.root, live ? backgroundStyle : styles.closed]}>
-      <View style={[styles.content, { paddingTop: insets.top + space[8], paddingBottom: insets.bottom + space[6] }]}>
-        <View style={styles.top}>
-          <Text weight="bold" variant="micro" tone="inverse" style={styles.eyebrow}>
-            {live ? "EMERGENCY" : SOS_STATUS_LABEL[alert.status].toUpperCase()}
-          </Text>
+    <View style={styles.root}>
+      <MapCanvas
+        fences={fences}
+        people={markers}
+        me={fix ? { ...fix, heading: live.heading } : null}
+        frameKey={`sos|${frame}`}
+        padding={{ top: insets.top + 90, right: 40, bottom: Math.min(sheetH, 460) + 24, left: 40 }}
+      />
 
-          <Text weight="bold" variant="hero" tone="inverse">
-            {SOS_KIND_LABEL[alert.kind]}
-          </Text>
-
-          <Text weight="semibold" variant="bodyLarge" tone="inverse">
-            {mine ? "You raised this" : (alert.raiser_name ?? "A guard")}
-          </Text>
-          <Text variant="body" tone="inverse">
-            {alert.site_name ?? "Unknown site"}
-            {myDistance !== null && !mine ? ` · ${formatDistance(myDistance)} from you` : ""}
-          </Text>
-
-          <Text variant="caption" tone="inverse" mono style={styles.dim}>
-            {new Date(alert.raised_at).toLocaleTimeString("en-IN", {
-              hour: "numeric",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-              timeZone: "Asia/Kolkata",
-            })}{" "}
-            IST
-          </Text>
-
-          {alert.note && (
-            <View style={styles.note}>
-              <Text variant="body" tone="inverse">
-                “{alert.note}”
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* ───────────────────────────────────────────── who is coming */}
-        <View style={styles.responders}>
-          <Text weight="bold" variant="micro" tone="inverse" style={styles.eyebrow}>
-            {responders.length === 0 ? "NOBODY HAS ANSWERED YET" : "RESPONDING"}
-          </Text>
-          {responders.map((responder) => (
-            <Text weight="medium" key={responder.name} variant="body" tone="inverse">
-              {responder.name}
-              {responder.distanceM !== null ? ` · ${formatDistance(responder.distanceM)} away` : ""}
-              {responder.response === "cannot_respond" ? " · cannot come" : ""}
+      {/* The banner: what, where, since when — readable at arm's length. */}
+      <View style={[styles.banner, { top: insets.top + space[2] }]} pointerEvents="box-none">
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={leave} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
+          <ArrowLeft size={20} color={color.foreground} strokeWidth={2.2} />
+        </Pressable>
+        <View style={[styles.pill, { backgroundColor: isOpen ? color.sos : color.card }]}>
+          <Siren size={18} color={isOpen ? "#fff" : color.mutedForeground} strokeWidth={2.2} />
+          <View style={styles.flex}>
+            <Text variant="label" weight="bold" numberOfLines={1} style={{ color: isOpen ? "#fff" : color.foreground }}>
+              SOS · {SOS_KIND_LABEL[alert.kind]} · {data.site.name}
             </Text>
-          ))}
-        </View>
-
-        {/* ───────────────────────────────────────────────── the actions */}
-        <View style={styles.actions}>
-          {live && !mine && !iResponded && (
-            <>
-              <Button
-                label="I am on the way"
-                size="lg"
-                loading={busy === "ack"}
-                onPress={async () => {
-                  setBusy("ack");
-                  await acknowledgeSos(alertId, "responding");
-                  setBusy(null);
-                  await reload();
-                }}
-              />
-              <Button
-                label="I cannot come"
-                variant="secondary"
-                loading={busy === "no"}
-                onPress={async () => {
-                  setBusy("no");
-                  // Recorded rather than ignored, and it does not stop the alarm — the
-                  // control room needs to know this person is accounted for and is not
-                  // one of the people arriving.
-                  await acknowledgeSos(alertId, "cannot_respond");
-                  setBusy(null);
-                  await reload();
-                }}
-              />
-            </>
-          )}
-
-          {live && (mine || (profile ? isStaff(profile.role) : false)) && (
-            <>
-              <Button
-                label="Situation resolved"
-                variant="secondary"
-                loading={busy === "resolved"}
-                onPress={async () => {
-                  setBusy("resolved");
-                  await closeSos(alertId, "resolved");
-                  setBusy(null);
-                  await reload();
-                }}
-              />
-              <Button
-                label="False alarm, stand down"
-                variant="secondary"
-                loading={busy === "false"}
-                onPress={async () => {
-                  setBusy("false");
-                  await closeSos(alertId, "false_alarm");
-                  setBusy(null);
-                  await reload();
-                }}
-              />
-            </>
-          )}
-
-          {!live && (
-            <Button
-              label="Close"
-              variant="secondary"
-              onPress={() => {
-                // `dismissTo` rather than `back`: the phone may have arrived here from a
-                // cold start with nothing behind it, and `back` would leave a blank.
-                if (router.canGoBack()) router.back();
-                else router.replace("/");
-              }}
-            />
-          )}
+            <Text variant="caption" numberOfLines={1} style={{ color: isOpen ? "#ffffffd9" : color.mutedForeground }}>
+              {isOpen ? `Raised ${clock(alert.raised_at)} · ${Math.max(0, Math.round((now - new Date(alert.raised_at).getTime()) / 60_000))} min ago` : SOS_STATUS_LABEL[alert.status]}
+            </Text>
+          </View>
         </View>
       </View>
-    </Animated.View>
+
+      <MapSheet
+        initial="half"
+        onSnap={(_, px) => setSheetH(px)}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.sos} />}
+        floating={
+          <View style={styles.floatRow} pointerEvents="box-none">
+            <Pressable accessibilityRole="button" accessibilityLabel="Show everyone" onPress={() => setFrame((n) => n + 1)} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
+              <LocateFixed size={22} color={color.sos} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+        }
+        header={
+          <View style={styles.headGap}>
+            <Text variant="title" weight="semibold" numberOfLines={1}>
+              {mine ? "You raised this SOS" : `${raiser?.name ?? "A guard"} needs help`}
+            </Text>
+            <Text variant="label" weight="semibold" style={{ color: isOpen ? (coming.length ? TONE.help : color.sos) : color.mutedForeground }}>
+              {statusLine}
+            </Text>
+            {!mine && myDistance !== null && (
+              <Text variant="caption" tone="muted">
+                {formatDistance(myDistance)} from you
+              </Text>
+            )}
+            {alert.note && (
+              <Text variant="body" style={styles.note}>
+                “{alert.note}”
+              </Text>
+            )}
+
+            <View style={styles.actions}>
+              {isOpen && !mine && answered === null && (
+                <>
+                  <View style={styles.flex}>
+                    <Button label="I'm on the way" icon={Navigation} fullWidth loading={busy === "go"} onPress={() => void act("go", () => acknowledgeSos(alertId, "responding"))} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Button label="Can't come" icon={UserRoundX} variant="outline" fullWidth loading={busy === "no"} onPress={() => void act("no", () => acknowledgeSos(alertId, "cannot_respond"))} />
+                  </View>
+                </>
+              )}
+              {isOpen && !mine && answered === "responding" && (
+                <>
+                  <View style={styles.flex}>
+                    <Button label="I'm on scene" icon={MapPin} fullWidth loading={busy === "here"} onPress={() => void act("here", () => acknowledgeSos(alertId, "on_scene"))} />
+                  </View>
+                  {where && (
+                    <View style={styles.flex}>
+                      <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => void Linking.openURL(directionsUrl(where))} />
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+            {canClose && (
+              <View style={styles.actions}>
+                <View style={styles.flex}>
+                  <Button label="Resolved" icon={CheckCircle2} variant="outline" fullWidth loading={busy === "resolved"} onPress={() => void act("resolved", () => closeSos(alertId, "resolved"))} />
+                </View>
+                <View style={styles.flex}>
+                  <Button label="False alarm" variant="outline" fullWidth loading={busy === "false"} onPress={() => void act("false", () => closeSos(alertId, "false_alarm"))} />
+                </View>
+              </View>
+            )}
+          </View>
+        }
+      >
+        {raiser && !mine && <PersonRow p={raiser} highlight="sos" />}
+
+        <Section title={`Responding · ${responders.length}`}>
+          {responders.length === 0 ? (
+            <Text variant="body" tone="muted">
+              Nobody has answered yet. Everyone on duty here, every supervisor and the client have been alerted.
+            </Text>
+          ) : (
+            responders.map((p) => <PersonRow key={p.id} p={p} highlight={p.response === "cannot_respond" ? undefined : "help"} you={p.id === profile?.id} />)
+          )}
+        </Section>
+
+        {others.length > 0 && (
+          <Section title={`Also on site · ${others.length}`}>
+            {others.map((p) => (
+              <PersonRow key={p.id} p={p} you={p.id === profile?.id} />
+            ))}
+          </Section>
+        )}
+      </MapSheet>
+    </View>
+  );
+}
+
+function leave() {
+  if (router.canGoBack()) router.back();
+  else router.replace("/");
+}
+
+function PersonRow({ p, highlight, you }: { p: Person; highlight?: "sos" | "help"; you?: boolean }) {
+  const tone = highlight === "sos" ? TONE.sos : highlight === "help" ? TONE.help : TONE.guard;
+  const sub = [
+    p.role === "raiser" ? "Raised the SOS" : p.response ? RESPONSE_LABEL[p.response] : null,
+    p.distance_m != null && p.role !== "raiser" ? `${formatDistance(p.distance_m)} away` : null,
+    p.heard_at ? `seen ${clock(p.heard_at)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <View style={[styles.row, highlight && { backgroundColor: `${tone}14`, borderColor: `${tone}55` }]}>
+      <View style={[styles.avatar, { backgroundColor: tone }]}>
+        <Text variant="caption" weight="bold" tone="inverse">
+          {p.name
+            .split(" ")
+            .map((w) => w[0])
+            .slice(0, 2)
+            .join("")
+            .toUpperCase()}
+        </Text>
+      </View>
+      <View style={styles.flex}>
+        <Text variant="label" weight="semibold" numberOfLines={1}>
+          {p.name}
+          {you ? " (you)" : ""}
+        </Text>
+        <Text variant="caption" numberOfLines={1} style={{ color: highlight ? tone : color.mutedForeground }}>
+          {sub || "On duty here"}
+        </Text>
+      </View>
+      {p.phone && !you && (
+        <Pressable accessibilityRole="button" accessibilityLabel={`Call ${p.name}`} onPress={() => void Linking.openURL(`tel:${p.phone}`)} style={({ pressed }) => [styles.call, pressed && styles.pressed]}>
+          <Phone size={18} color={color.primaryInk} strokeWidth={2.2} />
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text variant="eyebrow" weight="bold" tone="muted" uppercase>
+        {title}
+      </Text>
+      {children}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  closed: { backgroundColor: color.appBg },
+  root: { flex: 1, backgroundColor: color.appBg },
   center: { alignItems: "center", justifyContent: "center", gap: space[3], padding: space[6] },
-  centered: { textAlign: "center" },
-  content: { flex: 1, paddingHorizontal: space[5], gap: space[6] },
-  top: { gap: space[1] },
-  eyebrow: { letterSpacing: 1.2, opacity: 0.85 },
-  dim: { opacity: 0.8 },
-  note: {
-    marginTop: space[3],
-    padding: space[3],
-    borderRadius: radius.lg,
-    backgroundColor: "#ffffff22",
-  },
-  responders: { gap: space[1] },
-  actions: { marginTop: "auto", gap: space[3] },
+  centred: { textAlign: "center" },
+  flex: { flex: 1, minWidth: 0 },
+  pressed: { opacity: 0.75 },
+
+  banner: { position: "absolute", left: space[3], right: space[3], flexDirection: "row", alignItems: "center", gap: space[2] },
+  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
+  pill: { flex: 1, flexDirection: "row", alignItems: "center", gap: space[2], minHeight: 52, paddingHorizontal: space[3], borderRadius: radius.xl, ...shadow.raised },
+
+  floatRow: { flexDirection: "row", justifyContent: "flex-end" },
+  fab: { width: 52, height: 52, borderRadius: 26, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
+
+  headGap: { gap: 4 },
+  note: { marginTop: space[1], fontStyle: "italic" },
+  actions: { flexDirection: "row", gap: space[2], marginTop: space[3] },
+
+  section: { gap: space[2] },
+  row: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.xl, borderWidth: 1, borderColor: color.lineSoft, backgroundColor: color.card },
+  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  call: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
 });

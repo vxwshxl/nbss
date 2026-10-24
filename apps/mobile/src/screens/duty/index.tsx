@@ -31,7 +31,6 @@ import { shiftTypeLabel } from "@nbss/shared/shifts";
 import { checkFence, formatDistance } from "@nbss/shared/geo";
 
 import { Button } from "@/components/button";
-import { HoldButton } from "@/components/hold-button";
 import { InfoButton } from "@/components/info";
 import { LiveMap, type MapSite } from "@/components/live-map";
 import { MapSheet } from "@/components/map-sheet";
@@ -366,7 +365,6 @@ export function Duty() {
             )}
             {onDuty ? (
               <View style={[styles.gap2, styles.headActions]}>
-                <HoldButton label="Hold 3s for help" onComplete={() => void doRaiseSos()} />
                 <View style={styles.row2}>
                   <View style={styles.flex}>
                     <Button
@@ -395,10 +393,6 @@ export function Duty() {
                     loading={busy === target.id}
                     onPress={() => void doCheckIn(target)}
                   />
-                  {/* Help is not only for the shift: on the way to the gate counts too. */}
-                  <View style={styles.sosOff}>
-                    <HoldButton label="Emergency? Hold 3s for help" onComplete={() => void doRaiseSos()} />
-                  </View>
                 </View>
               )
             )}
