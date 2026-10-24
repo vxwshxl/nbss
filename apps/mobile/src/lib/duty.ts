@@ -72,7 +72,8 @@ export async function openPunch(): Promise<OpenPunch | null> {
 export async function rosteredSites(): Promise<Site[]> {
   const { data } = await supabase
     .from("shifts")
-    .select(`site_id, starts_at, ends_at, sites(${SITE_COLUMNS})`)
+    .select(`site_id, starts_at, ends_at, sites!inner(${SITE_COLUMNS})`)
+    .eq("sites.active", true)
     .neq("status", "cancelled")
     .gte("ends_at", new Date(Date.now() - 4 * 3_600_000).toISOString())
     .lte("starts_at", new Date(Date.now() + 8 * 3_600_000).toISOString())
@@ -95,7 +96,8 @@ export type Post = { siteId: string; siteName: string; startsAt: string; endsAt:
 export async function myPost(): Promise<Post | null> {
   const { data } = await supabase
     .from("shifts")
-    .select("site_id, starts_at, ends_at, shift_type, notes, replaces_shift, sites(name)")
+    .select("site_id, starts_at, ends_at, shift_type, notes, replaces_shift, sites!inner(name, active)")
+    .eq("sites.active", true)
     .in("status", ["scheduled", "in_progress"])
     .gt("ends_at", new Date().toISOString())
     .order("starts_at")
