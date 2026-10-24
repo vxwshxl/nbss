@@ -44,7 +44,7 @@ export default async function SoftwareFeePage() {
       </p>
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Active guards" value={String(guards ?? 0)} hint="Billed this month" icon={Users} tone="sky" />
-        <StatCard label="Per guard" value={inr(s?.per_guard_paise ?? 1500)} hint={`a month${s && Number(s.gst_percent) > 0 ? ` + ${s.gst_percent}% GST` : ""}`} icon={IndianRupee} tone="violet" />
+        <StatCard label="Per guard" value={inr(s?.per_guard_paise ?? 1500)} hint={`a month${s && Number(s.gst_percent) > 0 ? ` + ${s.gst_percent}% GST (claimable)` : ""}`} icon={IndianRupee} tone="violet" />
         <StatCard label="Due now" value={inr(due)} hint={due ? `${rows.filter((r) => r.status === "unpaid").length} month(s) unpaid` : "Nothing outstanding"} icon={CalendarClock} tone={due ? "amber" : "emerald"} />
         <StatCard label="Paid so far" value={inr(paid.reduce((n, r) => n + r.total_paise, 0))} hint={`${paid.length} month(s) settled`} icon={CircleCheckBig} tone="emerald" />
       </div>
