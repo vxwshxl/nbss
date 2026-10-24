@@ -21,6 +21,7 @@ export type FeeInvoice = {
   gst_paise: number;
   total_paise: number;
   status: "paid" | "unpaid";
+  is_test?: boolean;
   due_on: string;
   paid_at: string | null;
   razorpay_payment_id: string | null;
@@ -32,6 +33,7 @@ export type FeeSettings = {
   seller_name: string;
   seller_gstin: string | null;
   seller_address: string | null;
+  seller_cin?: string | null;
   buyer_name: string;
   buyer_gstin: string | null;
 };
@@ -75,7 +77,7 @@ function StatusStamp({ status, big }: { status: "paid" | "unpaid"; big?: boolean
  * The software fee's months, newest first. A row opens its invoice; an unpaid month can
  * be paid through Razorpay from the row or the invoice. A developer sees the rate form.
  */
-export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices: FeeInvoice[]; settings: FeeSettings | null; canEdit: boolean; online: boolean }) {
+export function FeeWorkspace({ invoices, settings, canEdit, online, test = false }: { invoices: FeeInvoice[]; settings: FeeSettings | null; canEdit: boolean; online: boolean; test?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState<FeeInvoice | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
         amount: order.amountPaise,
         currency: "INR",
         order_id: order.orderId,
-        name: settings?.seller_name ?? "BODOOKHRANG TECH PVT. LTD.",
+        name: settings?.seller_name ?? "Bodookhrang Tech Private Limited",
         description: `NBSS software fee · ${month(inv.period)} · ${order.number}`,
         prefill: order.prefill,
         theme: { color: "#009164" },
@@ -112,7 +114,10 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
     <div className="space-y-4">
       <section className="overflow-hidden rounded-2xl border border-app-line bg-card shadow-e1">
         <div className="flex items-center justify-between gap-3 border-b border-app-line-soft bg-gradient-to-r from-emerald-50 to-sky-50 px-5 py-3.5">
-          <h2 className="font-semibold">Monthly invoices</h2>
+          <h2 className="flex items-center gap-2 font-semibold">
+            Monthly invoices
+            {test && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-extrabold text-amber-950">TEST</span>}
+          </h2>
           <span className="text-xs text-muted-foreground">Tap a month for its invoice</span>
         </div>
         <div className="overflow-x-auto">
@@ -148,6 +153,9 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
                     <span className="ml-2 text-xs text-muted-foreground">{inv.status === "paid" && inv.paid_at ? day(inv.paid_at) : `due ${day(inv.due_on)}`}</span>
                   </td>
                   <td className="px-5 py-3 text-right">
+                    {inv.status === "unpaid" && inv.total_paise >= 100 && !online && (
+                      <span className="text-xs text-muted-foreground">{test ? "Add Razorpay test keys to pay" : "Online payment not set up"}</span>
+                    )}
                     {inv.status === "unpaid" && online && inv.total_paise >= 100 && (
                       <Button
                         size="sm"
@@ -158,7 +166,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
                         disabled={paying === inv.id}
                       >
                         {paying === inv.id && <Loader2 className="animate-spin" />}
-                        Pay now
+                        {test ? "Pay (test)" : "Pay now"}
                       </Button>
                     )}
                   </td>
@@ -185,7 +193,10 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
     <div id="fee-invoice" className="space-y-5">
       <div className="flex items-start justify-between gap-4 pr-8">
         <div>
-          <DialogTitle className="text-xl font-extrabold tracking-tight">Tax invoice</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
+            Tax invoice
+            {inv.is_test && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-extrabold text-amber-950">TEST</span>}
+          </DialogTitle>
           <p className="font-mono text-xs text-muted-foreground">{inv.number}</p>
         </div>
         <StatusStamp status={inv.status} big />
@@ -197,6 +208,7 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
           <p className="font-semibold">{s.seller_name}</p>
           {s.seller_address && <p className="text-xs text-muted-foreground">{s.seller_address}</p>}
           {s.seller_gstin && <p className="text-xs text-muted-foreground">GSTIN {s.seller_gstin}</p>}
+          {s.seller_cin && <p className="text-xs text-muted-foreground">CIN {s.seller_cin}</p>}
         </div>
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase">Billed to</p>
@@ -253,7 +265,9 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
         )}
       </div>
       <p className="text-center text-[11px] text-muted-foreground">
-        {s.seller_name} · software for National Bodo Security Service. Computer-generated invoice.
+        {s.seller_name}
+        {s.seller_gstin ? ` · GSTIN ${s.seller_gstin}` : ""}
+        {s.seller_cin ? ` · CIN ${s.seller_cin}` : ""} · software for National Bodo Security Service. Computer-generated invoice.
       </p>
     </div>
   );

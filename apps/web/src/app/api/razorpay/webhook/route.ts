@@ -10,10 +10,12 @@ import { webhookSignatureValid } from "@/lib/billing/razorpay";
  * Configure in Razorpay → Settings → Webhooks: this URL, event payment.captured.
  */
 export async function POST(req: NextRequest) {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  if (!secret) return NextResponse.json({ ok: false }, { status: 503 });
+  // Live and test mode each have their own webhook in Razorpay, each with its own secret.
+  const secrets = [process.env.RAZORPAY_WEBHOOK_SECRET, process.env.RAZORPAY_TEST_WEBHOOK_SECRET].filter((x): x is string => !!x);
+  if (secrets.length === 0) return NextResponse.json({ ok: false }, { status: 503 });
   const raw = await req.text();
-  if (!webhookSignatureValid(raw, req.headers.get("x-razorpay-signature") ?? "", secret)) {
+  const signature = req.headers.get("x-razorpay-signature") ?? "";
+  if (!secrets.some((s) => webhookSignatureValid(raw, signature, s))) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
   let event: { event?: string; payload?: { payment?: { entity?: { id?: string; order_id?: string; notes?: Record<string, string> } } } };
@@ -25,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (event.event === "payment.captured") {
     const e = event.payload?.payment?.entity;
     if (e?.notes?.kind === "nbss_software_fee" && e.id && (e.notes.invoice_id || e.notes.period)) {
-      const r = await markFeePaid({ invoiceId: e.notes.invoice_id, period: e.notes.period, orderId: e.order_id, paymentId: e.id });
+      const r = await markFeePaid({ invoiceId: e.notes.invoice_id, period: e.notes.period, test: e.notes.side === "test", orderId: e.order_id, paymentId: e.id });
       if (!r.ok) return NextResponse.json({ ok: false, retry: true }, { status: 500 });
     }
   }

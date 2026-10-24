@@ -3,7 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 /** Marks an invoice paid. Idempotent: a payment already recorded is not recorded twice. */
-export async function markFeePaid(input: { invoiceId?: string; period?: string; orderId?: string | null; paymentId: string; by?: string | null }): Promise<{ ok: boolean }> {
+export async function markFeePaid(input: { invoiceId?: string; period?: string; test?: boolean; orderId?: string | null; paymentId: string; by?: string | null }): Promise<{ ok: boolean }> {
   const db = supabaseAdmin();
   const { data: done } = await db.from("software_fee_invoices").select("id").eq("razorpay_payment_id", input.paymentId).maybeSingle();
   if (done) return { ok: true };
@@ -18,7 +18,7 @@ export async function markFeePaid(input: { invoiceId?: string; period?: string; 
       updated_at: new Date().toISOString(),
     })
     .eq("status", "unpaid");
-  q = input.invoiceId ? q.eq("id", input.invoiceId) : q.eq("period", input.period!);
+  q = input.invoiceId ? q.eq("id", input.invoiceId) : q.eq("period", input.period!).eq("is_test", !!input.test);
   const { error } = await q;
   return { ok: !error };
 }

@@ -174,9 +174,18 @@ export function SiteFooter() {
 
       <div className="bg-[#040b08]">
         <div className="mx-auto flex max-w-[1440px] flex-col items-center gap-2 border-t border-dashed border-gold/30 px-4 py-4 text-center text-[12px] text-ink-fg/50 sm:flex-row sm:justify-between sm:px-8 sm:py-6 sm:text-left sm:text-[13px]">
-          <p>
-            © {new Date().getFullYear()} {site.name}, {site.address.city}, {site.address.state}.
-          </p>
+          <div>
+            <p>
+              © {new Date().getFullYear()} {site.name}, {site.address.city}, {site.address.state}.
+            </p>
+            <p className="mt-1 text-[11px] text-ink-fg/40">
+              Software by{" "}
+              <a href="https://bodookhrang.com" target="_blank" rel="noopener noreferrer" className="hover:text-ink-fg">
+                Bodookhrang Tech Private Limited
+              </a>{" "}
+              · GSTIN 18AAMCB2128H1ZP · CIN U58202AS2024PTC025748
+            </p>
+          </div>
           <div className="flex items-center gap-x-5 sm:gap-x-6">
             <Link href="/privacy-policy" className="transition-colors hover:text-ink-fg">
               Privacy Policy

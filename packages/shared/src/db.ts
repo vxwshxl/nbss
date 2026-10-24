@@ -994,6 +994,7 @@ export type Database = {
           razorpay_payment_id: string | null;
           created_at: string;
           updated_at: string;
+          is_test: boolean;
         };
         Insert: {
           id?: string;
@@ -1013,6 +1014,7 @@ export type Database = {
           razorpay_payment_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_test?: boolean;
         };
         Update: {
           id?: string;
@@ -1032,6 +1034,7 @@ export type Database = {
           razorpay_payment_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_test?: boolean;
         };
         Relationships: [];
       };
@@ -1049,6 +1052,7 @@ export type Database = {
           buyer_gstin: string | null;
           updated_at: string;
           updated_by: string | null;
+          seller_cin: string | null;
         };
         Insert: {
           id?: boolean;
@@ -1063,6 +1067,7 @@ export type Database = {
           buyer_gstin?: string | null;
           updated_at?: string;
           updated_by?: string | null;
+          seller_cin?: string | null;
         };
         Update: {
           id?: boolean;
@@ -1077,6 +1082,7 @@ export type Database = {
           buyer_gstin?: string | null;
           updated_at?: string;
           updated_by?: string | null;
+          seller_cin?: string | null;
         };
         Relationships: [];
       };

@@ -21,16 +21,19 @@ async function payer() {
 export async function startFeePayment(invoiceId: string): Promise<Start> {
   const session = await payer();
   if (!session) return { ok: false, error: "Only an administrator can pay the software fee." };
-  if (!razorpayConfigured()) return { ok: false, error: "Online payment is not set up on the server yet." };
   const db = supabaseAdmin();
-  const { data: inv } = await db.from("software_fee_invoices").select("id, number, period, total_paise, status").eq("id", invoiceId).maybeSingle();
+  const { data: inv } = await db.from("software_fee_invoices").select("id, number, period, total_paise, status, is_test").eq("id", invoiceId).maybeSingle();
   if (!inv) return { ok: false, error: "That invoice was not found." };
+  if (!razorpayConfigured(inv.is_test)) {
+    return { ok: false, error: inv.is_test ? "Test payments need Razorpay's test keys on the server (RAZORPAY_TEST_KEY_ID / _SECRET)." : "Online payment is not set up on the server yet." };
+  }
   if (inv.status === "paid") return { ok: false, error: "This month is already paid." };
   if (inv.total_paise < 100) return { ok: false, error: "Nothing to pay for this month." };
   const order = await createOrder({
     amountPaise: inv.total_paise,
     receipt: inv.number,
-    notes: { kind: "nbss_software_fee", invoice_id: inv.id, period: inv.period },
+    notes: { kind: "nbss_software_fee", invoice_id: inv.id, period: inv.period, side: inv.is_test ? "test" : "live" },
+    test: inv.is_test,
   });
   if ("error" in order) return { ok: false, error: order.error };
   await db.from("software_fee_invoices").update({ razorpay_order_id: order.id }).eq("id", inv.id);
@@ -38,7 +41,7 @@ export async function startFeePayment(invoiceId: string): Promise<Start> {
   return {
     ok: true,
     orderId: order.id,
-    keyId: razorpayKeyId(),
+    keyId: razorpayKeyId(inv.is_test),
     amountPaise: inv.total_paise,
     number: inv.number,
     prefill: { name: p.full_name, email: p.email ?? "", contact: p.phone ?? "" },
@@ -49,7 +52,8 @@ export async function startFeePayment(invoiceId: string): Promise<Start> {
 export async function verifyFeePayment(input: { invoiceId: string; orderId: string; paymentId: string; signature: string }): Promise<{ ok: boolean; error?: string }> {
   const session = await payer();
   if (!session) return { ok: false, error: "Not allowed." };
-  if (!checkoutSignatureValid(input.orderId, input.paymentId, input.signature)) return { ok: false, error: "The payment could not be verified." };
+  const { data: inv } = await supabaseAdmin().from("software_fee_invoices").select("is_test").eq("id", input.invoiceId).maybeSingle();
+  if (!inv || !checkoutSignatureValid(input.orderId, input.paymentId, input.signature, inv.is_test)) return { ok: false, error: "The payment could not be verified." };
   const r = await markFeePaid({ invoiceId: input.invoiceId, orderId: input.orderId, paymentId: input.paymentId, by: session.realProfile.id });
   revalidatePath("/console/software-fee");
   return r.ok ? { ok: true } : { ok: false, error: "Paid, but it could not be recorded yet. It will be picked up shortly." };

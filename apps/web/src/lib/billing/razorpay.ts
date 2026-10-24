@@ -8,16 +8,29 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET); nothing secret reaches the browser.
  */
 
-export function razorpayConfigured(): boolean {
-  return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+/**
+ * Two key pairs: live (RAZORPAY_KEY_ID / _SECRET, real money) for live invoices, and
+ * Razorpay's test keys (RAZORPAY_TEST_KEY_ID / _SECRET, no money moves) for invoices on
+ * the Test side. A test invoice is never paid with live keys.
+ */
+function keys(test: boolean): { id: string; secret: string } {
+  return test
+    ? { id: process.env.RAZORPAY_TEST_KEY_ID ?? "", secret: process.env.RAZORPAY_TEST_KEY_SECRET ?? "" }
+    : { id: process.env.RAZORPAY_KEY_ID ?? "", secret: process.env.RAZORPAY_KEY_SECRET ?? "" };
 }
 
-export function razorpayKeyId(): string {
-  return process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? process.env.RAZORPAY_KEY_ID ?? "";
+export function razorpayConfigured(test = false): boolean {
+  const k = keys(test);
+  return Boolean(k.id && k.secret);
 }
 
-export async function createOrder(input: { amountPaise: number; receipt: string; notes: Record<string, string> }): Promise<{ id: string } | { error: string }> {
-  const auth = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
+export function razorpayKeyId(test = false): string {
+  return keys(test).id;
+}
+
+export async function createOrder(input: { amountPaise: number; receipt: string; notes: Record<string, string>; test?: boolean }): Promise<{ id: string } | { error: string }> {
+  const k = keys(!!input.test);
+  const auth = Buffer.from(`${k.id}:${k.secret}`).toString("base64");
   const res = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: { authorization: `Basic ${auth}`, "content-type": "application/json" },
@@ -35,8 +48,8 @@ function same(a: string, b: string): boolean {
 }
 
 /** The checkout's own proof: HMAC-SHA256 of "order_id|payment_id" with the key secret. */
-export function checkoutSignatureValid(orderId: string, paymentId: string, signature: string): boolean {
-  const expected = createHmac("sha256", process.env.RAZORPAY_KEY_SECRET ?? "").update(`${orderId}|${paymentId}`).digest("hex");
+export function checkoutSignatureValid(orderId: string, paymentId: string, signature: string, test = false): boolean {
+  const expected = createHmac("sha256", keys(test).secret).update(`${orderId}|${paymentId}`).digest("hex");
   return same(expected, signature);
 }
 
