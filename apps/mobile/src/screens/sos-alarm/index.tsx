@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { ArrowLeft, BellOff, CheckCircle2, LocateFixed, MapPin, Navigation, Phone, Siren, UserRoundX } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
@@ -75,7 +76,7 @@ const first = (name: string) => name.split(" ")[0] ?? name;
  * Still not swipe-dismissable (the route is `gestureEnabled: false`), but there is a
  * Back button: a responder may need to open Directions or the dialler and come back.
  */
-export function SosAlarm({ alertId }: { alertId: string }) {
+export function SosAlarm({ alertId, embedded = false }: { alertId: string; embedded?: boolean }) {
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
   const live = useLivePosition();
@@ -202,14 +203,16 @@ export function SosAlarm({ alertId }: { alertId: string }) {
         people={markers}
         me={fix ? { ...fix, heading: live.heading } : null}
         frameKey={`sos|${frame}`}
-        padding={{ top: insets.top + 90, right: 40, bottom: Math.min(sheetH, 460) + 24, left: 40 }}
+        padding={{ top: (embedded ? 0 : insets.top) + 90, right: 40, bottom: Math.min(sheetH, 460) + 24, left: 40 }}
       />
 
       {/* The banner: what, where, since when — readable at arm's length. */}
-      <View style={[styles.banner, { top: insets.top + space[2] }]} pointerEvents="box-none">
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={leave} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
-          <ArrowLeft size={20} color={color.foreground} strokeWidth={2.2} />
-        </Pressable>
+      <View style={[styles.banner, { top: (embedded ? 0 : insets.top) + space[2] }]} pointerEvents="box-none">
+        {!embedded && (
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={leave} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
+            <ArrowLeft size={20} color={color.foreground} strokeWidth={2.2} />
+          </Pressable>
+        )}
         <View style={[styles.pill, { backgroundColor: isOpen ? color.sos : color.card }]}>
           <Siren size={18} color={isOpen ? "#fff" : color.mutedForeground} strokeWidth={2.2} />
           <View style={styles.flex}>
@@ -277,7 +280,15 @@ export function SosAlarm({ alertId }: { alertId: string }) {
                 </>
               )}
             </View>
-            {canClose && (
+            {isOpen && mine && (
+              <View style={styles.closeBox}>
+                <Text variant="micro" weight="bold" tone="muted" uppercase>
+                  Safe now?
+                </Text>
+                <HoldToCancel busy={busy === "false"} onDone={() => void act("false", () => closeSos(alertId, "false_alarm"))} />
+              </View>
+            )}
+            {canClose && !mine && (
               <View style={styles.closeBox}>
                 <Text variant="micro" weight="bold" tone="muted" uppercase>
                   Close this alert
@@ -332,6 +343,49 @@ export function SosAlarm({ alertId }: { alertId: string }) {
         )}
       </MapSheet>
     </View>
+  );
+}
+
+const CANCEL_MS = 3000;
+
+/**
+ * The raiser's way out: hold for three seconds to cancel their own SOS (recorded as
+ * a false alarm). A hold, not a tap, so it cannot be cancelled by accident while
+ * running; the bar fills while held and empties if let go early.
+ */
+function HoldToCancel({ busy, onDone }: { busy: boolean; onDone: () => void }) {
+  const fill = useSharedValue(0);
+  const done = useRef(false);
+  const bar = useAnimatedStyle(() => ({ width: `${fill.get() * 100}%` }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Hold for three seconds to cancel your SOS"
+      disabled={busy}
+      delayLongPress={CANCEL_MS}
+      onPressIn={() => {
+        done.current = false;
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+        fill.set(withTiming(1, { duration: CANCEL_MS, easing: Easing.linear }));
+      }}
+      onPressOut={() => {
+        if (done.current) return;
+        cancelAnimation(fill);
+        fill.set(withTiming(0, { duration: 180 }));
+      }}
+      onLongPress={() => {
+        done.current = true;
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+        onDone();
+      }}
+      style={styles.cancel}
+    >
+      <Animated.View style={[styles.cancelFill, bar]} />
+      {busy ? <ActivityIndicator color="#fff" /> : <BellOff size={20} color="#fff" strokeWidth={2.4} />}
+      <Text variant="label" weight="bold" tone="inherit" style={styles.closeText}>
+        {busy ? "Cancelling…" : "Hold 3s to cancel my SOS"}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -414,6 +468,8 @@ const styles = StyleSheet.create({
   falseAlarm: { backgroundColor: "#d97706", borderBottomColor: "#b45309" },
   closePressed: { transform: [{ translateY: 2 }], borderBottomWidth: 1 },
   closeText: { color: "#fff" },
+  cancel: { minHeight: 56, borderRadius: radius.full, backgroundColor: "#d97706", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], overflow: "hidden" },
+  cancelFill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: "#92400e" },
 
   section: { gap: space[2] },
   row: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.xl, borderWidth: 1, borderColor: color.lineSoft, backgroundColor: color.card },

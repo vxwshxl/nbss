@@ -29,6 +29,9 @@ export type LiveMapProps = {
   /** Colleagues on duty with this guard, as small green dots with first names. */
   friends?: (MapPoint & { id: string; name: string })[];
   onFriendPress?: (id: string) => void;
+  /** Open SOS: their areas blink red and whoever raised one is marked. */
+  sos?: { areaIds: string[]; raisers: (MapPoint & { id: string; label: string })[] };
+  onSosPress?: () => void;
 };
 
 /** Google draws its own credit on the map, so there is nothing extra to show. */

@@ -41,13 +41,14 @@ export function FloatingSos({ bottom }: { bottom: number }) {
     setBusy(false);
     progress.set(withTiming(0, { duration: 200 }));
     // Not sent (no internet, usually): the SOS page says why and offers a call and an SMS.
-    if (r.ok) router.push(`/sos/${r.alertId}`);
-    else router.push({ pathname: "/(guard)/alerts", params: { failed: r.error } });
+    // Either way the SOS tab: it shows the live SOS (map, who is coming), or why it failed.
+    if (r.ok) router.navigate("/(guard)/alerts");
+    else router.navigate({ pathname: "/(guard)/alerts", params: { failed: r.error } });
   };
 
   return (
     <>
-    {live.length > 0 && <LiveSosBanner alerts={live} bottom={bottom + SIZE + 12} />}
+    {live.length > 0 && pathname !== "/alerts" && <LiveSosBanner alerts={live} bottom={bottom + SIZE + 12} />}
     <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
       <Animated.View pointerEvents="none" style={[styles.ring, ring]} />
       <Pressable
@@ -117,7 +118,7 @@ function useLiveSos(): MapAlert[] {
 
 /**
  * Above the SOS button while an alert is open: who, where, how long ago and how many
- * are coming. One tap opens its map; with several open, the SOS tab. It stays until
+ * are coming. One tap opens the SOS tab, which shows it on the map. It stays until
  * the alert is resolved or stood down.
  */
 function LiveSosBanner({ alerts, bottom }: { alerts: MapAlert[]; bottom: number }) {
@@ -140,7 +141,7 @@ function LiveSosBanner({ alerts, bottom }: { alerts: MapAlert[]; bottom: number 
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${sub}. Open the SOS map.`}
-      onPress={() => (many ? router.push("/(guard)/alerts") : router.push(`/sos/${a.id}`))}
+      onPress={() => router.navigate("/(guard)/alerts")}
       style={({ pressed }) => [styles.banner, { bottom }, pressed && styles.pressed]}
     >
       <View style={styles.bannerDotRing}>

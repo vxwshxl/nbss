@@ -89,7 +89,8 @@ export default function RootLayout() {
     // screen is not for, so a wrong guess costs a hop, not a dead end.
     const open = (data: unknown) => {
       const sos = asSosPush(data);
-      if (sos) return router.push(`/sos/${sos.alert_id}`);
+      // A guard's SOS lives in their SOS tab; the office and clients get the alert's own page.
+      if (sos) return (data as { audience?: string }).audience === "on_duty_guard" ? router.navigate("/(guard)/alerts") : router.push(`/sos/${sos.alert_id}`);
       const type = pushType(data);
       const shiftId = (data as { shift_id?: unknown } | null)?.shift_id;
       if (type === "duty" && typeof shiftId === "string") router.push({ pathname: "/shift/[id]", params: { id: shiftId } });
@@ -114,7 +115,10 @@ export default function RootLayout() {
     const arrived = Notifications.addNotificationReceivedListener((notification) => {
       const data = notification.request.content.data;
       const sos = asSosPush(data);
-      if (sos) router.push(`/sos/${sos.alert_id}`);
+      if (sos) {
+        if ((data as { audience?: string }).audience === "on_duty_guard") router.navigate("/(guard)/alerts");
+        else router.push(`/sos/${sos.alert_id}`);
+      }
       // The app is open: restart tracking quietly rather than sending the guard anywhere.
       else if (pushType(data) === "resume_tracking") void ensureTracking();
     });

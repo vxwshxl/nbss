@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { StyleSheet, View, type LayoutChangeEvent, type ScrollViewProps } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { StyleSheet, View, type LayoutChangeEvent, type ScrollViewProps, type ViewInstance } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, ScrollView as GestureScrollView } from "react-native-gesture-handler";
 import Animated, {
   Extrapolation,
@@ -53,8 +54,15 @@ export function MapSheet({
   const [headerH, setHeaderH] = useState(0);
   const [snap, setSnap] = useState<SheetSnap>(initial);
 
+  // Where the area the sheet lives in starts on the screen. On a screen with no header
+  // above it (the SOS map) that is the very top, and "full" must stop below the status
+  // bar and the Dynamic Island rather than slide under them.
+  const insets = useSafeAreaInsets();
+  const box = useRef<ViewInstance>(null);
+  const [winY, setWinY] = useState(0);
+
   // Offsets from the top of the area the sheet lives in.
-  const full = space[2];
+  const full = Math.max(space[2], insets.top + space[2] - winY);
   const half = Math.round(height * 0.5);
   const peek = Math.max(half, height - (headerH + 22));
   const points = { full, half, peek };
@@ -67,6 +75,10 @@ export function MapSheet({
   const onLayout = (e: LayoutChangeEvent) => {
     const h = Math.round(e.nativeEvent.layout.height);
     if (h !== height) setHeight(h);
+    box.current?.measureInWindow((_x: number, y: number) => {
+      const r = Math.round(y);
+      if (r !== winY) setWinY(r);
+    });
   };
 
   // Placed once both sizes are known, and kept at the current snap when either changes
@@ -79,7 +91,7 @@ export function MapSheet({
     onSnap?.(snap, height - at);
     // Only the measured sizes move it; a snap is placed by the gesture itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [height, headerH]);
+  }, [height, headerH, full]);
 
   const settle = (to: SheetSnap) => {
     setSnap(to);
@@ -137,6 +149,7 @@ export function MapSheet({
 
   return (
     <View
+      ref={box}
       style={StyleSheet.absoluteFill}
       pointerEvents="box-none"
       onLayout={onLayout}

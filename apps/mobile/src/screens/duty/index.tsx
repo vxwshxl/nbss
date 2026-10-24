@@ -144,6 +144,12 @@ export function Duty() {
     radiusM: a.geofence_radius_m,
     ring: toRing(a.polygon),
   }));
+  const mapSos = {
+    areaIds: (areasNow?.areas ?? []).filter((a) => a.sos).map((a) => a.id),
+    raisers: (areasNow?.alerts ?? []).flatMap((x) =>
+      x.lat != null && x.lng != null ? [{ id: x.raised_by, lat: x.lat, lng: x.lng, label: `SOS · ${x.mine ? "You" : x.raiser_name.split(/\s+/)[0]}` }] : [],
+    ),
+  };
   const mapFriends = (areasNow?.friends ?? []).flatMap((f) => (f.lat != null && f.lng != null ? [{ id: f.id, name: f.name, lat: f.lat, lng: f.lng }] : []));
 
   const punch = data?.punch ?? null;
@@ -339,7 +345,9 @@ export function Duty() {
           trail={onDuty ? (data?.trail ?? null) : null}
           areas={mapAreas}
           friends={mapFriends}
-          onFriendPress={() => router.push("/(guard)/alerts")}
+          onFriendPress={() => router.navigate("/(guard)/alerts")}
+          sos={mapSos}
+          onSosPress={() => router.navigate("/(guard)/alerts")}
           // Re-framed on the recenter button, and when the guard has moved a few
           // hundred metres — the blue dot never walks off the edge on its own.
           frameKey={`${frameKey}:${fix ? `${Math.round(fix.lat * 300)},${Math.round(fix.lng * 300)}` : "-"}`}
