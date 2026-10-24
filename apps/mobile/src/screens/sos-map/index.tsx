@@ -35,7 +35,8 @@ const first = (name: string) => name.split(/\s+/)[0] ?? name;
  *
  *   An SOS is open (yours, or one you were sent): the tab IS that SOS — the map with
  *   the area in red, who raised it, who is coming, and the buttons. With several open,
- *   a row of chips switches between them.
+ *   they are listed at the top of the sheet to switch between (names and sites wrap
+ *   there, which chips over the map could not).
  *
  *   All quiet: the map of the duties going on, the colleagues on duty with you (tap
  *   one to call or get directions), and Call office / SMS location, which work
@@ -47,7 +48,7 @@ const first = (name: string) => name.split(/\s+/)[0] ?? name;
 export function SosMap({ failed }: { failed?: string }) {
   const { profile } = useAuth();
   const live = useLivePosition();
-  const { data, refreshing, reload } = useLoader(dutyAreas);
+  const { data, refreshing, reload, refresh } = useLoader(dutyAreas);
   const [pickedAlert, setPickedAlert] = useState<string | null>(null);
   const [pickedFriend, setPickedFriend] = useState<string | null>(null);
   const [frameKey, setFrameKey] = useState(0);
@@ -87,18 +88,13 @@ export function SosMap({ failed }: { failed?: string }) {
   if (shown) {
     return (
       <View style={styles.root}>
-        <SosAlarm key={shown.id} alertId={shown.id} embedded />
-        {alerts.length > 1 && (
-          <View style={styles.switcher} pointerEvents="box-none">
-            {alerts.map((a) => (
-              <Pressable key={a.id} accessibilityRole="button" onPress={() => setPickedAlert(a.id)} style={[styles.switch, a.id === shown.id && styles.switchOn]}>
-                <Text variant="caption" weight="bold" tone="inherit" style={{ color: a.id === shown.id ? "#fff" : color.sos }} numberOfLines={1}>
-                  {a.mine ? "You" : first(a.raiser_name)} · {a.site_name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
+        <SosAlarm
+          key={shown.id}
+          alertId={shown.id}
+          embedded
+          choices={alerts.map((a) => ({ id: a.id, who: a.mine ? "Your SOS" : a.raiser_name, site: a.site_name }))}
+          onChoose={setPickedAlert}
+        />
       </View>
     );
   }
@@ -132,7 +128,7 @@ export function SosMap({ failed }: { failed?: string }) {
       <MapSheet
         initial="half"
         onSnap={(_, px) => setSheetH(px)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={color.primary} />}
         floating={
           <View style={styles.floatRow} pointerEvents="box-none">
             <Pressable accessibilityRole="button" accessibilityLabel="Show everything" onPress={() => setFrameKey((k) => k + 1)} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
@@ -286,9 +282,6 @@ const styles = StyleSheet.create({
   floatRow: { flexDirection: "row", justifyContent: "flex-end" },
   fab: { width: 52, height: 52, borderRadius: 26, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
   rowPressed: { backgroundColor: color.muted },
-  switcher: { position: "absolute", top: 76, left: space[3], right: space[3], flexDirection: "row", flexWrap: "wrap", gap: space[2] },
-  switch: { paddingHorizontal: space[3], paddingVertical: 6, borderRadius: radius.full, backgroundColor: color.card, borderWidth: 1.5, borderColor: color.sos, ...shadow.card },
-  switchOn: { backgroundColor: color.sos },
   cardHead: { flexDirection: "row", alignItems: "center", gap: space[3] },
   close: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.muted, alignItems: "center", justifyContent: "center" },
   facts: { flexDirection: "row", flexWrap: "wrap", rowGap: space[2], borderRadius: radius.xl, backgroundColor: color.muted, padding: space[3] },

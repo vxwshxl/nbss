@@ -124,7 +124,7 @@ export function Duty() {
     return { punch, permission, tracking, post, sites, notes, trail, areas };
   }, []);
 
-  const { data, refreshing, reload } = useLoader(load);
+  const { data, refreshing, reload, refresh } = useLoader(load);
 
   // Colleagues move: the areas and their dots refresh every 20 s while this tab is open.
   const crowd = useLoader(dutyAreas);
@@ -373,7 +373,7 @@ export function Duty() {
       <MapSheet
         initial="half"
         onSnap={(_, px) => setSheetH(px)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={color.primary} />}
         floating={
           <View style={styles.floatRow} pointerEvents="box-none">
             <Pressable

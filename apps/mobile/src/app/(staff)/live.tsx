@@ -43,7 +43,7 @@ export default function LiveRoute() {
 
   const [batch, setBatch] = useState<PositionBatch | null>(null);
 
-  const { data: alerts = [], refreshing, reload } = useLoader(liveAlerts);
+  const { data: alerts = [], refreshing, reload, refresh } = useLoader(liveAlerts);
 
   // Ticks on its own, so a guard whose phone died goes amber without waiting for a batch
   // that is never coming. See the comment in use-now.ts.
@@ -110,7 +110,7 @@ export default function LiveRoute() {
         <RefreshControl
           refreshing={refreshing}
           tintColor={color.primary}
-          onRefresh={() => void reload()}
+          onRefresh={() => void refresh()}
         />
       }
     >

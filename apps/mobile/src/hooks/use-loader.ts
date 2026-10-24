@@ -24,7 +24,10 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
   /** True only for a user-initiated refresh, so a pull-to-refresh spinner is honest. */
   refreshing: boolean;
   error: string | null;
+  /** Loads again quietly (timers, focus, realtime). */
   reload: () => Promise<void>;
+  /** Loads again with the pull-to-refresh spinner showing. */
+  refresh: () => Promise<void>;
 } {
   const [data, setData] = useState<T | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,8 +70,8 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
     };
   }, []);
 
-  const reload = useCallback(async () => {
-    setRefreshing(true);
+  const run = useCallback(async (spinner: boolean) => {
+    if (spinner) setRefreshing(true);
     try {
       const result = await fetcherRef.current();
       if (mounted.current) {
@@ -78,9 +81,18 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
     } catch (e) {
       if (mounted.current) setError(e instanceof Error ? e.message : String(e));
     } finally {
-      if (mounted.current) setRefreshing(false);
+      if (spinner && mounted.current) setRefreshing(false);
     }
   }, []);
 
-  return { data, refreshing, error, reload };
+  /**
+   * Two ways to load again, and the difference is the spinner. `reload` is silent:
+   * timers, focus and realtime use it, and a pull-to-refresh spinner flashing every
+   * ten seconds on its own (as it did) reads as the app glitching. `refresh` is for
+   * the pull itself, and shows the spinner until the answer is in.
+   */
+  const reload = useCallback(() => run(false), [run]);
+  const refresh = useCallback(() => run(true), [run]);
+
+  return { data, refreshing, error, reload, refresh };
 }

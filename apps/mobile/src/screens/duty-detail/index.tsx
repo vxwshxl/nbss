@@ -50,13 +50,14 @@ export function DutyDetail({ id }: { id: string }) {
   const [asking, setAsking] = useState<MyDuty | null>(null);
   const [note, setNote] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [pulls, setPulls] = useState(0);
+  const [pulling, setPulling] = useState(false);
 
   useEffect(() => {
     let live = true;
     void myDuty(id).then(async (duty) => {
       if (!live) return;
       setD(duty);
-      if (!duty) return;
+      if (!duty) return setPulling(false);
       const [t, n] = await Promise.all([
         duty.attendance?.id ? myTrail(duty.attendance.id) : Promise.resolve([]),
         handoverNotes(duty.site.id),
@@ -64,6 +65,7 @@ export function DutyDetail({ id }: { id: string }) {
       if (!live) return;
       setTrail(t);
       setNotes(n);
+      setPulling(false);
     });
     return () => {
       live = false;
@@ -118,7 +120,16 @@ export function DutyDetail({ id }: { id: string }) {
       <Screen
         topInset={false}
         contentStyle={styles.body}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => setPulls((n) => n + 1)} tintColor={color.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={pulling}
+            onRefresh={() => {
+              setPulling(true);
+              setPulls((n) => n + 1);
+            }}
+            tintColor={color.primary}
+          />
+        }
       >
         <View style={styles.mapPanel}>
           {mapSite ? (

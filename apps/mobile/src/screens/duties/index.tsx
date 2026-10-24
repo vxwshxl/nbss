@@ -79,12 +79,24 @@ export function Duties() {
   const [tab, setTab] = useState<"upcoming" | "history">("upcoming");
   // A pull-to-refresh bumps this; whichever half is showing reloads on it.
   const [pulls, setPulls] = useState(0);
+  const [pulling, setPulling] = useState(false);
 
   return (
     <Screen
       topInset={false}
       contentStyle={styles.body}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={() => setPulls((n) => n + 1)} tintColor={color.primary} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={pulling}
+          onRefresh={() => {
+            setPulling(true);
+            setPulls((n) => n + 1);
+            // The half on screen reloads on `pulls`; the spinner is given a moment, then let go.
+            setTimeout(() => setPulling(false), 800);
+          }}
+          tintColor={color.primary}
+        />
+      }
     >
       <Segmented
         stretch

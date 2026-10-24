@@ -76,7 +76,20 @@ const first = (name: string) => name.split(" ")[0] ?? name;
  * Still not swipe-dismissable (the route is `gestureEnabled: false`), but there is a
  * Back button: a responder may need to open Directions or the dialler and come back.
  */
-export function SosAlarm({ alertId, embedded = false }: { alertId: string; embedded?: boolean }) {
+export type SosChoice = { id: string; who: string; site: string };
+
+export function SosAlarm({
+  alertId,
+  embedded = false,
+  choices = [],
+  onChoose,
+}: {
+  alertId: string;
+  embedded?: boolean;
+  /** Every open SOS, when there is more than one: listed at the top of the sheet to switch between. */
+  choices?: SosChoice[];
+  onChoose?: (id: string) => void;
+}) {
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
   const live = useLivePosition();
@@ -90,7 +103,7 @@ export function SosAlarm({ alertId, embedded = false }: { alertId: string; embed
     const { data } = await supabase.rpc("sos_map", { p_alert_id: alertId });
     return (data as unknown as SosMap | null) ?? null;
   }, [alertId]);
-  const { data, reload, refreshing } = useLoader(load);
+  const { data, reload, refresh, refreshing } = useLoader(load);
 
   // The site's channel (raise, answer, close) for an instant refresh, and a slow
   // re-read behind it for responders moving towards the alert.
@@ -229,7 +242,7 @@ export function SosAlarm({ alertId, embedded = false }: { alertId: string; embed
       <MapSheet
         initial="half"
         onSnap={(_, px) => setSheetH(px)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reload()} tintColor={color.sos} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={color.sos} />}
         floating={
           <View style={styles.floatRow} pointerEvents="box-none">
             <Pressable accessibilityRole="button" accessibilityLabel="Show everyone" onPress={() => setFrame((n) => n + 1)} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
@@ -239,6 +252,40 @@ export function SosAlarm({ alertId, embedded = false }: { alertId: string; embed
         }
         header={
           <View style={styles.headGap}>
+            {choices.length > 1 && (
+              <View style={styles.choices}>
+                <Text variant="micro" weight="bold" tone="muted" uppercase>
+                  {choices.length} SOS open · tap to switch
+                </Text>
+                {choices.map((c) => {
+                  const on = c.id === alertId;
+                  return (
+                    <Pressable
+                      key={c.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      onPress={() => onChoose?.(c.id)}
+                      style={({ pressed }) => [styles.choice, on && styles.choiceOn, pressed && styles.pressed]}
+                    >
+                      <View style={[styles.choiceDot, on && styles.choiceDotOn]} />
+                      <View style={styles.flex}>
+                        <Text variant="label" weight="bold" numberOfLines={1}>
+                          {c.who}
+                        </Text>
+                        <Text variant="caption" tone="muted" numberOfLines={2}>
+                          {c.site}
+                        </Text>
+                      </View>
+                      {on && (
+                        <Text variant="micro" weight="bold" tone="inherit" style={styles.choiceTag}>
+                          SHOWING
+                        </Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
             <Text variant="title" weight="semibold" numberOfLines={1}>
               {mine ? "You raised this SOS" : `${raiser?.name ?? "A guard"} needs help`}
             </Text>
@@ -459,6 +506,12 @@ const styles = StyleSheet.create({
   fab: { width: 52, height: 52, borderRadius: 26, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
 
   headGap: { gap: 4 },
+  choices: { gap: space[2], marginBottom: space[3], paddingBottom: space[3], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.line },
+  choice: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.xl, borderWidth: 1, borderColor: color.border, backgroundColor: color.card },
+  choiceOn: { borderColor: color.sos, backgroundColor: "#fff1f2" },
+  choiceDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: color.sos },
+  choiceDotOn: { backgroundColor: color.sos },
+  choiceTag: { color: color.sos, letterSpacing: 0.6 },
   note: { marginTop: space[1], fontStyle: "italic" },
   actions: { flexDirection: "row", gap: space[2], marginTop: space[3] },
   closeBox: { marginTop: space[4], gap: space[2], padding: space[3], borderRadius: radius.xl, backgroundColor: color.muted },

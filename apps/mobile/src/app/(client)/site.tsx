@@ -68,7 +68,7 @@ export default function ClientSiteRoute() {
     };
   }, []);
 
-  const { data, refreshing, reload } = useLoader(load);
+  const { data, refreshing, refresh } = useLoader(load);
   const onDuty = data?.onDuty ?? [];
   const monthMinutes = data?.monthMinutes ?? 0;
   const overtime = data?.overtime ?? 0;
@@ -90,7 +90,7 @@ export default function ClientSiteRoute() {
         <RefreshControl
           refreshing={refreshing}
           tintColor={color.primary}
-          onRefresh={() => void reload()}
+          onRefresh={() => void refresh()}
         />
       }
     >
