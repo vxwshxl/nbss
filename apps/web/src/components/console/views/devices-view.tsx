@@ -28,7 +28,7 @@ export async function DevicesView({ siteId }: { siteId?: string } = {}) {
       .order("last_seen_at", { ascending: false }),
     supabase
       .from("attendance")
-      .select("id, check_in_at, device_flag, device_id, profiles!attendance_guard_id_fkey(full_name), sites(name)")
+      .select("id, guard_id, check_in_at, device_flag, device_id, profiles!attendance_guard_id_fkey(full_name), sites(name)")
       .not("device_flag", "is", null)
       .eq("status", "pending_review")
       .match(siteId ? { site_id: siteId } : {})
@@ -81,6 +81,13 @@ export async function DevicesView({ siteId }: { siteId?: string } = {}) {
     checkInAt: a.check_in_at ?? "",
     flag: a.device_flag ?? "",
     phone: a.device_id ? (phoneOf.get(a.device_id) ?? null) : null,
+    // Whose phone it is: every other guard registered on the same device id.
+    owners: a.device_id
+      ? (devices.data ?? [])
+          .filter((d) => d.device_id === a.device_id && d.profile_id !== a.guard_id)
+          .map((d) => one(d.profiles as unknown as Person | null)?.full_name)
+          .filter((n): n is string => !!n)
+      : [],
   }));
 
   const pending = rows.filter((r) => r.status === "pending").length;

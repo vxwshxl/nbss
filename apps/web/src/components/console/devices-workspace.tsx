@@ -39,6 +39,8 @@ export type FlaggedPunch = {
   checkInAt: string;
   flag: string;
   phone: string | null;
+  /** Who else uses this phone (by its unique device id), for "another guard's phone". */
+  owners: string[];
 };
 
 const FLAG_TEXT: Record<string, string> = {
@@ -199,7 +201,14 @@ export function DevicesWorkspace({ devices, flagged }: { devices: DeviceRow[]; f
                     {f.guardName} <span className="font-normal text-muted-foreground">at {f.siteName}</span>
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {istDateTime(f.checkInAt)} · {FLAG_TEXT[f.flag] ?? f.flag}
+                    {istDateTime(f.checkInAt)} ·{" "}
+                    {f.flag === "shared_device" && f.owners.length ? (
+                      <span className="font-semibold text-amber-800">
+                        {f.owners.length === 1 ? `${f.owners[0]}'s phone` : `phone used by ${f.owners.join(", ")}`}
+                      </span>
+                    ) : (
+                      (FLAG_TEXT[f.flag] ?? f.flag)
+                    )}
                     {f.phone ? ` · ${f.phone}` : ""}
                   </span>
                 </span>
