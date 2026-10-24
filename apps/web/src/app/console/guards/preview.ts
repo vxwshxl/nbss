@@ -24,6 +24,8 @@ export type PersonPreview = {
   joined: string | null;
   lastSeen: string | null;
   mustChangePin: boolean;
+  /** The PIN the office set (4 digits), when it was set from the console. */
+  pin: string | null;
   guard?: {
     posting: { site: string; starts: string; ends: string; days: number[] } | null;
     onDuty: { site: string; since: string } | null;
@@ -53,6 +55,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
     .maybeSingle();
 
   if (!p) return { error: "That person could not be found." };
+  const { data: pinRow } = await supabase.from("staff_pins").select("pin").eq("profile_id", p.id).maybeSingle();
 
   const base: PersonPreview = {
     id: p.id,
@@ -65,6 +68,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
     joined: p.joined_at ?? p.created_at,
     lastSeen: p.last_seen_at,
     mustChangePin: p.must_change_pin,
+    pin: pinRow?.pin ?? null,
   };
 
   if (p.role === "guard") {

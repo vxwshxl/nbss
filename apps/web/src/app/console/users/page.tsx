@@ -29,8 +29,8 @@ export default async function UsersPage() {
         canManage={isAdmin(session.profile.role) && !session.impersonating}
         selfId={session.realProfile.id}
         isDeveloper={session.realProfile.role === "developer"}
+        nextCode={(await supabase.rpc("next_employee_code")).data ?? "NBSS-001"}
         showRoleTabs
-        defaultRole="client"
       />
     </div>
   );

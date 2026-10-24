@@ -995,6 +995,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           is_test: boolean;
+          skip_note: string | null;
         };
         Insert: {
           id?: string;
@@ -1015,6 +1016,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           is_test?: boolean;
+          skip_note?: string | null;
         };
         Update: {
           id?: string;
@@ -1035,6 +1037,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           is_test?: boolean;
+          skip_note?: string | null;
         };
         Relationships: [];
       };
@@ -1203,6 +1206,27 @@ export type Database = {
           profile_id?: string;
           audience?: Enums["sos_audience"];
           at?: string;
+        };
+        Relationships: [];
+      };
+      staff_pins: {
+        Row: {
+          profile_id: string;
+          pin: string;
+          set_at: string;
+          set_by: string | null;
+        };
+        Insert: {
+          profile_id: string;
+          pin: string;
+          set_at?: string;
+          set_by?: string | null;
+        };
+        Update: {
+          profile_id?: string;
+          pin?: string;
+          set_at?: string;
+          set_by?: string | null;
         };
         Relationships: [];
       };
@@ -1540,6 +1564,10 @@ export type Database = {
         Returns: Enums["user_role"];
       };
       next_client_code: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      next_employee_code: {
         Args: Record<PropertyKey, never>;
         Returns: string;
       };

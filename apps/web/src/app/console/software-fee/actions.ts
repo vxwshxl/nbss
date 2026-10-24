@@ -73,3 +73,16 @@ export async function saveFeeSettings(input: { perGuardRupees: number; gstPercen
   revalidatePath("/console/software-fee");
   return error ? { ok: false, error: error.message } : { ok: true };
 }
+
+/** Skip a month (a free or trial month), or bring a skipped one back. Developers only. */
+export async function setFeeSkipped(invoiceId: string, skip: boolean, note?: string): Promise<{ ok: boolean; error?: string }> {
+  const session = await currentSession();
+  if (session?.realProfile.role !== "developer") return { ok: false, error: "Only a developer can skip a month." };
+  const { error } = await supabaseAdmin()
+    .from("software_fee_invoices")
+    .update({ status: skip ? "skipped" : "unpaid", skip_note: skip ? (note?.trim() || "Free month") : null, updated_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .neq("status", "paid");
+  revalidatePath("/console/software-fee");
+  return error ? { ok: false, error: error.message } : { ok: true };
+}

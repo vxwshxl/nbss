@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { isAdmin, roleAllowed } from "@nbss/shared/identity";
+import { expandEmployeeCode, isShortPin, pinPassword } from "@nbss/shared/identity";
 
 import { impersonatedId, type Session } from "@/lib/impersonation";
 import { bearerToken, supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ export function codeToEmail(code: string): string {
 
 /** Codes are stored and compared uppercase, so case at the keypad never matters. */
 export function normaliseCode(code: string): string {
-  return code.trim().toUpperCase().replace(/\s+/g, "");
+  return expandEmployeeCode(code);
 }
 
 /** Mirrors the CHECK constraint on profiles.employee_code. */
@@ -55,7 +56,9 @@ export function isValidCode(code: string): boolean {
  * admin can move a geofence or rewrite attendance — so they get a real
  * passphrase and the digit-only rule would only weaken them.
  */
+/** A 4-digit PIN for anyone; older 6–12 digit PINs and 8+ character passphrases still count. */
 export function isValidSecret(secret: string, role: Role): boolean {
+  if (isShortPin(secret)) return true;
   return role === "guard" ? /^\d{6,12}$/.test(secret) : secret.length >= 8;
 }
 
@@ -191,8 +194,8 @@ export async function createStaffAccount(input: {
     return {
       error:
         input.role === "guard"
-          ? "A guard's PIN must be 6–12 digits."
-          : "A staff passphrase must be at least 8 characters.",
+          ? "The PIN must be 4 digits."
+          : "The PIN must be 4 digits.",
     };
   }
 
@@ -217,7 +220,7 @@ export async function createStaffAccount(input: {
 
   const { data: created, error: authError } = await admin.auth.admin.createUser({
     email: email ?? codeToEmail(code),
-    password: input.pin,
+    password: pinPassword(input.pin),
     // Marked confirmed on creation, so Supabase never tries to deliver a
     // verification mail to an address that does not receive any.
     email_confirm: true,

@@ -1,3 +1,4 @@
+import { pinPassword } from "@nbss/shared/identity";
 import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -173,7 +174,7 @@ export async function passwordSignIn(
   const email = await resolveLoginEmail(identifier);
   if (!email) return { ok: false, error: REFUSED };
 
-  const { data, error } = await client.auth.signInWithPassword({ email, password: secret });
+  const { data, error } = await client.auth.signInWithPassword({ email, password: pinPassword(secret) });
   if (error) return { ok: false, error: REFUSED };
   return finish(client, data.user?.id);
 }

@@ -62,8 +62,9 @@ export function codeToEmail(code: string): string {
 export { CLIENT_DOMAIN_NOTE };
 
 /** Codes are stored and compared uppercase, so case at the keypad never matters. */
+/** Upper-cased, no spaces; a bare number ("11") is read as NBSS-011. */
 export function normaliseCode(code: string): string {
-  return code.trim().toUpperCase().replace(/\s+/g, "");
+  return expandEmployeeCode(code);
 }
 
 /** Mirrors the CHECK constraint on profiles.employee_code. */
@@ -131,4 +132,26 @@ export function initials(name: string): string {
   if (!first || !last) return "?";
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase() || "?";
+}
+
+/**
+ * A 4-digit PIN as the password Supabase stores. Auth needs at least six characters,
+ * and a guard types four digits, so the PIN is wrapped the same way on every side
+ * (console account creation, website and app sign-in). Older 6–12 digit PINs and
+ * passphrases are used as typed.
+ */
+export const EMPLOYEE_PREFIX = "NBSS-";
+
+export function isShortPin(secret: string): boolean {
+  return /^\d{4}$/.test(secret);
+}
+
+export function pinPassword(secret: string): string {
+  return isShortPin(secret) ? `nbss-pin-${secret}` : secret;
+}
+
+/** "42", "042" or "nbss-042" all mean NBSS-042; any other code is kept as written. */
+export function expandEmployeeCode(raw: string): string {
+  const code = raw.trim().toUpperCase().replace(/\s+/g, "");
+  return /^\d{1,6}$/.test(code) ? `${EMPLOYEE_PREFIX}${code.padStart(3, "0")}` : code;
 }

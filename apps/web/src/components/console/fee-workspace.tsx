@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Loader2, Printer, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { saveFeeSettings, startFeePayment, verifyFeePayment } from "@/app/console/software-fee/actions";
+import { saveFeeSettings, setFeeSkipped, startFeePayment, verifyFeePayment } from "@/app/console/software-fee/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,8 @@ export type FeeInvoice = {
   gst_percent: number;
   gst_paise: number;
   total_paise: number;
-  status: "paid" | "unpaid";
+  status: "paid" | "unpaid" | "skipped";
+  skip_note?: string | null;
   is_test?: boolean;
   due_on: string;
   paid_at: string | null;
@@ -59,16 +60,16 @@ function loadCheckout(): Promise<boolean> {
   });
 }
 
-function StatusStamp({ status, big }: { status: "paid" | "unpaid"; big?: boolean }) {
+function StatusStamp({ status, big }: { status: "paid" | "unpaid" | "skipped"; big?: boolean }) {
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full font-bold tracking-wide uppercase",
         big ? "border-2 px-4 py-1.5 text-sm" : "px-2.5 py-0.5 text-[11px]",
-        status === "paid" ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-amber-500 bg-amber-50 text-amber-700",
+        status === "paid" ? "border-emerald-600 bg-emerald-50 text-emerald-700" : status === "skipped" ? "border-slate-400 bg-slate-100 text-slate-600" : "border-amber-500 bg-amber-50 text-amber-700",
       )}
     >
-      {status === "paid" ? "Paid" : "Unpaid"}
+      {status === "paid" ? "Paid" : status === "skipped" ? "Skipped" : "Unpaid"}
     </span>
   );
 }
@@ -81,6 +82,17 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
   const router = useRouter();
   const [open, setOpen] = useState<FeeInvoice | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
+  const [skipping, setSkipping] = useState<string | null>(null);
+
+  async function skip(inv: FeeInvoice, on: boolean) {
+    setSkipping(inv.id);
+    const r = await setFeeSkipped(inv.id, on);
+    setSkipping(null);
+    if (r.ok) {
+      toast.success(on ? `${month(inv.period)} skipped: nothing due.` : `${month(inv.period)} is due again.`);
+      router.refresh();
+    } else toast.error(r.error ?? "Could not change it.");
+  }
 
   async function pay(inv: FeeInvoice) {
     setPaying(inv.id);
@@ -149,9 +161,23 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
                   <td className="px-3 py-3 text-right font-semibold tabular-nums">{inr(inv.total_paise)}</td>
                   <td className="px-3 py-3">
                     <StatusStamp status={inv.status} />
-                    <span className="ml-2 text-xs text-muted-foreground">{inv.status === "paid" && inv.paid_at ? day(inv.paid_at) : `due ${day(inv.due_on)}`}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{inv.status === "paid" && inv.paid_at ? day(inv.paid_at) : inv.status === "skipped" ? (inv.skip_note ?? "Free month") : `due ${day(inv.due_on)}`}</span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-5 py-3 text-right whitespace-nowrap">
+                    {canEdit && inv.status !== "paid" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mr-2"
+                        disabled={skipping === inv.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void skip(inv, inv.status !== "skipped");
+                        }}
+                      >
+                        {inv.status === "skipped" ? "Un-skip" : "Skip month"}
+                      </Button>
+                    )}
                     {inv.status === "unpaid" && inv.total_paise >= 100 && !online && (
                       <span className="text-xs text-muted-foreground">Online payment not set up</span>
                     )}
@@ -189,6 +215,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
 
 function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void }) {
   const paid = inv.status === "paid";
+  const skipped = inv.status === "skipped";
   return (
     <div id="fee-invoice" className="overflow-hidden rounded-2xl">
       {/* The band: who is billing, what this is, and whether it is settled. */}
@@ -202,10 +229,10 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
           <span
             className={cn(
               "rounded-xl border-2 px-4 py-1.5 text-sm font-extrabold tracking-widest uppercase",
-              paid ? "border-white bg-white text-emerald-700" : "border-amber-200 bg-amber-300 text-amber-950",
+              paid ? "border-white bg-white text-emerald-700" : skipped ? "border-white/60 bg-white/20 text-white" : "border-amber-200 bg-amber-300 text-amber-950",
             )}
           >
-            {paid ? "Paid" : "Unpaid"}
+            {paid ? "Paid" : skipped ? "Skipped" : "Unpaid"}
           </span>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -266,7 +293,9 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
           >
             {paid
               ? `Paid ${inv.paid_at ? day(inv.paid_at) : ""} online${inv.razorpay_payment_id ? ` · ${inv.razorpay_payment_id}` : ""}`
-              : `Unpaid · due on ${day(inv.due_on)}`}
+              : skipped
+                ? `Skipped · ${inv.skip_note ?? "Free month"} · nothing due`
+                : `Unpaid · due on ${day(inv.due_on)}`}
           </p>
           <dl className="w-full max-w-xs space-y-1.5 rounded-2xl bg-muted/50 p-4 text-sm sm:w-72">
             <div className="flex justify-between">
@@ -290,7 +319,7 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
             <Button variant="outline" onClick={() => window.print()}>
               <Printer data-icon="inline-start" /> Print
             </Button>
-            {!paid && online && inv.total_paise >= 100 && (
+            {!paid && !skipped && online && inv.total_paise >= 100 && (
               <Button onClick={onPay} disabled={paying}>
                 {paying && <Loader2 className="animate-spin" />}
                 Pay {inr(inv.total_paise)}

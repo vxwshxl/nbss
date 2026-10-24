@@ -48,6 +48,7 @@ export default async function GuardAttendancePage({
   const supabase = await supabaseServer();
   const { data: guard } = await supabase.from("profiles").select("id, full_name, employee_code, role").eq("id", id).maybeSingle();
   if (!guard) notFound();
+  const { data: pinRow } = await supabase.from("staff_pins").select("pin").eq("profile_id", guard.id).maybeSingle();
 
   const [shifts, att] = await Promise.all([
     supabase
@@ -149,7 +150,22 @@ export default async function GuardAttendancePage({
       <Link href="/console/reports" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" /> Reports
       </Link>
-      <PageHeader eyebrow={`Attendance · ${guard.employee_code}`} title={guard.full_name} />
+      <PageHeader
+        eyebrow="Attendance"
+        title={guard.full_name}
+        action={
+          <div className="flex gap-2">
+            <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm">
+              <span className="mr-2 text-[11px] font-bold tracking-widest text-emerald-700 uppercase">Code</span>
+              <span className="font-mono font-bold">{guard.employee_code}</span>
+            </span>
+            <span className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm">
+              <span className="mr-2 text-[11px] font-bold tracking-widest text-violet-700 uppercase">PIN</span>
+              <span className="font-mono font-bold tracking-[0.25em]">{pinRow?.pin ?? "-"}</span>
+            </span>
+          </div>
+        }
+      />
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Present" value={String(present)} hint={`${late} late`} icon={CalendarCheck} tone="emerald" />
         <StatCard label="Absent" value={String(absent)} hint="Rostered, no check-in" icon={CalendarX2} tone={absent ? "rose" : "slate"} />

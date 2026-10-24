@@ -105,6 +105,22 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
       </div>
 
       <div className="space-y-6 p-6">
+        {/* What the office tells the person: the code and PIN they sign in with. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+            <p className="text-[11px] font-bold tracking-widest text-emerald-700 uppercase">Employee code</p>
+            <p className="mt-0.5 font-mono text-xl font-bold tracking-wider">{p.code}</p>
+          </div>
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-3">
+            <p className="text-[11px] font-bold tracking-widest text-violet-700 uppercase">PIN</p>
+            {p.pin ? (
+              <p className="mt-0.5 font-mono text-xl font-bold tracking-[0.35em]">{p.pin}</p>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">Not on file. Reset the PIN to set one.</p>
+            )}
+          </div>
+        </div>
+
         {p.guard && (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

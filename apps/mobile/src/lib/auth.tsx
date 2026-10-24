@@ -10,6 +10,7 @@ import {
   isValidEmail,
   normaliseCode,
   type Role,
+  pinPassword,
 } from "@nbss/shared/identity";
 
 import { WEB_URL } from "./config";
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isEmail(identifier)) {
         const { error } = await supabase.auth.signInWithPassword({
           email: identifier.toLowerCase(),
-          password: secret,
+          password: pinPassword(secret),
         });
         // One message for every failure, so the form cannot be used to discover
         // which accounts exist.
@@ -209,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       // Older logins still sit under their synthesized address, so that is
       // tried first; it needs no server. Otherwise the server resolves the code.
-      const legacy = await supabase.auth.signInWithPassword({ email: codeToEmail(code), password: secret });
+      const legacy = await supabase.auth.signInWithPassword({ email: codeToEmail(code), password: pinPassword(secret) });
       if (!legacy.error) return {};
       return await viaServer("password", { identifier: code, secret });
     } finally {

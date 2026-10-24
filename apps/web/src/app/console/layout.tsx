@@ -139,24 +139,31 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       topbarRight={
-        <>
-        {canImpersonate && <ModeToggle mode={mode} />}
+        // One element, not a fragment: a fragment crosses to the client shell as a
+        // keyless list and React warns about the missing keys.
+        <div className="flex items-center gap-2">
+        {canImpersonate && <ModeToggle key="mode" mode={mode} />}
         <UserMenu
+          key="user"
           name={profile.full_name}
           code={profile.employee_code}
           roleLabel={ROLE_LABEL[profile.role]}
           photoUrl={profile.avatar_url}
           signOut={signOut}
         />
-        </>
+        </div>
       }
     >
+      {/* One child: several cross to the client shell as a keyless list. */}
+      <div className="contents">
       <RealtimeRefresher
+        key="realtime"
         tables={CONSOLE_REALTIME_TABLES}
         clientTopic={profile.role === "client" ? `client:${profile.id}` : undefined}
       />
-      {isStaff(realProfile.role) && <SosAlarm />}
-      {children}
+      {isStaff(realProfile.role) && <SosAlarm key="sos" />}
+      <div key="page" className="contents">{children}</div>
+      </div>
     </AppShell>
   );
 }

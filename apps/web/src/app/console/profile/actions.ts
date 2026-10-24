@@ -1,5 +1,7 @@
 "use server";
 
+import { pinPassword } from "@nbss/shared/identity";
+
 import { revalidatePath } from "next/cache";
 
 import { audit, isValidSecret, requireSession } from "@/lib/auth";
@@ -66,8 +68,8 @@ export async function changeOwnPin(_prev: ProfileState, data: FormData): Promise
       ok: false,
       error:
         session.profile.role === "guard"
-          ? "Your new PIN must be 6–12 digits."
-          : "Your new passphrase must be at least 8 characters.",
+          ? "Your new PIN must be 4 digits."
+          : "Your new PIN must be 4 digits.",
     };
   }
   if (next === current) return { ok: false, error: "The new PIN must be different from the old one." };
@@ -87,10 +89,10 @@ export async function changeOwnPin(_prev: ProfileState, data: FormData): Promise
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 
-  const { error: wrong } = await probe.auth.signInWithPassword({ email, password: current });
+  const { error: wrong } = await probe.auth.signInWithPassword({ email, password: pinPassword(current) });
   if (wrong) return { ok: false, error: "That is not your current PIN." };
 
-  const { error } = await admin.auth.admin.updateUserById(session.profile.id, { password: next });
+  const { error } = await admin.auth.admin.updateUserById(session.profile.id, { password: pinPassword(next) });
   if (error) return { ok: false, error: error.message };
 
   await admin

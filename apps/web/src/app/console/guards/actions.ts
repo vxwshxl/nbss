@@ -1,17 +1,16 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+
+import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { revalidatePath } from "next/cache";
 
-import { isAdmin, isValidEmail, ROLES } from "@nbss/shared/identity";
+import { isAdmin, isValidEmail, pinPassword, ROLES } from "@nbss/shared/identity";
 
 import {
   audit,
   codeToEmail,
   createStaffAccount,
-  isValidSecret,
-  normaliseCode,
   requireRoleSession,
   type Role,
 } from "@/lib/auth";
@@ -24,105 +23,75 @@ async function clientIp(): Promise<string | null> {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 }
 
-/** Digits only, and never starting with a zero — some keypads eat a leading 0. */
+/** Four digits, never starting with a zero (some keypads eat a leading 0). */
 function generatePin(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-/** Clients and guards sign in with a code mailed to them, so they must have an address. */
-function needsEmail(role: Role): boolean {
-  return role === "guard" || role === "client";
-}
-
-/** An unguessable password for an account that signs in by emailed code only. */
-function unusablePassword(): string {
-  return randomBytes(24).toString("base64url");
+/** Kept where the office can read it again: they tell the guard. */
+async function rememberPin(profileId: string, pin: string, by: string): Promise<void> {
+  await supabaseAdmin().from("staff_pins").upsert({ profile_id: profileId, pin, set_at: new Date().toISOString(), set_by: by });
 }
 
 export async function addGuard(_prev: GuardFormState, data: FormData): Promise<GuardFormState> {
   const session = await requireRoleSession("admin");
 
-  const employeeCode = normaliseCode(String(data.get("employee_code") ?? ""));
+  // The office types the number; "NBSS-" is fixed.
+  const number = String(data.get("employee_number") ?? "").replace(/\D/g, "");
+  const employeeCode = number ? `NBSS-${number.padStart(3, "0")}` : "";
   const fullName = String(data.get("full_name") ?? "").trim();
   const phone = String(data.get("phone") ?? "").trim();
   const email = String(data.get("email") ?? "").trim().toLowerCase();
   const role = String(data.get("role") ?? "guard") as Role;
   const supplied = String(data.get("pin") ?? "").trim();
 
-  const values = { employee_code: employeeCode, full_name: fullName, phone, email, role, pin: "" };
+  const values = { employee_code: number, full_name: fullName, phone, email, role, pin: supplied };
 
-  if (!ROLES.includes(role)) {
-    return { ok: false, values, error: "Choose a role." };
-  }
+  if (!ROLES.includes(role)) return { ok: false, values, error: "Choose a role." };
   if (role === "developer" && session.realProfile.role !== "developer") {
     return { ok: false, values, error: "Only a developer can create another developer." };
   }
   if (!fullName) return { ok: false, values, error: "Enter the person's full name." };
-  if (email && !isValidEmail(email)) {
-    return { ok: false, values, error: "That email address does not look right." };
-  }
-  if (needsEmail(role) && !email) {
-    return { ok: false, values, error: "An email address is required: sign-in codes are sent there." };
-  }
+  if (!number) return { ok: false, values, error: "Enter the employee number." };
+  if (phone.replace(/\D/g, "").length < 10) return { ok: false, values, error: "Enter a 10-digit phone number." };
+  if (email && !isValidEmail(email)) return { ok: false, values, error: "That email address does not look right." };
+  if (supplied && !/^\d{4}$/.test(supplied)) return { ok: false, values, error: "The PIN must be 4 digits." };
 
-  // A guard gets a PIN as well as their email, for the days the mail is slow
-  // at a gate. Anyone else with an address signs in by code alone unless the
-  // admin sets a passphrase; without an address a passphrase is the only way in.
-  const secret = supplied || (role === "guard" ? generatePin() : "");
-
-  if (!secret && !email) {
-    return { ok: false, values, error: "Add an email address, or set a passphrase of at least 8 characters." };
-  }
-  if (secret && !isValidSecret(secret, role)) {
-    return {
-      ok: false,
-      values,
-      error:
-        role === "guard"
-          ? "A guard's PIN must be 6–12 digits."
-          : "A passphrase must be at least 8 characters.",
-    };
-  }
+  // Everyone signs in with their employee code and a 4-digit PIN the office gives them.
+  const pin = supplied || generatePin();
 
   const created = await createStaffAccount({
     employeeCode,
-    pin: secret || unusablePassword(),
+    pin,
     fullName,
     role,
-    phone: phone || undefined,
+    phone,
     email: email || undefined,
   });
-
   if ("error" in created) return { ok: false, values, error: created.error };
 
-  // Anyone given a secret they did not choose is asked to replace it.
-  if (secret && !supplied) {
-    await supabaseAdmin().from("profiles").update({ must_change_pin: true }).eq("id", created.id);
-  }
+  await rememberPin(created.id, pin, session.realProfile.id);
+  // Test or Live, as its creator sees: a developer by their header switch, anyone else
+  // by their own side. (The service key creates it, so the database cannot tell.)
+  const isTest =
+    session.realProfile.role === "developer"
+      ? parseMode((await cookies()).get(DATA_MODE_COOKIE)?.value) === "test"
+      : Boolean((session.realProfile as { is_test?: boolean }).is_test);
+  if (isTest) await supabaseAdmin().from("profiles").update({ is_test: true }).eq("id", created.id);
 
   await audit({
     actor: session.realProfile,
     action: "account_created",
     entity: "profiles",
     entityId: created.id,
-    detail: { employee_code: employeeCode, role, generated_pin: !!secret && !supplied, email: !!email },
+    detail: { employee_code: employeeCode, role, generated_pin: !supplied, email: !!email },
     ip: await clientIp(),
   });
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
 
-  return {
-    ok: true,
-    values: null,
-    created: {
-      employeeCode,
-      fullName,
-      email: email || null,
-      pin: secret || null,
-      generated: !!secret && !supplied,
-    },
-  };
+  return { ok: true, values: null, created: { employeeCode, fullName, email: email || null, pin, generated: !supplied } };
 }
 
 /**
@@ -149,9 +118,7 @@ export async function updateContact(
   const phone = input.phone.trim();
 
   if (email && !isValidEmail(email)) return { ok: false, error: "That email address does not look right." };
-  if (!email && needsEmail(target.role)) {
-    return { ok: false, error: "Guards and clients need an email address to sign in." };
-  }
+  // Email is optional: everyone signs in with their employee code and PIN.
 
   if (email !== (target.email ?? "")) {
     if (email) {
@@ -209,15 +176,16 @@ export async function resetPin(profileId: string): Promise<PinResetResult> {
 
   if (!target) return { ok: false, error: "That account no longer exists." };
 
-  const pin = target.role === "guard" ? generatePin() : `nbss-${generatePin()}`;
+  const pin = generatePin();
 
-  const { error } = await admin.auth.admin.updateUserById(profileId, { password: pin });
+  const { error } = await admin.auth.admin.updateUserById(profileId, { password: pinPassword(pin) });
   if (error) return { ok: false, error: error.message };
+  await rememberPin(profileId, pin, session.realProfile.id);
 
   await admin
     .from("profiles")
     .update({
-      must_change_pin: true,
+      must_change_pin: false,
       pin_reset_at: new Date().toISOString(),
       pin_reset_by: session.realProfile.id,
     })

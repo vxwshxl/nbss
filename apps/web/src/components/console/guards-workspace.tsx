@@ -171,6 +171,7 @@ export function GuardsWorkspace({
   isDeveloper = false,
   showRoleTabs = false,
   defaultRole = "guard",
+  nextCode = "NBSS-001",
 }: {
   rows: PersonRow[];
   canManage: boolean;
@@ -181,6 +182,8 @@ export function GuardsWorkspace({
   showRoleTabs?: boolean;
   /** What "Add person" starts on. */
   defaultRole?: Role;
+  /** The next free NBSS-### code, offered in the form. */
+  nextCode?: string;
 }) {
   const [pending, start] = useTransition();
 
@@ -214,7 +217,6 @@ export function GuardsWorkspace({
 
   const [addState, addAction] = useActionState(addGuard, emptyGuardForm);
   const [role, setRole] = useState<Role>(defaultRole);
-  const emailRequired = role === "guard" || role === "client";
 
   function runContact(row: PersonRow, form: FormData) {
     start(async () => {
@@ -456,7 +458,7 @@ export function GuardsWorkspace({
           <DialogHeader>
             <DialogTitle>Add a person</DialogTitle>
             <DialogDescription>
-              They sign in with a code sent to their email.
+              They sign in with their employee code and a 4-digit PIN. Tell them both.
             </DialogDescription>
           </DialogHeader>
 
@@ -483,81 +485,83 @@ export function GuardsWorkspace({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="employee_code">
+              <Label htmlFor="employee_number">
                 Employee code <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="employee_code"
-                name="employee_code"
-                defaultValue={addState.values?.employee_code}
-                placeholder="NBSS-042"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                required
-                className="font-mono tracking-wider uppercase"
-              />
-              <p className="text-xs text-muted-foreground">
-                Printed on their identity card. Letters, digits and hyphens.
-              </p>
+              <div className="flex h-10 items-center overflow-hidden rounded-lg border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+                <span className="flex h-full items-center bg-muted px-3 font-mono text-sm font-semibold tracking-wider text-muted-foreground">NBSS-</span>
+                <input
+                  id="employee_number"
+                  name="employee_number"
+                  inputMode="numeric"
+                  defaultValue={addState.values?.employee_code || nextCode.replace(/^NBSS-/, "")}
+                  required
+                  className="h-full min-w-0 flex-1 bg-transparent px-3 font-mono text-sm tracking-wider outline-none"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">The next free number is filled in. They sign in with this code.</p>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">
-                Email {emailRequired && <span className="text-destructive">*</span>}
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                defaultValue={addState.values?.email}
-                placeholder="name@example.com"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                required={emailRequired}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="phone">
+                  Phone <span className="text-destructive">*</span>
+                </Label>
+                <Input id="phone" name="phone" defaultValue={addState.values?.phone} inputMode="tel" placeholder="10-digit mobile" required />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email">
+                  Email <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  defaultValue={addState.values?.email}
+                  placeholder="name@example.com"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                name="phone"
-                defaultValue={addState.values?.phone}
-                inputMode="tel"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="role">
-                Role <span className="text-destructive">*</span>
-              </Label>
-              {/* Radix's Select is not a form control, so the chosen value is
-                  mirrored into a hidden input for the server action. */}
-              <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-                <SelectTrigger id="role" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.filter((r) => isDeveloper || r.value !== "developer").map((r) => (
-                    <SelectItem key={r.value} value={r.value} description={r.note}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input type="hidden" name="role" value={role} />
-
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pin">{role === "guard" ? "PIN" : "Passphrase"} <span className="font-normal text-muted-foreground">(optional)</span></Label>
-              <Input
-                id="pin"
-                name="pin"
-                placeholder={role === "guard" ? "Leave blank to generate one" : "Leave blank to sign in by email code"}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="role">
+                  Role <span className="text-destructive">*</span>
+                </Label>
+                {/* Radix's Select is not a form control, so the chosen value is
+                    mirrored into a hidden input for the server action. */}
+                <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES.filter((r) => isDeveloper || r.value !== "developer").map((r) => (
+                      <SelectItem key={r.value} value={r.value} description={r.note}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="role" value={role} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="pin">
+                  PIN <span className="font-normal text-muted-foreground">(4 digits)</span>
+                </Label>
+                <Input
+                  id="pin"
+                  name="pin"
+                  inputMode="numeric"
+                  maxLength={4}
+                  pattern="\d{4}"
+                  defaultValue={addState.values?.pin}
+                  placeholder="Blank to make one"
+                  className="font-mono tracking-[0.3em]"
+                />
+              </div>
             </div>
           </form>
 
@@ -590,21 +594,21 @@ export function GuardsWorkspace({
             <DialogTitle>{issued ? "New PIN issued" : "Account created"}</DialogTitle>
             <DialogDescription>
               {issued
-                ? `Give this to ${issued.who}. It cannot be shown again.`
+                ? `Tell ${issued.who} their new PIN.`
                 : addState.created
                   ? addState.created.email
                     ? `${addState.created.fullName} signs in with ${addState.created.email}. A code is emailed each time.`
-                    : `${addState.created.fullName} can sign in with ${addState.created.employeeCode}.`
+                    : `${addState.created.fullName} signs in with ${addState.created.employeeCode} and this PIN.`
                   : ""}
             </DialogDescription>
           </DialogHeader>
 
           {secret ? (
             <>
-              <p className="text-sm font-medium">{issued ? "PIN" : "Backup PIN"}</p>
+              <p className="text-sm font-medium">PIN</p>
               <Secret value={secret} />
               <p className="text-xs text-muted-foreground">
-                Shown once: it is stored hashed and cannot be read back.
+                You can see it again any time in their profile.
               </p>
             </>
           ) : (
