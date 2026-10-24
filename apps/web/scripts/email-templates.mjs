@@ -7,7 +7,13 @@
  * field names here must match those in 0022_field_ops.sql.
  */
 
+import { createHmac } from "node:crypto";
+
 const BASE = (process.env.NEXT_PUBLIC_BASE_URL || "https://nbsskokrajhar.com").replace(/\/$/, "");
+
+/** Same formula as src/lib/sos-map-sig.ts: the map picture only loads from a link we signed. */
+const sosMapSig = (id) =>
+  createHmac("sha256", process.env.SUPABASE_SECRET_KEY ?? "").update(`sos-map:${id}`).digest("hex").slice(0, 24);
 
 const esc = (v) =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -31,7 +37,7 @@ function rupees(paise) {
   return `₹${(Number(paise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
-function layout({ heading, intro, rows = [], action, note, tone = "green", text }) {
+function layout({ heading, intro, rows = [], action, note, tone = "green", text, image }) {
   const band =
     tone === "red"
       ? "background:#b91c1c;background-image:linear-gradient(100deg,#dc2626 10%,#991b1b 90%)"
@@ -63,6 +69,7 @@ function layout({ heading, intro, rows = [], action, note, tone = "green", text 
               <td style="padding:28px">
                 <p style="margin:0 0 6px;font-size:16px;font-weight:600">${esc(heading)}</p>
                 <p style="margin:0 0 16px;font-size:14px;color:#5d5d5d;line-height:1.5">${esc(intro)}</p>
+                ${image ? `<a href="${esc(image.href)}" style="display:block;margin:0 0 16px;text-decoration:none"><img src="${esc(image.src)}" width="424" alt="${esc(image.alt)}" style="display:block;width:100%;height:auto;border:0;border-radius:12px;background:#eef0ee"></a>` : ""}
                 ${table ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0">${table}</table>` : ""}
                 ${button}
                 ${note ? `<p style="margin:22px 0 0;font-size:12px;color:#8a8a8a;line-height:1.5">${esc(note)}</p>` : ""}
@@ -94,8 +101,11 @@ export const templates = {
         ["Raised", istTime(d.raised_at)],
         ["Location", map ? `${Number(d.lat).toFixed(5)}, ${Number(d.lng).toFixed(5)}` : "No GPS fix"],
       ],
-      action: { label: "Open the SOS", href: `${BASE}/console/sos` },
-      note: map ? `Map: ${map}` : "The phone could not get a GPS fix when the alert was raised.",
+      // Where it came from, at a glance: a picture of the spot and the site's fence
+      // (email clients run no scripts), opening Google Maps at the pin when tapped.
+      image: map && d.alert_id ? { src: `${BASE}/api/sos-map/${d.alert_id}?s=${sosMapSig(d.alert_id)}`, href: map, alt: `Map: where ${d.guard} raised the SOS` } : undefined,
+      action: { label: "Open the SOS", href: `${BASE}/console/sos?alert=${d.alert_id ?? ""}` },
+      note: map ? `Tap the map for directions: ${map}` : "The phone could not get a GPS fix when the alert was raised.",
       text: `SOS at ${d.site}: ${d.guard} (${d.code}) needs help. ${KIND[d.kind] ?? ""} ${d.note ?? ""}\n${map ?? ""}\n${BASE}/console/sos`,
     });
   },
