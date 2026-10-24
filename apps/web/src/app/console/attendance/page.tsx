@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { requireSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
+import { AttendanceViews, ViewTabs } from "@/app/console/attendance/views";
 
 export const metadata: Metadata = { title: "Attendance" };
 export const dynamic = "force-dynamic";
@@ -27,12 +28,17 @@ export const dynamic = "force-dynamic";
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; record?: string }>;
+  searchParams: Promise<{ site?: string; record?: string; view?: string; month?: string; date?: string }>;
 }) {
   const session = await requireSession();
   const supabase = await supabaseServer();
 
-  const siteId = (await searchParams).site;
+  const q = await searchParams;
+  const siteId = q.site;
+  // Staff read attendance four ways; a guard has their own list only.
+  if (isStaff(session.profile.role) && q.view !== "punches") {
+    return <AttendanceViews view={q.view} month={q.month} date={q.date} siteId={siteId} />;
+  }
 
   let query = supabase
     .from("attendance")
@@ -87,6 +93,7 @@ export default async function AttendancePage({
         eyebrow="Operations"
         title={mine ? "My attendance" : "Attendance"}
       />
+      {!mine && <ViewTabs view="punches" />}
 
       <Panel
         tone="sky"

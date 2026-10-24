@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusPill } from "@/components/ui/status-pill";
-import { DatePicker } from "@/components/ui/date-picker";
+import { PeriodBar } from "@/components/console/period-bar";
 import { duration } from "@/lib/tracking";
 
 export type RegisterRow = {
@@ -76,12 +76,7 @@ export function GuardRegister({ guardName, from, to, rows }: { guardName: string
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-app-line bg-card p-3">
-        <span className="px-1 text-sm font-medium">Period</span>
-        <DatePicker value={from} onChange={(v) => v && go(v, to)} className="h-9 w-40" />
-        <span className="text-muted-foreground">to</span>
-        <DatePicker value={to} onChange={(v) => v && go(from, v)} className="h-9 w-40" />
-      </div>
+      <PeriodBar from={from} to={to} onChange={go} />
       <DataTable
         title={`${rows.length} ${rows.length === 1 ? "entry" : "entries"}`}
         columns={columns}

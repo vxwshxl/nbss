@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { PeriodBar } from "@/components/console/period-bar";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { duration } from "@/lib/tracking";
 
@@ -96,12 +97,7 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-app-line bg-card p-3">
-        <span className="px-1 text-sm font-medium">Period</span>
-        <input type="date" value={from} max={to} onChange={(e) => e.target.value && go(e.target.value, to)} className="h-9 rounded-full bg-muted/70 px-3 text-sm ring-1 ring-border/60 outline-none" aria-label="From" />
-        <span className="text-muted-foreground">to</span>
-        <input type="date" value={to} min={from} onChange={(e) => e.target.value && go(from, e.target.value)} className="h-9 rounded-full bg-muted/70 px-3 text-sm ring-1 ring-border/60 outline-none" aria-label="To" />
-      </div>
+      <PeriodBar from={from} to={to} onChange={go} />
       <DataTable title="By guard" columns={g} data={guards} getRowKey={(r) => r.id} printTitle={`Guards ${from} to ${to}`} searchPlaceholder="Search guards…" emptyMessage="No attendance in this period." />
       <DataTable title="By site" columns={s} data={sites} getRowKey={(r) => r.id} printTitle={`Sites ${from} to ${to}`} searchPlaceholder="Search sites…" emptyMessage="No sites." />
     </div>
