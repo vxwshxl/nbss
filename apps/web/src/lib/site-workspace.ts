@@ -8,28 +8,74 @@
  */
 
 import {
+  ArrowLeftRight,
   CalendarCheck,
   CalendarRange,
+  FileSpreadsheet,
   LayoutDashboard,
   MapPinned,
+  NotebookPen,
+  Radar,
+  Route,
   Settings2,
   Siren,
+  Smartphone,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
 
 export type WorkspaceSite = { id: string; name: string; district: string | null; client: string | null; active: boolean };
 
-export const SITE_SECTIONS: { key: string; label: string; icon: LucideIcon }[] = [
-  { key: "", label: "Overview", icon: LayoutDashboard },
-  { key: "roster", label: "Roster", icon: CalendarRange },
-  { key: "attendance", label: "Attendance", icon: CalendarCheck },
-  { key: "guards", label: "Guards", icon: UserRound },
-  { key: "sos", label: "SOS alerts", icon: Siren },
-  { key: "settings", label: "Boundary & settings", icon: Settings2 },
+/**
+ * A site's sidebar: the same groups and pages as the whole agency's, each showing
+ * that site alone, so moving between "all sites" and one site changes the data, not
+ * the menu. Overview and Boundary & settings are the site's own.
+ */
+export const SITE_GROUPS: { label: string | null; items: { key: string; label: string; icon: LucideIcon }[] }[] = [
+  {
+    label: null,
+    items: [
+      { key: "", label: "Overview", icon: LayoutDashboard },
+      { key: "settings", label: "Boundary & settings", icon: Settings2 },
+    ],
+  },
+  {
+    label: "Location tracking",
+    items: [
+      { key: "live", label: "Live tracking", icon: Radar },
+      { key: "routes", label: "Route history", icon: Route },
+    ],
+  },
+  {
+    label: "Shift management",
+    items: [
+      { key: "roster", label: "Roster", icon: CalendarRange },
+      { key: "replacements", label: "Replacements", icon: ArrowLeftRight },
+      { key: "handover", label: "Handover notes", icon: NotebookPen },
+    ],
+  },
+  {
+    label: "Security management",
+    items: [
+      { key: "guards", label: "Guards", icon: UserRound },
+      { key: "devices", label: "Devices", icon: Smartphone },
+      { key: "sos", label: "SOS alerts", icon: Siren },
+    ],
+  },
+  {
+    label: "Attendance",
+    items: [
+      { key: "attendance", label: "Attendance", icon: CalendarCheck },
+      { key: "reports", label: "Reports", icon: FileSpreadsheet },
+    ],
+  },
 ];
 
-export const SITE_SECTION_KEYS = SITE_SECTIONS.map((s) => s.key);
+export const SITE_SECTIONS = SITE_GROUPS.flatMap((g) => g.items);
+
+/** Sections the site's own page renders; the rest are their own routes under the site. */
+export const SITE_SECTION_KEYS = ["", "roster", "attendance", "guards", "sos", "settings"];
+
 
 export const SITE_PATH = /^\/console\/sites\/([0-9a-f-]{36})(?:\/([a-z]+))?/i;
 

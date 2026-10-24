@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { groups } from "@/components/console/nav-items";
 import { NavGroupLabel, NavLink } from "@/components/shell/nav-link";
-import { AGENCY_LINKS, SITE_SECTIONS, siteFromPath, siteHref, type WorkspaceSite } from "@/lib/site-workspace";
+import { AGENCY_LINKS, SITE_GROUPS, siteFromPath, siteHref, type WorkspaceSite } from "@/lib/site-workspace";
 import type { Role } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -43,10 +43,10 @@ export function ConsoleNav({
   if (inSite && site) {
     const here = target ?? pathname;
     const groupsInSite = [
-      {
-        label: site.name,
-        items: SITE_SECTIONS.map((sec) => ({ href: siteHref(site.id, sec.key), label: sec.label, icon: sec.icon, exact: !sec.key })),
-      },
+      ...SITE_GROUPS.map((g) => ({
+        label: g.label ?? site.name,
+        items: g.items.map((sec) => ({ href: siteHref(site.id, sec.key), label: sec.label, icon: sec.icon, exact: !sec.key })),
+      })),
       { label: "NBSS", items: AGENCY_LINKS },
     ];
     return (

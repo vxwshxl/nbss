@@ -6,19 +6,36 @@ import { PageHeader } from "@/components/console/page-header";
 import { StatCard } from "@/components/console/stat-card";
 import { requireRole } from "@/lib/auth";
 import { istDate } from "@/lib/roster";
+import { googleMapsUsage, MAPS_SERVICES, monitoringConfigured, type GoogleUsage } from "@/lib/gcp-monitoring";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Maps usage" };
 export const dynamic = "force-dynamic";
 
 /**
- * Google's list price for the two things the console uses (Maps Platform, from
- * March 2025): each SKU has 10,000 free events a month, then a price per 1,000.
+ * Google Maps Platform pricing for India (billing account and most usage in India),
+ * per Google's India pricing page:
+ *   Dynamic Maps (each map shown in a browser): 70,000 free a month, then $2.10 per
+ *   1,000 up to 5 million, $0.53 per 1,000 beyond.
+ *   Static Maps (the SOS email picture): the global allowance is assumed, 10,000 free
+ *   then $2 per 1,000, until India's figure for it is confirmed.
  * An estimate only — the invoice is in Google Cloud Console.
  */
-const FREE = 10_000;
-const PRICE = { dynamic: 7, static: 2 }; // USD per 1,000 above the free allowance
+const FREE = { dynamic: 70_000, static: 10_000 };
 const USD_INR = 84;
+
+function dynamicCost(n: number): number {
+  const paid = Math.max(0, n - FREE.dynamic);
+  const tier1 = Math.min(paid, 5_000_000 - FREE.dynamic);
+  const tier2 = Math.max(0, paid - tier1);
+  return (tier1 / 1000) * 2.1 + (tier2 / 1000) * 0.53;
+}
+/** The request's clock (read once, outside rendering). */
+function nowMs(): number {
+  return Date.now();
+}
+
+const staticCost = (n: number) => (Math.max(0, n - FREE.static) / 1000) * 2;
 const CLOUD = "https://console.cloud.google.com/google/maps-apis/metrics";
 
 type Report = {
@@ -35,9 +52,6 @@ const LABEL: Record<string, string> = {
 };
 const pageName = (p: string) => LABEL[p] ?? (p.startsWith("/console/reports/guard") ? "Guard attendance" : p.startsWith("/console/sites") ? "Site detail" : p);
 
-function cost(n: number, perK: number): number {
-  return (Math.max(0, n - FREE) / 1000) * perK;
-}
 
 /**
  * How much Google Maps the console used this month, counted as it happens: every
@@ -63,18 +77,34 @@ export default async function MapsUsagePage({ searchParams }: { searchParams: Pr
   const { data } = await supabase.rpc("map_usage_report", { p_from: from, p_to: to });
   const r = (data ?? { days: [], pages: [], people: [] }) as unknown as Report;
 
-  const dyn = r.days.reduce((n, d) => n + Number(d.dynamic), 0);
-  const sta = r.days.reduce((n, d) => n + Number(d.static), 0);
-  const usd = cost(dyn, PRICE.dynamic) + cost(sta, PRICE.static);
+  // Google's own count, when a monitoring key is set up; ours otherwise.
+  let google: GoogleUsage | null = null;
+  let googleError: string | null = null;
+  if (monitoringConfigured()) {
+    try {
+      const startUtc = new Date(Date.UTC(y, m - 1, 1) - 5.5 * 3_600_000);
+      const endUtc = new Date(Math.min(nowMs(), Date.UTC(y, m, 1) - 5.5 * 3_600_000));
+      google = await googleMapsUsage(startUtc, endUtc);
+    } catch (e) {
+      googleError = e instanceof Error ? e.message : "Cloud Monitoring could not be read.";
+    }
+  }
+
+  const ownDyn = r.days.reduce((n, d) => n + Number(d.dynamic), 0);
+  const ownSta = r.days.reduce((n, d) => n + Number(d.static), 0);
+  const dyn = google ? (google.byService["maps-backend.googleapis.com"] ?? 0) : ownDyn;
+  const sta = google ? (google.byService["static-maps-backend.googleapis.com"] ?? 0) : ownSta;
+  const usd = dynamicCost(dyn) + staticCost(sta);
   const isNow = month === today.slice(0, 7);
   const dayOfMonth = isNow ? Number(today.slice(8, 10)) : last;
   const projected = isNow && dayOfMonth > 0 ? Math.round((dyn / dayOfMonth) * last) : dyn;
+  const source = google ? "Google Cloud Monitoring" : "NBSS's own count";
 
   const byDay = new Map(r.days.map((d) => [d.day, d]));
   const series = Array.from({ length: last }, (_, i) => {
     const day = `${month}-${String(i + 1).padStart(2, "0")}`;
     const d = byDay.get(day);
-    return { day, n: Number(d?.dynamic ?? 0) + Number(d?.static ?? 0) };
+    return { day, n: google ? (google.byDay[day] ?? 0) : Number(d?.dynamic ?? 0) + Number(d?.static ?? 0) };
   });
   const peak = Math.max(1, ...series.map((s) => s.n));
   const monthName = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -108,15 +138,32 @@ export default async function MapsUsagePage({ searchParams }: { searchParams: Pr
         }
       />
 
+      <div
+        className={
+          google
+            ? "flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm"
+            : "flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 text-sm"
+        }
+      >
+        <span className="font-semibold">Figures from: {source}</span>
+        <span className="text-muted-foreground">
+          {google
+            ? "the same numbers as Google Cloud Console → Google Maps Platform → Metrics (refreshed every 10 minutes)."
+            : googleError
+              ? `Google's numbers could not be read: ${googleError}`
+              : "counted as maps open. Connect Google Cloud Monitoring (below) to show Google's exact figures here."}
+        </span>
+      </div>
+
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Map loads" value={dyn.toLocaleString("en-IN")} hint={`${Math.max(0, FREE - dyn).toLocaleString("en-IN")} of 10,000 free left`} icon={MapIcon} tone="sky" />
+        <StatCard label="Map loads" value={dyn.toLocaleString("en-IN")} hint={`${Math.max(0, FREE.dynamic - dyn).toLocaleString("en-IN")} of 70,000 free left`} icon={MapIcon} tone="sky" />
         <StatCard label="SOS email maps" value={sta.toLocaleString("en-IN")} hint="Google Static Maps · 10,000 free" icon={Mail} tone="rose" />
         <StatCard
           label={isNow ? "At this pace" : "Month total"}
           value={projected.toLocaleString("en-IN")}
           hint={isNow ? `map loads by ${last} ${monthName.split(" ")[0]}` : "map loads"}
           icon={MapPinned}
-          tone={projected > FREE ? "amber" : "emerald"}
+          tone={projected > FREE.dynamic ? "amber" : "emerald"}
         />
         <StatCard
           label="Estimated bill"
@@ -173,10 +220,36 @@ export default async function MapsUsagePage({ searchParams }: { searchParams: Pr
         </section>
       </div>
 
+      {google && (
+        <section className="rounded-2xl border border-app-line bg-card shadow-e1">
+          <h2 className="border-b border-app-line-soft px-5 py-3.5 font-semibold">By Google Maps API, this month</h2>
+          <ul className="divide-y divide-app-line-soft">
+            {Object.entries(MAPS_SERVICES).map(([service, label]) => (
+              <li key={service} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                <span className="truncate">{label}</span>
+                <span className="font-semibold tabular-nums">{(google.byService[service] ?? 0).toLocaleString("en-IN")}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!google && (
+        <section className="rounded-2xl border border-app-line bg-card p-5 text-sm shadow-e1">
+          <h2 className="font-semibold">Show Google&apos;s exact figures here</h2>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+            <li>Google Cloud Console → the project that owns the Maps key → IAM &amp; Admin → Service accounts → Create service account (name it “nbss-maps-usage”).</li>
+            <li>Give it one role: <span className="font-medium text-foreground">Monitoring Viewer</span>. It can only read usage, nothing else.</li>
+            <li>Open it → Keys → Add key → JSON. A file downloads.</li>
+            <li>Send that file to your developer to add to the server as GOOGLE_CLOUD_MONITORING_KEY. Do not email or post it anywhere public.</li>
+          </ol>
+        </section>
+      )}
+
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Counted by NBSS as maps are opened, so it is close to Google&apos;s figure but not the invoice. Google gives 10,000 free map loads and 10,000 free
-        static maps every month; beyond that the list price is about $7 per 1,000 map loads and $2 per 1,000 static maps (₹ at {USD_INR}/$). The phone
-        app is not counted: Android&apos;s maps are free and iPhones use Apple Maps. Exact figures:{" "}
+        India pricing: 70,000 free map loads a month, then $2.10 per 1,000 (up to 5 million) and $0.53 per 1,000 beyond; SOS email maps assume
+        10,000 free then $2 per 1,000. Rupees at {USD_INR} per dollar. An estimate, not the invoice. The phone app costs nothing: Android&apos;s maps are
+        free and iPhones use Apple Maps. Invoice and exact figures:{" "}
         <a href={CLOUD} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline-offset-2 hover:underline">
           Google Cloud Console → Google Maps Platform → Metrics
         </a>
