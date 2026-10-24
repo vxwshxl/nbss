@@ -35,7 +35,8 @@ type TabIcon = { color: ColorValue; size: number };
 export default function GuardLayout() {
   const { session, role, profile } = useAuth();
   const insets = useSafeAreaInsets();
-  const photo = photoOf(session);
+  // The photo saved on the profile (copied from Google at sign-in), else the session's.
+  const photo = profile?.avatar_url ?? photoOf(session);
 
   useEffect(() => {
     if (!session) return;

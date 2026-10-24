@@ -36,7 +36,7 @@ export default function ProfileRoute() {
 
       <Panel tone="indigo" title="Details" icon={CircleUserRound}>
         <View style={styles.identity}>
-          <Avatar name={profile?.full_name ?? "?"} uri={photoOf(session)} size={52} />
+          <Avatar name={profile?.full_name ?? "?"} uri={profile?.avatar_url ?? photoOf(session)} size={52} />
           <View style={styles.identityText}>
             <Text variant="bodyLarge" weight="semibold">
               {profile?.full_name ?? "-"}

@@ -519,6 +519,7 @@ export type Database = {
           last_seen_at: string | null;
           email: string | null;
           is_test: boolean;
+          avatar_url: string | null;
         };
         Insert: {
           id: string;
@@ -537,6 +538,7 @@ export type Database = {
           last_seen_at?: string | null;
           email?: string | null;
           is_test?: boolean;
+          avatar_url?: string | null;
         };
         Update: {
           id?: string;
@@ -555,6 +557,7 @@ export type Database = {
           last_seen_at?: string | null;
           email?: string | null;
           is_test?: boolean;
+          avatar_url?: string | null;
         };
         Relationships: [];
       };

@@ -145,6 +145,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           name={profile.full_name}
           code={profile.employee_code}
           roleLabel={ROLE_LABEL[profile.role]}
+          photoUrl={profile.avatar_url}
           signOut={signOut}
         />
         </>
