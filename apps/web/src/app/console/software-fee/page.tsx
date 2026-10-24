@@ -38,23 +38,17 @@ export default async function SoftwareFeePage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Billing" title="Software fee" />
-      {test && (
-        <p className="-mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="font-bold">Test side.</span> These invoices count test guards. Paying one is a real Razorpay payment, kept apart from the live bill.
-          Switch to Live in the header for the real bill.
-        </p>
-      )}
       <p className="-mt-3 text-sm text-muted-foreground">
         Billed monthly by <span className="font-semibold text-foreground">{s?.seller_name ?? "Bodookhrang Tech Private Limited"}</span>{s?.seller_gstin ? ` (GSTIN ${s.seller_gstin})` : ""} for the NBSS console and app,
         per active guard. Each month is due on the {s?.due_day ?? 15}th.
       </p>
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Active guards" value={String(guards ?? 0)} hint={test ? "Test guards, billed on the Test side" : "Billed this month (test accounts never count)"} icon={Users} tone="sky" />
+        <StatCard label="Active guards" value={String(guards ?? 0)} hint="Billed this month" icon={Users} tone="sky" />
         <StatCard label="Per guard" value={inr(s?.per_guard_paise ?? 1500)} hint={`a month${s && Number(s.gst_percent) > 0 ? ` + ${s.gst_percent}% GST` : ""}`} icon={IndianRupee} tone="violet" />
         <StatCard label="Due now" value={inr(due)} hint={due ? `${rows.filter((r) => r.status === "unpaid").length} month(s) unpaid` : "Nothing outstanding"} icon={CalendarClock} tone={due ? "amber" : "emerald"} />
         <StatCard label="Paid so far" value={inr(paid.reduce((n, r) => n + r.total_paise, 0))} hint={`${paid.length} month(s) settled`} icon={CircleCheckBig} tone="emerald" />
       </div>
-      <FeeWorkspace invoices={rows} settings={s} canEdit={session.realProfile.role === "developer"} online={razorpayConfigured()} test={!!test} />
+      <FeeWorkspace invoices={rows} settings={s} canEdit={session.realProfile.role === "developer"} online={razorpayConfigured()} />
     </div>
   );
 }

@@ -77,7 +77,7 @@ function StatusStamp({ status, big }: { status: "paid" | "unpaid"; big?: boolean
  * The software fee's months, newest first. A row opens its invoice; an unpaid month can
  * be paid through Razorpay from the row or the invoice. A developer sees the rate form.
  */
-export function FeeWorkspace({ invoices, settings, canEdit, online, test = false }: { invoices: FeeInvoice[]; settings: FeeSettings | null; canEdit: boolean; online: boolean; test?: boolean }) {
+export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices: FeeInvoice[]; settings: FeeSettings | null; canEdit: boolean; online: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState<FeeInvoice | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
@@ -116,7 +116,6 @@ export function FeeWorkspace({ invoices, settings, canEdit, online, test = false
         <div className="flex items-center justify-between gap-3 border-b border-app-line-soft bg-gradient-to-r from-emerald-50 to-sky-50 px-5 py-3.5">
           <h2 className="flex items-center gap-2 font-semibold">
             Monthly invoices
-            {test && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-extrabold text-amber-950">TEST</span>}
           </h2>
           <span className="text-xs text-muted-foreground">Tap a month for its invoice</span>
         </div>
@@ -166,7 +165,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online, test = false
                         disabled={paying === inv.id}
                       >
                         {paying === inv.id && <Loader2 className="animate-spin" />}
-                        {test ? "Pay (test)" : "Pay now"}
+                        Pay now
                       </Button>
                     )}
                   </td>
@@ -180,7 +179,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online, test = false
       {canEdit && settings && <RateForm settings={settings} />}
 
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-3xl">
           {open && settings && <Invoice inv={open} s={settings} paying={paying === open.id} online={online} onPay={() => void pay(open)} />}
         </DialogContent>
       </Dialog>
@@ -189,86 +188,136 @@ export function FeeWorkspace({ invoices, settings, canEdit, online, test = false
 }
 
 function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void }) {
+  const paid = inv.status === "paid";
   return (
-    <div id="fee-invoice" className="space-y-5">
-      <div className="flex items-start justify-between gap-4 pr-8">
-        <div>
-          <DialogTitle className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
-            Tax invoice
-            {inv.is_test && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-extrabold text-amber-950">TEST</span>}
-          </DialogTitle>
-          <p className="font-mono text-xs text-muted-foreground">{inv.number}</p>
+    <div id="fee-invoice" className="overflow-hidden rounded-2xl">
+      {/* The band: who is billing, what this is, and whether it is settled. */}
+      <div className="relative bg-gradient-to-br from-[#006b4a] via-[#009164] to-[#14b8a6] px-6 py-6 pr-16 text-white sm:px-8 sm:pr-16">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-white/75 uppercase">Tax invoice</p>
+            <DialogTitle className="mt-1 text-2xl font-extrabold tracking-tight text-white">{s.seller_name}</DialogTitle>
+            {s.seller_address && <p className="mt-0.5 text-sm text-white/80">{s.seller_address}</p>}
+          </div>
+          <span
+            className={cn(
+              "rounded-xl border-2 px-4 py-1.5 text-sm font-extrabold tracking-widest uppercase",
+              paid ? "border-white bg-white text-emerald-700" : "border-amber-200 bg-amber-300 text-amber-950",
+            )}
+          >
+            {paid ? "Paid" : "Unpaid"}
+          </span>
         </div>
-        <StatusStamp status={inv.status} big />
-      </div>
-
-      <div className="grid gap-4 rounded-xl bg-muted/50 p-4 text-sm sm:grid-cols-2">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase">From</p>
-          <p className="font-semibold">{s.seller_name}</p>
-          {s.seller_address && <p className="text-xs text-muted-foreground">{s.seller_address}</p>}
-          {s.seller_gstin && <p className="text-xs text-muted-foreground">GSTIN {s.seller_gstin}</p>}
-          {s.seller_cin && <p className="text-xs text-muted-foreground">CIN {s.seller_cin}</p>}
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase">Billed to</p>
-          <p className="font-semibold">{s.buyer_name}</p>
-          {s.buyer_gstin && <p className="text-xs text-muted-foreground">GSTIN {s.buyer_gstin}</p>}
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <Meta label="Invoice no." value={inv.number} mono />
+          <Meta label="Period" value={month(inv.period)} />
+          <Meta label={paid ? "Paid on" : "Due on"} value={paid && inv.paid_at ? day(inv.paid_at) : day(inv.due_on)} />
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-y-1.5 text-sm">
-        <dt className="text-muted-foreground">Period</dt>
-        <dd className="text-right font-medium">{month(inv.period)}</dd>
-        <dt className="text-muted-foreground">Due on</dt>
-        <dd className="text-right font-medium">{day(inv.due_on)}</dd>
-      </dl>
+      <div className="space-y-6 px-6 py-6 sm:px-8">
+        {/* Seller and buyer, with the registrations a business needs to claim GST. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+            <p className="text-[11px] font-bold tracking-widest text-emerald-700 uppercase">From</p>
+            <p className="mt-1 text-base font-bold">{s.seller_name}</p>
+            <div className="mt-3 grid gap-2">
+              {s.seller_gstin && <Reg label="GSTIN" value={s.seller_gstin} />}
+              {s.seller_cin && <Reg label="CIN" value={s.seller_cin} />}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
+            <p className="text-[11px] font-bold tracking-widest text-sky-700 uppercase">Billed to</p>
+            <p className="mt-1 text-base font-bold">{s.buyer_name}</p>
+            <div className="mt-3 grid gap-2">{s.buyer_gstin ? <Reg label="GSTIN" value={s.buyer_gstin} /> : <p className="text-xs text-muted-foreground">Kokrajhar, Assam</p>}</div>
+          </div>
+        </div>
 
-      <table className="w-full text-sm">
-        <tbody className="divide-y divide-app-line-soft">
-          <tr>
-            <td className="py-2">
-              NBSS software · {inv.guards} active guard{inv.guards === 1 ? "" : "s"} × {inr(inv.per_guard_paise)}
-            </td>
-            <td className="py-2 text-right tabular-nums">{inr(inv.amount_paise)}</td>
-          </tr>
-          {Number(inv.gst_percent) > 0 && (
-            <tr>
-              <td className="py-2">GST {inv.gst_percent}%</td>
-              <td className="py-2 text-right tabular-nums">{inr(inv.gst_paise)}</td>
-            </tr>
-          )}
-          <tr className="text-base font-bold">
-            <td className="py-2.5">Total</td>
-            <td className="py-2.5 text-right tabular-nums">{inr(inv.total_paise)}</td>
-          </tr>
-        </tbody>
-      </table>
+        <div className="overflow-hidden rounded-2xl border border-app-line">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/60 text-left text-[11px] tracking-wider text-muted-foreground uppercase">
+              <tr>
+                <th className="px-4 py-2.5 font-semibold">Description</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Guards</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Rate</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-app-line-soft">
+                <td className="px-4 py-3">
+                  <p className="font-semibold">NBSS software</p>
+                  <p className="text-xs text-muted-foreground">Console and app, per active guard · {month(inv.period)}</p>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{inv.guards}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{inr(inv.per_guard_paise)}</td>
+                <td className="px-4 py-3 text-right font-semibold tabular-nums">{inr(inv.amount_paise)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      {inv.status === "paid" ? (
-        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Paid {inv.paid_at ? day(inv.paid_at) : ""} online{inv.razorpay_payment_id ? ` · Razorpay ${inv.razorpay_payment_id}` : ""}.
-        </p>
-      ) : (
-        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Unpaid. Due on {day(inv.due_on)}.</p>
-      )}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <p
+            className={cn(
+              "rounded-xl px-4 py-3 text-sm font-medium",
+              paid ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800",
+            )}
+          >
+            {paid
+              ? `Paid ${inv.paid_at ? day(inv.paid_at) : ""} online${inv.razorpay_payment_id ? ` · ${inv.razorpay_payment_id}` : ""}`
+              : `Unpaid · due on ${day(inv.due_on)}`}
+          </p>
+          <dl className="w-full max-w-xs space-y-1.5 rounded-2xl bg-muted/50 p-4 text-sm sm:w-72">
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Subtotal</dt>
+              <dd className="tabular-nums">{inr(inv.amount_paise)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">GST {Number(inv.gst_percent) > 0 ? `@ ${inv.gst_percent}%` : ""}</dt>
+              <dd className="tabular-nums">{inr(inv.gst_paise)}</dd>
+            </div>
+            <div className="flex justify-between border-t border-app-line pt-2 text-lg font-extrabold">
+              <dt>Total</dt>
+              <dd className="tabular-nums">{inr(inv.total_paise)}</dd>
+            </div>
+          </dl>
+        </div>
 
-      <div className="flex flex-wrap justify-end gap-2 print:hidden">
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer data-icon="inline-start" /> Print
-        </Button>
-        {inv.status === "unpaid" && online && inv.total_paise >= 100 && (
-          <Button onClick={onPay} disabled={paying}>
-            {paying && <Loader2 className="animate-spin" />}
-            Pay {inr(inv.total_paise)}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-app-line-soft pt-5 print:hidden">
+          <p className="text-[11px] text-muted-foreground">Computer-generated invoice · {s.seller_name}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer data-icon="inline-start" /> Print
+            </Button>
+            {!paid && online && inv.total_paise >= 100 && (
+              <Button onClick={onPay} disabled={paying}>
+                {paying && <Loader2 className="animate-spin" />}
+                Pay {inr(inv.total_paise)}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
-      <p className="text-center text-[11px] text-muted-foreground">
-        {s.seller_name}
-        {s.seller_gstin ? ` · GSTIN ${s.seller_gstin}` : ""}
-        {s.seller_cin ? ` · CIN ${s.seller_cin}` : ""} · software for National Bodo Security Service. Computer-generated invoice.
-      </p>
+    </div>
+  );
+}
+
+function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-xl bg-white/12 px-3 py-2 ring-1 ring-white/20">
+      <p className="text-[10px] font-semibold tracking-widest text-white/70 uppercase">{label}</p>
+      <p className={cn("text-sm font-bold", mono && "font-mono")}>{value}</p>
+    </div>
+  );
+}
+
+/** A statutory number, large and copyable at a glance. */
+function Reg({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 ring-1 ring-black/5">
+      <span className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">{label}</span>
+      <span className="font-mono text-[15px] font-bold tracking-wide">{value}</span>
     </div>
   );
 }
