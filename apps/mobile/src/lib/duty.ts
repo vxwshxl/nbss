@@ -511,6 +511,8 @@ export type MyDuty = {
     device_flag?: string | null;
     review_note?: string | null;
   } | null;
+  /** Every check-in of this duty, in order: a duty can be worked in more than one session. */
+  sessions?: { id: string; check_in_at: string; check_out_at: string | null; worked_minutes: number | null; status: string }[];
 };
 
 /** The guard's duties from a week back to two weeks ahead, in order. */

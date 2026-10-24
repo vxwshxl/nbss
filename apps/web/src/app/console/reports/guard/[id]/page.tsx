@@ -68,12 +68,24 @@ export default async function GuardAttendancePage({
   ]);
 
   const now = nowMs();
-  const byShift = new Map((att.data ?? []).filter((a) => a.shift_id).map((a) => [a.shift_id!, a]));
+  // A duty can be worked in more than one session (out for lunch and back): all of them.
+  const byShift = new Map<string, NonNullable<typeof att.data>>();
+  for (const a of att.data ?? []) if (a.shift_id) byShift.set(a.shift_id, [...(byShift.get(a.shift_id) ?? []), a]);
   const used = new Set<string>();
 
   const rows: RegisterRow[] = (shifts.data ?? []).map((s) => {
-    const a = byShift.get(s.id) ?? null;
-    if (a) used.add(a.id);
+    const sessions = byShift.get(s.id) ?? [];
+    for (const x of sessions) used.add(x.id);
+    const first = sessions[0] ?? null;
+    const open = sessions.some((x) => !x.check_out_at);
+    const a = first
+      ? {
+          ...first,
+          check_out_at: open ? null : (sessions.at(-1)!.check_out_at ?? null),
+          worked_minutes: sessions.reduce((n, x) => n + (x.worked_minutes ?? 0), 0),
+          overtime_minutes: sessions.reduce((n, x) => n + (x.overtime_minutes ?? 0), 0),
+        }
+      : null;
     const site = one(s.sites as unknown as { name: string } | null)?.name ?? "A site";
     const window = `${shiftTypeLabel(s.shift_type) ? `${shiftTypeLabel(s.shift_type)} · ` : ""}${clock(s.starts_at)}–${clock(s.ends_at)}`;
     let status: RegisterRow["status"];
@@ -87,6 +99,7 @@ export default async function GuardAttendancePage({
       s.replaced_by_shift && !a ? "Handed to another guard" : null,
       a?.device_flag ? (a.device_flag === "shared_device" ? "Another guard's phone" : "Unapproved phone") : null,
       a?.review_note && a.status !== "present" ? a.review_note : null,
+      sessions.length > 1 ? `${sessions.length} sessions: ${sessions.map((x) => `${clock(x.check_in_at!)}–${x.check_out_at ? clock(x.check_out_at) : "now"}`).join(", ")}` : null,
     ].filter(Boolean);
     return {
       key: s.id,

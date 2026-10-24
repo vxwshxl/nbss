@@ -65,7 +65,8 @@ export function DutyDetail({ id }: { id: string }) {
       setD(duty);
       if (!duty) return setPulling(false);
       const [t, n] = await Promise.all([
-        duty.attendance?.id ? myRoute(duty.attendance.id) : Promise.resolve([]),
+        // Every session's route, joined in order (a duty can be split, e.g. around lunch).
+        Promise.all((duty.sessions?.length ? duty.sessions.map((x) => x.id) : duty.attendance?.id ? [duty.attendance.id] : []).map(myRoute)).then((parts) => parts.flat()),
         handoverNotes(duty.site.id),
       ]);
       if (!live) return;
@@ -243,7 +244,16 @@ export function DutyDetail({ id }: { id: string }) {
           <Panel tone="sky" title="Attendance" icon={Clock} bare>
             <Field first label="Checked in" value={a?.check_in_at ? when(a.check_in_at) : "-"} />
             <Field label="Checked out" value={a?.check_out_at ? when(a.check_out_at) : a?.check_in_at ? "Still on duty" : "-"} />
-            <Field label="Worked" value={a?.worked_minutes != null ? hm(a.worked_minutes) : "-"} />
+            <Field label="Worked" value={a?.worked_minutes != null ? hm(a.worked_minutes) : "-"} sub={(d.sessions?.length ?? 0) > 1 ? `in ${d.sessions!.length} sessions` : undefined} />
+            {(d.sessions?.length ?? 0) > 1 &&
+              d.sessions!.map((x, i) => (
+                <Field
+                  key={x.id}
+                  label={`Session ${i + 1}`}
+                  value={`${clock(x.check_in_at)} – ${x.check_out_at ? clock(x.check_out_at) : "now"}`}
+                  sub={x.worked_minutes != null ? hm(x.worked_minutes) : x.check_out_at ? undefined : "on duty"}
+                />
+              ))}
             {a?.overtime_minutes ? <Field label="Overtime" value={hm(a.overtime_minutes)} /> : null}
             {a?.device_flag ? <Field label="Phone" value={a.device_flag === "shared_device" ? "Another guard's phone" : "Not your approved phone"} warn /> : null}
             {a?.review_note ? <Field label="Office note" value={a.review_note} /> : null}
