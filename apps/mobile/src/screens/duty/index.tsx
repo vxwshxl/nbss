@@ -64,7 +64,7 @@ import {
   requestTracking,
   type PermissionState,
 } from "@/lib/location";
-import { feedLocations } from "@/lib/location-task";
+import { feedLocations, sendHeading } from "@/lib/location-task";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO, IS_WEB, runtimeLimitation } from "@/lib/runtime";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
@@ -143,8 +143,12 @@ export function Duty() {
     // The compass rides along, so the console's arrow points the way the guard faces
     // while the app is open; in the background the GPS course is sent instead.
     void feedLocations([{ lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracyM, heading: live.heading, at: fix.at }]);
-    // A heading change alone sends nothing: the guard above skips a fix already fed.
   }, [onDuty, fix, live.heading]);
+
+  // Turning on the spot sends no new point, so the heading goes on its own.
+  useEffect(() => {
+    if (onDuty && !IS_WEB) sendHeading(live.heading);
+  }, [onDuty, live.heading]);
 
   // The blue line of where they have been, refreshed every minute on duty.
   useEffect(() => {

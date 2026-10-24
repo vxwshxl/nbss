@@ -1,5 +1,7 @@
 import { CircleUserRound, LogOut, MapPin, BadgeCheck } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import Constants from "expo-constants";
+import * as WebBrowser from "expo-web-browser";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { ROLE_LABEL } from "@nbss/shared/identity";
 
@@ -11,6 +13,7 @@ import { Panel } from "@/components/panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
 import { useAuth } from "@/lib/auth";
+import { WEB_URL } from "@/lib/config";
 import { CAN_RECEIVE_PUSH, IS_EXPO_GO } from "@/lib/runtime";
 import { color, space } from "@/theme/tokens";
 
@@ -112,7 +115,29 @@ export default function ProfileRoute() {
         loading={loading}
         onPress={() => void signOut()}
       />
+
+      <View style={styles.legal}>
+        <LegalLink label="Terms & Conditions" path="/terms-and-conditions" />
+        <Text variant="caption" tone="muted">
+          ·
+        </Text>
+        <LegalLink label="Privacy Policy" path="/privacy-policy" />
+      </View>
+      <Text variant="caption" tone="muted" style={styles.version}>
+        NBSS Kokrajhar · app {Constants.expoConfig?.version ?? "-"}
+      </Text>
     </Screen>
+  );
+}
+
+/** The website's own page, in the in-app browser, so the guard comes straight back. */
+function LegalLink({ label, path }: { label: string; path: string }) {
+  return (
+    <Pressable accessibilityRole="link" hitSlop={8} onPress={() => void WebBrowser.openBrowserAsync(`${WEB_URL}${path}`)}>
+      <Text variant="label" weight="medium" tone="primary">
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -134,6 +159,8 @@ const styles = StyleSheet.create({
   identity: { flexDirection: "row", alignItems: "center", gap: space[3] },
   identityText: { flex: 1, gap: 2 },
   rows: { gap: 0 },
+  legal: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space[2], marginTop: -space[2] },
+  version: { textAlign: "center", marginTop: -space[4] },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

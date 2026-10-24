@@ -151,6 +151,24 @@ export async function feedLocations(locations: { lat: number; lng: number; accur
   await flush();
 }
 
+let headingSent = { deg: -999, at: 0 };
+
+/**
+ * The compass alone, while the duty screen is open. Standing still sends no points,
+ * so without this the console's arrow froze while the guard turned on the spot. Only
+ * a turn of 15° or more goes out, and at most every 4 seconds.
+ */
+export function sendHeading(deg: number | null): void {
+  if (deg == null || deg < 0) return;
+  const now = Date.now();
+  const turned = Math.abs(((deg - headingSent.deg + 540) % 360) - 180);
+  if (turned < 15 || now - headingSent.at < 4000) return;
+  headingSent = { deg, at: now };
+  void supabase.rpc("record_heading", { p_heading: Math.round(deg) }).then(({ error }) => {
+    if (error) headingSent = { deg: -999, at: now };
+  });
+}
+
 /** Sends what is waiting. One at a time: a second caller waits for the first. */
 export async function flush(): Promise<void> {
   if (flushing) return flushing;

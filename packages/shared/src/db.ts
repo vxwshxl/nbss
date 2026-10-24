@@ -1378,6 +1378,12 @@ export type Database = {
         };
         Returns: string;
       };
+      record_heading: {
+        Args: {
+          p_heading: number;
+        };
+        Returns: boolean;
+      };
       record_position: {
         Args: {
           p_lat: number;

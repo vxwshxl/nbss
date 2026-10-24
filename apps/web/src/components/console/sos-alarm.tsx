@@ -13,9 +13,10 @@ type Alert = { id: string; status: SosStatus; kind: SosKind; site: string; guard
 
 /**
  * The console's alarm. Whatever page an admin, developer or supervisor is on, a new SOS
- * sounds a siren, raises a notification card that stays until it is dealt with, and (with
- * the tab in the background) a system notification. Open shows the alert's own popup,
- * the site map with the guard on it, without leaving the page.
+ * sounds a siren, raises a notification card that stays until the alert is resolved or
+ * stood down (opening it does not dismiss it), and with the tab in the background a
+ * system notification. Open shows the alert's own popup, the site map with the guard
+ * on it, without leaving the page.
  *
  * The siren repeats while any alert is still waiting for a first response, and stops by
  * itself the moment someone answers. Silence only quietens this tab.
@@ -42,14 +43,13 @@ export function SosAlarm() {
 
     const show = (a: Alert) => {
       toast.custom(
-        (t) => (
+        () => (
           <SosCard
             alert={a}
             onOpen={() => {
               silenced.current.add(a.id);
               sync();
               setOpen(a.id);
-              toast.dismiss(t);
             }}
             onSilence={() => {
               silenced.current.add(a.id);
@@ -108,7 +108,7 @@ export function SosAlarm() {
       const a = await load(id);
       if (!a || cancelled) return;
       waiting.current.set(id, a);
-      if (a.status === "active") show(a);
+      show(a);
       sync();
     };
 
@@ -116,7 +116,7 @@ export function SosAlarm() {
     void supabase
       .from("sos_alerts")
       .select("id, status")
-      .eq("status", "active")
+      .in("status", ["active", "acknowledged"])
       .then(({ data }) => {
         for (const r of data ?? []) void track(r.id, r.status as SosStatus);
       });
