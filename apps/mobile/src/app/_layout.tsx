@@ -27,6 +27,18 @@ import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 import type { ErrorBoundaryProps } from "expo-router";
 import { ErrorScreen } from "@/components/error-screen";
+import { LogBox } from "react-native";
+import { IS_EXPO_GO } from "@/lib/runtime";
+
+// Expo Go's own notices about push being limited there: true, expected, and not this
+// app's to fix (the installed build has full push). Kept out of the in-app warning
+// overlay so a real warning is not lost among them.
+if (IS_EXPO_GO) {
+  LogBox.ignoreLogs([
+    "expo-notifications: Android Push notifications",
+    "`expo-notifications` functionality is not fully supported in Expo Go",
+  ]);
+}
 
 // Held until Geist has loaded, so the first frame is not system-font text that then
 // reflows into Geist — a jump the eye catches on every cold start.

@@ -7,6 +7,7 @@ import { Platform } from "react-native";
 
 import { APP_VERSION } from "./config";
 import { secureStorage } from "./secure-storage";
+import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
 import { supabase } from "./supabase";
 
 /**
@@ -87,7 +88,7 @@ export async function registerHandset(): Promise<HandsetStatus> {
       deviceId(),
       batteryState(),
       Location.getForegroundPermissionsAsync().catch(() => null),
-      Location.getBackgroundPermissionsAsync().catch(() => null),
+      CAN_TRACK_IN_BACKGROUND ? Location.getBackgroundPermissionsAsync().catch(() => null) : Promise.resolve(null),
       Location.hasServicesEnabledAsync().catch(() => null),
     ]);
     const optimized = Platform.OS === "android" ? await Battery.isBatteryOptimizationEnabledAsync().catch(() => null) : null;

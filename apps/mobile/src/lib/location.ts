@@ -82,6 +82,8 @@ export function openSettings(): void {
 }
 
 export async function isTracking(): Promise<boolean> {
+  // Expo Go has no background location; asking prints its "limited in Expo Go" warning.
+  if (!CAN_TRACK_IN_BACKGROUND) return false;
   return Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
 }
 

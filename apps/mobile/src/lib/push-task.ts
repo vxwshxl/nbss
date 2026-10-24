@@ -2,6 +2,7 @@ import * as TaskManager from "expo-task-manager";
 
 import { ensureTracking } from "./keep-alive";
 import { Notifications } from "./push";
+import { IS_EXPO_GO } from "./runtime";
 
 /**
  * Runs JavaScript when a push arrives while the app is in the background or
@@ -40,6 +41,8 @@ TaskManager.defineTask(PUSH_TASK, async ({ data, error }) => {
   if (type === "resume_tracking" || type === "sos") await ensureTracking();
 });
 
-if (Notifications) {
+// Background remote notifications need a real build (enableBackgroundRemoteNotifications in
+// app.config.ts); Expo Go cannot run them and only reports that it cannot.
+if (Notifications && !IS_EXPO_GO) {
   void Notifications.registerTaskAsync(PUSH_TASK).catch((err: unknown) => console.warn("[push] background task not registered", err));
 }

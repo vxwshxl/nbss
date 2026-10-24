@@ -131,6 +131,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-notifications",
       {
+        // Lets a silent push wake the app in the background (the tracking watchdog's
+        // resume_tracking), on iOS as well as Android.
+        enableBackgroundRemoteNotifications: true,
         icon: "./assets/images/notification-icon.png",
         color: "#B91C1C",
         // Bundled rather than fetched, because the alarm has to be audible on a
