@@ -64,7 +64,8 @@ export function Dropdown({
     <>
       {name && <input type="hidden" name={name} value={current} />}
       <Select
-        value={current === "" ? EMPTY : current}
+        // Nothing chosen and no "none" option: "" lets the placeholder show.
+        value={current === "" ? (options.some((o) => o.value === "") ? EMPTY : "") : current}
         onValueChange={handle}
         disabled={disabled}
       >
