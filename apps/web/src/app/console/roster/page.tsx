@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { CalendarRange, CircleHelp, UserRoundX, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
@@ -30,8 +31,11 @@ const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? nu
  * three questions a supervisor asks every evening: is every site staffed, who
  * has not turned up, and who checked in somewhere they were not sent.
  */
-export default async function RosterPage() {
+export default async function RosterPage({ searchParams }: { searchParams: Promise<{ site?: string }> }) {
   const session = await requireRoleSession("admin", "supervisor");
+  // A link to one site's roster opens that site's own Roster page, not a popup over everything.
+  const { site: only } = await searchParams;
+  if (only && /^[0-9a-f-]{36}$/i.test(only)) redirect(`/console/sites/${only.toLowerCase()}/roster`);
   const supabase = await supabaseServer();
 
   const from = istInstant(istDay(-1), "00:00");

@@ -205,7 +205,7 @@ export function RosterWorkspace({
 }) {
   const params = useSearchParams();
   const [pending, start] = useTransition();
-  const [siteId, setSiteId] = useState<string | null>(params.get("site"));
+  const [siteId, setSiteId] = useState<string | null>(params.get("open"));
   const [day, setDay] = useState<{ siteId: string; date: string } | null>(null);
   const [posting, setPosting] = useState<PostingDraft | null>(() => {
     const g = params.get("guard");
@@ -357,7 +357,7 @@ export function RosterWorkspace({
                   <TableCell>
                     <span className="block font-medium">{s.name}</span>
                     <span className="block text-xs text-muted-foreground">
-                      Needs {s.required ?? "-"} on duty{s.district ? ` · ${s.district}` : ""}
+                      {s.required ? `Needs ${s.required} on duty` : "Needs not set"}{s.district ? ` · ${s.district}` : ""}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -420,24 +420,7 @@ export function RosterWorkspace({
         </div>
       </Panel>
 
-      {unposted.length > 0 && (
-        <Panel tone="sky" title={`Guards without a post · ${unposted.length}`} icon={Users}>
-          <p className="mb-3 text-sm text-muted-foreground">Free for cover shifts, or post them to a site.</p>
-          <ul className="flex flex-wrap gap-2">
-            {unposted.map((g) => (
-              <li key={g.id} className="flex items-center gap-2 rounded-xl border border-app-line-soft py-1.5 pr-1.5 pl-3">
-                <span className="text-sm font-medium">{g.name}</span>
-                <span className="font-mono text-xs text-muted-foreground">{g.code}</span>
-                {canEdit && (
-                  <Button size="sm" variant="outline" onClick={() => newPosting({ guardId: g.id })}>
-                    Post
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      )}
+      {unposted.length > 0 && <Unposted guards={unposted} canEdit={canEdit} onPost={(id) => newPosting({ guardId: id })} />}
 
       {/* ─────────────────────────────────────────── a site's staffing */}
       <PreviewDialog open={!!site} onClose={() => setSiteId(null)} label="Site staffing" wide>
@@ -450,7 +433,7 @@ export function RosterWorkspace({
               meta={<span>{site.client ?? "No client recorded"}</span>}
               badge={
                 <>
-                  <HeroPill>Needs {site.required ?? "-"}</HeroPill>
+                  <HeroPill>{site.required ? `Needs ${site.required}` : "Needs not set"}</HeroPill>
                   <HeroPill>{site.onDuty} on duty</HeroPill>
                   {site.notArrived > 0 && <HeroPill>{site.notArrived} not arrived</HeroPill>}
                 </>
@@ -1044,5 +1027,55 @@ function DatesPicker({ value, onChange }: { value: string[]; onChange: (dates: s
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Guards with no post, as a short searchable list rather than a wall of names: the
+ * first eight, a search, and "Show all" for the rest. Each row posts that guard.
+ */
+function Unposted({ guards, canEdit, onPost }: { guards: { id: string; name: string; code: string }[]; canEdit: boolean; onPost: (id: string) => void }) {
+  const [q, setQ] = useState("");
+  const [all, setAll] = useState(false);
+  const needle = q.trim().toLowerCase();
+  const matched = needle ? guards.filter((g) => `${g.name} ${g.code}`.toLowerCase().includes(needle)) : guards;
+  const shown = all || needle ? matched : matched.slice(0, 8);
+  return (
+    <Panel tone="sky" title={`Guards without a post · ${guards.length}`} icon={Users}>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <p className="flex-1 text-sm text-muted-foreground">Free for cover shifts, or post them to a site.</p>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Find a guard"
+          aria-label="Find a guard"
+          className="h-9 w-56 rounded-full bg-muted/70 px-4 text-sm ring-1 ring-border/60 outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {shown.map((g) => (
+          <li key={g.id} className="flex items-center gap-2.5 rounded-xl border border-app-line-soft bg-card px-3 py-2">
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-sky-100 text-[11px] font-bold text-sky-700">
+              {g.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("")}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{g.name}</span>
+              <span className="block font-mono text-[11px] text-muted-foreground">{g.code}</span>
+            </span>
+            {canEdit && (
+              <Button size="sm" variant="outline" onClick={() => onPost(g.id)}>
+                Post
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {matched.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">Nobody matches “{q.trim()}”.</p>}
+      {!needle && matched.length > 8 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="mt-3 w-full rounded-xl border border-dashed border-sky-300 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50">
+          {all ? "Show fewer" : `Show all ${matched.length}`}
+        </button>
+      )}
+    </Panel>
   );
 }

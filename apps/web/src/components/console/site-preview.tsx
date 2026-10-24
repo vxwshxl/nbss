@@ -231,7 +231,7 @@ export function SitePreviewDialog({
                   title={`Roster · needs ${d.required ?? "-"} on duty · ${d.posted.length} posted`}
                   action={
                     <Link
-                      href={`/console/roster?site=${site.id}`}
+                      href={`/console/roster?open=${site.id}`}
                       onClick={onClose}
                       className="text-xs font-medium text-primary-ink hover:underline"
                     >

@@ -171,7 +171,7 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
         </div>
         <div className="action-row w-full lg:w-auto">
           <Button asChild variant="outline" className="rounded-full">
-            <Link href={`/console/roster?site=${s.id}`}>
+            <Link href={`/console/roster?open=${s.id}`}>
               <CalendarRange data-icon="inline-start" />
               Post a guard
             </Link>
@@ -209,11 +209,11 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
           <Card>
             <CardTitle
               title={`Posted here · ${posted.length}`}
-              hint={`Needs ${s.guards_required ?? "-"} on duty at once`}
+              hint={s.guards_required ? `Needs ${s.guards_required} on duty at once` : "Needs not set"}
               icon={Users}
               hue="jade"
               right={
-                <Link href={`/console/roster?site=${s.id}`} className="text-sm font-medium text-primary-ink hover:underline">
+                <Link href={`/console/roster?open=${s.id}`} className="text-sm font-medium text-primary-ink hover:underline">
                   Edit in roster
                 </Link>
               }
