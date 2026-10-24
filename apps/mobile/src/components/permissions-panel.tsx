@@ -19,8 +19,9 @@ type Perm = { key: string; icon: LucideIcon; title: string; detail: string; stat
 const settings = async () => void (await Linking.openSettings());
 
 /** What each permission is for, what the phone says now, and the one thing that fixes it. */
-async function read(): Promise<Perm[]> {
+async function read(location: boolean): Promise<Perm[]> {
   const out: Perm[] = [];
+  if (location) {
 
   // Location: the one that matters.
   const [services, fg, bg] = await Promise.all([
@@ -71,6 +72,8 @@ async function read(): Promise<Perm[]> {
     });
   }
 
+  }
+
   // Notifications: SOS alarms and the tracking wake-up.
   if (!Notifications) {
     out.push({ key: "push", icon: Bell, title: "Notifications", detail: "This test app cannot receive alerts. The installed app can.", state: "na", label: "N/A" });
@@ -93,7 +96,7 @@ async function read(): Promise<Perm[]> {
   }
 
   // Battery saver (Android): it stops tracking in the background.
-  if (Platform.OS === "android") {
+  if (location && Platform.OS === "android") {
     const optimized = await Battery.isBatteryOptimizationEnabledAsync().catch(() => null);
     out.push({
       key: "battery",
@@ -106,7 +109,7 @@ async function read(): Promise<Perm[]> {
     });
   }
 
-  if (brandNeedsAutostart()) {
+  if (location && brandNeedsAutostart()) {
     out.push({
       key: "autostart",
       icon: RefreshCw,
@@ -136,23 +139,24 @@ const PILL: Record<State, { bg: string; fg: string }> = {
  * show the question a second time, opens the app's page in Settings. Re-read when
  * the guard comes back from Settings.
  */
-export function PermissionsPanel() {
+/** `location`: a guard's phone (location, battery, autostart); everyone needs notifications. */
+export function PermissionsPanel({ location = true }: { location?: boolean }) {
   const [perms, setPerms] = useState<Perm[] | null>(null);
 
   const refresh = useCallback(() => {
-    void read().then(setPerms);
-  }, []);
+    void read(location).then(setPerms);
+  }, [location]);
 
   useEffect(() => {
     if (IS_WEB) return;
     let live = true;
-    void read().then((p) => live && setPerms(p));
+    void read(location).then((p) => live && setPerms(p));
     const sub = AppState.addEventListener("change", (s) => s === "active" && refresh());
     return () => {
       live = false;
       sub.remove();
     };
-  }, [refresh]);
+  }, [refresh, location]);
 
   if (IS_WEB) return null;
   const missing = (perms ?? []).filter((p) => p.state === "missing" || p.state === "partial").length;

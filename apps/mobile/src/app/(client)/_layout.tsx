@@ -9,7 +9,8 @@ import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TopBar } from "@/components/top-bar";
-import { useAuth } from "@/lib/auth";
+import { Avatar } from "@/components/avatar";
+import { photoOf, useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 
@@ -40,7 +41,7 @@ export default function ClientLayout() {
          * is why every screen underneath passes `topInset={false}` to <Screen>.
          */
         header: () => (
-          <TopBar role={role ?? "client"} name={profile?.full_name ?? "-"} />
+          <TopBar role={role ?? "client"} name={profile?.full_name ?? "-"} account={false} />
         ),
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,
@@ -54,8 +55,8 @@ export default function ClientLayout() {
           backgroundColor: color.card,
           borderTopColor: color.lineSoft,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: 58 + insets.bottom,
-          paddingBottom: insets.bottom + 6,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
           paddingTop: 6,
         },
         // Geist, so the tab bar does not betray the system font under a screen full of it.
@@ -76,6 +77,15 @@ export default function ClientLayout() {
           title: "Book guards",
           tabBarIcon: ({ color: c, size }: TabIcon) => (
             <ClipboardList size={size} color={c as string} strokeWidth={2} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: "Me",
+          tabBarIcon: ({ focused, size }: TabIcon & { focused: boolean }) => (
+            <Avatar name={profile?.full_name ?? "?"} uri={profile?.avatar_url ?? photoOf(session)} size={size} ring={focused ? color.primary : undefined} />
           ),
         }}
       />

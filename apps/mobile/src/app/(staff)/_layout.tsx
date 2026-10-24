@@ -1,14 +1,21 @@
 import { Splash } from "@/components/splash";
-import { Redirect, Stack } from "expo-router";
+import { Redirect } from "expo-router";
+import { Tabs } from "expo-router/js-tabs";
+import { CalendarClock, Radar, Siren, Users } from "lucide-react-native";
+import { StyleSheet, type ColorValue } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect } from "react";
 
 import { isStaff } from "@nbss/shared/identity";
 
 import { TopBar } from "@/components/top-bar";
-import { useAuth } from "@/lib/auth";
+import { Avatar } from "@/components/avatar";
+import { photoOf, useAuth } from "@/lib/auth";
 import { askForegroundOnce } from "@/lib/location";
 import { registerForPush } from "@/lib/push";
-import { color } from "@/theme/tokens";
+import { color, font } from "@/theme/tokens";
+
+type TabIcon = { color: ColorValue; size: number };
 
 /**
  * Admins and supervisors.
@@ -20,6 +27,7 @@ import { color } from "@/theme/tokens";
  */
 export default function StaffLayout() {
   const { session, role, profile } = useAuth();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!session) return;
@@ -32,15 +40,37 @@ export default function StaffLayout() {
   if (role && !isStaff(role)) return <Redirect href="/" />;
 
   return (
-    <Stack
+    <Tabs
       screenOptions={{
-        // The same topbar the guard and client tabs carry, so all three roles get the
-        // console's chrome rather than two of them getting it and one a plain title bar.
-        header: () => <TopBar role={role ?? "supervisor"} name={profile?.full_name ?? "-"} />,
-        contentStyle: { backgroundColor: color.appBg },
+        header: () => <TopBar role={role ?? "supervisor"} name={profile?.full_name ?? "-"} account={false} />,
+        tabBarActiveTintColor: color.primary,
+        tabBarInactiveTintColor: color.mutedForeground,
+        tabBarStyle: {
+          backgroundColor: color.card,
+          borderTopColor: color.lineSoft,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: 64 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontFamily: font.medium, fontSize: 12 },
+        sceneStyle: { backgroundColor: color.appBg },
       }}
     >
-      <Stack.Screen name="live" />
-    </Stack>
+      {/* The office in a pocket: the map, SOS, today's duties, the guards, and the account. */}
+      <Tabs.Screen name="live" options={{ title: "Live", tabBarIcon: ({ color: c, size }: TabIcon) => <Radar size={size} color={c as string} strokeWidth={2} /> }} />
+      <Tabs.Screen name="sos" options={{ title: "SOS", tabBarIcon: ({ color: c, size }: TabIcon) => <Siren size={size} color={c as string} strokeWidth={2} /> }} />
+      <Tabs.Screen name="today" options={{ title: "Today", tabBarIcon: ({ color: c, size }: TabIcon) => <CalendarClock size={size} color={c as string} strokeWidth={2} /> }} />
+      <Tabs.Screen name="guards" options={{ title: "Guards", tabBarIcon: ({ color: c, size }: TabIcon) => <Users size={size} color={c as string} strokeWidth={2} /> }} />
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: "Me",
+          tabBarIcon: ({ focused, size }: TabIcon & { focused: boolean }) => (
+            <Avatar name={profile?.full_name ?? "?"} uri={profile?.avatar_url ?? photoOf(session)} size={size} ring={focused ? color.primary : undefined} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
