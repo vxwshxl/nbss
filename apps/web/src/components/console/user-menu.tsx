@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { LogOut, UserRound } from "lucide-react";
 
@@ -38,6 +38,27 @@ export function UserMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  // The menu's generated ids differ between the server and the browser on some pages,
+  // which React reports as a hydration mismatch. The same-looking button is drawn on the
+  // server, and the menu attached once the page is running in the browser.
+  const inBrowser = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
+  const face = (
+    <Avatar className="size-9 ring-2 ring-border">
+      {photoUrl && <AvatarImage src={photoUrl} alt="" />}
+      <AvatarFallback className="bg-accent-subtle text-xs font-semibold text-primary-ink">{initials(name)}</AvatarFallback>
+    </Avatar>
+  );
+  if (!inBrowser) {
+    return (
+      <button type="button" className="rounded-full outline-none" aria-label="Account menu">
+        {face}
+      </button>
+    );
+  }
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -46,12 +67,7 @@ export function UserMenu({
           className="rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-primary/30"
           aria-label="Account menu"
         >
-          <Avatar className="size-9 ring-2 ring-border">
-            {photoUrl && <AvatarImage src={photoUrl} alt="" />}
-            <AvatarFallback className="bg-accent-subtle text-xs font-semibold text-primary-ink">
-              {initials(name)}
-            </AvatarFallback>
-          </Avatar>
+          {face}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-64 rounded-2xl border-2 border-border bg-elevated p-1.5 shadow-e3">
