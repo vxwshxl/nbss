@@ -181,6 +181,25 @@ export default function TrainingPage() {
         </div>
       </Section>
 
+      <Section>
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <Reveal className="lg:order-2">
+            <Eyebrow text="Recruits" />
+            <h2 className="mt-4 font-display text-[clamp(1.6rem,3.5vw,2.25rem)] leading-tight font-bold tracking-tight text-balance">
+              Fitness first, from the first week.
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              New recruits march and run before they ever wear the uniform. A guard on a
+              twelve-hour shift has to be on their feet for all of it, and the drill
+              instructor finds out in week one who will be.
+            </p>
+          </Reveal>
+          <Reveal delay={80} className="lg:order-1">
+            <VideoBand src="/video/nbss-drill.mp4" poster="/video/nbss-drill-poster.webp" caption="Recruit drill, Kokrajhar." />
+          </Reveal>
+        </div>
+      </Section>
+
       {photos.length > 0 && (
         <Section>
           <SectionHead kicker="Sessions" title="Training and parade, photographed." />

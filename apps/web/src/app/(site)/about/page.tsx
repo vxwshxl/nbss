@@ -86,18 +86,15 @@ export default function AboutPage() {
             <figure>
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-app-line-soft bg-muted">
                 <Image
-                  src="/img/gallery/aronai.webp"
-                  alt="An Aronai, the traditional woven Bodo scarf, with its diamond motifs"
+                  src="/img/nbss/woman-guard.webp"
+                  alt="An NBSS guard in uniform, cap and shoulder flash, on duty"
                   fill
                   sizes="(max-width: 1024px) 100vw, 40vw"
                   className="object-cover"
                 />
               </div>
               <figcaption className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                The <em>Aronai</em>, the woven band our mark is drawn from.{" "}
-                <span className="text-muted-foreground/70">
-                  Wikimedia Commons, CC BY 4.0
-                </span>
+                An NBSS guard on duty: recruited, trained and posted in the district she comes from.
               </figcaption>
             </figure>
           </Reveal>

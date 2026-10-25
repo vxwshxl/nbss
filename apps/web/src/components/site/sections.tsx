@@ -25,7 +25,7 @@ export function AerialSection() {
         </h2>
       </FadeUp>
       <ExpandOnScroll className="relative mt-14 h-[82svh] min-h-[420px]">
-        <Image data-zoom src="/img/nbss/parade-ranks.webp" alt="NBSS guards standing in ranks on the parade ground" fill sizes="100vw" className="object-cover" />
+        <Image data-zoom src="/img/nbss/assembly-road.webp" alt="NBSS guards assembled at full strength on a road in Kokrajhar" fill sizes="100vw" className="object-cover" />
       </ExpandOnScroll>
     </section>
   );
@@ -35,9 +35,9 @@ export function AerialSection() {
 
 const strip = [
   { src: "/img/nbss/training-briefing.webp", alt: "A training briefing" },
-  { src: "/img/ops-control-room.webp", alt: "A control room" },
+  { src: "/img/nbss/classroom-recruits.webp", alt: "Recruits in an NBSS classroom session" },
   { src: "/img/nbss/guards-on-duty.webp", alt: "Guards on duty" },
-  { src: "/img/ops-fire-training.webp", alt: "Fire safety training" },
+  { src: "/img/nbss/stadium-ranks.webp", alt: "NBSS guards drawn up at a stadium before an event" },
   { src: "/img/nbss/training-classroom.webp", alt: "Guards in a classroom session" },
 ];
 
@@ -75,13 +75,13 @@ const help = [
   {
     word: "Protect",
     href: "/services/event-vip-protection",
-    image: "/img/nbss/parade-night.webp",
+    image: "/img/nbss/stadium-night.webp",
     body: "Events, gatherings and VIP movement, with access control and crowd handling planned before the day.",
   },
   {
     word: "Supervise",
     href: "/training",
-    image: "/img/ops-control-room.webp",
+    image: "/img/nbss/batch-officers.webp",
     body: "Attendance at the gate on the app, supervision around the clock and a replacement when a guard cannot report.",
   },
 ];

@@ -190,7 +190,7 @@ export function Hero() {
  * only a small label sits in each corner.
  *
  *   ┌───────────────────────────────┐
- *   │ CAM 01  parade      1600 × 714 │
+ *   │ CAM 01  stadium     1280 × 571 │
  *   ├──────────┬────────────────────┤
  *   │ CAM 02   │ shift clock        │
  *   │ team 3:4 │ posts covered      │
@@ -205,13 +205,13 @@ function CameraWall() {
     >
       <Feed
         className="col-span-2"
-        src="/img/nbss/parade-salute.webp"
-        width={1600}
-        height={714}
-        label="CAM 01 · Main gate"
+        src="/img/nbss/cam-main.webp"
+        width={1280}
+        height={571}
+        label="CAM 01 · Stadium duty"
         priority
       />
-      <Feed src="/img/nbss/team-event.webp" width={720} height={968} label="CAM 02 · Event duty" />
+      <Feed src="/img/nbss/cam-event.webp" width={720} height={968} label="CAM 02 · Building post" />
 
       <div
         data-cam
@@ -233,10 +233,10 @@ function CameraWall() {
         </div>
         <ul className="space-y-[0.5em] text-[max(9px,calc(var(--w)*0.018))] text-white/75">
           <li className="flex items-center gap-1.5">
-            <span className="size-[0.6em] rounded-full bg-emerald-400" /> Main gate · {site.address.city}
+            <span className="size-[0.6em] rounded-full bg-emerald-400" /> Stadium duty · {site.address.city}
           </li>
           <li className="flex items-center gap-1.5">
-            <span className="size-[0.6em] rounded-full bg-emerald-400" /> Event duty · New Delhi
+            <span className="size-[0.6em] rounded-full bg-emerald-400" /> Building post · {site.address.city}
           </li>
         </ul>
       </div>

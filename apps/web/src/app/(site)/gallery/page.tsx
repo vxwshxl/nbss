@@ -11,9 +11,9 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbStructuredData, jsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Gallery: operations, training and the region we come from",
+  title: "Gallery: our guards, our postings, our training",
   description:
-    "Photographs from NBSS parades, training sessions and live deployments in Kokrajhar, alongside the Bodoland the agency recruits from.",
+    "NBSS's own photographs: stadium and event duty, guards posted at public halls and showrooms, recruits in training and the company at full strength in Kokrajhar.",
   path: "/gallery",
 });
 
@@ -42,7 +42,7 @@ export default async function GalleryPage({
         eyebrow="Gallery"
         crumb="Gallery"
         title="Our parades, our training, our postings."
-        lede="Photographs from NBSS parades, training sessions and live deployments, alongside the Bodoland the agency comes from: the Aronai, Bwisagu, Manas, and the districts we recruit in."
+        lede="Our own photographs, every one: stadium duty, public halls and showrooms, recruits in training and the company at full strength."
       />
 
       <Section>
@@ -92,7 +92,7 @@ export default async function GalleryPage({
         <SectionHead
           kicker="Credits"
           title="On the photographs."
-          lede="Photographs credited to National Bodo Security Service are our own: our guards, our parades, our postings. The remaining images are used under a Creative Commons licence or are public domain, and the photographer and licence are printed under each frame. Cultural photographs of Bodoland are included because the region is the point, not decoration."
+          lede="Every photograph here is our own: our guards, our parades, our postings, taken on the job. None of it is stock photography."
           className="mx-auto max-w-3xl text-center [&>div]:justify-center [&_p]:mx-auto"
         />
       </Section>

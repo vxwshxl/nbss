@@ -4,11 +4,11 @@ export type Photo = {
   src: string;
   alt: string;
   caption: string;
-  category: "operations" | "training" | "bodoland" | "community";
+  category: "operations" | "training" | "events" | "team";
   credit: string;
   /** Absent on NBSS's own photographs — there is no third-party licence to name. */
   licence?: string;
-  /** True for photographs supplied by NBSS, as opposed to licensed stock. */
+  /** True for photographs supplied by NBSS (all of them, today). */
   own?: boolean;
   /** Renders across two grid rows in the mosaic. */
   tall?: boolean;
@@ -21,16 +21,16 @@ export const galleryCategories: GalleryCategory[] = [
   { slug: "all", label: "Everything" },
   { slug: "operations", label: "Operations" },
   { slug: "training", label: "Training" },
-  { slug: "bodoland", label: "Bodoland" },
-  { slug: "community", label: "Community" },
+  { slug: "events", label: "Events" },
+  { slug: "team", label: "Our people" },
 ];
 
 const NBSS = "National Bodo Security Service";
 
 /**
- * NBSS's own photographs lead the array so they surface first in every filtered
- * view and in the homepage strip. The licensed stock photographs that follow
- * carry a mandatory attribution line — see CREDITS.md.
+ * Every photograph here is NBSS's own: our guards, our sites, our training. The
+ * first ones are the strongest, because they lead every filtered view and the
+ * homepage strip.
  */
 export const gallery: Photo[] = [
   // ------------------------------------------------- supplied by the client
@@ -93,30 +93,191 @@ export const gallery: Photo[] = [
     own: true,
   },
 
-  // ---------------------------------------------- licensed stock, attributed
-  { src: "/img/hero-guard.webp", alt: "A uniformed security guard on duty at a campus gate", caption: "Gate duty, morning shift", category: "operations", credit: "liber(the poet)", licence: "CC BY-SA 2.0" },
-  { src: "/img/ops-team.webp", alt: "A security team standing in formation", caption: "Shift briefing before deployment", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/ops-fire-training.webp", alt: "Fire safety training with an extinguisher", caption: "Fire response training", category: "training", credit: "BLM Oregon & Washington", licence: "CC BY-SA 2.0" },
-  { src: "/img/ops-bank.webp", alt: "A security guard posted outside a bank", caption: "Branch posting, opening drill", category: "operations", credit: "Brad & Ying", licence: "CC BY 2.0" },
-  { src: "/img/services/mall.webp", alt: "Interior of a shopping mall", caption: "Retail floor, closing sweep", category: "operations", credit: "shankar s.", licence: "CC BY 2.0" },
-  { src: "/img/services/warehouse.webp", alt: "Warehouse and logistics facility", caption: "Dock supervision, warehouse posting", category: "operations", credit: "tm-md", licence: "CC BY 2.0" },
-  { src: "/img/gallery/kokrajhar-eve.webp", alt: "Evening at Kokrajhar Medical College", caption: "Evening handover, hospital posting", category: "operations", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-
-  { src: "/img/gallery/aronai.webp", alt: "An Aronai, the traditional woven Bodo scarf", caption: "The Aronai: the woven band our identity is drawn from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 4.0", tall: true },
-  { src: "/img/gallery/aronai-2.webp", alt: "Detail of Aronai weaving showing diamond motifs", caption: "Diamond motif, hand-loomed", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bodo-women.webp", alt: "Bodo women in traditional dokhona", caption: "The community our women guards are recruited from", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 3.0" },
-  { src: "/img/gallery/bodo-elder.webp", alt: "An elderly Bodo man", caption: "Kokrajhar district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/kokrajhar-rail.webp", alt: "Kokrajhar railway station building", caption: "Kokrajhar station", category: "bodoland", credit: "Wikimedia Commons", licence: "CC0" },
-  { src: "/img/gallery/kokrajhar-med.webp", alt: "Kokrajhar Medical College and cancer care centre", caption: "Kokrajhar Medical College", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/manas.webp", alt: "Manas National Park landscape", caption: "Manas: the northern edge of the region", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY 3.0", tall: true },
-  { src: "/img/gallery/manas-2.webp", alt: "Grassland and forest in Manas National Park", caption: "Grassland boundary, Baksa district", category: "bodoland", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-
-  { src: "/img/gallery/bagurumba-1.webp", alt: "Bodo women performing the Bagurumba dance", caption: "Bagurumba: the butterfly dance", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bagurumba-2.webp", alt: "Bagurumba dancers in traditional dokhona", caption: "Festival ground, Bwisagu week", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bagurumba-3.webp", alt: "A Bagurumba performance in progress", caption: "Crowd management at a cultural meet", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0", tall: true },
-  { src: "/img/gallery/bwisagu.webp", alt: "Bwisagu festival dance performance", caption: "Bwisagu: the Bodo new year", category: "community", credit: "Wikimedia Commons", licence: "CC BY-SA 4.0" },
-  { src: "/img/gallery/bardoi-sikhla.webp", alt: "Bodo girls performing the Bardoi Sikhla dance", caption: "Bardoi Sikhla, harvest season", category: "community", credit: "Wikimedia Commons", licence: "CC BY 2.0" },
-  { src: "/img/gallery/marigold.webp", alt: "Marigolds in bloom in Kokrajhar", caption: "Kokrajhar in bloom", category: "community", credit: "Wikimedia Commons", licence: "CC BY 4.0" },
+  {
+    src: "/img/nbss/stadium-night.webp",
+    alt: "NBSS guards drawn up on the running track of a floodlit stadium before an event",
+    caption: "Stadium duty, the evening before the gates open",
+    category: "events",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/assembly-road.webp",
+    alt: "More than a hundred NBSS guards assembled in rows on a road",
+    caption: "Full strength, assembled before deployment",
+    category: "team",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/hall-gate.webp",
+    alt: "Three NBSS guards in reflective vests at the steps of a large domed hall",
+    caption: "Posted at the steps of a public hall",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/guard-portrait.webp",
+    alt: "An NBSS guard in full uniform and cap",
+    caption: "Turned out for the shift",
+    category: "team",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/field-formation.webp",
+    alt: "A long line of NBSS guards on a sports ground under a clear sky",
+    caption: "On the ground, the whole company",
+    category: "training",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/line-women.webp",
+    alt: "NBSS guards, women in front, lined up at a building entrance",
+    caption: "Women guards, posted at an entrance",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/stadium-ranks.webp",
+    alt: "NBSS guards in ranks inside a stadium, the stands behind them",
+    caption: "Briefing at the stadium, every post assigned",
+    category: "events",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/batch-officers.webp",
+    alt: "An NBSS batch standing behind its seated officers",
+    caption: "A batch with its officers",
+    category: "team",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/flag-hoisting.webp",
+    alt: "NBSS guards at a flag hoisting in front of a showroom",
+    caption: "Flag hoisting at a client's showroom",
+    category: "events",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/classroom-recruits.webp",
+    alt: "Recruits seated for a classroom session",
+    caption: "Recruits, first day in the classroom",
+    category: "training",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/vest-team.webp",
+    alt: "Five NBSS guards in reflective vests standing indoors",
+    caption: "Night team, high-visibility vests on",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/woman-guard.webp",
+    alt: "A woman NBSS guard on duty at a water park",
+    caption: "Poolside post at a water park",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/stadium-line.webp",
+    alt: "A single line of NBSS guards across a stadium track",
+    caption: "One line, every post covered",
+    category: "events",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/construction-guard.webp",
+    alt: "An NBSS guard in a reflective vest at a construction site",
+    caption: "Construction site, material gate",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/batch-hall.webp",
+    alt: "An NBSS batch in a red-brick hall with an officer seated in front",
+    caption: "Passing out, a new batch",
+    category: "training",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/waterpark-team.webp",
+    alt: "NBSS guards and managers in front of a water park sculpture",
+    caption: "With the client's team at a water park",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/hall-wide.webp",
+    alt: "A domed public hall with NBSS guards posted at the foot of its steps",
+    caption: "A public hall, guarded from the steps",
+    category: "operations",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/batch-grass.webp",
+    alt: "Two rows of NBSS guards standing on grass",
+    caption: "Drill, two ranks",
+    category: "training",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/formation-trees.webp",
+    alt: "NBSS guards in formation under trees",
+    caption: "Morning fall-in",
+    category: "training",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/classroom-desk.webp",
+    alt: "Recruits at a training table with forms and folders",
+    caption: "Documents and verification, before any posting",
+    category: "training",
+    credit: NBSS,
+    own: true,
+  },
+  {
+    src: "/img/nbss/flag-day.webp",
+    alt: "A flag hoisting ceremony with NBSS guards in the background",
+    caption: "Independence Day at a client's site",
+    category: "events",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
+  {
+    src: "/img/nbss/woman-guard-2.webp",
+    alt: "A woman NBSS guard in uniform at her post",
+    caption: "On post, eyes on the gate",
+    category: "team",
+    credit: NBSS,
+    own: true,
+    tall: true,
+  },
 ];
 
 export function photosIn(category?: string): Photo[] {
