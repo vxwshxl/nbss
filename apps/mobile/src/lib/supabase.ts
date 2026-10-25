@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@nbss/shared/db";
 
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config";
+import { DATA_MODE_HEADER, dataMode } from "./data-mode";
 import { secureStorage } from "./secure-storage";
 
 /**
@@ -18,6 +19,9 @@ import { secureStorage } from "./secure-storage";
  *
  * `detectSessionInUrl` is off because there is no URL to detect one in; leaving it
  * on makes the client reach for `window.location` and throw on native.
+ *
+ * Each request is stamped with the Test / Live mode as it stands when it is sent
+ * (lib/data-mode.tsx), so a developer's switch takes effect without a new client.
  */
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -37,5 +41,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   global: {
     headers: { "x-nbss-client": "mobile" },
+    fetch: (input, init) => {
+      const headers = new Headers(init?.headers);
+      headers.set(DATA_MODE_HEADER, dataMode());
+      return fetch(input, { ...init, headers });
+    },
   },
 });

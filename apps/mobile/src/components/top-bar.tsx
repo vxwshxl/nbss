@@ -11,6 +11,7 @@ import { color, space } from "@/theme/tokens";
 
 import { Avatar } from "./avatar";
 import { BrandMark } from "./brand-mark";
+import { ModeToggle } from "./mode-toggle";
 import { Nibo } from "./nibo/nibo";
 import { Text } from "./text";
 
@@ -56,6 +57,9 @@ export function TopBar({
         <View style={styles.brandText}>
           <Wordmark role={ROLE_LABEL[role]} />
         </View>
+
+        {/* The website's Test / Live switch, for developers, as its header has it. */}
+        {role === "developer" && <ModeToggle />}
 
         {right}
 

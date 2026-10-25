@@ -12,6 +12,7 @@ import {
   Geist_500Medium,
   Geist_600SemiBold,
   Geist_700Bold,
+  Geist_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/geist";
 import { Stack, router } from "expo-router";
@@ -22,6 +23,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
+import { DataModeProvider } from "@/lib/data-mode";
 import { ensureTracking } from "@/lib/keep-alive";
 import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
@@ -77,6 +79,7 @@ export default function RootLayout() {
     Geist_500Medium,
     Geist_600SemiBold,
     Geist_700Bold,
+    Geist_800ExtraBold,
   });
 
   // The logo the loading screen shows, cached first so it is there on the first frame.
@@ -156,34 +159,40 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AuthProvider>
           <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: color.background },
-              headerTintColor: color.foreground,
-              headerTitleStyle: { fontFamily: font.semibold },
-              headerShadowVisible: false,
-              contentStyle: { backgroundColor: color.appBg },
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(guard)" options={{ headerShown: false }} />
-            <Stack.Screen name="(client)" options={{ headerShown: false }} />
-            <Stack.Screen name="(staff)" options={{ headerShown: false }} />
-            <Stack.Screen name="assistant" options={{ headerShown: false, presentation: "modal" }} />
-            <Stack.Screen name="shift/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-            <Stack.Screen
-              name="sos/[id]"
-              options={{
-                // Full screen, no header, and not dismissible by a swipe. An alarm
-                // that can be flicked away by accident is not an alarm.
-                presentation: "fullScreenModal",
-                headerShown: false,
-                gestureEnabled: false,
-                animation: "fade",
-              }}
-            />
-          </Stack>
+          {/* Keyed by Test / Live: a developer's switch starts every screen again on that side. */}
+          <DataModeProvider>
+            {(mode) => (
+              <Stack
+                key={mode}
+                screenOptions={{
+                  headerStyle: { backgroundColor: color.background },
+                  headerTintColor: color.foreground,
+                  headerTitleStyle: { fontFamily: font.semibold },
+                  headerShadowVisible: false,
+                  contentStyle: { backgroundColor: color.appBg },
+                }}
+              >
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(guard)" options={{ headerShown: false }} />
+                <Stack.Screen name="(client)" options={{ headerShown: false }} />
+                <Stack.Screen name="(staff)" options={{ headerShown: false }} />
+                <Stack.Screen name="assistant" options={{ headerShown: false, presentation: "modal" }} />
+                <Stack.Screen name="shift/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+                <Stack.Screen
+                  name="sos/[id]"
+                  options={{
+                    // Full screen, no header, and not dismissible by a swipe. An alarm
+                    // that can be flicked away by accident is not an alarm.
+                    presentation: "fullScreenModal",
+                    headerShown: false,
+                    gestureEnabled: false,
+                    animation: "fade",
+                  }}
+                />
+              </Stack>
+            )}
+          </DataModeProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

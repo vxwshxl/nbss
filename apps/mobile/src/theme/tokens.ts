@@ -106,6 +106,8 @@ export const font = {
   medium: "Geist_500Medium",
   semibold: "Geist_600SemiBold",
   bold: "Geist_700Bold",
+  /** `font-extrabold`: the sign-in heading and the lockup's wordmark. */
+  extrabold: "Geist_800ExtraBold",
   // Codes and numbers: Geist with tabular figures (Text asks for them), not Geist Mono,
   // whose slashed zero reads as code rather than a guard's number.
   mono: "Geist_500Medium",

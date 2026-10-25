@@ -9,9 +9,11 @@ import { BrandMark } from "./brand-mark";
 import { Text } from "./text";
 
 const SIZES = {
-  sm: { mark: 34, word: 28, line: 11 },
-  md: { mark: 48, word: 40, line: 15 },
-  lg: { mark: 64, word: 54, line: 20 },
+  sm: { mark: 34, word: 28, line: 11, gap: 10 },
+  md: { mark: 48, word: 40, line: 15, gap: 10 },
+  lg: { mark: 64, word: 54, line: 20, gap: 10 },
+  /** The website's sign-in lockup (`lg` there): the lines scale with the row, as its SVG does. */
+  xl: { mark: 72, word: 62, line: 0, gap: 12 },
 };
 
 /**
@@ -37,13 +39,16 @@ export function BrandLockup({
 }) {
   const s = SIZES[size];
   const [width, setWidth] = useState(0);
+  // The web sets these lines at 118 units in a 1000-wide box, 120 units apart, 4pt under the row.
+  const line = s.line || width * 0.118;
+  const lineHeight = s.line ? s.line * 1.2 : width * 0.12;
 
   return (
     <View style={[styles.wrap, style]} accessible accessibilityLabel={COMPANY.name}>
-      <View style={styles.row} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <View style={[styles.row, { gap: s.gap }, !s.line && styles.rowXl]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         <BrandMark size={s.mark} />
         <Text
-          weight="bold"
+          weight={size === "xl" ? "extrabold" : "bold"}
           tone="inherit"
           style={{ color: tone, fontSize: s.word, lineHeight: s.word * 1.05, letterSpacing: -s.word * 0.035 }}
         >
@@ -51,9 +56,9 @@ export function BrandLockup({
         </Text>
       </View>
       {width > 0 &&
-        ["National Bodo", "Security Service"].map((line) => (
-          <View key={line} style={[styles.spread, { width }]}>
-            {line.split("").map((ch, i) => (
+        ["National Bodo", "Security Service"].map((words) => (
+          <View key={words} style={[styles.spread, { width }]}>
+            {words.split("").map((ch, i) => (
               <Text
                 key={i}
                 tone="inherit"
@@ -61,9 +66,9 @@ export function BrandLockup({
                   color: tone,
                   opacity: 0.72,
                   fontFamily: font.medium,
-                  fontSize: s.line,
-                  lineHeight: s.line * 1.2,
-                  minWidth: ch === " " ? s.line * 0.35 : undefined,
+                  fontSize: line,
+                  lineHeight,
+                  minWidth: ch === " " ? line * 0.35 : undefined,
                 }}
               >
                 {ch}
@@ -77,6 +82,7 @@ export function BrandLockup({
 
 const styles = StyleSheet.create({
   wrap: { alignSelf: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 2 },
+  row: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
+  rowXl: { marginBottom: 6 },
   spread: { flexDirection: "row", justifyContent: "space-between" },
 });

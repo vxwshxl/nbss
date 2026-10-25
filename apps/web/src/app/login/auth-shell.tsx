@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowLeft, LockKeyhole } from "lucide-react";
 
 import { GateScene } from "@/components/auth/gate-scene";
 import { BrandLockup } from "@/components/brand";
@@ -11,7 +10,8 @@ import { site } from "@/content/site";
  *
  * Wide screens: a night gate on the left (the picture of what the console is
  * for) and the form on the right under the full lockup. Below lg the picture
- * becomes a band at the foot, so a phone opens straight onto the form.
+ * becomes a band at the foot that takes whatever height the form leaves, so a
+ * phone opens onto the whole page in one screen, without scrolling.
  */
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
@@ -38,33 +38,20 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         <GateScene className="mt-auto" />
       </aside>
 
-      <section className="flex min-h-dvh flex-col px-5 pt-8 sm:px-10">
-        <div className="m-auto w-full max-w-[400px] py-8">
+      <section className="flex min-h-dvh flex-col px-5 pt-8 sm:px-10 max-lg:h-dvh max-lg:pt-6 [@media(max-height:740px)]:pt-3">
+        <div className="mx-auto w-full max-w-[400px] py-8 max-lg:py-4 lg:my-auto [@media(max-height:740px)]:py-2">
           <Link href="/" aria-label={`${site.shortName} home`} className="mx-auto flex w-fit text-foreground">
-            <BrandLockup size="lg" priority />
+            <BrandLockup size="lg" priority className="[@media(max-height:740px)]:hidden" />
+            <BrandLockup size="md" className="hidden [@media(max-height:740px)]:inline-flex" />
           </Link>
-          <div
-            aria-hidden
-            className="mx-auto mt-6 h-px w-24 bg-[linear-gradient(90deg,transparent,var(--primary),transparent)]"
-          />
-          <div className="animate-rise mt-6">{children}</div>
+          <div className="animate-rise mt-8 [@media(max-height:740px)]:mt-5">{children}</div>
         </div>
 
-        <div aria-hidden className="-mx-5 overflow-hidden rounded-t-[28px] bg-[#06110d] sm:-mx-10 lg:hidden">
-          <GateScene className="h-[220px] sm:h-[280px]" />
+        <div aria-hidden className="relative -mx-5 mt-4 min-h-[120px] flex-1 overflow-hidden [@media(max-height:740px)]:min-h-[80px] rounded-t-[28px] bg-[#06110d] sm:-mx-10 lg:hidden">
+          <GateScene className="absolute inset-0 h-full" />
         </div>
 
-        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 py-5 text-xs text-muted-foreground">
-          <Link href="/" className="inline-flex items-center gap-1 underline-offset-4 hover:text-foreground hover:underline">
-            <ArrowLeft className="size-3.5" />
-            Back to {site.shortName}
-          </Link>
-          <span aria-hidden>·</span>
-          <span className="inline-flex items-center gap-1">
-            <LockKeyhole className="size-3.5 text-primary-ink" />
-            Secured sign-in
-          </span>
-          <span aria-hidden>·</span>
+        <p className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
           <Link href="/privacy-policy" className="underline-offset-4 hover:text-foreground hover:underline">
             Privacy
           </Link>

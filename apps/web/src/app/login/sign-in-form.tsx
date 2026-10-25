@@ -165,11 +165,9 @@ export function SignInForm({ from, error }: { from: string; error?: string }) {
 
   return (
     <div className="w-full">
-      <div className="mb-7 text-center">
+      <div className="mb-7 text-center [@media(max-height:740px)]:mb-4">
         <h1 className="font-display text-[32px] leading-tight font-extrabold tracking-[-0.025em]">Login</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {staff ? "With the employee code and PIN the office gave you." : "to your NBSS account"}
-        </p>
+        {staff && <p className="mt-1.5 text-sm text-muted-foreground">With the employee code and PIN the office gave you.</p>}
       </div>
 
       {staff ? (
@@ -178,9 +176,6 @@ export function SignInForm({ from, error }: { from: string; error?: string }) {
         <div className="flex flex-col gap-4">
           {googleError && <Alert>{googleError}</Alert>}
           <GoogleButton from={from} onError={setGoogleError} />
-          <p className="text-center text-sm text-muted-foreground">
-            Use the Google account registered with NBSS.
-          </p>
 
           <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
@@ -190,18 +185,12 @@ export function SignInForm({ from, error }: { from: string; error?: string }) {
 
           <Button
             type="button"
-            variant="ghost"
             onClick={() => setStaff(true)}
-            className="h-11 w-full rounded-xl text-[15px]"
+            className="h-12 w-full rounded-xl text-[15px] font-semibold shadow-sm"
           >
             <IdCard className="size-4" />
             Sign in with employee code
           </Button>
-
-          <p className="mt-4 rounded-2xl border border-app-line bg-brand-gradient-soft px-4 py-3 text-center text-sm text-accent-foreground">
-            <span className="font-semibold">New to NBSS?</span> Sign in with Google and your client account is set up
-            on the spot, then you can book guards in two minutes.
-          </p>
         </div>
       )}
     </div>

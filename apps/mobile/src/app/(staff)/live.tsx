@@ -70,7 +70,9 @@ export default function LiveRoute() {
   );
   const nameOf = (id: string) => board?.names.get(id)?.full_name ?? "Guard";
 
-  const list = useMemo(() => Object.values(positions), [positions]);
+  // The broadcast carries every guard; keep the ones on this side of Test / Live, which
+  // are the guards the profiles query (filtered by the mode) returned.
+  const list = useMemo(() => (board ? Object.values(positions).filter((p) => board.names.has(p.guard_id)) : []), [positions, board]);
   const fences = useMemo<MapFence[]>(
     () =>
       (board?.sites ?? []).map((s) => ({

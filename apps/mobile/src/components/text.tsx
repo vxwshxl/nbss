@@ -4,7 +4,7 @@ import { color, font, text } from "@/theme/tokens";
 
 type Variant = keyof typeof text;
 type Tone = "default" | "muted" | "primary" | "danger" | "inverse" | "inherit";
-type Weight = "regular" | "medium" | "semibold" | "bold";
+type Weight = "regular" | "medium" | "semibold" | "bold" | "extrabold";
 
 /**
  * Typography.
