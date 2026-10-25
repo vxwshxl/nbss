@@ -5,7 +5,7 @@
  * design. After that, accounts are normally created from the console; this
  * stays for bootstrapping and for recovering a locked-out admin.
  *
- *   node scripts/create-user.mjs --code NBSS-001 --name "Name" --role admin --pin 481920
+ *   node scripts/create-user.mjs --code NBSS-1 --name "Name" --role admin --pin 481920
  *
  * Omit --pin and one is generated and printed.
  */
@@ -26,7 +26,7 @@ const phone = args.phone ?? null;
 const pin = args.pin ?? String(Math.floor(100000 + Math.random() * 900000));
 
 if (!/^[A-Z0-9-]{3,20}$/.test(code)) {
-  console.error("--code must be 3–20 letters, digits or hyphens, e.g. NBSS-001");
+  console.error("--code must be 3–20 letters, digits or hyphens, e.g. NBSS-1");
   process.exit(1);
 }
 if (!name) {

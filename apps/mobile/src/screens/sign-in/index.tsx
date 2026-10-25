@@ -175,7 +175,7 @@ function StaffForm({ onBack }: { onBack: () => void }) {
                 setNumber(v.replace(/^nbss-/i, ""));
                 setError(null);
               }}
-              placeholder={custom ? "Employee code or email" : "012"}
+              placeholder=""
               placeholderTextColor={color.mutedForeground}
               autoCapitalize="none"
               autoCorrect={false}

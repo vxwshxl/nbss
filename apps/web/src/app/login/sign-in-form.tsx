@@ -101,7 +101,7 @@ function CodeField({ defaultValue }: { defaultValue?: string }) {
           id="identifier-input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={custom ? "Employee code or email" : "012"}
+          placeholder=""
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"

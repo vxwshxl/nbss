@@ -62,7 +62,7 @@ export function codeToEmail(code: string): string {
 export { CLIENT_DOMAIN_NOTE };
 
 /** Codes are stored and compared uppercase, so case at the keypad never matters. */
-/** Upper-cased, no spaces; a bare number ("11") is read as NBSS-011. */
+/** Upper-cased, no spaces; a bare number ("11") is read as NBSS-11. */
 export function normaliseCode(code: string): string {
   return expandEmployeeCode(code);
 }
@@ -189,9 +189,13 @@ export function pinPassword(secret: string): string {
   return isShortPin(secret) ? `nbss-pin-${secret}` : secret;
 }
 
-/** "42", "042", "NBSS-42" and "nbss-042" all mean NBSS-042; any other code is kept as written. */
+/**
+ * "42", "042", "NBSS-42" and "nbss-042" all mean NBSS-42: codes run 1, 2, 3… with no
+ * leading zeros, and a zero typed from an old printed card is dropped. Any other code
+ * is kept as written.
+ */
 export function expandEmployeeCode(raw: string): string {
   const code = raw.trim().toUpperCase().replace(/\s+/g, "");
   const n = /^(?:NBSS-)?(\d{1,6})$/.exec(code)?.[1];
-  return n ? `${EMPLOYEE_PREFIX}${n.padStart(3, "0")}` : code;
+  return n ? `${EMPLOYEE_PREFIX}${Number(n)}` : code;
 }

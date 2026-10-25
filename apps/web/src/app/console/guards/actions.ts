@@ -38,7 +38,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
 
   // The office types the number; "NBSS-" is fixed.
   const number = String(data.get("employee_number") ?? "").replace(/\D/g, "");
-  const employeeCode = number ? `NBSS-${number.padStart(3, "0")}` : "";
+  const employeeCode = number ? `NBSS-${Number(number)}` : "";
   const fullName = String(data.get("full_name") ?? "").trim();
   const phone = String(data.get("phone") ?? "").trim();
   const email = String(data.get("email") ?? "").trim().toLowerCase();

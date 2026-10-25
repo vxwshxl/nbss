@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isStaff, roleAllowed } from "@nbss/shared/identity";
+import { expandEmployeeCode, isStaff, roleAllowed } from "@nbss/shared/identity";
 import { z } from "zod";
 
 import { supabaseServer } from "@/lib/supabase/server";
@@ -303,8 +303,9 @@ const guardAttendance: AiTool = {
     const supabase = await supabaseServer();
 
     // Matched on either field, because the office says "Ripun" and the roster
-    // says "NBSS-041" and both are the same question.
-    const term = who.trim();
+    // says "NBSS-41" and both are the same question. A code is read as the sign-in
+    // reads it, so "41" and an old "NBSS-041" find NBSS-41 too.
+    const term = /^(nbss-)?\d+$/i.test(who.trim()) ? expandEmployeeCode(who) : who.trim();
     const { data: people } = await supabase
       .from("profiles")
       .select("id, full_name, employee_code, role, active")

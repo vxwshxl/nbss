@@ -173,7 +173,7 @@ export function GuardsWorkspace({
   isDeveloper = false,
   showRoleTabs = false,
   defaultRole = "guard",
-  nextCode = "NBSS-001",
+  nextCode = "NBSS-1",
 }: {
   rows: PersonRow[];
   canManage: boolean;
