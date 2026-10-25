@@ -4,9 +4,9 @@
  * (or for --minutes), and checks out. For demos and for testing the console's
  * Live tracking and Route history without a phone in a pocket.
  *
- *   node scripts/simulate-guard.mjs --code TEST-G1 --pin 111111 --site "Marriage event"
- *   node scripts/simulate-guard.mjs --code TEST-G2 --pin 222222 --site KGC --minutes 5 --wander 300
- *   node scripts/simulate-guard.mjs --code TEST-G1 --pin 111111 --sos     # raise an SOS mid-walk
+ *   node scripts/simulate-guard.mjs --code TEST-G1 --pin 1111 --site "Marriage event"
+ *   node scripts/simulate-guard.mjs --code TEST-G2 --pin 2222 --site KGC --minutes 5 --wander 300
+ *   node scripts/simulate-guard.mjs --code TEST-G1 --pin 1111 --sos     # raise an SOS mid-walk
  *
  * --every     seconds between batches (default 15, like a phone in a pocket)
  * --wander    how far from the gate the walk may go, in metres (default 220 —
@@ -36,7 +36,7 @@ const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SECRET_KEY
 const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } });
 
 const code = String(args.code ?? "TEST-G1").toUpperCase();
-const pin = String(args.pin ?? "111111");
+const pin = String(args.pin ?? "1111");
 const every = Number(args.every ?? 15) * 1000;
 const wander = Number(args.wander ?? 220);
 const minutes = args.minutes ? Number(args.minutes) : null;
@@ -45,7 +45,7 @@ const offline = Number(args.offline ?? 0);
 const { data: profile } = await admin.from("profiles").select("id, full_name").eq("employee_code", code).single();
 if (!profile) throw new Error(`No guard ${code}`);
 const { data: u } = await admin.auth.admin.getUserById(profile.id);
-const { error: signInError } = await db.auth.signInWithPassword({ email: u.user.email, password: pin });
+const { error: signInError } = await db.auth.signInWithPassword({ email: u.user.email, password: `nbss-pin-${pin}` });
 if (signInError) throw new Error(`sign in: ${signInError.message}`);
 
 const siteQuery = admin.from("sites").select("id, name, lat, lng, geofence_radius_m").eq("active", true);

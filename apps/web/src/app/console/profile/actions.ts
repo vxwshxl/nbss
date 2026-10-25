@@ -64,13 +64,10 @@ export async function changeOwnPin(_prev: ProfileState, data: FormData): Promise
   if (!current) return { ok: false, error: "Enter your current PIN." };
   if (next !== confirm) return { ok: false, error: "The two new PINs do not match." };
 
-  if (!isValidSecret(next, session.profile.role)) {
+  if (!isValidSecret(next)) {
     return {
       ok: false,
-      error:
-        session.profile.role === "guard"
-          ? "Your new PIN must be 4 digits."
-          : "Your new PIN must be 4 digits.",
+      error: "Your new PIN must be 4 digits.",
     };
   }
   if (next === current) return { ok: false, error: "The new PIN must be different from the old one." };
@@ -100,6 +97,10 @@ export async function changeOwnPin(_prev: ProfileState, data: FormData): Promise
     .from("profiles")
     .update({ must_change_pin: false, pin_reset_at: new Date().toISOString() })
     .eq("id", session.profile.id);
+  // The office's copy (0044), so the person popup shows the PIN that works now.
+  await admin
+    .from("staff_pins")
+    .upsert({ profile_id: session.profile.id, pin: next, set_at: new Date().toISOString(), set_by: session.profile.id });
 
   await audit({ actor: session.realProfile, action: "own_pin_changed", entity: "profiles", entityId: session.profile.id });
 

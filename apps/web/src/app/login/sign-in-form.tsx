@@ -6,7 +6,7 @@ import { AlertCircle, ArrowLeft, ArrowRight, IdCard, Loader2 } from "lucide-reac
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { PasswordInput } from "@/components/ui/password-input";
+import { PinInput } from "@/components/ui/pin-input";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 import { signInAction } from "./actions";
@@ -131,14 +131,15 @@ function StaffForm({ from, onBack }: { from: string; onBack: () => void }) {
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="secret">PIN</Label>
-          <PasswordInput
+          <PinInput
             id="secret"
             name="secret"
-            autoComplete="current-password"
-            inputMode="numeric"
-            placeholder="4-digit PIN"
             required
-            className="h-11 rounded-xl text-[15px] tracking-[0.3em] placeholder:tracking-normal"
+            // The fourth digit signs in, as an OTP box does, once the code is there.
+            onComplete={(_, input) => {
+              const form = input.form;
+              if (form && new FormData(form).get("identifier")) form.requestSubmit();
+            }}
           />
         </div>
 

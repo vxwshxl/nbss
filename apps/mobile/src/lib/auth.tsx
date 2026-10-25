@@ -84,6 +84,8 @@ async function viaServer(
     const data = (await res.json().catch(() => null)) as
       | { error?: string; session?: { access_token: string; refresh_token: string } }
       | null;
+    // A server that fails is not a wrong PIN, so it is not reported as one.
+    if (res.status >= 500) return { error: "NBSS could not sign you in just now. Try again in a minute." };
     if (!res.ok) return { error: data?.error ?? REFUSED };
     if (data?.session) {
       const { error } = await supabase.auth.setSession(data.session);

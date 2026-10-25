@@ -27,7 +27,6 @@ const ROLE_LABEL: Record<Role, string> = {
 
 export default async function ProfilePage() {
   const { profile, impersonating } = await requireSession();
-  const isGuard = profile.role === "guard";
 
   return (
     <div className="space-y-6">
@@ -65,7 +64,7 @@ export default async function ProfilePage() {
 
       <Panel
         tone="amber"
-        title={isGuard ? "Change your PIN" : "Change your passphrase"}
+        title="Change your PIN"
         icon={KeyRound}
       >
         {impersonating ? (
@@ -75,10 +74,10 @@ export default async function ProfilePage() {
             path is recorded in the audit log.
           </p>
         ) : (
-          <PinForm isGuard={isGuard} mustChange={profile.must_change_pin} />
+          <PinForm mustChange={profile.must_change_pin} />
         )}
         <p className="mt-4 text-xs text-muted-foreground">
-          Your {isGuard ? "PIN" : "passphrase"} is stored hashed and cannot be read by
+          Your PIN is stored hashed and cannot be read by
           anyone, including an administrator. If you forget it, the office issues a new
           one. They never see the old.
         </p>

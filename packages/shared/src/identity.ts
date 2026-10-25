@@ -73,24 +73,17 @@ export function isValidCode(code: string): boolean {
 }
 
 /**
- * Two shapes of secret, because two very different people type them.
- *
- * A guard's PIN is short by design — entered on a phone at a gate, in the dark,
- * often in the rain. Six digits plus lockout is the trade that situation calls
- * for; the throttle on the sign-in action carries the security, not the length.
- *
- * Office staff sit at a desk and hold far more authority — an admin can move a
- * geofence or rewrite attendance — so they get a real passphrase, and a
- * digit-only rule would only weaken them. A client is in the same position as
- * office staff: a keyboard, and an account worth protecting properly.
+ * One shape of secret: a 4-digit PIN, for every role. It is typed on a phone at a
+ * gate as often as at a desk; the sign-in's throttle carries the security, not the
+ * length. Stored as `pinPassword(pin)` below.
  */
-export function isValidSecret(secret: string, role: Role): boolean {
-  return role === "guard" ? /^\d{6,12}$/.test(secret) : secret.length >= 8;
+export function isValidSecret(secret: string): boolean {
+  return /^\d{4}$/.test(secret);
 }
 
-/** Guards only. Kept for the check-in screens, which never see another role. */
+/** The same 4-digit rule. */
 export function isValidPin(pin: string): boolean {
-  return /^\d{6,12}$/.test(pin);
+  return /^\d{4}$/.test(pin);
 }
 
 /**

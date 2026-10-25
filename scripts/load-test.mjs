@@ -11,7 +11,7 @@
  * silent half-way (No signal), one checks in on another guard's phone, and one
  * raises an SOS (unless --no-sos). Prints round-trip times for record_positions.
  *
- * Accounts: LOAD-G001…, PIN 600001…; sites "Load site 01"…. Re-running reuses them.
+ * Accounts: LOAD-G001…, PIN 5001…; sites "Load site 01"…. Re-running reuses them.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -85,18 +85,20 @@ console.log(`${sites.length} sites ready`);
 const guards = [];
 for (let i = 0; i < N; i++) {
   const code = `LOAD-G${String(i + 1).padStart(3, "0")}`;
-  const pin = String(600001 + i);
+  // 4-digit PINs, stored as the sign-in stores them (pinPassword in packages/shared).
+  const pin = String(5001 + i);
+  const password = `nbss-pin-${pin}`;
   const email = `${code.toLowerCase()}@staff.nbss.co.in`;
   const name = `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]}`;
   let { data: p } = await admin.from("profiles").select("id").eq("employee_code", code).maybeSingle();
   if (!p) {
-    const { data, error } = await admin.auth.admin.createUser({ email, password: pin, email_confirm: true });
+    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     if (error) throw new Error(`${code}: ${error.message}`);
     const { error: pe } = await admin.from("profiles").insert({ id: data.user.id, employee_code: code, role: "guard", full_name: name, phone: `90000${String(10000 + i)}` });
     if (pe) throw new Error(`${code}: ${pe.message}`);
     p = { id: data.user.id };
   }
-  guards.push({ i, code, pin, email, name, id: p.id, site: sites[i % sites.length] });
+  guards.push({ i, code, pin, password, email, name, id: p.id, site: sites[i % sites.length] });
 }
 console.log(`${guards.length} guards ready, signing in…`);
 
@@ -105,7 +107,7 @@ let signed = 0;
 for (const g of guards) {
   g.db = client();
   for (let attempt = 0; attempt < 6; attempt++) {
-    const { error } = await g.db.auth.signInWithPassword({ email: g.email, password: g.pin });
+    const { error } = await g.db.auth.signInWithPassword({ email: g.email, password: g.password });
     if (!error) break;
     if (!/rate|too many/i.test(error.message)) throw new Error(`${g.code}: ${error.message}`);
     await sleep(2500);

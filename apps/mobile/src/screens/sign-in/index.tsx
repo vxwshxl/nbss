@@ -142,14 +142,18 @@ function StaffForm({ onBack }: { onBack: () => void }) {
   const custom = /[^0-9]/.test(number);
   const identifier = custom ? number.trim() : number ? `NBSS-${number}` : "";
 
-  const submit = async () => {
-    if (!identifier || !secret) {
-      setError(!identifier ? "Enter your employee code." : "Enter your PIN.");
+  const submit = async (pin = secret) => {
+    if (!identifier || pin.length !== 4) {
+      setError(!identifier ? "Enter your employee code." : "Enter your 4-digit PIN.");
       return;
     }
     setError(null);
-    const result = await signIn(identifier, secret);
-    if (result.error) setError(result.error);
+    const result = await signIn(identifier, pin);
+    if (result.error) {
+      setError(result.error);
+      // A wrong PIN clears, ready for the next try, as an OTP box does.
+      setSecret("");
+    }
   };
 
   return (
@@ -195,31 +199,44 @@ function StaffForm({ onBack }: { onBack: () => void }) {
           <Text variant="label" weight="medium">
             PIN
           </Text>
-          <Box focused={focus === "pin"}>
-            <TextInput
-              value={secret}
-              onChangeText={(v) => {
-                setSecret(v);
-                setError(null);
-              }}
-              placeholder="4-digit PIN"
-              placeholderTextColor={color.mutedForeground}
-              secureTextEntry={!shown}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="current-password"
-              textContentType="password"
-              keyboardType={custom ? "default" : "number-pad"}
-              returnKeyType="go"
-              onSubmitEditing={() => void submit()}
-              onFocus={() => setFocus("pin")}
-              onBlur={() => setFocus((f) => (f === "pin" ? null : f))}
-              style={[styles.input, secret ? styles.pinText : styles.pinPlaceholder]}
-            />
-            <Pressable accessibilityRole="button" accessibilityLabel={shown ? "Hide PIN" : "Show PIN"} hitSlop={10} onPress={() => setShown((v) => !v)} style={styles.eye}>
+          <View style={styles.pinRow}>
+            <View style={styles.pinCells}>
+              {[0, 1, 2, 3].map((i) => {
+                const active = focus === "pin" && (i === secret.length || (i === 3 && secret.length === 4));
+                return (
+                  <View key={i} style={[styles.halo, styles.cellHalo, active && styles.haloOn]}>
+                    <View style={[styles.cell, active && styles.boxOn]}>
+                      {secret[i] ? shown ? <Text weight="semibold" style={styles.cellDigit}>{secret[i]}</Text> : <View style={styles.cellDot} /> : null}
+                    </View>
+                  </View>
+                );
+              })}
+              {/* One real input over the cells: the keypad, paste and a password manager all work as usual. */}
+              <TextInput
+                value={secret}
+                onChangeText={(v) => {
+                  const pin = v.replace(/\D/g, "").slice(0, 4);
+                  setSecret(pin);
+                  setError(null);
+                  // The fourth digit signs in, as an OTP box does.
+                  if (pin.length === 4 && identifier) void submit(pin);
+                }}
+                maxLength={4}
+                keyboardType="number-pad"
+                secureTextEntry
+                autoComplete="current-password"
+                textContentType="password"
+                caretHidden
+                accessibilityLabel="4-digit PIN"
+                onFocus={() => setFocus("pin")}
+                onBlur={() => setFocus((f) => (f === "pin" ? null : f))}
+                style={styles.pinInput}
+              />
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel={shown ? "Hide PIN" : "Show PIN"} hitSlop={10} onPress={() => setShown((v) => !v)} style={styles.eyeButton}>
               {shown ? <EyeOff size={18} color={color.mutedForeground} strokeWidth={2} /> : <Eye size={18} color={color.mutedForeground} strokeWidth={2} />}
             </Pressable>
-          </Box>
+          </View>
         </View>
 
         <Pressable
@@ -377,9 +394,32 @@ const styles = StyleSheet.create({
     // The browser preview's own focus outline; the frame draws the ring.
     ...(Platform.OS === "web" ? ({ outlineWidth: 0, outlineStyle: "none" } as object) : null),
   },
-  pinText: { letterSpacing: 4.5 },
-  pinPlaceholder: { letterSpacing: 0 },
-  eye: { justifyContent: "center", paddingHorizontal: space[3] },
+  pinRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  pinCells: { flex: 1, flexDirection: "row", gap: 10 },
+  cellHalo: { flex: 1, margin: 0 },
+  cell: {
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.background,
+  },
+  cellDigit: { fontSize: 20, lineHeight: 26, color: color.foreground },
+  cellDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.foreground },
+  // Invisible, over the cells, so a tap anywhere on them opens the keypad.
+  pinInput: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0,
+    color: "transparent",
+    ...(Platform.OS === "web" ? ({ outlineWidth: 0, outlineStyle: "none" } as object) : null),
+  },
+  eyeButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.xl },
   submitWrap: { marginTop: space[1], borderRadius: radius.xl, overflow: "hidden" },
   tall: { height: 48 },
   raised: { shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 },

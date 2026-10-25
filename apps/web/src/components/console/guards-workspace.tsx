@@ -710,7 +710,7 @@ export function GuardsWorkspace({
                   onClick={() => setConfirm({ kind: "reset", row: detail })}
                 >
                   <KeyRound data-icon="inline-start" />
-                  {p.role === "guard" ? "Reset PIN" : "Reset passphrase"}
+                  Reset PIN
                 </Button>
                 <Button
                   size="sm"

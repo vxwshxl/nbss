@@ -11,7 +11,7 @@ import { emptyProfileState } from "@/app/console/profile/profile-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PasswordInput } from "@/components/ui/password-input";
+import { PinInput } from "@/components/ui/pin-input";
 
 function Save({ label = "Save changes" }: { label?: string }) {
   const { pending } = useFormStatus();
@@ -82,9 +82,10 @@ export function DetailsForm({ fullName, phone }: { fullName: string; phone: stri
   );
 }
 
-export function PinForm({ isGuard, mustChange }: { isGuard: boolean; mustChange: boolean }) {
+/** Everyone, every role, signs in with a 4-digit PIN. */
+export function PinForm({ mustChange }: { mustChange: boolean }) {
   const [state, action] = useActionState(changeOwnPin, emptyProfileState);
-  const word = isGuard ? "PIN" : "passphrase";
+  const word = "PIN";
 
   return (
     <form action={action} className="grid gap-4 sm:grid-cols-2">
@@ -100,38 +101,20 @@ export function PinForm({ isGuard, mustChange }: { isGuard: boolean; mustChange:
 
       <div className="flex flex-col gap-2 sm:col-span-2">
         <Label htmlFor="current">Current {word}</Label>
-        <PasswordInput
-          id="current"
-          name="current"
-          autoComplete="current-password"
-          inputMode={isGuard ? "numeric" : undefined}
-          required
-        />
+        <PinInput id="current" name="current" autoComplete="current-password" required />
       </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="next">New {word}</Label>
-        <PasswordInput
-          id="next"
-          name="next"
-          autoComplete="new-password"
-          inputMode={isGuard ? "numeric" : undefined}
-          required
-        />
+        <PinInput id="next" name="next" autoComplete="new-password" required />
         <p className="text-xs text-muted-foreground">
-          {isGuard ? "Six to twelve digits." : "At least eight characters."}
+          Four digits.
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirm">Repeat new {word}</Label>
-        <PasswordInput
-          id="confirm"
-          name="confirm"
-          autoComplete="new-password"
-          inputMode={isGuard ? "numeric" : undefined}
-          required
-        />
+        <PinInput id="confirm" name="confirm" autoComplete="new-password" required />
       </div>
 
       <div className="sm:col-span-2">

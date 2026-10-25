@@ -5,7 +5,7 @@
  * design. After that, accounts are normally created from the console; this
  * stays for bootstrapping and for recovering a locked-out admin.
  *
- *   node scripts/create-user.mjs --code NBSS-1 --name "Name" --role admin --pin 481920
+ *   node scripts/create-user.mjs --code NBSS-1 --name "Name" --role admin --pin 4819
  *
  * Omit --pin and one is generated and printed.
  */
@@ -23,7 +23,8 @@ const code = (args.code ?? "").trim().toUpperCase();
 const name = (args.name ?? "").trim();
 const role = args.role ?? "guard";
 const phone = args.phone ?? null;
-const pin = args.pin ?? String(Math.floor(100000 + Math.random() * 900000));
+// Four digits, never starting with a zero, as the console issues them.
+const pin = args.pin ?? String(Math.floor(1000 + Math.random() * 9000));
 
 if (!/^[A-Z0-9-]{3,20}$/.test(code)) {
   console.error("--code must be 3–20 letters, digits or hyphens, e.g. NBSS-1");
@@ -37,15 +38,9 @@ if (!["developer", "admin", "supervisor", "guard", "client"].includes(role)) {
   console.error("--role must be developer, admin, supervisor, guard or client");
   process.exit(1);
 }
-// Guards get a digit PIN they can thumb in at a gate; office staff hold more
-// authority and sit at a keyboard, so they get a real passphrase instead.
-const ok = role === "guard" ? /^\d{6,12}$/.test(pin) : pin.length >= 8;
-if (!ok) {
-  console.error(
-    role === "guard"
-      ? "--pin must be 6–12 digits for a guard"
-      : "--pin must be at least 8 characters for an admin, supervisor or client",
-  );
+// Every role signs in with a 4-digit PIN.
+if (!/^\d{4}$/.test(pin)) {
+  console.error("--pin must be 4 digits");
   process.exit(1);
 }
 
@@ -70,7 +65,8 @@ if (taken) {
 
 const { data: created, error: authError } = await admin.auth.admin.createUser({
   email,
-  password: pin,
+  // As the sign-in stores a PIN (pinPassword in packages/shared/src/identity.ts).
+  password: `nbss-pin-${pin}`,
   email_confirm: true,
   user_metadata: { employee_code: code, full_name: name },
 });
@@ -96,6 +92,9 @@ if (profileError) {
   process.exit(1);
 }
 
+// The office's copy of the PIN (0044), shown in the person popup.
+await admin.from("staff_pins").upsert({ profile_id: created.user.id, pin });
+
 console.log(`Created ${role}  ${code}  ${name}`);
 console.log(`  PIN  ${pin}`);
-console.log(`  Sign in at /console/login with the code and PIN above.`);
+console.log(`  Sign in at /login with the code and PIN above.`);

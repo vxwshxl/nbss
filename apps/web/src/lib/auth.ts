@@ -44,27 +44,17 @@ export function isValidCode(code: string): boolean {
 }
 
 /**
- * Two shapes of secret, because two very different people type them.
- *
- * A guard's PIN is short by design — it is entered on a phone at a gate, in the
- * dark, often in the rain, sometimes by someone who is not a confident typist.
- * Six digits with lockout after repeated failures is the trade that situation
- * calls for; the throttle on the sign-in action is what carries the security
- * here, not the length.
- *
- * Office staff sit at a desk with a keyboard and hold far more authority — an
- * admin can move a geofence or rewrite attendance — so they get a real
- * passphrase and the digit-only rule would only weaken them.
+ * One shape of secret: a 4-digit PIN, for every role. It is typed on a phone at a
+ * gate as often as at a desk, and the sign-in's throttle carries the security, not
+ * the length. Stored as `pinPassword(pin)` (packages/shared/identity).
  */
-/** A 4-digit PIN for anyone; older 6–12 digit PINs and 8+ character passphrases still count. */
-export function isValidSecret(secret: string, role: Role): boolean {
-  if (isShortPin(secret)) return true;
-  return role === "guard" ? /^\d{6,12}$/.test(secret) : secret.length >= 8;
+export function isValidSecret(secret: string): boolean {
+  return isShortPin(secret);
 }
 
-/** Guards only. Kept for the check-in screens, which never see another role. */
+/** The same 4-digit rule, for the screens that only ever handle a PIN. */
 export function isValidPin(pin: string): boolean {
-  return /^\d{6,12}$/.test(pin);
+  return isShortPin(pin);
 }
 
 /**
@@ -190,12 +180,9 @@ export async function createStaffAccount(input: {
   const code = normaliseCode(input.employeeCode);
 
   if (!isValidCode(code)) return { error: "Employee code must be 3–20 letters, digits or hyphens." };
-  if (!isValidSecret(input.pin, input.role)) {
+  if (!isValidSecret(input.pin)) {
     return {
-      error:
-        input.role === "guard"
-          ? "The PIN must be 4 digits."
-          : "The PIN must be 4 digits.",
+      error: "The PIN must be 4 digits.",
     };
   }
 
