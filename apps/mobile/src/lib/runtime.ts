@@ -1,4 +1,4 @@
-import Constants, { ExecutionEnvironment } from "expo-constants";
+import { isRunningInExpoGo } from "expo";
 import { Platform } from "react-native";
 
 /**
@@ -35,7 +35,12 @@ import { Platform } from "react-native";
  */
 export const IS_WEB = Platform.OS === "web";
 
-export const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+/**
+ * Asked of Expo Go's own native module rather than `Constants.executionEnvironment`:
+ * Expo Go on SDK 58 reports "bare" there, which once made this false on a phone in Expo
+ * Go and loaded expo-notifications, taking every screen down with it.
+ */
+export const IS_EXPO_GO = isRunningInExpoGo();
 
 /** True where a real, OS-scheduled background location stream is possible. */
 /**
