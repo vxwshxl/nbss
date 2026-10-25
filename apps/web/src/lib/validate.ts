@@ -1,3 +1,4 @@
+import { isValidPhone } from "@nbss/shared/identity";
 /**
  * Form validation, shared by every server action.
  *
@@ -78,15 +79,8 @@ export class Validator {
     const value = this.get(field);
     if (!value) return this;
 
-    let digits = value.replace(/\D/g, "");
-    if (digits.startsWith("91")) digits = digits.slice(2);
-    if (digits.startsWith("0")) digits = digits.slice(1);
-
-    if (digits.length !== 10) {
-      return this.fail(field, "Enter a 10-digit Indian phone number.");
-    }
-    if (!/^[6-9]/.test(digits)) {
-      this.fail(field, "An Indian mobile number starts with 6, 7, 8 or 9.");
+    if (!isValidPhone(value)) {
+      return this.fail(field, "Enter exactly 10 digits after the country code (an Indian mobile starts with 6, 7, 8 or 9).");
     }
     return this;
   }

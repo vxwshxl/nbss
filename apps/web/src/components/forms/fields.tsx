@@ -1,5 +1,6 @@
 "use client";
 
+import { PhoneInput } from "@/components/ui/phone-input";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import type { ReactNode } from "react";
@@ -93,6 +94,16 @@ export function TextField({
         aria-invalid={error ? true : undefined}
         {...rest}
       />
+    </Field>
+  );
+}
+
+/** The phone field for the public forms: country code list (+91 preset) and exactly 10 digits. */
+export function PhoneField({ name, label, required, hint }: { name: string; label: string; required?: boolean; hint?: string }) {
+  const { value, error, set } = useFormField(name);
+  return (
+    <Field name={name} label={label} required={required} error={error} hint={hint}>
+      <PhoneInput id={name} name={name} defaultValue={value} required={required} onValueChange={set} invalid={!!error} />
     </Field>
   );
 }

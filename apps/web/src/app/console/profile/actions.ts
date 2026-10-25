@@ -1,6 +1,6 @@
 "use server";
 
-import { pinPassword } from "@nbss/shared/identity";
+import { isValidPhone, pinPassword } from "@nbss/shared/identity";
 
 import { revalidatePath } from "next/cache";
 
@@ -19,6 +19,7 @@ export async function updateOwnProfile(_prev: ProfileState, data: FormData): Pro
   const phone = String(data.get("phone") ?? "").trim();
 
   if (!fullName) return { ok: false, error: "Your name cannot be blank." };
+  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
 
   const { error } = await supabaseAdmin()
     .from("profiles")

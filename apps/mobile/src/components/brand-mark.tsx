@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { StyleSheet, View, type ViewProps } from "react-native";
+import { Image as RNImage, StyleSheet, View, type ViewProps } from "react-native";
 
 import { radius } from "@/theme/tokens";
 
@@ -14,6 +14,24 @@ import { radius } from "@/theme/tokens";
  * `expo-image` rather than RN's `Image`: it caches the decoded bitmap across mounts, so
  * switching tabs does not re-decode the logo each time.
  */
+const MARK = require("../../assets/images/mark.png");
+
+/**
+ * Puts the mark in expo-image's cache before the splash lifts. In development the
+ * asset comes over the network from the bundler, so without this the loading screen
+ * shows a blank square where the logo goes; capped so a slow link never holds the app.
+ */
+export function preloadBrandMark(capMs = 2500): Promise<void> {
+  // Native resolves the bundler asset; on web the import already is the URL.
+  const uri: string | undefined =
+    typeof RNImage.resolveAssetSource === "function" ? RNImage.resolveAssetSource(MARK)?.uri : typeof MARK === "string" ? MARK : MARK?.uri;
+  if (!uri) return Promise.resolve();
+  return Promise.race([
+    Image.prefetch(uri).then(() => undefined, () => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, capMs)),
+  ]);
+}
+
 export function BrandMark({
   size = 34,
   tinted = false,
@@ -41,7 +59,7 @@ export function BrandMark({
       {...rest}
     >
       <Image
-        source={require("../../assets/images/mark.png")}
+        source={MARK}
         // Fills its box when bare; inset only when it has a tile to sit inside.
         style={{ width: size * (tinted ? 0.68 : 1), height: size * (tinted ? 0.68 : 1) }}
         contentFit="contain"
@@ -50,6 +68,7 @@ export function BrandMark({
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         transition={0}
+        cachePolicy="memory-disk"
       />
     </View>
   );

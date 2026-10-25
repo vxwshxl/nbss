@@ -2,6 +2,8 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { isValidPhone } from "@nbss/shared/identity";
+
+import { PhoneField } from "@/components/phone-field";
 import { SHIFT_TYPES, type ShiftType } from "@nbss/shared/shifts";
 
 import { Button } from "@/components/button";
@@ -58,7 +60,7 @@ export default function BookRoute() {
 
     if (!service) return setError("Which kind of security do you need?");
     if (!contact.trim()) return setError("Who should we ask for when we call?");
-    if (!isValidPhone(phone)) return setError("Enter a mobile number we can reach you on.");
+    if (!isValidPhone(phone)) return setError("Enter exactly 10 digits for the mobile number.");
 
     const count = guards.trim() ? Number(guards) : null;
     if (count !== null && (!Number.isInteger(count) || count < 1 || count > 2000)) {
@@ -178,7 +180,7 @@ export default function BookRoute() {
 
         <Panel title="How we reach you">
           <Field label="Contact name" value={contact} onChangeText={setContact} autoCapitalize="words" />
-          <Field label="Mobile" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <PhoneField label="Mobile" value={phone} onChange={setPhone} />
           <Field
             label="Anything else"
             placeholder="Two at the main gate, one at emergency, rest roving."

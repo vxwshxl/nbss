@@ -19,6 +19,7 @@ export function Field({
   error,
   right,
   prefix,
+  left,
   style,
   ...rest
 }: TextInputProps & {
@@ -28,6 +29,8 @@ export function Field({
   right?: React.ReactNode;
   /** Fixed text before what is typed, e.g. "NBSS-". */
   prefix?: string;
+  /** Any control before the text (a country-code picker). */
+  left?: React.ReactNode;
 }) {
   const [focused, setFocused] = useState(false);
 
@@ -44,6 +47,7 @@ export function Field({
           Boolean(error) && styles.boxError,
         ]}
       >
+        {left}
         {prefix ? (
           <Text weight="semibold" mono tone="muted" style={styles.prefix}>
             {prefix}

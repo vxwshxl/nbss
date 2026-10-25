@@ -1,5 +1,7 @@
 "use client";
 
+import { PhoneInput } from "@/components/ui/phone-input";
+
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
@@ -70,7 +72,7 @@ export function DetailsForm({ fullName, phone }: { fullName: string; phone: stri
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="phone">Phone</Label>
-        <Input id="phone" name="phone" defaultValue={phone} inputMode="tel" />
+        <PhoneInput id="phone" name="phone" defaultValue={phone} />
       </div>
 
       <div className="sm:col-span-2">

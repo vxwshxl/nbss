@@ -1,5 +1,7 @@
 "use client";
 
+import { PhoneInput } from "@/components/ui/phone-input";
+
 import { useActionState, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -507,7 +509,7 @@ export function GuardsWorkspace({
                 <Label htmlFor="phone">
                   Phone <span className="text-destructive">*</span>
                 </Label>
-                <Input id="phone" name="phone" defaultValue={addState.values?.phone} inputMode="tel" placeholder="10-digit mobile" required />
+                <PhoneInput id="phone" name="phone" defaultValue={addState.values?.phone} required />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">
@@ -549,7 +551,7 @@ export function GuardsWorkspace({
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="pin">
-                  PIN <span className="font-normal text-muted-foreground">(4 digits)</span>
+                  PIN <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="pin"
@@ -558,7 +560,8 @@ export function GuardsWorkspace({
                   maxLength={4}
                   pattern="\d{4}"
                   defaultValue={addState.values?.pin}
-                  placeholder="Blank to make one"
+                  placeholder="4 digits"
+                  required
                   className="font-mono tracking-[0.3em]"
                 />
               </div>
@@ -647,7 +650,7 @@ export function GuardsWorkspace({
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="edit-phone">Phone</Label>
-                    <Input id="edit-phone" name="phone" inputMode="tel" defaultValue={p.phone ?? ""} />
+                    <PhoneInput id="edit-phone" name="phone" defaultValue={p.phone ?? ""} />
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" size="lg" onClick={() => setEditing(false)}>

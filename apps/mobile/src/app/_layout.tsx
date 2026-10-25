@@ -16,7 +16,7 @@ import {
 } from "@expo-google-fonts/geist";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -27,6 +27,7 @@ import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 import type { ErrorBoundaryProps } from "expo-router";
 import { ErrorScreen } from "@/components/error-screen";
+import { preloadBrandMark } from "@/components/brand-mark";
 import { LogBox } from "react-native";
 import { IS_EXPO_GO } from "@/lib/runtime";
 
@@ -78,12 +79,18 @@ export default function RootLayout() {
     Geist_700Bold,
   });
 
+  // The logo the loading screen shows, cached first so it is there on the first frame.
+  const [markReady, setMarkReady] = useState(false);
+  useEffect(() => {
+    void preloadBrandMark().then(() => setMarkReady(true));
+  }, []);
+
   useEffect(() => {
     // Hidden on an error too, deliberately. A missing font means the app falls back to
     // the system one, which is a cosmetic problem; holding the splash forever over it
     // would be a guard who cannot check in.
-    if (fontsLoaded || fontError) void SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError]);
+    if ((fontsLoaded || fontError) && markReady) void SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError, markReady]);
 
   useEffect(() => {
     void ensureChannels();
@@ -142,7 +149,7 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  if ((!fontsLoaded && !fontError) || !markReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

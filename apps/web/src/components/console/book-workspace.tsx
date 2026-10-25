@@ -1,5 +1,7 @@
 "use client";
 
+import { PhoneInput } from "@/components/ui/phone-input";
+
 import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -257,7 +259,7 @@ export function BookWorkspace({
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="phone">Mobile</Label>
-                <Input id="phone" name="phone" inputMode="tel" defaultValue={defaults.phone} placeholder="98640 12345" className="h-10" />
+                <PhoneInput id="phone" name="phone" defaultValue={defaults.phone} required />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="organisation">Organisation</Label>

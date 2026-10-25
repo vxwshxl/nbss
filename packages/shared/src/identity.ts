@@ -113,8 +113,47 @@ export function normalisePhone(phone: string): string {
   return digits;
 }
 
+/**
+ * Country codes the phone fields offer. India first and preset; then the neighbours
+ * and the countries families most often work in.
+ */
+export const COUNTRY_CODES = [
+  { code: "+91", label: "India" },
+  { code: "+977", label: "Nepal" },
+  { code: "+975", label: "Bhutan" },
+  { code: "+880", label: "Bangladesh" },
+  { code: "+95", label: "Myanmar" },
+  { code: "+971", label: "UAE" },
+  { code: "+966", label: "Saudi Arabia" },
+  { code: "+65", label: "Singapore" },
+  { code: "+44", label: "UK" },
+  { code: "+1", label: "USA / Canada" },
+] as const;
+
+/**
+ * How a number is stored: an Indian number as its 10 digits (as every number on file
+ * already is), any other as "+<code><10 digits>".
+ */
+export function joinPhone(countryCode: string, national: string): string {
+  const digits = national.replace(/\D/g, "");
+  return countryCode === "+91" ? digits : `${countryCode}${digits}`;
+}
+
+/** The other way: the country code and the 10 digits, for a phone field's starting value. */
+export function splitPhone(stored: string | null | undefined): { code: string; national: string } {
+  const t = (stored ?? "").replace(/[\s-]/g, "");
+  if (t.startsWith("+") && !t.startsWith("+91")) {
+    const c = COUNTRY_CODES.map((x) => x.code).sort((a, b) => b.length - a.length).find((x) => t.startsWith(x));
+    if (c) return { code: c, national: t.slice(c.length).replace(/\D/g, "") };
+  }
+  return { code: "+91", national: normalisePhone(t) };
+}
+
+/** Exactly 10 digits after the country code; an Indian mobile starts 6–9. */
 export function isValidPhone(phone: string): boolean {
-  return /^[6-9]\d{9}$/.test(normalisePhone(phone));
+  const { code, national } = splitPhone(phone);
+  if (!/^\d{10}$/.test(national)) return false;
+  return code === "+91" ? /^[6-9]/.test(national) : true;
 }
 
 /**

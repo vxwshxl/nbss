@@ -13,7 +13,7 @@ import {
   SubmitButton,
   SuccessPanel,
   TextArea,
-  TextField,
+  PhoneField, TextField,
 } from "@/components/forms/fields";
 
 export function EnquiryForm() {
@@ -45,15 +45,7 @@ export function EnquiryForm() {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <TextField
-            name="phone"
-            label="Phone"
-            required
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="98640 12345"
-          />
+          <PhoneField name="phone" label="Phone" required />
           <TextField name="email" label="Email" type="email" maxLength={120} autoComplete="email" />
         </div>
 

@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { revalidatePath } from "next/cache";
 
-import { isAdmin, isValidEmail, pinPassword, ROLES } from "@nbss/shared/identity";
+import { isAdmin, isValidEmail, isValidPhone, pinPassword, ROLES } from "@nbss/shared/identity";
 
 import {
   audit,
@@ -53,12 +53,12 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
   }
   if (!fullName) return { ok: false, values, error: "Enter the person's full name." };
   if (!number) return { ok: false, values, error: "Enter the employee number." };
-  if (phone.replace(/\D/g, "").length < 10) return { ok: false, values, error: "Enter a 10-digit phone number." };
+  if (!isValidPhone(phone)) return { ok: false, values, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
   if (email && !isValidEmail(email)) return { ok: false, values, error: "That email address does not look right." };
-  if (supplied && !/^\d{4}$/.test(supplied)) return { ok: false, values, error: "The PIN must be 4 digits." };
+  if (!/^\d{4}$/.test(supplied)) return { ok: false, values, error: "Set a 4-digit PIN for them." };
 
-  // Everyone signs in with their employee code and a 4-digit PIN the office gives them.
-  const pin = supplied || generatePin();
+  // Everyone signs in with their employee code and the 4-digit PIN the office sets.
+  const pin = supplied;
 
   const created = await createStaffAccount({
     employeeCode,
@@ -84,14 +84,14 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     action: "account_created",
     entity: "profiles",
     entityId: created.id,
-    detail: { employee_code: employeeCode, role, generated_pin: !supplied, email: !!email },
+    detail: { employee_code: employeeCode, role, email: !!email },
     ip: await clientIp(),
   });
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
 
-  return { ok: true, values: null, created: { employeeCode, fullName, email: email || null, pin, generated: !supplied } };
+  return { ok: true, values: null, created: { employeeCode, fullName, email: email || null, pin, generated: false } };
 }
 
 /**
@@ -116,6 +116,7 @@ export async function updateContact(
 
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
+  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
 
   if (email && !isValidEmail(email)) return { ok: false, error: "That email address does not look right." };
   // Email is optional: everyone signs in with their employee code and PIN.

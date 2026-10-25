@@ -15,7 +15,7 @@ import {
   SubmitButton,
   SuccessPanel,
   TextArea,
-  TextField,
+  PhoneField, TextField,
 } from "@/components/forms/fields";
 
 export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
@@ -55,15 +55,7 @@ export function ApplyForm({ vacancy }: { vacancy: Vacancy }) {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <TextField
-            name="phone"
-            label="Phone"
-            required
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="98640 12345"
-          />
+          <PhoneField name="phone" label="Phone" required />
           <TextField
             name="email"
             label="Email (if you have one)"
