@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { isValidEmail } from "@nbss/shared/identity";
 
 import { homeFor, isValidCode, normaliseCode, type Role } from "@/lib/auth";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
+import { SUPABASE_PUBLISHABLE_KEY, serverSupabaseUrl } from "@/lib/supabase/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
@@ -185,7 +185,7 @@ export async function passwordSignIn(
  * then holds the session in its own encrypted store.
  */
 export function statelessClient(): Client {
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  return createClient<Database>(serverSupabaseUrl(), SUPABASE_PUBLISHABLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
 }

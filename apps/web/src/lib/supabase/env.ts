@@ -46,3 +46,20 @@ export function secretKey(): string {
  * session timebox or inactivity timeout; see scripts/configure-auth.mjs).
  */
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
+
+/**
+ * Where the server reaches the database. On the production box Supabase runs on the same
+ * machine, so SUPABASE_INTERNAL_URL points at its local gateway (about 2 ms a call)
+ * instead of the public URL, which leaves the box through Cloudflare and comes back
+ * (about 430 ms a call, several per page). Browsers always use the public URL.
+ */
+export function serverSupabaseUrl(): string {
+  return process.env.SUPABASE_INTERNAL_URL?.trim() || SUPABASE_URL;
+}
+
+/**
+ * The session cookie's name, fixed from the public URL. Supabase names it after the
+ * host it is given, so a server client on the internal URL would otherwise look for a
+ * different cookie than the browser wrote and find nobody signed in.
+ */
+export const AUTH_COOKIE_NAME = `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-token`;

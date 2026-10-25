@@ -84,7 +84,7 @@ export async function changeOwnPin(_prev: ProfileState, data: FormData): Promise
 
   const { createClient } = await import("@supabase/supabase-js");
   const probe = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_INTERNAL_URL?.trim() || process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );

@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 
-import { SESSION_MAX_AGE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, secretKey } from "./env";
+import { AUTH_COOKIE_NAME, SESSION_MAX_AGE, SUPABASE_PUBLISHABLE_KEY, secretKey, serverSupabaseUrl } from "./env";
 import { DATA_MODE_COOKIE, DATA_MODE_HEADER, parseMode } from "@/lib/mode/shared";
 
 import type { Database } from "./types";
@@ -40,7 +40,7 @@ export async function bearerToken(): Promise<string | null> {
 export async function supabaseServer() {
   const token = await bearerToken();
   if (token) {
-    return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    return createClient<Database>(serverSupabaseUrl(), SUPABASE_PUBLISHABLE_KEY, {
       global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -48,8 +48,8 @@ export async function supabaseServer() {
 
   const store = await cookies();
 
-  return createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    cookieOptions: { maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
+  return createServerClient<Database>(serverSupabaseUrl(), SUPABASE_PUBLISHABLE_KEY, {
+    cookieOptions: { name: AUTH_COOKIE_NAME, maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
     // Test / Live: the database honours it for developers only (0036).
     global: { headers: { [DATA_MODE_HEADER]: parseMode(store.get(DATA_MODE_COOKIE)?.value) } },
     cookies: {
@@ -71,7 +71,7 @@ export async function supabaseServer() {
 
 /** Bypasses RLS. Never call this with input that has not been checked first. */
 export function supabaseAdmin() {
-  return createClient<Database>(SUPABASE_URL, secretKey(), {
+  return createClient<Database>(serverSupabaseUrl(), secretKey(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

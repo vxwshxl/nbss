@@ -43,10 +43,12 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    // The server's own route to the database when it has one (see lib/supabase/env.ts),
+    // reading the cookie the browser wrote under the public URL's name.
+    process.env.SUPABASE_INTERNAL_URL?.trim() || process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
-      cookieOptions: { maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
+      cookieOptions: { name: `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split(".")[0]}-auth-token`, maxAge: SESSION_MAX_AGE, sameSite: "lax", path: "/" },
       cookies: {
         getAll() {
           return request.cookies.getAll();
