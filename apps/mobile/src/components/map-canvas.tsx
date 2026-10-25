@@ -54,6 +54,8 @@ export type MapCanvasProps = {
   frameKey?: string;
   padding?: { top: number; right: number; bottom: number; left: number };
   onPersonPress?: (id: string) => void;
+  /** A site tapped: its boundary or its name pin. */
+  onFencePress?: (id: string) => void;
   style?: ViewStyle;
 };
 
@@ -75,6 +77,7 @@ export function MapCanvas({
   frameKey = "",
   padding,
   onPersonPress,
+  onFencePress,
   style,
 }: MapCanvasProps) {
   const map = useRef<MapView>(null);
@@ -141,12 +144,20 @@ export function MapCanvas({
             strokeColor={f.tone}
             strokeWidth={f.quiet ? 1.5 : 2.5}
             fillColor={alpha(f.tone, f.fill ?? (f.quiet ? 0.08 : 0.14))}
+            tappable={Boolean(onFencePress)}
+            onPress={onFencePress ? () => onFencePress(f.id) : undefined}
           />
         ))}
         {fences.map((f) => {
           const c = centre(f.ring);
           return (
-            <Marker key={`label-${f.id}-${f.tone}`} coordinate={c} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
+            <Marker
+              key={`label-${f.id}-${f.tone}`}
+              coordinate={c}
+              anchor={{ x: 0.5, y: 1 }}
+              tracksViewChanges={false}
+              onPress={onFencePress ? () => onFencePress(f.id) : undefined}
+            >
               <View style={styles.pin}>
                 <View style={[styles.pinLabel, f.quiet && styles.pinQuiet, { backgroundColor: f.tone }]}>
                   <Text style={[styles.pinText, f.quiet && styles.pinTextQuiet]} numberOfLines={1}>

@@ -27,6 +27,7 @@ import { countSubmissions } from "@/lib/store";
 import { ModeToggle } from "@/components/shell/mode-toggle";
 import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { cookies } from "next/headers";
+import { after } from "next/server";
 
 export const metadata: Metadata = {
   title: { default: "Console", template: `%s · ${site.shortName} Console` },
@@ -57,6 +58,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (!session) return <>{children}</>;
 
   const { profile, realProfile, impersonating } = session;
+  // "Last seen" (0048), after the page is sent so it never slows one down. The real
+  // person's, even while viewing as someone else: the cookie is theirs.
+  after(async () => {
+    await (await supabaseServer()).rpc("touch_presence");
+  });
   const persona = personaFor(profile.role);
   const canImpersonate = realProfile.role === "developer";
   // Test / Live: a developer's switch. Everyone else sees their own side.

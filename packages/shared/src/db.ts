@@ -1808,6 +1808,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      touch_presence: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       tracking_mode_for: {
         Args: {
           p_site_id: string;

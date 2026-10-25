@@ -24,6 +24,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
 import { DataModeProvider } from "@/lib/data-mode";
+import { usePresence } from "@/lib/presence";
 import { ensureTracking } from "@/lib/keep-alive";
 import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
@@ -159,6 +160,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AuthProvider>
           <StatusBar style="dark" />
+          <Presence />
           {/* Keyed by Test / Live: a developer's switch starts every screen again on that side. */}
           <DataModeProvider>
             {(mode) => (
@@ -179,6 +181,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(staff)" options={{ headerShown: false }} />
                 <Stack.Screen name="assistant" options={{ headerShown: false, presentation: "modal" }} />
                 <Stack.Screen name="shift/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+                <Stack.Screen name="person/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
                 <Stack.Screen
                   name="sos/[id]"
                   options={{
@@ -197,4 +200,10 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/** Stamps "last seen" for the console (lib/presence.ts). Inside the auth provider. */
+function Presence() {
+  usePresence();
+  return null;
 }

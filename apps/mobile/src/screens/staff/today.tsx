@@ -1,7 +1,7 @@
-import { useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { CalendarClock, CircleCheckBig, Clock3, Phone, UserRoundX } from "lucide-react-native";
-import { useCallback } from "react";
-import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 import { istTime, tel } from "@nbss/shared/company";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
@@ -10,99 +10,239 @@ import { Avatar } from "@/components/avatar";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
+import { Segmented } from "@/components/segmented";
 import { StatCard } from "@/components/stat-card";
 import { Text } from "@/components/text";
+import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
 import { supabase } from "@/lib/supabase";
-import { color, radius } from "@/theme/tokens";
+import { color, radius, space } from "@/theme/tokens";
 
-type Duty = { id: string; starts_at: string; ends_at: string; status: string; shift_type: string | null; guard: string; phone: string | null; site: string; grace: number; inAt: string | null };
+type Duty = {
+  id: string;
+  guardId: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  shift_type: string | null;
+  guard: string;
+  avatar: string | null;
+  phone: string | null;
+  siteId: string;
+  site: string;
+  grace: number;
+  inAt: string | null;
+  outAt: string | null;
+  /** A check-in with no rostered duty behind it. */
+  offRoster?: boolean;
+};
+type Day = "-1" | "0" | "1";
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
-async function load(): Promise<Duty[]> {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start.getTime() + 86_400_000);
-  const [shifts, open] = await Promise.all([
+/** Midnight in India (fixed UTC+5:30), `offset` days from today, as an instant. */
+function istMidnight(offset: number): number {
+  const shift = 330 * 60_000;
+  return Math.floor((Date.now() + shift) / 86_400_000) * 86_400_000 - shift + offset * 86_400_000;
+}
+
+async function load(day: Day): Promise<Duty[]> {
+  const start = istMidnight(Number(day));
+  const end = start + 86_400_000;
+  const [shifts, punches] = await Promise.all([
     supabase
       .from("shifts")
-      .select("id, guard_id, starts_at, ends_at, status, shift_type, profiles!shifts_guard_id_fkey(full_name, phone), sites(name, grace_minutes)")
+      .select("id, guard_id, site_id, starts_at, ends_at, status, shift_type, profiles!shifts_guard_id_fkey(full_name, phone, avatar_url), sites(name, grace_minutes)")
       .neq("status", "cancelled")
-      .lt("starts_at", end.toISOString())
-      .gt("ends_at", start.toISOString())
+      .lt("starts_at", new Date(end).toISOString())
+      .gt("ends_at", new Date(start).toISOString())
       .order("starts_at"),
-    supabase.from("attendance").select("guard_id, shift_id, check_in_at").is("check_out_at", null),
+    // Every session that touches the day, open ones included: a duty worked in two
+    // sessions shows its first in and last out.
+    supabase
+      .from("attendance")
+      .select("id, guard_id, shift_id, site_id, check_in_at, check_out_at, profiles!attendance_guard_id_fkey(full_name, phone, avatar_url), sites(name)")
+      .lt("check_in_at", new Date(end).toISOString())
+      .or(`check_out_at.is.null,check_out_at.gt.${new Date(start).toISOString()}`)
+      .order("check_in_at"),
   ]);
-  const inAt = new Map((open.data ?? []).map((a) => [a.shift_id ?? a.guard_id, a.check_in_at]));
-  return (shifts.data ?? []).map((s) => {
-    const p = one(s.profiles as unknown as { full_name: string; phone: string | null } | null);
+
+  const byShift = new Map<string, { in: string; out: string | null }>();
+  const used = new Set<string>();
+  for (const a of punches.data ?? []) {
+    if (!a.shift_id || !a.check_in_at) continue;
+    const cur = byShift.get(a.shift_id);
+    // First in; last out, or still open while any session is.
+    const stillOpen = !a.check_out_at || (cur !== undefined && cur.out === null);
+    byShift.set(a.shift_id, {
+      in: cur && cur.in < a.check_in_at ? cur.in : a.check_in_at,
+      out: stillOpen ? null : [cur?.out ?? "", a.check_out_at!].sort().at(-1)!,
+    });
+    used.add(a.id);
+  }
+
+  const rows: Duty[] = (shifts.data ?? []).map((s) => {
+    const p = one(s.profiles as unknown as { full_name: string; phone: string | null; avatar_url: string | null } | null);
     const site = one(s.sites as unknown as { name: string; grace_minutes: number } | null);
+    const punch = byShift.get(s.id);
     return {
       id: s.id,
+      guardId: s.guard_id,
       starts_at: s.starts_at,
       ends_at: s.ends_at,
       status: s.status,
       shift_type: s.shift_type,
-      guard: p?.full_name ?? "A guard",
+      guard: p?.full_name ?? "Unassigned",
+      avatar: p?.avatar_url ?? null,
       phone: p?.phone ?? null,
+      siteId: s.site_id,
       site: site?.name ?? "A site",
       grace: site?.grace_minutes ?? 10,
-      inAt: inAt.get(s.id) ?? (s.guard_id ? (inAt.get(s.guard_id) ?? null) : null),
+      inAt: punch?.in ?? null,
+      outAt: punch ? punch.out : null,
     };
   });
+
+  // Check-ins with no rostered duty: still somebody at a gate, so still on the board.
+  for (const a of punches.data ?? []) {
+    if (used.has(a.id) || !a.check_in_at) continue;
+    const p = one(a.profiles as unknown as { full_name: string; phone: string | null; avatar_url: string | null } | null);
+    rows.push({
+      id: a.id,
+      guardId: a.guard_id,
+      starts_at: a.check_in_at,
+      ends_at: a.check_out_at ?? new Date(end).toISOString(),
+      status: a.check_out_at ? "completed" : "in_progress",
+      shift_type: null,
+      guard: p?.full_name ?? "A guard",
+      avatar: p?.avatar_url ?? null,
+      phone: p?.phone ?? null,
+      siteId: a.site_id,
+      site: one(a.sites as unknown as { name: string } | null)?.name ?? "A site",
+      grace: 0,
+      inAt: a.check_in_at,
+      outAt: a.check_out_at,
+      offRoster: true,
+    });
+  }
+  return rows;
 }
 
-/** Today across every site: who has not arrived, who is on duty, who is coming, who is done. */
+const mins = (ms: number) => {
+  const m = Math.round(ms / 60_000);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
+};
+
+/**
+ * A day across every site: who has not arrived (and by how long), who is on duty,
+ * who is coming, who is done. Yesterday and tomorrow are one tap away, and a site
+ * chip narrows it to one place. Current as it happens: a check-in on any phone or a
+ * roster change on the website moves people between the lists.
+ */
 export function StaffToday() {
-  const { data, refreshing, reload, refresh } = useLoader(load);
+  const [day, setDay] = useState<Day>("0");
+  const [site, setSite] = useState<string | null>(null);
+  const loader = useCallback(() => load(day), [day]);
+  const { data, refreshing, reload, refresh } = useLoader(loader);
+  useLiveTables(["shifts", "attendance"], reload);
   const now = useNow(60_000);
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
-  const all = data ?? [];
-  const late = all.filter((d) => !d.inAt && d.status === "scheduled" && new Date(d.starts_at).getTime() + d.grace * 60_000 < now && new Date(d.ends_at).getTime() > now);
-  const on = all.filter((d) => d.inAt);
-  const coming = all.filter((d) => !d.inAt && d.status === "scheduled" && new Date(d.starts_at).getTime() + d.grace * 60_000 >= now);
-  const done = all.filter((d) => !d.inAt && (d.status === "completed" || d.status === "missed" || new Date(d.ends_at).getTime() <= now));
+
+  const everything = useMemo(() => data ?? [], [data]);
+  const sites = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of everything) m.set(d.siteId, d.site);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [everything]);
+  const all = site ? everything.filter((d) => d.siteId === site) : everything;
+
+  const isOn = (d: Duty) => d.inAt && !d.outAt;
+  const due = (d: Duty) => new Date(d.starts_at).getTime() + d.grace * 60_000;
+  const late = all.filter((d) => !d.inAt && d.status !== "completed" && d.status !== "missed" && due(d) < now && new Date(d.ends_at).getTime() > now);
+  const on = all.filter(isOn);
+  const coming = all.filter((d) => !d.inAt && d.status === "scheduled" && due(d) >= now);
+  const done = all.filter((d) => !isOn(d) && !late.includes(d) && !coming.includes(d));
+
+  const open = (d: Duty) => d.guardId && router.push({ pathname: "/person/[id]", params: { id: d.guardId } });
 
   return (
     <Screen topInset={false} bottomInset={false} contentStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh()} />}>
-      <PageHeader eyebrow="Shift management" title="Today" />
+      <PageHeader eyebrow="Shift management" title={day === "0" ? "Today" : day === "-1" ? "Yesterday" : "Tomorrow"} />
+      <Segmented
+        value={day}
+        stretch
+        onChange={(v) => {
+          setDay(v);
+          setSite(null);
+        }}
+        options={[
+          { value: "-1", label: "Yesterday" },
+          { value: "0", label: "Today" },
+          { value: "1", label: "Tomorrow" },
+        ]}
+      />
+      {sites.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          <Chip label="All sites" on={!site} onPress={() => setSite(null)} />
+          {sites.map(([id, name]) => (
+            <Chip key={id} label={name} on={site === id} onPress={() => setSite(site === id ? null : id)} />
+          ))}
+        </ScrollView>
+      )}
       <CardGrid columns={2}>
         <StatCard label="Not arrived" value={String(late.length)} hint="Past start + grace" icon={UserRoundX} tone={late.length ? "rose" : "slate"} />
         <StatCard label="On duty" value={String(on.length)} hint="Checked in now" icon={CircleCheckBig} tone="emerald" />
-        <StatCard label="Coming up" value={String(coming.length)} hint="Later today" icon={CalendarClock} tone="sky" />
+        <StatCard label="Coming up" value={String(coming.length)} hint="Not started yet" icon={CalendarClock} tone="sky" />
         <StatCard label="Done" value={String(done.length)} hint="Finished or missed" icon={Clock3} tone="violet" />
       </CardGrid>
-      <Group title="Not arrived" tone="rose" rows={late} note={(d) => `Due ${istTime(d.starts_at)}`} />
-      <Group title="On duty" tone="emerald" rows={on} note={(d) => `In since ${istTime(d.inAt!)}`} />
-      <Group title="Coming up" tone="sky" rows={coming} note={(d) => `Starts ${istTime(d.starts_at)}`} />
-      <Group title="Done" tone="slate" rows={done} note={(d) => (d.status === "missed" ? "Missed" : `Ended ${istTime(d.ends_at)}`)} />
+      {data && all.length === 0 && (
+        <Text variant="label" tone="muted" style={styles.centred}>
+          No duty on the roster for this day.
+        </Text>
+      )}
+      <Group title="Not arrived" tone="rose" rows={late} onPress={open} note={(d) => `Due ${istTime(d.starts_at)} · ${mins(now - new Date(d.starts_at).getTime())} late`} />
+      <Group
+        title="On duty"
+        tone="emerald"
+        rows={on}
+        onPress={open}
+        note={(d) => `In ${istTime(d.inAt!)} · ${mins(now - new Date(d.inAt!).getTime())}${d.offRoster ? " · not rostered" : ` · ends ${istTime(d.ends_at)}`}`}
+      />
+      <Group title="Coming up" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
+      <Group
+        title="Done"
+        tone="slate"
+        rows={done}
+        onPress={open}
+        note={(d) => (d.inAt ? `${istTime(d.inAt)} – ${d.outAt ? istTime(d.outAt) : "?"}` : d.status === "missed" || new Date(d.ends_at).getTime() <= now ? "Missed" : `Ended ${istTime(d.ends_at)}`)}
+      />
     </Screen>
   );
 }
 
-function Group({ title, tone, rows, note }: { title: string; tone: "rose" | "emerald" | "sky" | "slate"; rows: Duty[]; note: (d: Duty) => string }) {
+function Group({ title, tone, rows, note, onPress }: { title: string; tone: "rose" | "emerald" | "sky" | "slate"; rows: Duty[]; note: (d: Duty) => string; onPress: (d: Duty) => void }) {
   if (rows.length === 0) return null;
   return (
     <Panel tone={tone} title={title} subtitle={`${rows.length}`} bare>
       {rows.map((d, i) => (
         <PanelRow key={d.id} first={i === 0}>
-          <Avatar name={d.guard} size={36} />
-          <View style={styles.flex}>
-            <Text variant="label" weight="semibold" numberOfLines={1}>
-              {d.guard}
-            </Text>
-            <Text variant="caption" tone="muted" numberOfLines={1}>
-              {d.site} · {[shiftTypeLabel(d.shift_type), note(d)].filter(Boolean).join(" · ")}
-            </Text>
-          </View>
+          {/* The row opens the guard; the phone beside it calls. Siblings, not nested. */}
+          <Pressable accessibilityRole="button" onPress={() => onPress(d)} style={({ pressed }) => [styles.main, pressed && styles.pressed]}>
+            <Avatar name={d.guard} uri={d.avatar} size={36} />
+            <View style={styles.flex}>
+              <Text variant="label" weight="semibold" numberOfLines={1}>
+                {d.guard}
+              </Text>
+              <Text variant="caption" tone="muted" numberOfLines={1}>
+                {[d.site, shiftTypeLabel(d.shift_type)].filter(Boolean).join(" · ")}
+              </Text>
+              <Text variant="caption" weight="medium" tone={tone === "rose" ? "danger" : "muted"} numberOfLines={1}>
+                {note(d)}
+              </Text>
+            </View>
+          </Pressable>
           {d.phone ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Call ${d.guard}`} onPress={() => void Linking.openURL(`tel:${tel(d.phone!)}`)} style={styles.call}>
-              <Phone size={18} color={color.primaryInk} strokeWidth={2.2} />
+            <Pressable accessibilityRole="button" accessibilityLabel={`Call ${d.guard}`} hitSlop={4} onPress={() => void Linking.openURL(`tel:${tel(d.phone!)}`)} style={styles.call}>
+              <Phone size={17} color={color.primaryInk} strokeWidth={2.2} />
             </Pressable>
           ) : null}
         </PanelRow>
@@ -111,8 +251,24 @@ function Group({ title, tone, rows, note }: { title: string; tone: "rose" | "eme
   );
 }
 
+function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.chip, on && styles.chipOn]}>
+      <Text variant="caption" weight="semibold" tone="inherit" style={{ color: on ? color.primaryForeground : color.foreground }} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  body: { gap: 20, paddingBottom: 40 },
-  flex: { flex: 1, minWidth: 0, gap: 2 },
-  call: { width: 40, height: 40, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
+  body: { gap: 16, paddingBottom: 120 },
+  flex: { flex: 1, minWidth: 0, gap: 1 },
+  centred: { textAlign: "center" },
+  main: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: space[3] },
+  pressed: { opacity: 0.6 },
+  chips: { gap: space[2], paddingRight: space[4] },
+  chip: { height: 32, paddingHorizontal: space[3], borderRadius: radius.full, justifyContent: "center", backgroundColor: color.card, borderWidth: 1, borderColor: color.border, maxWidth: 200 },
+  chipOn: { backgroundColor: color.foreground, borderColor: color.foreground },
+  call: { width: 38, height: 38, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
 });

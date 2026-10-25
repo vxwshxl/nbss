@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import {
   CalendarCheck,
   CalendarClock,
@@ -12,7 +12,7 @@ import {
   Percent,
   UserRoundX,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Linking, Modal, Pressable, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 
 import { shiftTypeLabel } from "@nbss/shared/shifts";
@@ -25,6 +25,7 @@ import { Segmented } from "@/components/segmented";
 import { StatCard } from "@/components/stat-card";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
+import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
 import {
@@ -120,11 +121,8 @@ function Upcoming({ pulls }: { pulls: number }) {
   const [note, setNote] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const now = useNow(60_000);
 
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
+  // Fresh on arrival and whenever the office changes a duty, from the website or a phone.
+  useLiveTables(["shifts", "attendance", "replacement_requests"], reload);
   useEffect(() => {
     if (pulls) void reload();
   }, [pulls, reload]);

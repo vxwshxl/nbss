@@ -1,6 +1,7 @@
 import "react-native-url-polyfill/auto";
 
 import { createClient } from "@supabase/supabase-js";
+import { AppState, Platform } from "react-native";
 import type { Database } from "@nbss/shared/db";
 
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config";
@@ -48,3 +49,19 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
   },
 });
+
+/**
+ * The session's token is refreshed only while the app is in front, and checked the
+ * moment it returns. A phone that slept overnight wakes with an expired token; without
+ * this the first requests after reopening fail before the timer catches up. Supabase's
+ * own guidance for React Native. The realtime socket reconnects by itself.
+ *
+ * The background location task is unaffected: every request reads the session first,
+ * and an expired token is refreshed right then, timer or no timer.
+ */
+if (Platform.OS !== "web") {
+  AppState.addEventListener("change", (state) => {
+    if (state === "active") void supabase.auth.startAutoRefresh();
+    else void supabase.auth.stopAutoRefresh();
+  });
+}

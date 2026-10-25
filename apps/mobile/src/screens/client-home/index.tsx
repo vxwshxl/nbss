@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { Building2, ChevronRight, LocateFixed, Phone, ShieldCheck, Siren, UserRoundCheck } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
@@ -14,6 +14,7 @@ import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
 import { SolidButton } from "@/components/solid-button";
 import { Text } from "@/components/text";
+import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useAuth } from "@/lib/auth";
 import { liveAlerts } from "@/lib/duty";
@@ -63,14 +64,9 @@ export function ClientHome() {
   }, [profile?.id]);
   const { data, refreshing, reload, refresh } = useLoader(load);
 
-  // Fresh on arrival, every half minute while open, and the moment an SOS push lands.
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-      const t = setInterval(() => void reload(), 30_000);
-      return () => clearInterval(t);
-    }, [reload]),
-  );
+  // Fresh on arrival, on any change at their sites (a guard checking in, an SOS), and
+  // the moment an SOS push lands. Told rather than polling, so an idle screen costs nothing.
+  useLiveTables(["attendance", "shifts", "sos_alerts", "sites"], reload);
   useEffect(() => {
     const sub = Notifications?.addNotificationReceivedListener((n) => {
       if ((n.request.content.data as { type?: string } | null)?.type === "sos") void reload();

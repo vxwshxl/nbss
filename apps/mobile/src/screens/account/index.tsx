@@ -1,6 +1,6 @@
-import { CircleUserRound, LogOut, MapPin, BadgeCheck } from "lucide-react-native";
-import Constants from "expo-constants";
+import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
+import { BellRing, CalendarCheck, LogOut, Mail, MapPin, Phone } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ROLE_LABEL } from "@nbss/shared/identity";
@@ -8,172 +8,130 @@ import { ROLE_LABEL } from "@nbss/shared/identity";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { InfoButton } from "@/components/info";
-import { PageHeader } from "@/components/page-header";
 import { PermissionsPanel } from "@/components/permissions-panel";
-import { Panel } from "@/components/panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
 import { photoOf, useAuth } from "@/lib/auth";
 import { WEB_URL } from "@/lib/config";
-import { CAN_RECEIVE_PUSH, IS_EXPO_GO } from "@/lib/runtime";
-import { color, space } from "@/theme/tokens";
+import { CAN_RECEIVE_PUSH } from "@/lib/runtime";
+import { color, gradient, radius, space } from "@/theme/tokens";
 
 /**
- * What the app knows about you, and what it does with your location.
- *
- * The location section exists as much for the guard as for the company: being tracked at
- * work is defensible, and being tracked without a plain explanation of when and why is
- * not. The explanation lives behind the (i) rather than on the screen — it is four
- * paragraphs nobody re-reads daily, and burying the sign-out button under it served
- * nobody.
+ * Me: who you are, the few facts that matter, whether the phone is set up, and the
+ * way out. Anything longer (how location is used) sits behind an (i).
  */
 export function Account() {
   const { profile, session, signOut, loading } = useAuth();
   const guard = profile?.role === "guard";
+  const joined = profile?.joined_at
+    ? new Date(profile.joined_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : null;
 
   return (
     <Screen contentStyle={styles.body} topInset={false} bottomInset={false}>
-      <PageHeader title="Account" />
-
-      <Panel tone="indigo" title="Details" icon={CircleUserRound}>
-        <View style={styles.identity}>
-          <Avatar name={profile?.full_name ?? "?"} uri={profile?.avatar_url ?? photoOf(session)} size={52} />
-          <View style={styles.identityText}>
-            <Text variant="bodyLarge" weight="semibold">
-              {profile?.full_name ?? "-"}
-            </Text>
-            <Text variant="caption" tone="muted" mono>
-              {profile?.employee_code ?? "-"}
-            </Text>
+      <LinearGradient colors={gradient.strong} start={gradient.start} end={gradient.end} style={styles.hero}>
+        <View style={styles.heroRing} />
+        <Avatar name={profile?.full_name ?? "?"} uri={profile?.avatar_url ?? photoOf(session)} size={68} />
+        <View style={styles.heroText}>
+          <Text variant="title" weight="bold" tone="inherit" style={styles.white} numberOfLines={2}>
+            {profile?.full_name ?? "-"}
+          </Text>
+          <View style={styles.badges}>
+            <View style={styles.badge}>
+              <Text variant="caption" weight="bold" tone="inherit" style={styles.white}>
+                {profile?.employee_code ?? "-"}
+              </Text>
+            </View>
+            <View style={[styles.badge, styles.badgeSoft]}>
+              <Text variant="caption" weight="semibold" tone="inherit" style={styles.white}>
+                {profile ? ROLE_LABEL[profile.role] : "-"}
+              </Text>
+            </View>
           </View>
         </View>
+      </LinearGradient>
 
-        <View style={styles.rows}>
-          <Row label="Role" value={profile ? ROLE_LABEL[profile.role] : "-"} />
-          <Row label="Phone" value={profile?.phone ?? "-"} />
+      <View style={styles.card}>
+        <Row icon={Phone} label="Phone" value={profile?.phone ?? "Not given"} />
+        <Row icon={Mail} label="Email" value={profile?.email ?? "Not given"} />
+        {joined && <Row icon={CalendarCheck} label="Joined" value={joined} />}
+        {guard && (
           <Row
-            label="Joined"
-            value={
-              profile?.joined_at
-                ? new Date(profile.joined_at).toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : "-"
+            icon={MapPin}
+            label="Location"
+            value="Shared on duty only"
+            extra={
+              <InfoButton title="How your location is used">
+                {[
+                  "Shared with the control room only while you are checked in. It stops the moment you check out.",
+                  "On duty the phone sends a position as you move, and a quick check-in every few minutes so the office knows the app is working.",
+                  "During an SOS it sends more often until the alert is closed. The trail is kept for thirty days.",
+                ]}
+              </InfoButton>
             }
           />
-        </View>
-      </Panel>
-
-      {guard && (
-      <Panel
-        tone="teal"
-        title="Your location"
-        icon={MapPin}
-        action={
-          <InfoButton title="How your location is used">
-            {[
-              "Your position is shared with the control room only while you are checked in. It stops the moment you check out, and nothing at all is recorded in between.",
-              "While on duty your phone sends a position when you have moved about fifty metres, and otherwise once every couple of minutes so the office can see the app is still working rather than dead.",
-              "If you raise an SOS it sends much more often, until the alert is closed, so the people coming to help can find you.",
-              "The trail is kept in full for thirty days so a question about a particular shift can be answered, and is thinned out after that.",
-            ]}
-          </InfoButton>
-        }
-      >
-        <Text variant="body" tone="muted">
-          Shared only while you are checked in. Never off duty.
-        </Text>
-      </Panel>
-      )}
+        )}
+        <Row icon={BellRing} label="SOS alerts" value={CAN_RECEIVE_PUSH ? "On, even when closed" : "Install the app build"} last />
+      </View>
 
       <PermissionsPanel location={guard} />
 
-      <Panel
-        tone="slate"
-        title="Alerts"
-        icon={BadgeCheck}
-        action={
-          <InfoButton title="SOS alerts on this phone">
-            {[
-              "When a guard at your site raises an emergency, this phone rings, even if the app is closed and the phone is on silent.",
-              "That is deliberate. An SOS has to reach somebody, so it uses a notification channel that cannot be quietened, and it repeats every minute until a human acknowledges it.",
-              IS_EXPO_GO && !CAN_RECEIVE_PUSH
-                ? "This test build cannot receive them at all. A development build can."
-                : "You can acknowledge an alert to tell everyone else you are on your way.",
-            ]}
-          </InfoButton>
-        }
-      >
-        <Text variant="body" tone="muted">
-          {IS_EXPO_GO && !CAN_RECEIVE_PUSH
-            ? "Not available in this test build."
-            : "You will be alerted if a colleague at your site needs help."}
-        </Text>
-      </Panel>
-
-      <Button
-        label="Sign out"
-        variant="outline"
-        icon={LogOut}
-        fullWidth
-        loading={loading}
-        onPress={() => void signOut()}
-      />
+      <Button label="Sign out" variant="outline" icon={LogOut} fullWidth loading={loading} onPress={() => void signOut()} />
 
       <View style={styles.legal}>
-        <LegalLink label="Terms & Conditions" path="/terms-and-conditions" />
+        <LegalLink label="Terms" path="/terms-and-conditions" />
         <Text variant="caption" tone="muted">
           ·
         </Text>
-        <LegalLink label="Privacy Policy" path="/privacy-policy" />
+        <LegalLink label="Privacy" path="/privacy-policy" />
       </View>
-      <Text variant="caption" tone="muted" style={styles.version}>
-        NBSS Kokrajhar · app {Constants.expoConfig?.version ?? "-"}
-      </Text>
     </Screen>
   );
 }
 
-/** The website's own page, in the in-app browser, so the guard comes straight back. */
+/** The website's own page, in the in-app browser, so the person comes straight back. */
 function LegalLink({ label, path }: { label: string; path: string }) {
   return (
     <Pressable accessibilityRole="link" hitSlop={8} onPress={() => void WebBrowser.openBrowserAsync(`${WEB_URL}${path}`)}>
-      <Text variant="label" weight="medium" tone="primary">
+      <Text variant="caption" weight="medium" tone="muted">
         {label}
       </Text>
     </Pressable>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ icon: Icon, label, value, extra, last }: { icon: typeof Phone; label: string; value: string; extra?: React.ReactNode; last?: boolean }) {
   return (
-    <View style={styles.row}>
-      <Text variant="label" tone="muted">
-        {label}
-      </Text>
-      <Text variant="label" weight="medium">
-        {value}
-      </Text>
+    <View style={[styles.row, !last && styles.rowLine]}>
+      <View style={styles.rowIcon}>
+        <Icon size={17} color={color.primaryInk} strokeWidth={2} />
+      </View>
+      <View style={styles.rowText}>
+        <Text variant="caption" tone="muted">
+          {label}
+        </Text>
+        <Text variant="label" weight="semibold" numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+      {extra}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { gap: space[6] },
-  identity: { flexDirection: "row", alignItems: "center", gap: space[3] },
-  identityText: { flex: 1, gap: 2 },
-  rows: { gap: 0 },
-  legal: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space[2], marginTop: -space[2] },
-  version: { textAlign: "center", marginTop: -space[4] },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: space[4],
-    paddingVertical: space[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.lineSoft,
-  },
+  body: { gap: space[4], paddingTop: space[4], paddingBottom: 120 },
+  hero: { flexDirection: "row", alignItems: "center", gap: space[4], padding: space[5], borderRadius: radius["2xl"], overflow: "hidden" },
+  heroRing: { position: "absolute", right: -40, top: -50, width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(255,255,255,0.08)" },
+  heroText: { flex: 1, minWidth: 0, gap: space[2] },
+  white: { color: "#ffffff" },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
+  badge: { paddingHorizontal: space[2.5], paddingVertical: 3, borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.22)" },
+  badgeSoft: { backgroundColor: "rgba(255,255,255,0.12)" },
+  card: { borderRadius: radius["2xl"], backgroundColor: color.card, borderWidth: StyleSheet.hairlineWidth, borderColor: color.border, paddingHorizontal: space[4] },
+  row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingVertical: space[3] },
+  rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.lineSoft },
+  rowIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
+  rowText: { flex: 1, minWidth: 0, gap: 1 },
+  legal: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space[2] },
 });

@@ -41,6 +41,7 @@ import { PhoneSetup } from "@/components/phone-setup";
 import { SolidButton } from "@/components/solid-button";
 import { Text } from "@/components/text";
 import { useLivePosition } from "@/hooks/use-live-position";
+import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
 import {
@@ -129,6 +130,9 @@ export function Duty() {
   }, []);
 
   const { data, refreshing, reload, refresh } = useLoader(load);
+  // A change from the office (posted to a site, a duty moved, attendance corrected on the
+  // website) shows at once rather than at the next pull.
+  useLiveTables(["attendance", "shifts", "site_postings", "sites"], reload);
 
   // Colleagues and SOS, from the live feed: pushed over the socket, not polled.
   const areasNow = useLiveFeed().data ?? data?.areas;

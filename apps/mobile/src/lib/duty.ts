@@ -238,7 +238,7 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
     };
   }
 
-  const { data, error } = await supabase.rpc("punch_in", {
+  const args = {
     p_site_id: siteId,
     p_lat: position.coords.latitude,
     p_lng: position.coords.longitude,
@@ -246,8 +246,15 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
     p_device_reported_at: new Date(position.timestamp).toISOString(),
     p_device_id: IS_WEB ? undefined : await deviceId(),
     p_battery: (await batteryState()).level ?? undefined,
-  });
+  };
+  const { data, error } = await withRetry(() => supabase.rpc("punch_in", args));
 
+  // A second tap, or a retry after a reply that was lost on a weak network: the first
+  // one landed. Nothing is overwritten (one open record at a time), so it is a success.
+  if (error && /already checked in/i.test(error.message)) {
+    if (!IS_WEB && CAN_TRACK_IN_BACKGROUND) await startTracking("on_duty").catch(() => undefined);
+    return { ok: true, distanceM: 0, message: "You are checked in." };
+  }
   // The function raises with a message written for a guard at a gate, so it is shown
   // rather than replaced.
   if (error) return { ok: false, error: error.message };
@@ -312,14 +319,20 @@ export async function punchOut(handover?: string): Promise<PunchResult> {
     return { ok: false, error: "Your location could not be read. Try again with GPS switched on." };
   }
 
-  const { data, error } = await supabase.rpc("punch_out", {
+  const outArgs = {
     p_lat: position.coords.latitude,
     p_lng: position.coords.longitude,
     p_accuracy_m: position.coords.accuracy ?? 9999,
     p_device_reported_at: new Date(position.timestamp).toISOString(),
     p_handover: handover?.trim() || undefined,
-  });
+  };
+  const { data, error } = await withRetry(() => supabase.rpc("punch_out", outArgs));
 
+  // Already out (a double tap, or a retry whose first reply was lost): the shift is closed.
+  if (error && /not checked in/i.test(error.message)) {
+    await stopTracking().catch(() => undefined);
+    return { ok: true, distanceM: 0, message: "You are checked out." };
+  }
   if (error) return { ok: false, error: error.message };
 
   /**
@@ -369,17 +382,48 @@ export type RaiseResult =
  * seconds, else the last one the phone knows (minutes old is far better than
  * nothing), else none. The old path waited up to twelve seconds for GPS indoors.
  */
+type Fix = { lat: number; lng: number; accuracyM: number; at: number };
+let warm: Fix | null = null;
+
+/**
+ * Reads one position ahead of need, so a held SOS button has somewhere to say from the
+ * first second. Called when a screen with the button opens and when the app returns to
+ * the front: one reading each time, never a running watch, so it costs no battery.
+ */
+export async function prefetchFix(): Promise<void> {
+  const pos = await currentFix().catch(() => null);
+  if (pos) warm = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy ?? 999, at: Date.now() };
+}
+
 async function quickFix(): Promise<{ lat: number; lng: number; accuracyM: number } | null> {
   const Location = await import("expo-location");
   const fresh = await Promise.race([
     currentFix(),
     new Promise<null>((r) => setTimeout(() => r(null), 3_000)),
   ]);
-  const pos = fresh ?? (await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null));
+  if (fresh) return { lat: fresh.coords.latitude, lng: fresh.coords.longitude, accuracyM: fresh.coords.accuracy ?? 999 };
+  // The reading taken ahead of time, while it is still recent enough to be where they are.
+  if (warm && Date.now() - warm.at < 15 * 60_000) return warm;
+  const pos = await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null);
   return pos ? { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyM: pos.coords.accuracy ?? 999 } : null;
 }
 
 const looksOffline = (msg: string) => /network|fetch|timed? ?out|connection|offline|abort/i.test(msg);
+
+/**
+ * A punch on a weak network: tried again a few times while the failure looks like the
+ * connection, not the database. Safe to repeat, because the database keeps one open
+ * record per guard and refuses a second (which the callers above treat as done).
+ */
+async function withRetry<T extends { error: { message: string } | null }>(call: () => PromiseLike<T>): Promise<T> {
+  let last!: T;
+  for (const wait of [0, 1_500, 3_000, 5_000]) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    last = await call();
+    if (!last.error || !looksOffline(last.error.message)) return last;
+  }
+  return last;
+}
 
 /**
  * Raising the alarm.
@@ -417,7 +461,11 @@ export async function raiseSos(kind: SosKind = "other", note?: string): Promise<
     }
 
     lastError = error.message;
-    // A refusal from the database (no site, inactive account) will not change on retry.
+    // Off duty and no location: the database cannot tell where help is needed.
+    if (/no site could be found/i.test(error.message)) {
+      return { ok: false, error: "your location could not be read. Turn location on and hold SOS again, or call the office", fix };
+    }
+    // A refusal from the database (inactive account) will not change on retry.
     if (!looksOffline(error.message)) return { ok: false, error: error.message, fix };
   }
   return { ok: false, error: lastError, offline: true, fix };

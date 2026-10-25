@@ -35,7 +35,7 @@ function dot(color: string, size: number) {
   return { path: 0 as google.maps.SymbolPath, scale: size, fillColor: color, fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 };
 }
 
-export function MapCanvas({ fences = [], people = [], me = null, route = null, trail = null, frameKey = "", padding, onPersonPress }: MapCanvasProps) {
+export function MapCanvas({ fences = [], people = [], me = null, route = null, trail = null, frameKey = "", padding, onPersonPress, onFencePress }: MapCanvasProps) {
   const host = useRef<HTMLDivElement | null>(null);
   const [ctx, setCtx] = useState<{ g: G; map: google.maps.Map } | null>(null);
   const framed = useRef<string | null>(null);
@@ -59,7 +59,9 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
     for (const f of fences) {
       const path = f.ring.map(([lng, lat]) => ({ lat, lng }));
       if (f.frame !== false) path.forEach((p) => bounds.extend(p));
-      drawn.push(new g.Polygon({ map, paths: path, strokeColor: f.tone, strokeWeight: f.quiet ? 1.5 : 2.5, fillColor: f.tone, fillOpacity: f.fill ?? (f.quiet ? 0.08 : 0.14), clickable: false }));
+      const poly = new g.Polygon({ map, paths: path, strokeColor: f.tone, strokeWeight: f.quiet ? 1.5 : 2.5, fillColor: f.tone, fillOpacity: f.fill ?? (f.quiet ? 0.08 : 0.14), clickable: Boolean(onFencePress) });
+      if (onFencePress) poly.addListener("click", () => onFencePress(f.id));
+      drawn.push(poly);
     }
     if (trail && trail.length > 1) drawn.push(new g.Polyline({ map, path: trail, strokeColor: MAP_COLOR.me, strokeOpacity: 0.75, strokeWeight: 4 }));
     if (route) drawn.push(new g.Polyline({ map, path: route, strokeOpacity: 0, icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: MAP_COLOR.route, scale: 3 }, offset: "0", repeat: "12px" }] }));
@@ -94,7 +96,7 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
       });
     }
     return () => drawn.forEach((d) => d.setMap(null));
-  }, [ctx, fences, people, me, route, trail, frameKey, padding, onPersonPress]);
+  }, [ctx, fences, people, me, route, trail, frameKey, padding, onPersonPress, onFencePress]);
 
   return (
     <View style={styles.fill}>
