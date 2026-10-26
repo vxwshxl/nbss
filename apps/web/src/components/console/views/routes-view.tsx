@@ -36,7 +36,7 @@ export async function RoutesView({
   let q = supabase
     .from("attendance")
     .select(
-      "id, guard_id, check_in_at, check_out_at, worked_minutes, status, device_flag, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name, lat, lng, geofence_radius_m, polygon)",
+      "id, guard_id, check_in_at, check_out_at, worked_minutes, status, device_flag, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name, lat, lng, geofence_radius_m, polygon)",
     )
     .not("check_in_at", "is", null)
     .order("check_in_at", { ascending: false })
@@ -56,7 +56,7 @@ export async function RoutesView({
     attendance
       ? supabase
           .from("attendance")
-          .select("id, guard_id, check_in_at, check_out_at, worked_minutes, status, device_flag, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name, lat, lng, geofence_radius_m, polygon)")
+          .select("id, guard_id, check_in_at, check_out_at, worked_minutes, status, device_flag, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name, lat, lng, geofence_radius_m, polygon)")
           .eq("id", attendance)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -88,7 +88,8 @@ export async function RoutesView({
         checkOutAt: a.check_out_at,
         workedMinutes: a.worked_minutes,
         status: a.status,
-        deviceFlag: a.device_flag,
+        // Accepted by a supervisor: no longer flagged on the list.
+        deviceFlag: a.reviewed_at ? null : a.device_flag,
       };
     });
 

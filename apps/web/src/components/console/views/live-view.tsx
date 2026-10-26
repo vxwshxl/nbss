@@ -31,7 +31,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
   const [open, positions, sites, devices, sos, due] = await Promise.all([
     supabase
       .from("attendance")
-      .select("id, guard_id, site_id, check_in_at, status, device_flag, device_id, silent_alerted_at, silent_staff_alerted_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone), sites(name)")
+      .select("id, guard_id, site_id, check_in_at, status, device_flag, device_id, reviewed_at, silent_alerted_at, silent_staff_alerted_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone), sites(name)")
       .is("check_out_at", null)
       .match(siteId ? { site_id: siteId } : {})
       .order("check_in_at"),
@@ -70,7 +70,9 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
       siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "A site",
       checkInAt: a.check_in_at ?? now,
       status: a.status,
-      deviceFlag: a.device_flag,
+      // Only while it is still held: a check-in a supervisor has accepted keeps its flag
+      // on record but no longer needs anything doing.
+      deviceFlag: a.reviewed_at ? null : a.device_flag,
       silentAlertedAt: a.silent_staff_alerted_at ?? a.silent_alerted_at,
       device: d
         ? {
