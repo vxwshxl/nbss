@@ -87,32 +87,29 @@ function Submit() {
  * from before (TEST-ADMIN) or an email still works: typing a letter, "-" or "@" drops
  * the prefix and the field takes the whole thing as written.
  */
+/** "NBSS-" fixed and digits only after it: the number pad, as for the PIN. */
 function CodeField({ defaultValue }: { defaultValue?: string }) {
-  const initial = (defaultValue ?? "").replace(/^NBSS-/i, "");
-  const [value, setValue] = useState(initial);
-  const custom = /[^0-9]/.test(value);
-  const identifier = custom ? value.trim() : value ? `NBSS-${value}` : "";
+  const [value, setValue] = useState((defaultValue ?? "").replace(/^NBSS-/i, "").replace(/\D/g, ""));
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor="identifier-input">Employee code</Label>
       <div className="flex h-11 items-center overflow-hidden rounded-xl border border-input bg-background transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-        {!custom && <span className="flex h-full items-center bg-muted px-3.5 font-mono text-[15px] font-semibold tracking-wider text-muted-foreground">NBSS-</span>}
+        <span className="flex h-full items-center bg-muted px-3.5 font-mono text-[15px] font-semibold tracking-wider text-muted-foreground">NBSS-</span>
         <input
           id="identifier-input"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
           placeholder=""
           autoComplete="username"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          inputMode={custom ? "text" : "numeric"}
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={6}
           required
           autoFocus
           className="h-full min-w-0 flex-1 bg-transparent px-3.5 font-mono text-[15px] tracking-wider outline-none"
         />
       </div>
-      <input type="hidden" name="identifier" value={identifier} />
+      <input type="hidden" name="identifier" value={value ? `NBSS-${value}` : ""} />
     </div>
   );
 }

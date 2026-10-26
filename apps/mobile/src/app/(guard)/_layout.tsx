@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "@/components/avatar";
 import { FloatingSos } from "@/components/floating-sos";
+import { SosRinger } from "@/components/sos-ringer";
 import { TopBar } from "@/components/top-bar";
 import { photoOf, useAuth } from "@/lib/auth";
 import { registerHandset } from "@/lib/device";
@@ -140,6 +141,8 @@ export default function GuardLayout() {
     </Tabs>
       {/* On every tab, above the tab bar: hold for help from wherever the guard is. */}
       <FloatingSos bottom={64 + insets.bottom + 14} />
+      {/* Rings and calls out an SOS this person has not opened yet, whoever raised it. */}
+      <SosRinger />
     </View>
     </LiveFeedProvider>
   );

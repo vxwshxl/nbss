@@ -151,10 +151,8 @@ function StaffForm({ onBack }: { onBack: () => void }) {
   const [shown, setShown] = useState(false);
   const [focus, setFocus] = useState<"code" | "pin" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // "NBSS-" fixed, the number typed after it. A code from before (TEST-ADMIN) or an
-  // email still works: a letter, "-" or "@" drops the prefix and takes it as written.
-  const custom = /[^0-9]/.test(number);
-  const identifier = custom ? number.trim() : number ? `NBSS-${number}` : "";
+  // "NBSS-" fixed and digits only after it, on the number pad, as for the PIN.
+  const identifier = number ? `NBSS-${number}` : "";
 
   const submit = async (pin = secret) => {
     if (!identifier || pin.length !== 4) {
@@ -180,17 +178,15 @@ function StaffForm({ onBack }: { onBack: () => void }) {
             Employee code
           </Text>
           <Box focused={focus === "code"}>
-            {!custom && (
-              <View style={styles.prefix}>
-                <Text weight="semibold" tone="muted" style={styles.codeText}>
-                  NBSS-
-                </Text>
-              </View>
-            )}
+            <View style={styles.prefix}>
+              <Text weight="semibold" tone="muted" style={styles.codeText}>
+                NBSS-
+              </Text>
+            </View>
             <TextInput
               value={number}
               onChangeText={(v) => {
-                setNumber(v.replace(/^nbss-/i, ""));
+                setNumber(v.replace(/\D/g, "").slice(0, 6));
                 setError(null);
               }}
               placeholder=""
@@ -199,8 +195,8 @@ function StaffForm({ onBack }: { onBack: () => void }) {
               autoCorrect={false}
               spellCheck={false}
               autoComplete="username"
-              // Digits first, but a TEST- code or an email can still be typed.
-              keyboardType={custom ? "default" : Platform.OS === "ios" ? "numbers-and-punctuation" : "visible-password"}
+              keyboardType="number-pad"
+              maxLength={6}
               autoFocus
               // "Next" on the keyboard goes straight to the PIN.
               returnKeyType="next"

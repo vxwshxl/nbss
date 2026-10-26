@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { isStaff } from "@nbss/shared/identity";
 
 import { FloatingSos } from "@/components/floating-sos";
+import { SosRinger } from "@/components/sos-ringer";
 import { TopBar } from "@/components/top-bar";
 import { Avatar } from "@/components/avatar";
 import { photoOf, useAuth } from "@/lib/auth";
@@ -125,6 +126,8 @@ export default function StaffLayout() {
       </Tabs>
       {/* The office can call for help too: the same button, held three seconds. */}
       <FloatingSos bottom={64 + insets.bottom + 14} staff />
+      {/* Rings and calls out an SOS this person has not opened yet, whoever raised it. */}
+      <SosRinger staff />
     </LiveFeedProvider>
   );
 }

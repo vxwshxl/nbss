@@ -74,7 +74,8 @@ export function Account() {
         <Row icon={BellRing} label="SOS alerts" value={CAN_RECEIVE_PUSH ? "On, even when closed" : "Install the app build"} last />
       </View>
 
-      <PermissionsPanel location={guard} />
+      {/* Anyone who carries the SOS button needs location, as a guard does. */}
+      <PermissionsPanel location={profile?.role !== "client"} />
 
       <Button label="Sign out" variant="outline" icon={LogOut} fullWidth loading={loading} onPress={() => void signOut()} />
 

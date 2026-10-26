@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { CalendarClock, CircleCheckBig, Clock3, Phone, UserRoundX } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 import { istTime, tel } from "@nbss/shared/company";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
 import { Segmented } from "@/components/segmented";
+import { Select } from "@/components/select";
 import { StatCard } from "@/components/stat-card";
 import { Text } from "@/components/text";
 import { useLiveTables } from "@/hooks/use-live-tables";
@@ -160,7 +161,10 @@ export function StaffToday() {
   const late = all.filter((d) => !d.inAt && d.status !== "completed" && d.status !== "missed" && due(d) < now && new Date(d.ends_at).getTime() > now);
   const on = all.filter(isOn);
   const coming = all.filter((d) => !d.inAt && d.status === "scheduled" && due(d) >= now);
-  const done = all.filter((d) => !isOn(d) && !late.includes(d) && !coming.includes(d));
+  // The rest of the day, in plain words: came and left, or never came at all.
+  const rest = all.filter((d) => !isOn(d) && !late.includes(d) && !coming.includes(d));
+  const completed = rest.filter((d) => d.inAt);
+  const missed = rest.filter((d) => !d.inAt);
 
   const open = (d: Duty) => d.guardId && router.push({ pathname: "/person/[id]", params: { id: d.guardId } });
 
@@ -181,48 +185,57 @@ export function StaffToday() {
         ]}
       />
       {sites.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          <Chip label="All sites" on={!site} onPress={() => setSite(null)} />
-          {sites.map(([id, name]) => (
-            <Chip key={id} label={name} on={site === id} onPress={() => setSite(site === id ? null : id)} />
-          ))}
-        </ScrollView>
+        <Select
+          title="Site"
+          value={site ?? "all"}
+          onChange={(v) => setSite(v === "all" ? null : v)}
+          options={[{ value: "all", label: "All sites" }, ...sites.map(([id, name]) => ({ value: id, label: name, hint: `${everything.filter((d) => d.siteId === id).length} on the roster` }))]}
+        />
       )}
       <CardGrid columns={2}>
-        <StatCard label="Not arrived" value={String(late.length)} hint="Past start + grace" icon={UserRoundX} tone={late.length ? "rose" : "slate"} />
+        <StatCard label="Not arrived" value={String(late.length)} hint="Late, not checked in" icon={UserRoundX} tone={late.length ? "rose" : "slate"} />
         <StatCard label="On duty" value={String(on.length)} hint="Checked in now" icon={CircleCheckBig} tone="emerald" />
-        <StatCard label="Coming up" value={String(coming.length)} hint="Not started yet" icon={CalendarClock} tone="sky" />
-        <StatCard label="Done" value={String(done.length)} hint="Finished or missed" icon={Clock3} tone="violet" />
+        <StatCard label="Starting later" value={String(coming.length)} hint="Duty not started yet" icon={CalendarClock} tone="sky" />
+        <StatCard
+          label="Completed"
+          value={String(completed.length)}
+          hint={missed.length ? `${missed.length} missed (never came)` : "Came and checked out"}
+          icon={Clock3}
+          tone={missed.length ? "amber" : "violet"}
+        />
       </CardGrid>
       {data && all.length === 0 && (
         <Text variant="label" tone="muted" style={styles.centred}>
           No duty on the roster for this day.
         </Text>
       )}
-      <Group title="Not arrived" tone="rose" rows={late} onPress={open} note={(d) => `Due ${istTime(d.starts_at)} · ${mins(now - new Date(d.starts_at).getTime())} late`} />
+      <Group title="Not arrived" hint="Their duty has started; they have not checked in" tone="rose" rows={late} onPress={open} note={(d) => `Due ${istTime(d.starts_at)} · ${mins(now - new Date(d.starts_at).getTime())} late`} />
       <Group
-        title="On duty"
+        title="On duty now"
+        hint="Checked in and working"
         tone="emerald"
         rows={on}
         onPress={open}
         note={(d) => `In ${istTime(d.inAt!)} · ${mins(now - new Date(d.inAt!).getTime())}${d.offRoster ? " · not rostered" : ` · ends ${istTime(d.ends_at)}`}`}
       />
-      <Group title="Coming up" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
+      <Group title="Starting later" hint="Duty begins later" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
+      <Group title="Missed" hint="The duty ended and they never checked in" tone="amber" rows={missed} onPress={open} note={(d) => `Was due ${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
       <Group
-        title="Done"
+        title="Completed"
+        hint="Came, worked and checked out"
         tone="slate"
-        rows={done}
+        rows={completed}
         onPress={open}
-        note={(d) => (d.inAt ? `${istTime(d.inAt)} – ${d.outAt ? istTime(d.outAt) : "?"}` : d.status === "missed" || new Date(d.ends_at).getTime() <= now ? "Missed" : `Ended ${istTime(d.ends_at)}`)}
+        note={(d) => `${istTime(d.inAt!)} – ${d.outAt ? istTime(d.outAt) : "?"}${d.inAt && d.outAt ? ` · ${mins(new Date(d.outAt).getTime() - new Date(d.inAt).getTime())}` : ""}`}
       />
     </Screen>
   );
 }
 
-function Group({ title, tone, rows, note, onPress }: { title: string; tone: "rose" | "emerald" | "sky" | "slate"; rows: Duty[]; note: (d: Duty) => string; onPress: (d: Duty) => void }) {
+function Group({ title, hint, tone, rows, note, onPress }: { title: string; hint: string; tone: "rose" | "emerald" | "sky" | "slate" | "amber"; rows: Duty[]; note: (d: Duty) => string; onPress: (d: Duty) => void }) {
   if (rows.length === 0) return null;
   return (
-    <Panel tone={tone} title={title} subtitle={`${rows.length}`} bare>
+    <Panel tone={tone} title={`${title} · ${rows.length}`} subtitle={hint} bare>
       {rows.map((d, i) => (
         <PanelRow key={d.id} first={i === 0}>
           {/* The row opens the guard; the phone beside it calls. Siblings, not nested. */}
@@ -251,24 +264,11 @@ function Group({ title, tone, rows, note, onPress }: { title: string; tone: "ros
   );
 }
 
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.chip, on && styles.chipOn]}>
-      <Text variant="caption" weight="semibold" tone="inherit" style={{ color: on ? color.primaryForeground : color.foreground }} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   body: { gap: 16, paddingBottom: 120 },
   flex: { flex: 1, minWidth: 0, gap: 1 },
   centred: { textAlign: "center" },
   main: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: space[3] },
   pressed: { opacity: 0.6 },
-  chips: { gap: space[2], paddingRight: space[4] },
-  chip: { height: 32, paddingHorizontal: space[3], borderRadius: radius.full, justifyContent: "center", backgroundColor: color.card, borderWidth: 1, borderColor: color.border, maxWidth: 200 },
-  chipOn: { backgroundColor: color.foreground, borderColor: color.foreground },
   call: { width: 38, height: 38, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
 });

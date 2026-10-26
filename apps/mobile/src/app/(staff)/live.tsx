@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { ChevronRight, LocateFixed, MapPin, Navigation, SatelliteDish, Siren, Users, X } from "lucide-react-native";
+import { ChevronRight, LocateFixed, Maximize2, MapPin, Navigation, SatelliteDish, Siren, Users, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
@@ -14,8 +14,10 @@ import { MAP_COLOR, fenceRing } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
+import { PermissionsPanel } from "@/components/permissions-panel";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
+import { useLivePosition } from "@/hooks/use-live-position";
 import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
@@ -75,6 +77,14 @@ export default function LiveRoute() {
   const [sheetH, setSheetH] = useState(0);
   const [frame, setFrame] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
+  // What the map frames: everything, the picked site alone, or where I am.
+  const [focus, setFocus] = useState<"all" | "site" | "me">("all");
+  const pick = (id: string | null) => {
+    setPicked(id);
+    setFocus(id ? "site" : "all");
+  };
+  const live = useLivePosition();
+  const me = live.fix ? { lat: live.fix.lat, lng: live.fix.lng, accuracyM: live.fix.accuracyM, heading: live.heading } : null;
   const { data: alerts = [], refreshing, reload, refresh } = useLoader(liveAlerts);
   const { data: board, reload: reloadBoard } = useLoader(loadBoard);
   // Ticks on its own, so a guard whose phone died goes amber without waiting for a batch.
@@ -132,8 +142,10 @@ export default function LiveRoute() {
         ring: fenceRing({ id: s.id, name: s.name, lat: s.lat, lng: s.lng, radiusM: s.geofence_radius_m, ring: toFence(s).ring ?? null }),
         tone: sosSites.has(s.id) ? color.destructive : color.primary,
         quiet: s.id !== picked,
+        // Framed: every site, or only the one tapped; none when centring on me.
+        frame: focus === "all" || (focus === "site" && s.id === picked),
       })),
-    [board, picked, sosSites],
+    [board, picked, sosSites, focus],
   );
   const dots = useMemo<MapPerson[]>(
     () =>
@@ -143,8 +155,9 @@ export default function LiveRoute() {
         lng: p.lng,
         label: board?.names.get(p.guard_id)?.full_name.split(" ")[0],
         tone: p.mode === "emergency" ? color.destructive : p.inside_fence ? MAP_COLOR.inside : MAP_COLOR.outside,
+        frame: focus === "all",
       })),
-    [list, board],
+    [list, board, focus],
   );
 
   const quiet = list.filter((p) => freshness(new Date(p.recorded_at).getTime(), now) !== "live").length;
@@ -157,10 +170,12 @@ export default function LiveRoute() {
         <MapCanvas
           fences={fences}
           people={dots}
-          frameKey={board ? `sites|${frame}|${picked ?? ""}` : ""}
+          // My dot shows always; it is framed only when "my location" is asked for.
+          me={me && focus === "me" ? me : me ? { ...me, frame: false } : null}
+          frameKey={board ? `sites|${frame}|${focus}|${picked ?? ""}` : ""}
           padding={{ top: 24, right: 24, bottom: sheetH + 16, left: 24 }}
           onPersonPress={openPerson}
-          onFencePress={setPicked}
+          onFencePress={pick}
         />
       </View>
 
@@ -170,14 +185,33 @@ export default function LiveRoute() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh().then(reloadAll)} />}
         floating={
           <View style={styles.floatRow} pointerEvents="box-none">
-            <Pressable accessibilityRole="button" accessibilityLabel="Show every site" onPress={() => { setPicked(null); setFrame((k) => k + 1); }} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
-              <LocateFixed size={22} color={color.primary} strokeWidth={2.2} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Show every site"
+              onPress={() => {
+                pick(null);
+                setFrame((k) => k + 1);
+              }}
+              style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+            >
+              <Maximize2 size={20} color={color.foreground} strokeWidth={2.2} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go to my location"
+              onPress={() => {
+                setFocus("me");
+                setFrame((k) => k + 1);
+              }}
+              style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
+            >
+              <LocateFixed size={22} color={me ? color.primary : color.mutedForeground} strokeWidth={2.2} />
             </Pressable>
           </View>
         }
         header={
           site ? (
-            <SiteHead site={site} onClose={() => setPicked(null)} />
+            <SiteHead site={site} onClose={() => pick(null)} />
           ) : (
             <View style={styles.headGap}>
               <Text variant="label" weight="semibold" tone="primary">
@@ -207,30 +241,16 @@ export default function LiveRoute() {
           />
         ) : (
           <>
+            {/* Location and alerts, so this phone can raise and hear an SOS: only while something is missing. */}
+            <PermissionsPanel onlyIfMissing />
             {alerts.length > 0 && <SosPanel alerts={alerts} />}
-
-            <Panel tone="indigo" icon={SatelliteDish} title={`${list.length} on duty`} subtitle="Tap a guard for their page" bare>
-              {list.length === 0 ? (
-                <PanelRow first>
-                  <Text variant="label" tone="muted">
-                    Nobody is on duty right now.
-                  </Text>
-                </PanelRow>
-              ) : (
-                [...list]
-                  .sort((a, b) => (b.received_at ?? b.recorded_at).localeCompare(a.received_at ?? a.recorded_at))
-                  .map((p, i) => (
-                    <GuardRow key={p.guard_id} p={p} person={board?.names.get(p.guard_id)} site={board?.sites.find((s) => s.id === p.site_id)?.name} now={now} first={i === 0} onPress={() => openPerson(p.guard_id)} />
-                  ))
-              )}
-            </Panel>
 
             <Panel tone="emerald" icon={MapPin} title="Sites" subtitle="Tap one to see it" bare>
               {(board?.sites ?? []).map((s, i) => {
                 const on = list.filter((p) => p.site_id === s.id).length;
                 const posted = board?.posted.get(s.id)?.length ?? 0;
                 return (
-                  <Pressable key={s.id} accessibilityRole="button" onPress={() => setPicked(s.id)}>
+                  <Pressable key={s.id} accessibilityRole="button" onPress={() => pick(s.id)}>
                     {({ pressed }) => (
                       <PanelRow first={i === 0} style={pressed && styles.rowPressed}>
                         <View style={[styles.siteDot, { backgroundColor: sosSites.has(s.id) ? color.destructive : on ? MAP_COLOR.inside : color.border }]} />
@@ -447,7 +467,7 @@ const styles = StyleSheet.create({
   siteDot: { width: 10, height: 10, borderRadius: 5 },
   sosIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.sos, alignItems: "center", justifyContent: "center" },
   close: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.muted, alignItems: "center", justifyContent: "center" },
-  floatRow: { flexDirection: "row", justifyContent: "flex-end" },
+  floatRow: { flexDirection: "row", justifyContent: "flex-end", gap: space[2] },
   fab: { width: 52, height: 52, borderRadius: 26, backgroundColor: color.card, alignItems: "center", justifyContent: "center", ...shadow.raised },
   sheetEnd: { height: 96 },
 });

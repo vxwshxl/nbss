@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { ChevronRight, Phone, Search, Users, X } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Linking, Pressable, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 
 import { istTime, tel } from "@nbss/shared/company";
 
@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { Screen } from "@/components/screen";
 import { Segmented } from "@/components/segmented";
+import { Select } from "@/components/select";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
 import { useLiveTables } from "@/hooks/use-live-tables";
@@ -99,12 +100,15 @@ export function StaffGuards() {
         ) : null}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        <Chip label="All sites" on={!site} onPress={() => setSite(null)} />
-        {sites.map((s) => (
-          <Chip key={s.id} label={s.name} on={site === s.id} onPress={() => setSite(site === s.id ? null : s.id)} />
-        ))}
-      </ScrollView>
+      <Select
+        title="Site"
+        value={site ?? "all"}
+        onChange={(v) => setSite(v === "all" ? null : v)}
+        options={[
+          { value: "all", label: "All sites", hint: `${all.length} guards` },
+          ...sites.map((s) => ({ value: s.id, label: s.name, hint: [s.district, `${all.filter((g) => g.dutySiteId === s.id || g.postSiteId === s.id).length} guards`].filter(Boolean).join(" · ") })),
+        ]}
+      />
 
       <Segmented
         value={show}
@@ -155,16 +159,6 @@ export function StaffGuards() {
   );
 }
 
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.chip, on && styles.chipOn]}>
-      <Text variant="label" weight="semibold" tone="inherit" style={{ color: on ? color.primaryForeground : color.foreground }} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   body: { gap: 14, paddingBottom: 120 },
   flex: { flex: 1, minWidth: 0, gap: 2 },
@@ -172,8 +166,5 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   search: { flexDirection: "row", alignItems: "center", gap: space[2], paddingHorizontal: space[3], minHeight: 48, borderRadius: radius.full, backgroundColor: color.card, borderWidth: 1, borderColor: color.border },
   input: { flex: 1, fontSize: 16, color: color.foreground },
-  chips: { gap: space[2], paddingRight: space[4] },
-  chip: { height: 36, paddingHorizontal: space[4], borderRadius: radius.full, justifyContent: "center", backgroundColor: color.card, borderWidth: 1, borderColor: color.border, maxWidth: 220 },
-  chipOn: { backgroundColor: color.foreground, borderColor: color.foreground },
   call: { width: 38, height: 38, borderRadius: radius.full, alignItems: "center", justifyContent: "center", backgroundColor: color.accent },
 });

@@ -139,8 +139,11 @@ const PILL: Record<State, { bg: string; fg: string }> = {
  * show the question a second time, opens the app's page in Settings. Re-read when
  * the guard comes back from Settings.
  */
-/** `location`: a guard's phone (location, battery, autostart); everyone needs notifications. */
-export function PermissionsPanel({ location = true }: { location?: boolean }) {
+/**
+ * `location`: a phone that may raise an SOS (guards and the office): location, battery,
+ * autostart; everyone needs notifications.
+ */
+export function PermissionsPanel({ location = true, onlyIfMissing = false }: { location?: boolean; /** Nothing at all once everything is allowed. */ onlyIfMissing?: boolean }) {
   const [perms, setPerms] = useState<Perm[] | null>(null);
 
   const refresh = useCallback(() => {
@@ -160,6 +163,7 @@ export function PermissionsPanel({ location = true }: { location?: boolean }) {
 
   if (IS_WEB) return null;
   const missing = (perms ?? []).filter((p) => p.state === "missing" || p.state === "partial").length;
+  if (onlyIfMissing && (!perms || missing === 0)) return null;
 
   return (
     <Panel

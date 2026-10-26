@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { ChevronRight, LocateFixed, ShieldCheck, Siren } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 import { COMPANY, istTime } from "@nbss/shared/company";
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
@@ -10,6 +10,7 @@ import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canva
 import { fenceRing } from "@/components/live-map/shared";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
+import { Select } from "@/components/select";
 import { Text } from "@/components/text";
 import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
@@ -173,31 +174,32 @@ export function StaffSos() {
           </View>
         }
       >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {PERIODS.map((p) => (
-            <Chip key={p.value} label={p.label} on={period === p.value} onPress={() => setPeriod(p.value)} />
-          ))}
-        </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {(
-            [
-              ["all", "All"],
-              ["open", "Open"],
-              ["resolved", "Resolved"],
-              ["false_alarm", "False alarm"],
-            ] as const
-          ).map(([v, l]) => (
-            <Chip key={v} label={l} on={show === v} onPress={() => setShow(v)} />
-          ))}
-        </ScrollView>
-        {siteIds.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-            <Chip label="All sites" on={!site} onPress={() => setSite(null)} />
-            {siteIds.map((id) => (
-              <Chip key={id} label={rows.find((r) => r.site_id === id)?.site ?? "Site"} on={site === id} onPress={() => setSite(site === id ? null : id)} />
-            ))}
-          </ScrollView>
-        )}
+        <Select
+          title="Site"
+          value={site ?? "all"}
+          onChange={(v) => setSite(v === "all" ? null : v)}
+          options={[
+            { value: "all", label: "All sites" },
+            ...[...(data?.sites ?? [])]
+              .sort((x, y) => x.name.localeCompare(y.name))
+              .map((s) => ({ value: s.id, label: s.name, hint: [s.district, `${rows.filter((r) => r.site_id === s.id).length} SOS`].filter(Boolean).join(" · ") })),
+          ]}
+        />
+        <View style={styles.pair}>
+          <Select
+            title="Status"
+            style={styles.half}
+            value={show}
+            onChange={setShow}
+            options={[
+              { value: "all", label: "All" },
+              { value: "open", label: "Open" },
+              { value: "resolved", label: "Resolved" },
+              { value: "false_alarm", label: "False alarm" },
+            ]}
+          />
+          <Select title="Period" style={styles.half} value={period} onChange={setPeriod} options={PERIODS} />
+        </View>
 
         {data && list.length === 0 ? (
           <View style={styles.empty}>
@@ -243,16 +245,6 @@ export function StaffSos() {
   );
 }
 
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} onPress={onPress} style={[styles.chip, on && styles.chipOn]}>
-      <Text variant="caption" weight="semibold" tone="inherit" style={{ color: on ? color.primaryForeground : color.foreground }} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 function Count({ value, label, tone }: { value: number; label: string; tone: string }) {
   return (
     <View style={styles.count}>
@@ -274,9 +266,8 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: color.muted },
   counts: { flexDirection: "row", gap: space[2], marginTop: space[2] },
   count: { flex: 1, alignItems: "center", paddingVertical: space[2], borderRadius: radius.lg, backgroundColor: color.muted },
-  chips: { gap: space[2], paddingRight: space[4] },
-  chip: { height: 32, paddingHorizontal: space[3], borderRadius: radius.full, justifyContent: "center", backgroundColor: color.card, borderWidth: 1, borderColor: color.border, maxWidth: 200 },
-  chipOn: { backgroundColor: color.foreground, borderColor: color.foreground },
+  pair: { flexDirection: "row", gap: space[2] },
+  half: { flex: 1 },
   icon: { width: 36, height: 36, borderRadius: radius.full, alignItems: "center", justifyContent: "center" },
   empty: { alignItems: "center", gap: space[2], paddingVertical: space[6] },
   centred: { textAlign: "center" },

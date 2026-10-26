@@ -45,7 +45,7 @@ export type MapCanvasProps = {
   fences?: MapFence[];
   people?: MapPerson[];
   /** The phone; `heading` (degrees from north) draws Google Maps' direction beam. */
-  me?: (MapPoint & { accuracyM?: number; heading?: number | null }) | null;
+  me?: (MapPoint & { accuracyM?: number; heading?: number | null; /** Left out of the framing (default true). */ frame?: boolean }) | null;
   /** A dashed line, from the guard to where they are heading. */
   route?: [MapPoint, MapPoint] | null;
   /** The path walked since check-in. */
@@ -88,7 +88,7 @@ export function MapCanvas({
     const pts: { latitude: number; longitude: number }[] = [];
     for (const f of fences) if (f.frame !== false) for (const [lng, lat] of f.ring) pts.push({ latitude: lat, longitude: lng });
     for (const p of people) if (p.frame !== false) pts.push({ latitude: p.lat, longitude: p.lng });
-    if (me) pts.push({ latitude: me.lat, longitude: me.lng });
+    if (me && me.frame !== false) pts.push({ latitude: me.lat, longitude: me.lng });
     return pts;
   }, [fences, people, me]);
 

@@ -72,7 +72,7 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
       drawn.push(m);
     }
     if (me) {
-      bounds.extend(me);
+      if (me.frame !== false) bounds.extend(me);
       if (me.accuracyM && me.accuracyM < 500) drawn.push(new g.Circle({ map, center: me, radius: me.accuracyM, strokeOpacity: 0, fillColor: MAP_COLOR.me, fillOpacity: 0.1 }));
       if (me.heading != null) {
         drawn.push(
@@ -90,7 +90,13 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
     const key = `${frameKey}|${me ? 1 : 0}`;
     if (framed.current !== key && !bounds.isEmpty()) {
       framed.current = key;
-      map.fitBounds(bounds, padding ?? 40);
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      // One point (my location, a single guard): centred at street level, not the deepest zoom.
+      if (ne.equals(sw)) {
+        map.setCenter(ne);
+        map.setZoom(17);
+      } else map.fitBounds(bounds, padding ?? 40);
       g.event.addListenerOnce(map, "idle", () => {
         if ((map.getZoom() ?? 0) > 18) map.setZoom(18);
       });
