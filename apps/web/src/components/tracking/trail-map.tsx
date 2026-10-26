@@ -20,6 +20,8 @@ export function TrailMap({
   stats,
   site,
   head,
+  clock,
+  playing = false,
   pan,
   height = "100%",
   className,
@@ -29,6 +31,12 @@ export function TrailMap({
   site: TrailSite | null;
   /** Index into `points` the playback is at; the line beyond it is faded. */
   head: number;
+  /**
+   * The playback time (ms, shift clock), written every frame by the player. While
+   * `playing`, the head glides between points by it instead of jumping point to point.
+   */
+  clock?: React.RefObject<number | null>;
+  playing?: boolean;
   /** Changes when the reader picks a moment from the timeline. */
   pan?: { lat: number; lng: number; key: string } | null;
   height?: number | string;
@@ -38,6 +46,8 @@ export function TrailMap({
   const { maps, map, error } = useGoogleMap(host, { zoom: 16, gestureHandling: "greedy" });
   const headMarker = useRef<HtmlMarker | null>(null);
   const done = useRef<google.maps.Polyline | null>(null);
+  // The last stretch, from the last point passed to the head where it is right now.
+  const tail = useRef<google.maps.Polyline | null>(null);
 
   // The fence.
   useEffect(() => {
@@ -137,7 +147,7 @@ export function TrailMap({
         Math.sin((a.lat * Math.PI) / 180) * Math.cos((to.lat * Math.PI) / 180) * Math.cos(((to.lng - a.lng) * Math.PI) / 180),
     ) * 180) / Math.PI;
     const moved = a !== to && (a.lat !== to.lat || a.lng !== to.lng);
-    const headHtml = `<span class="gm-head">${moved ? `<i class="gm-dir" style="--r:${Math.round((bearing + 360) % 360)}deg;--c:#2563eb"></i>` : ""}</span>`;
+    const headHtml = headIcon(moved ? bearing : null);
     if (!done.current) {
       done.current = new maps.Polyline({ map, strokeColor: MAP_COLOR.route, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false });
     }
@@ -149,13 +159,52 @@ export function TrailMap({
       headMarker.current.setPosition(at);
       headMarker.current.setHtml(headHtml);
     }
+    if (!tail.current) {
+      tail.current = new maps.Polyline({ map, strokeColor: MAP_COLOR.route, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false });
+    }
+    tail.current.setPath([]);
   }, [maps, map, points, head]);
+
+  /**
+   * Playing: every frame the head is placed where the guard was at that instant, between
+   * the two points either side of it, and the solid line follows it. The map is moved
+   * directly, not through React state, so sixty frames a second cost nothing but the
+   * marker's own move; the page only re-renders when a point is passed.
+   */
+  useEffect(() => {
+    if (!playing || !clock || points.length < 2) return;
+    let raf = 0;
+    let seg = -1;
+    const frame = () => {
+      const t = clock.current;
+      if (t != null && headMarker.current) {
+        let i = Math.max(0, Math.min(head, points.length - 2));
+        while (i < points.length - 2 && points[i + 1]!.at <= t) i++;
+        const a = points[i]!;
+        const b = points[i + 1]!;
+        const f = b.at > a.at ? Math.min(1, Math.max(0, (t - a.at) / (b.at - a.at))) : 1;
+        const pos = { lat: a.lat + (b.lat - a.lat) * f, lng: a.lng + (b.lng - a.lng) * f };
+        headMarker.current.setPosition(pos);
+        tail.current?.setPath([a, pos]);
+        if (i !== seg) {
+          seg = i;
+          const moved = a.lat !== b.lat || a.lng !== b.lng;
+          headMarker.current.setHtml(headIcon(moved ? bearingDeg(a, b) : null));
+        }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, clock, points, head]);
 
   useEffect(
     () => () => {
       done.current?.setMap(null);
+      tail.current?.setMap(null);
       headMarker.current?.setMap(null);
       done.current = null;
+      tail.current = null;
       headMarker.current = null;
     },
     [points],
@@ -169,4 +218,22 @@ export function TrailMap({
   }, [map, pan?.key]);
 
   return <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className} />;
+}
+
+/** The playback head, with its direction arrow when the guard is moving. */
+function headIcon(bearing: number | null): string {
+  return `<span class="gm-head">${bearing != null ? `<i class="gm-dir" style="--r:${Math.round((bearing + 360) % 360)}deg;--c:#2563eb"></i>` : ""}</span>`;
+}
+
+/** Compass bearing from a to b, in degrees. */
+function bearingDeg(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const r = Math.PI / 180;
+  return (
+    (Math.atan2(
+      Math.sin((b.lng - a.lng) * r) * Math.cos(b.lat * r),
+      Math.cos(a.lat * r) * Math.sin(b.lat * r) - Math.sin(a.lat * r) * Math.cos(b.lat * r) * Math.cos((b.lng - a.lng) * r),
+    ) *
+      180) /
+    Math.PI
+  );
 }

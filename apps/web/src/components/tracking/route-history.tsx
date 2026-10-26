@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BatteryMedium,
   CircleDot,
@@ -79,6 +79,8 @@ export function RouteHistory({
   const [loaded, setLoaded] = useState<{ id: string; points: TrailPoint[] } | null>(null);
   const [head, setHead] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // The playback time, every frame, for the map to glide the head by (TrailMap).
+  const clockRef = useRef<number | null>(null);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(120);
   // The guard's full profile, from their name on the summary.
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -116,8 +118,12 @@ export function RouteHistory({
     const tick = (t: number) => {
       clock += (t - last) * speed;
       last = t;
+      clockRef.current = clock;
       let i = head;
       while (i < points.length - 1 && points[i + 1]!.at <= clock) i++;
+      // A signal gap (no points for minutes) is skipped, not crawled across in a straight line.
+      const next = points[i + 1];
+      if (next && next.at - points[i]!.at > 3 * 60_000 && clock < next.at - 1_000) clock = next.at - 1_000;
       if (i !== head) setHead(i);
       if (i >= points.length - 1) {
         setPlaying(false);
@@ -243,7 +249,7 @@ export function RouteHistory({
       <div className="order-1 flex min-h-0 flex-col gap-3 xl:order-2">
         <div className="relative h-[55vh] min-h-[380px] xl:h-auto xl:flex-1">
           {shift ? (
-            <TrailMap points={points} stats={stats} site={shift.site} head={head} pan={pan} className="h-full" />
+            <TrailMap points={points} stats={stats} site={shift.site} head={head} clock={clockRef} playing={playing} pan={pan} className="h-full" />
           ) : (
             <div className="grid h-full place-items-center rounded-xl border border-app-line-soft bg-muted text-sm text-muted-foreground">Pick a shift to see its route.</div>
           )}
