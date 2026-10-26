@@ -1550,3 +1550,13 @@ html.lenis, html.lenis body { height: auto; }
 body[data-sos-live] [data-nibo] {
   display: none !important;
 }
+
+/* Software fee invoices (fee-workspace): while printing, only the invoice sheet on
+ * <body> prints, one invoice per page, whatever page or dialog is open behind it. */
+#fee-print-root { display: none; }
+@media print {
+  body.printing-fees > *:not(#fee-print-root) { display: none !important; }
+  body.printing-fees #fee-print-root { display: block !important; }
+  .fee-print-page { break-after: page; page-break-after: always; }
+  .fee-print-page:last-child { break-after: auto; page-break-after: auto; }
+}

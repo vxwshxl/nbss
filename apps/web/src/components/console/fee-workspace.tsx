@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, Printer, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { saveFeeSettings, setFeeSkipped, startFeePayment, verifyFeePayment } from "@/app/console/software-fee/actions";
 import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -122,98 +124,133 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
     }
   }
 
+  // Invoices to print: one from its row or the invoice, or every one at once. They are
+  // drawn into a sheet attached to <body> that only print shows, a page each.
+  const [printing, setPrinting] = useState<FeeInvoice[] | null>(null);
+  const printInvoices = (list: FeeInvoice[]) => setPrinting(list);
+  useEffect(() => {
+    if (!printing) return;
+    document.body.classList.add("printing-fees");
+    const done = () => {
+      document.body.classList.remove("printing-fees");
+      setPrinting(null);
+    };
+    window.addEventListener("afterprint", done, { once: true });
+    const t = setTimeout(() => window.print(), 50);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("afterprint", done);
+      document.body.classList.remove("printing-fees");
+    };
+  }, [printing]);
+
+  const columns: Column<FeeInvoice>[] = [
+    {
+      header: "Month",
+      cell: (r) => (
+        <button type="button" data-row-primary onClick={() => setOpen(r)} className="font-semibold hover:underline">
+          {month(r.period)}
+        </button>
+      ),
+      sortValue: (r) => r.period,
+      searchValue: (r) => month(r.period),
+      printCell: (r) => month(r.period),
+    },
+    { header: "Invoice", cell: (r) => <span className="font-mono text-xs text-muted-foreground">{r.number}</span>, sortValue: (r) => r.number, searchValue: (r) => r.number, printCell: (r) => r.number },
+    { header: "Guards", cell: (r) => <span className="tabular-nums">{r.guards}</span>, sortValue: (r) => r.guards, total: (rows) => rows.reduce((n, r) => n + r.guards, 0) },
+    { header: "Rate", cell: (r) => <span className="tabular-nums">{r.per_guard_paise ? inr(r.per_guard_paise) : "-"}</span>, sortValue: (r) => r.per_guard_paise, printCell: (r) => (r.per_guard_paise ? inr(r.per_guard_paise) : "-") },
+    {
+      header: "Total",
+      cell: (r) => <span className="font-semibold tabular-nums">{inr(r.total_paise)}</span>,
+      sortValue: (r) => r.total_paise,
+      printCell: (r) => inr(r.total_paise),
+      total: (rows) => inr(rows.filter((r) => r.status !== "skipped").reduce((n, r) => n + r.total_paise, 0)),
+    },
+    {
+      header: "Status",
+      cell: (r) => (
+        <span className="whitespace-nowrap">
+          <StatusStamp status={r.status} />
+          <span className="ml-2 text-xs text-muted-foreground">{r.status === "paid" && r.paid_at ? day(r.paid_at) : r.status === "skipped" ? (r.skip_note ?? "Free month") : `due ${day(r.due_on)}`}</span>
+        </span>
+      ),
+      sortValue: (r) => r.status,
+      searchValue: (r) => r.status,
+      printCell: (r) => (r.status === "paid" ? `Paid${r.paid_at ? ` ${day(r.paid_at)}` : ""}` : r.status === "skipped" ? `Skipped · ${r.skip_note ?? "Free month"}` : `Unpaid · due ${day(r.due_on)}`),
+    },
+    {
+      header: "",
+      noPrint: true,
+      cell: (inv) => (
+        <span className="flex items-center justify-end gap-2 whitespace-nowrap">
+          {settings && (
+            <Button size="sm" variant="outline" onClick={() => printInvoices([inv])} aria-label={`Print the ${month(inv.period)} invoice`}>
+              <Printer data-icon="inline-start" /> Print
+            </Button>
+          )}
+          {canEdit && inv.status !== "paid" && (
+            <Button size="sm" variant="outline" disabled={skipping === inv.id} onClick={() => void skip(inv, inv.status !== "skipped")}>
+              {inv.status === "skipped" ? "Un-skip" : "Skip month"}
+            </Button>
+          )}
+          {inv.status === "unpaid" && inv.total_paise >= 100 && !online && <span className="text-xs text-muted-foreground">Online payment not set up</span>}
+          {inv.status === "unpaid" && online && inv.total_paise >= 100 && (
+            <Button size="sm" onClick={() => void pay(inv)} disabled={paying === inv.id}>
+              {paying === inv.id && <Loader2 className="animate-spin" />}
+              Pay now
+            </Button>
+          )}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-2xl border border-app-line bg-card shadow-e1">
-        <div className="flex items-center justify-between gap-3 border-b border-app-line-soft bg-gradient-to-r from-emerald-50 to-sky-50 px-5 py-3.5">
-          <h2 className="flex items-center gap-2 font-semibold">
-            Monthly invoices
-          </h2>
-          <span className="text-xs text-muted-foreground">Tap a month for its invoice</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground uppercase">
-              <tr className="border-b border-app-line-soft">
-                <th className="px-5 py-2.5 font-semibold">Month</th>
-                <th className="px-3 py-2.5 font-semibold">Invoice</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Guards</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Rate</th>
-                <th className="px-3 py-2.5 text-right font-semibold">Total</th>
-                <th className="px-3 py-2.5 font-semibold">Status</th>
-                <th className="px-5 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-app-line-soft">
-              {invoices.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-muted-foreground">
-                    No invoices yet.
-                  </td>
-                </tr>
-              )}
-              {invoices.map((inv) => (
-                <tr key={inv.id} onClick={() => setOpen(inv)} className={cn("cursor-pointer transition-colors hover:bg-muted/50", inv.status === "unpaid" && "bg-amber-50/40")}>
-                  <td className="px-5 py-3 font-semibold">{month(inv.period)}</td>
-                  <td className="px-3 py-3 font-mono text-xs text-muted-foreground">{inv.number}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{inv.guards}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{inv.per_guard_paise ? inr(inv.per_guard_paise) : "-"}</td>
-                  <td className="px-3 py-3 text-right font-semibold tabular-nums">{inr(inv.total_paise)}</td>
-                  <td className="px-3 py-3">
-                    <StatusStamp status={inv.status} />
-                    <span className="ml-2 text-xs text-muted-foreground">{inv.status === "paid" && inv.paid_at ? day(inv.paid_at) : inv.status === "skipped" ? (inv.skip_note ?? "Free month") : `due ${day(inv.due_on)}`}</span>
-                  </td>
-                  <td className="px-5 py-3 text-right whitespace-nowrap">
-                    {canEdit && inv.status !== "paid" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mr-2"
-                        disabled={skipping === inv.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void skip(inv, inv.status !== "skipped");
-                        }}
-                      >
-                        {inv.status === "skipped" ? "Un-skip" : "Skip month"}
-                      </Button>
-                    )}
-                    {inv.status === "unpaid" && inv.total_paise >= 100 && !online && (
-                      <span className="text-xs text-muted-foreground">Online payment not set up</span>
-                    )}
-                    {inv.status === "unpaid" && online && inv.total_paise >= 100 && (
-                      <Button
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void pay(inv);
-                        }}
-                        disabled={paying === inv.id}
-                      >
-                        {paying === inv.id && <Loader2 className="animate-spin" />}
-                        Pay now
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <DataTable
+        title="Monthly invoices"
+        columns={columns}
+        data={invoices}
+        getRowKey={(r) => r.id}
+        printTitle="Software fee invoices"
+        searchPlaceholder="Search month, invoice or status…"
+        emptyMessage="No invoices yet."
+        interactiveRows
+        rowClassName={(r) => (r.status === "unpaid" ? "bg-amber-50/40" : undefined)}
+        toolbar={
+          invoices.length > 0 && settings ? (
+            <Button variant="outline" size="sm" onClick={() => printInvoices(invoices)}>
+              <Printer data-icon="inline-start" /> Print all invoices
+            </Button>
+          ) : null
+        }
+      />
 
       {canEdit && settings && <RateForm settings={settings} />}
 
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-3xl">
-          {open && settings && <Invoice inv={open} s={settings} paying={paying === open.id} online={online} onPay={() => void pay(open)} />}
+          {open && settings && <Invoice inv={open} s={settings} paying={paying === open.id} online={online} onPay={() => void pay(open)} onPrint={() => printInvoices([open])} />}
         </DialogContent>
       </Dialog>
+
+      {printing &&
+        settings &&
+        createPortal(
+          <div id="fee-print-root">
+            {printing.map((inv) => (
+              <div key={inv.id} className="fee-print-page">
+                <Invoice inv={inv} s={settings} paying={false} online={false} onPay={() => undefined} onPrint={() => undefined} />
+              </div>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
 
-function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void }) {
+function Invoice({ inv, s, paying, online, onPay, onPrint }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void; onPrint: () => void }) {
   const paid = inv.status === "paid";
   const skipped = inv.status === "skipped";
   return (
@@ -316,7 +353,7 @@ function Invoice({ inv, s, paying, online, onPay }: { inv: FeeInvoice; s: FeeSet
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-app-line-soft pt-5 print:hidden">
           <p className="text-[11px] text-muted-foreground">Computer-generated invoice · {s.seller_name}</p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.print()}>
+            <Button variant="outline" onClick={onPrint}>
               <Printer data-icon="inline-start" /> Print
             </Button>
             {!paid && !skipped && online && inv.total_paise >= 100 && (

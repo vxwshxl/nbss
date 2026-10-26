@@ -48,7 +48,8 @@ export default async function SoftwareFeePage() {
         <StatCard label="Due now" value={inr(due)} hint={due ? `${rows.filter((r) => r.status === "unpaid").length} month(s) unpaid` : "Nothing outstanding"} icon={CalendarClock} tone={due ? "amber" : "emerald"} />
         <StatCard label="Paid so far" value={inr(paid.reduce((n, r) => n + r.total_paise, 0))} hint={`${paid.length} month(s) settled`} icon={CircleCheckBig} tone="emerald" />
       </div>
-      <FeeWorkspace invoices={rows} settings={s} canEdit={session.realProfile.role === "developer"} online={razorpayConfigured()} />
+      <FeeWorkspace invoices={rows} settings={s} // A developer viewing as an admin sees what an admin sees: pay and invoices only.
+        canEdit={session.realProfile.role === "developer" && !session.impersonating} online={razorpayConfigured()} />
     </div>
   );
 }
