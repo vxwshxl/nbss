@@ -524,6 +524,13 @@ export function GuardsWorkspace({
                   id="employee_number"
                   name="employee_number"
                   inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  // Digits only, as on the sign-in page: "NBSS-" is fixed in front.
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.value = el.value.replace(/\D/g, "").slice(0, 6);
+                  }}
                   defaultValue={addState.values?.employee_code || nextCode.replace(/^NBSS-/, "")}
                   required
                   className="h-full min-w-0 flex-1 bg-transparent px-3 font-mono text-sm tracking-wider outline-none"
