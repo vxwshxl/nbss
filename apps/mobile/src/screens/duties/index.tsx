@@ -229,7 +229,7 @@ function DutyCard({ d, now, onAsk, onWithdraw }: { d: MyDuty; now: number; onAsk
           <Check size={14} color={color.primary} strokeWidth={2.4} />
           <Text variant="caption" tone="muted">
             In {clock(d.attendance.check_in_at)}
-            {d.attendance.check_out_at ? ` · Out ${clock(d.attendance.check_out_at)}` : ""}
+            {d.attendance.check_out_at ? ` · Out ${clock(d.attendance.check_out_at)}${d.attendance.auto_check_out ? " (auto)" : ""}` : ""}
           </Text>
         </View>
       )}
@@ -477,7 +477,7 @@ function MonthTable({ rows, now, loading, title }: { rows: MyDuty[]; now: number
                     {d.attendance?.worked_minutes != null ? hm(d.attendance.worked_minutes) : "-"}
                   </Text>
                   <Text variant="caption" tone="muted" mono>
-                    {d.attendance?.check_in_at ? `${clock(d.attendance.check_in_at)}${d.attendance.check_out_at ? `–${clock(d.attendance.check_out_at)}` : ""}` : ""}
+                    {d.attendance?.check_in_at ? `${clock(d.attendance.check_in_at)}${d.attendance.check_out_at ? `–${clock(d.attendance.check_out_at)}${d.attendance.auto_check_out ? " auto" : ""}` : ""}` : ""}
                   </Text>
                 </View>
               </PanelRow>

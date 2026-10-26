@@ -243,7 +243,7 @@ export function DutyDetail({ id }: { id: string }) {
         {d && (
           <Panel tone="sky" title="Attendance" icon={Clock} bare>
             <Field first label="Checked in" value={a?.check_in_at ? when(a.check_in_at) : "-"} />
-            <Field label="Checked out" value={a?.check_out_at ? when(a.check_out_at) : a?.check_in_at ? "Still on duty" : "-"} />
+            <Field label="Checked out" value={a?.check_out_at ? when(a.check_out_at) : a?.check_in_at ? "Still on duty" : "-"} sub={a?.auto_check_out ? "Auto check-out at the end of the shift" : undefined} warn={!!a?.auto_check_out} />
             <Field label="Worked" value={a?.worked_minutes != null ? hm(a.worked_minutes) : "-"} sub={(d.sessions?.length ?? 0) > 1 ? `in ${d.sessions!.length} sessions` : undefined} />
             {(d.sessions?.length ?? 0) > 1 &&
               d.sessions!.map((x, i) => (
@@ -251,7 +251,7 @@ export function DutyDetail({ id }: { id: string }) {
                   key={x.id}
                   label={`Session ${i + 1}`}
                   value={`${clock(x.check_in_at)} – ${x.check_out_at ? clock(x.check_out_at) : "now"}`}
-                  sub={x.worked_minutes != null ? hm(x.worked_minutes) : x.check_out_at ? undefined : "on duty"}
+                  sub={[x.worked_minutes != null ? hm(x.worked_minutes) : x.check_out_at ? null : "on duty", x.auto_check_out ? "auto check-out" : null].filter(Boolean).join(" · ") || undefined}
                 />
               ))}
             {a?.overtime_minutes ? <Field label="Overtime" value={hm(a.overtime_minutes)} /> : null}

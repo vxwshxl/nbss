@@ -58,7 +58,7 @@ const STATUS_LABEL: Record<string, string> = {
 const METHOD_LABEL: Record<string, string> = {
   geofence: "Inside the boundary",
   supervisor_override: "Supervisor override",
-  auto_close: "Closed automatically",
+  auto_close: "Auto check-out at the end of the shift",
 };
 
 type Verdict = "present" | "late" | "absent" | "rejected";

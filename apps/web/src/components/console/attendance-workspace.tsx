@@ -123,7 +123,12 @@ export function AttendanceWorkspace({
       header: "Out",
       cell: (r) =>
         r.check_out_at ? (
-          <span className="tabular-nums">{shortTime(r.check_out_at)}</span>
+          <span className="tabular-nums">
+            {shortTime(r.check_out_at)}
+            {r.check_out_method === "auto_close" && (
+              <span className="ml-1.5 rounded-md bg-orange-100 px-1.5 py-0.5 text-[11px] font-semibold text-orange-800">Auto check-out</span>
+            )}
+          </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
             <Radio className="size-3.5" strokeWidth={2.2} />
@@ -131,7 +136,7 @@ export function AttendanceWorkspace({
           </span>
         ),
       sortValue: (r) => r.check_out_at ?? "",
-      printCell: (r) => (r.check_out_at ? shortTime(r.check_out_at) : "On duty"),
+      printCell: (r) => (r.check_out_at ? `${shortTime(r.check_out_at)}${r.check_out_method === "auto_close" ? " (auto)" : ""}` : "On duty"),
     },
     {
       header: "Worked",

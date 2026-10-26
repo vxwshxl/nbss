@@ -553,6 +553,8 @@ export type MyDuty = {
     id: string;
     check_in_at: string | null;
     check_out_at: string | null;
+    /** Checked out by the system at the shift's end (0054), not by the guard. */
+    auto_check_out?: boolean | null;
     worked_minutes: number | null;
     overtime_minutes?: number | null;
     status: string;
@@ -560,7 +562,7 @@ export type MyDuty = {
     review_note?: string | null;
   } | null;
   /** Every check-in of this duty, in order: a duty can be worked in more than one session. */
-  sessions?: { id: string; check_in_at: string; check_out_at: string | null; worked_minutes: number | null; status: string }[];
+  sessions?: { id: string; check_in_at: string; check_out_at: string | null; worked_minutes: number | null; status: string; auto_check_out?: boolean | null }[];
 };
 
 /** The guard's duties from a week back to two weeks ahead, in order. */
