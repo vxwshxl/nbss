@@ -169,6 +169,24 @@ export async function setSiteSos(id: string, enabled: boolean): Promise<void> {
   revalidatePath("/console/sites");
 }
 
+/** Whether an SOS from a site sounds a siren on the phones it reaches, or only vibrates (0057). */
+export async function setSiteSiren(id: string, enabled: boolean): Promise<void> {
+  const profile = await requireRole("admin");
+  const supabase = await supabaseServer();
+
+  const { error } = await supabase.from("sites").update({ sos_siren: enabled }).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  await audit({
+    actor: profile,
+    action: enabled ? "site_siren_on" : "site_siren_off",
+    entity: "sites",
+    entityId: id,
+  });
+
+  revalidatePath("/console/sites");
+}
+
 /** Takes a site out of service without deleting the attendance recorded at it. */
 export async function setSiteActive(id: string, active: boolean): Promise<void> {
   const profile = await requireRole("admin");

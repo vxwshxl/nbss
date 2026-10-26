@@ -933,6 +933,7 @@ export type Database = {
           guards_required: number | null;
           is_test: boolean;
           sos_enabled: boolean;
+          sos_siren: boolean;
         };
         Insert: {
           id?: string;
@@ -957,6 +958,7 @@ export type Database = {
           guards_required?: number | null;
           is_test?: boolean;
           sos_enabled?: boolean;
+          sos_siren?: boolean;
         };
         Update: {
           id?: string;
@@ -981,6 +983,7 @@ export type Database = {
           guards_required?: number | null;
           is_test?: boolean;
           sos_enabled?: boolean;
+          sos_siren?: boolean;
         };
         Relationships: [];
       };
@@ -1353,6 +1356,10 @@ export type Database = {
           p_request_id?: string;
         };
         Returns: Json;
+      };
+      auto_check_out: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
       broadcast_positions: {
         Args: Record<PropertyKey, never>;
@@ -1796,6 +1803,12 @@ export type Database = {
           p_alert_id: string;
         };
         Returns: { profile_id: string; audience: Enums["sos_audience"] }[];
+      };
+      sos_siren_sites: {
+        Args: {
+          p_site_ids: string[];
+        };
+        Returns: string[];
       };
       sos_tell_people: {
         Args: {

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import { router, usePathname } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
@@ -11,19 +12,26 @@ import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 import { Nibo } from "@/components/nibo/nibo";
 import { Text } from "@/components/text";
 import { useLiveFeed } from "@/lib/live-feed";
+import { supabase } from "@/lib/supabase";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 const SEEN_KEY = "nbss-sos-seen";
+/** 40 KB, under a second, looped: light enough to start at once on any phone. */
+const SIREN = require("../../assets/sounds/sos-siren.wav");
+/** An incoming call's rhythm: a second on, most of a second off, until it is opened. */
+const CALL_VIBRATION = [0, 1000, 800];
 
 /**
  * The alarm while the app is open: any SOS this person may see and has not opened yet,
- * whoever raised it (a guard, a supervisor, an admin), vibrates the phone on a loop
- * and Nibo calls it out under the header. Opening the alert, or the guard's SOS tab
- * that shows it, stops both. Their own SOS never rings at them.
+ * whoever raised it (a guard, a supervisor, an admin), vibrates like an incoming call
+ * and, where the site has its siren on (0057, the default), sounds a siren on a loop.
+ * Nibo calls it out under the header. Opening the alert, or the guard's SOS tab that
+ * shows it, stops both. Their own SOS never rings at them.
  *
- * Vibration, not a siren: a sound at a post gives the guard away, and the vibration
- * works on silent too. With the app closed, the SOS push does the same job on the
- * "sos" channel (lib/push.ts).
+ * The siren plays through the silent switch on iOS and as media audio on Android; a
+ * site where a sound would give the guard away has it switched off on the website and
+ * only vibrates. With the app closed, the SOS push does the same job on the "sos"
+ * channel (lib/push.ts).
  */
 export function SosRinger({ staff = false }: { staff?: boolean }) {
   const feed = useLiveFeed();
@@ -55,12 +63,44 @@ export function SosRinger({ staff = false }: { staff?: boolean }) {
 
   const ringing = seen ? open.filter((a) => !seen.has(a.id)) : [];
   const loud = ringing.length > 0;
+  const sites = [...new Set(ringing.map((a) => a.site_id))].sort().join(",");
+
+  // Whether any of these sites rings a siren. Unknown (offline) counts as yes: an alarm
+  // that sounds where it should not is better than one that stays quiet where it should.
+  const [siren, setSiren] = useState(true);
+  useEffect(() => {
+    if (!sites) return;
+    let live = true;
+    void supabase.rpc("sos_siren_sites", { p_site_ids: sites.split(",") }).then(({ data, error }) => {
+      if (live) setSiren(error ? true : (data ?? []).length > 0);
+    });
+    return () => {
+      live = false;
+    };
+  }, [sites]);
 
   useEffect(() => {
     if (!loud) return;
-    Vibration.vibrate([0, 700, 500], true);
+    Vibration.vibrate(CALL_VIBRATION, true);
     return () => Vibration.cancel();
   }, [loud]);
+
+  useEffect(() => {
+    if (!loud || !siren) return;
+    // A player of its own while it rings, released when it stops.
+    const player = createAudioPlayer(SIREN);
+    void setAudioModeAsync({ playsInSilentMode: true, interruptionMode: "doNotMix", shouldPlayInBackground: true })
+      .catch(() => undefined)
+      .then(() => {
+        player.loop = true;
+        player.volume = 1;
+        player.play();
+      });
+    return () => {
+      player.pause();
+      player.remove();
+    };
+  }, [loud, siren]);
 
   const pulse = useSharedValue(1);
   useEffect(() => {

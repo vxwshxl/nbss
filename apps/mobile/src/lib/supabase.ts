@@ -24,6 +24,26 @@ import { secureStorage } from "./secure-storage";
  * Each request is stamped with the Test / Live mode as it stands when it is sent
  * (lib/data-mode.tsx), so a developer's switch takes effect without a new client.
  */
+/**
+ * No request waits for ever. On a weak signal a request can hang with the connection
+ * up but nothing moving; without a limit a screen spun until the app was closed. After
+ * this long it fails like any other network error, so the retries, the location outbox
+ * and the reload when the app returns to the front take over. A caller's own abort
+ * still applies.
+ */
+const REQUEST_TIMEOUT_MS = 25_000;
+
+function withTimeout(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const outer = init.signal;
+  if (outer) {
+    if (outer.aborted) controller.abort();
+    else outer.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: secureStorage,
@@ -45,7 +65,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     fetch: (input, init) => {
       const headers = new Headers(init?.headers);
       headers.set(DATA_MODE_HEADER, dataMode());
-      return fetch(input, { ...init, headers });
+      return withTimeout(input, { ...init, headers });
     },
   },
 });

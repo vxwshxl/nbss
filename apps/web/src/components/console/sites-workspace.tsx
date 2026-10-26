@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { BellOff, MapPinned, PowerOff, Power, Radio, Shapes, Siren } from "lucide-react";
+import { BellOff, MapPinned, PowerOff, Power, Radio, Shapes, Siren, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 
-import { setSiteActive, setSiteSos } from "@/app/console/sites/actions";
+import { setSiteActive, setSiteSiren, setSiteSos } from "@/app/console/sites/actions";
 import { SiteMap, type MapSite } from "@/components/console/site-map";
 import { SitePreviewDialog } from "@/components/console/site-preview";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ export type SiteRow = {
   active: boolean;
   /** Whether anyone working here has the SOS button (0052). */
   sos_enabled: boolean;
+  /** Whether an SOS here sounds a siren on phones, or only vibrates (0057). */
+  sos_siren: boolean;
   created_at: string;
   /** Guards checked in here right now. */
   onDuty: number;
@@ -125,6 +127,18 @@ export function SitesWorkspace({
         toast.success(enabled ? "SOS switched on" : "SOS switched off", { description: site.name });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not change SOS for the site.");
+      }
+    });
+  }
+
+  function toggleSiren(site: SiteRow, enabled: boolean) {
+    start(async () => {
+      try {
+        await setSiteSiren(site.id, enabled);
+        setDetail(null);
+        toast.success(enabled ? "Siren switched on" : "Siren switched off: SOS only vibrates", { description: site.name });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not change the siren for the site.");
       }
     });
   }
@@ -279,6 +293,21 @@ export function SitesWorkspace({
                 </>
               )}
             </Button>
+            {detail.sos_enabled && (
+              <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSiren(detail, !detail.sos_siren)}>
+                {detail.sos_siren ? (
+                  <>
+                    <VolumeX data-icon="inline-start" />
+                    Siren off (vibrate only)
+                  </>
+                ) : (
+                  <>
+                    <Volume2 data-icon="inline-start" />
+                    Siren on
+                  </>
+                )}
+              </Button>
+            )}
             <Button
               size="sm"
               variant={detail.active ? "destructive" : "default"}

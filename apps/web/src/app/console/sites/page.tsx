@@ -19,7 +19,7 @@ export default async function SitesPage() {
     supabase
       .from("sites")
       .select(
-        "id, name, client_name, address, district, lat, lng, geofence_radius_m, max_accuracy_m, polygon, shift_start, shift_end, grace_minutes, standard_shift_minutes, active, sos_enabled, created_at",
+        "id, name, client_name, address, district, lat, lng, geofence_radius_m, max_accuracy_m, polygon, shift_start, shift_end, grace_minutes, standard_shift_minutes, active, sos_enabled, sos_siren, created_at",
       )
       .order("name"),
     // Who is standing in each fence right now. An open punch — checked in, not
@@ -64,6 +64,7 @@ export default async function SitesPage() {
     standard_shift_minutes: s.standard_shift_minutes,
     active: s.active,
     sos_enabled: s.sos_enabled,
+    sos_siren: s.sos_siren,
     created_at: s.created_at,
     onDuty: onDutyBySite.get(s.id) ?? 0,
     assigned: assignedBySite.get(s.id)?.size ?? 0,
