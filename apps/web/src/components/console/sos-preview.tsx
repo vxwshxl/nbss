@@ -161,12 +161,13 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
             />
 
             <PreviewBody>
-              {d.guard?.phone && live && (
+              {/* The raiser's number, always: once it is over, the office still calls back. */}
+              {d.guard?.phone && (
                 <a
                   href={`tel:${d.guard.phone.replace(/[^\d+]/g, "")}`}
-                  className="flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-900 transition hover:bg-rose-100"
+                  className={live ? "flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-900 transition hover:bg-rose-100" : "flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 transition hover:bg-muted"}
                 >
-                  <span className="flex size-10 items-center justify-center rounded-full bg-rose-600 text-white">
+                  <span className={live ? "flex size-10 items-center justify-center rounded-full bg-rose-600 text-white" : "flex size-10 items-center justify-center rounded-full bg-foreground/80 text-background"}>
                     <Phone className="size-4.5" />
                   </span>
                   <span className="min-w-0 flex-1">

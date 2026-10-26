@@ -1825,6 +1825,7 @@ export type Database = {
           p_source?: string;
           p_days_required?: number;
           p_shift_types?: string[];
+          p_end_date?: string;
         };
         Returns: Json;
       };

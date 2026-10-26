@@ -74,7 +74,10 @@ type NavGroup = { label?: string; items: NavItem[] };
  * step with a route rename.
  */
 export const groups: NavGroup[] = [
+  // The desk's front door, first and one per line: the day at a glance, the website's
+  // enquiries (badged until someone answers them) and the clients' bookings.
   {
+    label: "CRM",
     items: [
       {
         href: "/console",
@@ -83,9 +86,12 @@ export const groups: NavGroup[] = [
         roles: ["admin", "supervisor"],
         exact: true,
       },
-      // The website's forms, right under the dashboard: new ones carry a badge until
-      // someone marks them contacted or closed.
       { href: "/console/submissions", label: "Enquiries", icon: Inbox, roles: ["admin", "supervisor"] },
+      { href: "/console/bookings", label: "Bookings", icon: ClipboardList, roles: ["admin", "supervisor"] },
+    ],
+  },
+  {
+    items: [
       // The guard's and the client's landing screens. Each is that role's
       // entire reason for having a login, so each sits alone at the top rather
       // than inside a section of one.
@@ -139,17 +145,6 @@ export const groups: NavGroup[] = [
     items: [
       { href: "/console/software-fee", label: "Software fee", icon: ReceiptIndianRupee, roles: ["admin"] },
       { href: "/console/maps-usage", label: "Maps usage", icon: Gauge, roles: ["admin"] },
-    ],
-  },
-  {
-    label: "Desk",
-    items: [
-      {
-        href: "/console/bookings",
-        label: "Bookings",
-        icon: ClipboardList,
-        roles: ["admin", "supervisor"],
-      },
     ],
   },
   {

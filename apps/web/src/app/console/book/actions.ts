@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { isValidPhone } from "@nbss/shared/identity";
 
 import { audit, requireRoleSession } from "@/lib/auth";
-import { SERVICE_OPTIONS } from "@/lib/bookings";
+import { OTHER_SERVICE, SERVICE_OPTIONS } from "@/lib/bookings";
 import { districtOptions } from "@/content/site";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -35,9 +35,17 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
   const shiftTypes = data.getAll("shift_types").map(String).filter((t) => SHIFT_TYPES.has(t));
   const guards = Number(text("guards_required") || 0);
   const start = text("start_date");
-  const days = Number(text("days_required") || 0);
+  const end = text("end_date");
+  const otherService = text("other_service");
+  // "Contract for": a number and a unit. Days go to days_required; months and years to
+  // duration_months, which is what the desk quotes a standing posting by.
+  const length = Number(text("contract_length") || 0);
+  const unit = text("contract_unit") || "days";
+  const days = unit === "days" ? length : 0;
+  const months = unit === "months" ? length : unit === "years" ? length * 12 : 0;
 
   if (!SERVICE_OPTIONS.some((s) => s.value === service)) return { ok: false, error: "Choose which service you need." };
+  if (service === OTHER_SERVICE && otherService.length < 2) return { ok: false, error: "Say which service you need." };
   if (!contactName) return { ok: false, error: "Enter a contact name." };
   if (!isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit mobile number for the deployment desk." };
   if (!district || !districtOptions.includes(district)) return { ok: false, error: "Choose the district." };
@@ -46,10 +54,12 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
     return { ok: false, error: "Guards needed should be a whole number between 1 and 2000." };
   }
   if (shiftTypes.length === 0) return { ok: false, error: "Pick at least one shift: Morning, Evening, Night or 24 Hours." };
-  if (text("days_required") && (!Number.isInteger(days) || days < 1 || days > 3650)) {
-    return { ok: false, error: "Number of days should be a whole number, 1 or more." };
+  if (text("contract_length") && (!Number.isInteger(length) || length < 1 || (unit === "days" ? length > 3650 : months > 600))) {
+    return { ok: false, error: "Contract length should be a whole number: up to 3650 days, or 50 years." };
   }
   if (start && Number.isNaN(Date.parse(start))) return { ok: false, error: "That start date does not look right." };
+  if (end && Number.isNaN(Date.parse(end))) return { ok: false, error: "That end date does not look right." };
+  if (start && end && end < start) return { ok: false, error: "The end date is before the start date." };
 
   const supabase = await supabaseServer();
   const h = await headers();
@@ -65,8 +75,10 @@ export async function submitBooking(_prev: BookingFormState, data: FormData): Pr
     p_guards_required: guards || undefined,
     p_shift_types: shiftTypes,
     p_days_required: days > 0 ? days : undefined,
+    p_duration_months: months > 0 ? months : undefined,
     p_start_date: start || undefined,
-    p_notes: text("notes") || undefined,
+    p_end_date: end || undefined,
+    p_notes: [service === OTHER_SERVICE ? `Service: ${otherService}` : "", text("notes")].filter(Boolean).join("\n") || undefined,
     p_source: "web",
   });
 

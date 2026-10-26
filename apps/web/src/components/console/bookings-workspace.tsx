@@ -31,6 +31,7 @@ export type BookingInboxRow = {
   guards_required: number | null;
   shift_pattern: string | null;
   start_date: string | null;
+  end_date: string | null;
   duration_months: number | null;
   days_required: number | null;
   shift_types: string[] | null;
@@ -253,7 +254,7 @@ export function BookingsWorkspace({
                   <Fact
                     icon={CalendarDays}
                     label="When"
-                    value={[bookingWhen(open), open.start_date ? `from ${when(open.start_date)}` : null]
+                    value={[bookingWhen(open), open.start_date ? `from ${when(open.start_date)}` : null, open.end_date ? `to ${when(open.end_date)}` : null]
                       .filter(Boolean)
                       .join(" · ")}
                   />

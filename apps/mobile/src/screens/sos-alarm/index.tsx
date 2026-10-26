@@ -461,6 +461,11 @@ function PersonRow({ p, highlight, you }: { p: Person; highlight?: "sos" | "help
         <Text variant="caption" numberOfLines={1} style={{ color: highlight ? tone : color.mutedForeground }}>
           {sub || "On duty here"}
         </Text>
+        {p.phone && !you ? (
+          <Text variant="caption" weight="semibold" mono numberOfLines={1} selectable>
+            {p.phone}
+          </Text>
+        ) : null}
       </View>
       {p.phone && !you && (
         <Pressable accessibilityRole="button" accessibilityLabel={`Call ${p.name}`} onPress={() => void Linking.openURL(`tel:${p.phone}`)} style={({ pressed }) => [styles.call, pressed && styles.pressed]}>

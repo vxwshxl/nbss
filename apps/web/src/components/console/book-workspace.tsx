@@ -46,6 +46,8 @@ import { clock } from "@/lib/roster";
 import {
   BOOKING_STATUS_LABEL,
   BOOKING_STATUS_NOTE,
+  CONTRACT_UNITS,
+  OTHER_SERVICE,
   SERVICE_OPTIONS,
   bookingWhen,
   serviceName,
@@ -104,6 +106,7 @@ function Choice({
   options,
   defaultValue = "",
   required,
+  onChange,
 }: {
   id: string;
   label: string;
@@ -111,8 +114,13 @@ function Choice({
   options: readonly { value: string; label: string }[];
   defaultValue?: string;
   required?: boolean;
+  onChange?: (value: string) => void;
 }) {
-  const [value, setValue] = useState(defaultValue);
+  const [value, setState] = useState(defaultValue);
+  const setValue = (v: string) => {
+    setState(v);
+    onChange?.(v);
+  };
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={id}>
@@ -144,6 +152,7 @@ export function BookWorkspace({
 }) {
   const [state, action] = useActionState(submitBooking, emptyBookingState);
   const [formKey, setFormKey] = useState(0);
+  const [service, setService] = useState(defaults.service);
   const [pending, start] = useTransition();
   const [openId, setOpenId] = useState<string | null>(null);
   const openRow = rows.find((r) => r.id === openId) ?? null;
@@ -201,8 +210,17 @@ export function BookWorkspace({
               options={SERVICE_OPTIONS}
               defaultValue={defaults.service}
               required
+              onChange={setService}
             />
           </div>
+          {service === OTHER_SERVICE && (
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="other_service">
+                What service? <span className="text-destructive">*</span>
+              </Label>
+              <Input id="other_service" name="other_service" placeholder="e.g. Housekeeping, bouncers, escort" className="h-10" required />
+            </div>
+          )}
           <Choice id="district" label="District" placeholder="Choose…" options={districtOptions.map((d) => ({ value: d, label: d }))} required />
           <div className="flex flex-col gap-2">
             <Label htmlFor="site_type">
@@ -242,9 +260,14 @@ export function BookWorkspace({
             <DatePicker id="start_date" name="start_date" min={today} placeholder="Not sure yet" className="h-10" />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="days_required">Number of days</Label>
-            <Input id="days_required" name="days_required" type="number" min={1} max={3650} placeholder="e.g. 3 for an event, 365 for a year" className="h-10" />
+            <Label htmlFor="end_date">End date</Label>
+            <DatePicker id="end_date" name="end_date" min={today} placeholder="Optional" className="h-10" />
           </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="contract_length">Contract for</Label>
+            <Input id="contract_length" name="contract_length" type="number" min={1} max={3650} placeholder="e.g. 3 days, 6 months, 1 year" className="h-10" />
+          </div>
+          <Choice id="contract_unit" label="Days, months or years" placeholder="Choose…" options={CONTRACT_UNITS} defaultValue="days" />
           <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="notes">Anything else?</Label>
             <Textarea id="notes" name="notes" rows={3} placeholder="Shift timings, armed requirement, existing agency, tender reference…" />

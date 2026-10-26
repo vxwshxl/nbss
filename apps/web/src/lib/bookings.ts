@@ -55,16 +55,29 @@ export function bookingWhen(r: {
   const length = r.days_required
     ? `${r.days_required} ${r.days_required === 1 ? "day" : "days"}`
     : r.duration_months
-      ? `${r.duration_months} months`
+      ? r.duration_months % 12 === 0
+        ? `${r.duration_months / 12} ${r.duration_months === 12 ? "year" : "years"}`
+        : `${r.duration_months} ${r.duration_months === 1 ? "month" : "months"}`
       : null;
   return [shifts, length].filter(Boolean).join(" · ");
 }
 
-export const SERVICE_OPTIONS = services.map((s) => ({ value: s.slug, label: s.name }));
+/** A service not on the list: the client says what it is, and it is kept with the notes. */
+export const OTHER_SERVICE = "other";
+
+export const SERVICE_OPTIONS = [...services.map((s) => ({ value: s.slug, label: s.name })), { value: OTHER_SERVICE, label: "Other service" }];
 
 export function serviceName(slug: string): string {
+  if (slug === OTHER_SERVICE) return "Other service";
   return services.find((s) => s.slug === slug)?.name ?? slug;
 }
+
+/** How long a contract runs: days for an event, months or years for a posting. */
+export const CONTRACT_UNITS = [
+  { value: "days", label: "Days" },
+  { value: "months", label: "Months" },
+  { value: "years", label: "Years" },
+] as const;
 
 export function withdrawable(status: string): boolean {
   return status === "new" || status === "reviewing" || status === "quoted";
