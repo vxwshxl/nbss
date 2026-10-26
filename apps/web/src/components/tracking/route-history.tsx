@@ -23,6 +23,7 @@ import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
 import {
   duration,
   istClock,
@@ -81,6 +82,14 @@ export function RouteHistory({
   const [playing, setPlaying] = useState(false);
   // The playback time, every frame, for the map to glide the head by (TrailMap).
   const clockRef = useRef<number | null>(null);
+  // Read by the live refresh without restarting it.
+  const headRef = useRef(0);
+  const playingRef = useRef(false);
+  const lengthRef = useRef(0);
+  useEffect(() => {
+    headRef.current = head;
+    playingRef.current = playing;
+  }, [head, playing]);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(120);
   // The guard's full profile, from their name on the summary.
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -105,9 +114,51 @@ export function RouteHistory({
     };
   }, [selected]);
 
+  // Live while the shift is open: the guard's new positions join the route as they
+  // arrive (the live map's channel says when, and a slow poll backs it up), as on Live
+  // tracking. The head follows the latest point only if it was already there, so
+  // someone replaying an earlier stretch is not pulled away from it.
+  const liveId = shift && !shift.checkOutAt ? shift.attendanceId : null;
+  const liveGuard = shift?.guardId ?? null;
+  useEffect(() => {
+    if (!liveId || !liveGuard) return;
+    const supabase = supabaseBrowser();
+    let cancelled = false;
+    let last = 0;
+    const refetch = async () => {
+      if (Date.now() - last < 4_000) return;
+      last = Date.now();
+      const { data } = await supabase.rpc("guard_trail", { p_attendance_id: liveId });
+      if (cancelled) return;
+      const pts = toPoints((data as { points?: TrailTuple[] } | null)?.points);
+      const wasAtEnd = headRef.current >= lengthRef.current - 1;
+      setLoaded({ id: liveId, points: pts });
+      if (wasAtEnd && !playingRef.current) setHead(Math.max(0, pts.length - 1));
+    };
+    const channel = supabase
+      .channel(LIVE_MAP_CHANNEL, { config: { private: true } })
+      .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
+        if (((payload as PositionBatch).positions ?? []).some((p) => p.guard_id === liveGuard)) void refetch();
+      });
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      if (data.session?.access_token) await supabase.realtime.setAuth(data.session.access_token);
+      channel.subscribe();
+    });
+    const poll = setInterval(() => void refetch(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+      void supabase.removeChannel(channel);
+    };
+  }, [liveId, liveGuard]);
+
   // The route on screen belongs to the selected shift, or there is none yet.
   const loading = !!selected && loaded?.id !== selected;
   const points = useMemo(() => (loaded && loaded.id === selected ? loaded.points : []), [loaded, selected]);
+  useEffect(() => {
+    lengthRef.current = points.length;
+  }, [points]);
 
   // Playback: the head walks the trail in shift time, `speed` times real time.
   useEffect(() => {
