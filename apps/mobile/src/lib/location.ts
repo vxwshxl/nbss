@@ -116,7 +116,11 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
           ? Location.Accuracy.High
           : Location.Accuracy.Balanced,
 
-    distanceInterval: still ? 15 : Math.max(5, Math.round(policy.minDistanceM / 2)),
+    // No minimum distance. Android and iOS both deliver nothing until the phone has moved
+    // this far, whatever the time interval says, so a guard standing at a post sent no
+    // heartbeat and went "Signal late" after three minutes. The cadence filter in
+    // location-task (20 m or one minute) decides what is actually sent.
+    distanceInterval: 0,
     timeInterval: still ? 55_000 : Math.max(5_000, Math.round(policy.heartbeatMs / 4)),
 
     /**
@@ -146,7 +150,10 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
     // Deferred updates are a battery optimisation that batches positions and delivers
     // them late. An emergency cannot afford it; normal duty can, a little.
     deferredUpdatesInterval: mode === "emergency" ? 0 : still ? 55_000 : 30_000,
-    deferredUpdatesDistance: mode === "emergency" ? 0 : 20,
+    // Zero. In the background Android hands over held readings only once BOTH the interval
+    // has passed AND the guard has moved this far (expo-location's
+    // shouldReportDeferredLocations), so a guard standing still reported nothing at all.
+    deferredUpdatesDistance: 0,
   });
 }
 
