@@ -124,7 +124,13 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
     }
   }
 
-  // Invoices to print: one from its row or the invoice, or every one at once. They are
+  // Which months the table shows: this month by default, widened from the pickers.
+  const thisMonth = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
+  const [from, setFrom] = useState(thisMonth);
+  const [to, setTo] = useState(thisMonth);
+  const shown = invoices.filter((r) => r.period.slice(0, 7) >= from && r.period.slice(0, 7) <= to);
+
+  // Invoices to print: one from its row or the invoice. They are
   // drawn into a sheet attached to <body> that only print shows, a page each.
   const [printing, setPrinting] = useState<FeeInvoice[] | null>(null);
   const printInvoices = (list: FeeInvoice[]) => setPrinting(list);
@@ -210,7 +216,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
       <DataTable
         title="Monthly invoices"
         columns={columns}
-        data={invoices}
+        data={shown}
         getRowKey={(r) => r.id}
         printTitle="Software fee invoices"
         searchPlaceholder="Search month, invoice or status…"
@@ -218,11 +224,11 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
         interactiveRows
         rowClassName={(r) => (r.status === "unpaid" ? "bg-amber-50/40" : undefined)}
         toolbar={
-          invoices.length > 0 && settings ? (
-            <Button variant="outline" size="sm" onClick={() => printInvoices(invoices)}>
-              <Printer data-icon="inline-start" /> Print all invoices
-            </Button>
-          ) : null
+          <span className="flex items-center gap-1.5 text-xs text-white/80">
+            <input type="month" aria-label="From month" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="h-9 rounded-full border border-white/20 bg-white/10 px-3 text-white [color-scheme:dark]" />
+            <span>to</span>
+            <input type="month" aria-label="To month" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-9 rounded-full border border-white/20 bg-white/10 px-3 text-white [color-scheme:dark]" />
+          </span>
         }
       />
 
@@ -240,7 +246,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
           <div id="fee-print-root">
             {printing.map((inv) => (
               <div key={inv.id} className="fee-print-page">
-                <Invoice inv={inv} s={settings} paying={false} online={false} onPay={() => undefined} onPrint={() => undefined} />
+                <Invoice inv={inv} s={settings} paying={false} online={false} onPay={() => undefined} onPrint={() => undefined} inDialog={false} />
               </div>
             ))}
           </div>,
@@ -250,7 +256,7 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
   );
 }
 
-function Invoice({ inv, s, paying, online, onPay, onPrint }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void; onPrint: () => void }) {
+function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void; onPrint: () => void; inDialog?: boolean }) {
   const paid = inv.status === "paid";
   const skipped = inv.status === "skipped";
   return (
@@ -260,7 +266,11 @@ function Invoice({ inv, s, paying, online, onPay, onPrint }: { inv: FeeInvoice; 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.2em] text-white/75 uppercase">Tax invoice</p>
-            <DialogTitle className="mt-1 text-2xl font-extrabold tracking-tight text-white">{s.seller_name}</DialogTitle>
+            {inDialog ? (
+              <DialogTitle className="mt-1 text-2xl font-extrabold tracking-tight text-white">{s.seller_name}</DialogTitle>
+            ) : (
+              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white">{s.seller_name}</h2>
+            )}
             {s.seller_address && <p className="mt-0.5 text-sm text-white/80">{s.seller_address}</p>}
           </div>
           <span
