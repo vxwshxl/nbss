@@ -343,6 +343,9 @@ export function SosAlarm({
                 <Text variant="micro" weight="bold" tone="muted" uppercase>
                   Safe now?
                 </Text>
+                {/* Help came and it is over: resolved. A mistaken press: hold to cancel it
+                    as a false alarm. The raiser may close it either way (close_sos). */}
+                <SolidButton label="Resolved, I am safe" icon={CheckCircle2} tone="green" loading={busy === "resolved"} disabled={!!busy} onPress={() => void act("resolved", () => closeSos(alertId, "resolved"))} />
                 <HoldToCancel busy={busy === "false"} onDone={() => void act("false", () => closeSos(alertId, "false_alarm"))} />
               </View>
             )}

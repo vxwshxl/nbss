@@ -1,11 +1,12 @@
 import { router } from "expo-router";
-import { ArrowLeft, CalendarDays, CalendarX2, Clock, LocateFixed, Navigation, NotebookPen, Pause, Play, Route as RouteIcon, UserRoundX } from "lucide-react-native";
+import { ArrowLeft, CalendarDays, CalendarX2, Clock, LocateFixed, Navigation, NotebookPen, Pause, Play, Route as RouteIcon, ShieldCheck, Siren, UserRoundX } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
+import { SOS_KIND_LABEL, SOS_STATUS_LABEL } from "@nbss/shared/sos";
 
 import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
@@ -30,6 +31,8 @@ import {
   type MyDuty,
 } from "@/lib/duty";
 import { AskCover, clock, hm, OUTCOME_TONE } from "@/screens/duties";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 const IST = "Asia/Kolkata";
@@ -51,6 +54,10 @@ export function DutyDetail({ id }: { id: string }) {
   // Where the playback head is (an index into the route), or null when not playing.
   const [head, setHead] = useState<number | null>(null);
   const [notes, setNotes] = useState<HandoverNote[]>([]);
+  // The SOS this guard raised during the duty, on the map and in their own panel.
+  const [sos, setSos] = useState<{ id: string; kind: string; status: string; raised_at: string; closed_at: string | null; lat: number | null; lng: number | null }[]>([]);
+  const { session } = useAuth();
+  const me = session?.user.id ?? null;
   const [asking, setAsking] = useState<MyDuty | null>(null);
   const [note, setNote] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [pulls, setPulls] = useState(0);
@@ -72,12 +79,19 @@ export function DutyDetail({ id }: { id: string }) {
       if (!live) return;
       setTrail(t);
       setNotes(n);
+      const from = duty.attendance?.check_in_at;
+      if (from && me) {
+        let q = supabase.from("sos_alerts").select("id, kind, status, raised_at, closed_at, lat, lng").eq("raised_by", me).gte("raised_at", from).order("raised_at");
+        if (duty.attendance?.check_out_at) q = q.lte("raised_at", duty.attendance.check_out_at);
+        const { data } = await q;
+        if (live) setSos(data ?? []);
+      }
       setPulling(false);
     });
     return () => {
       live = false;
     };
-  }, [id, pulls]);
+  }, [id, pulls, me]);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace("/(guard)/duties"));
 
@@ -121,7 +135,16 @@ export function DutyDetail({ id }: { id: string }) {
     setPulls((n) => n + 1);
   };
 
-  const marks = routeMarks(trail, head, !!a?.check_out_at);
+  const marks = [
+    ...routeMarks(trail, head, !!a?.check_out_at),
+    ...sos.filter((x) => x.lat != null && x.lng != null).map((x) => ({ id: `sos-${x.id}`, lat: x.lat!, lng: x.lng!, tone: color.sos, label: `SOS ${clock(x.raised_at)}` })),
+  ];
+  // The route point nearest a moment, so an SOS in the list can move the playback there.
+  const nearest = (iso: string) => {
+    const t = new Date(iso).getTime();
+    const i = trail.findIndex((p) => p.at >= t);
+    return i < 0 ? Math.max(0, trail.length - 1) : i;
+  };
 
   return (
     <View style={styles.fill}>
@@ -237,6 +260,28 @@ export function DutyDetail({ id }: { id: string }) {
             {d.replaced_by && <Field label="Handed to" value={d.replaced_by} />}
             {d.request && <Field label="Cover request" value={REQUEST_LABEL[d.request.status]} sub={d.request.reason ?? undefined} />}
             {d.notes ? <Field label="Note" value={d.notes} /> : null}
+          </Panel>
+        )}
+
+        {sos.length > 0 && (
+          <Panel tone="rose" title={`${sos.length} SOS on this duty`} icon={Siren} bare>
+            {sos.map((x, i) => (
+              <Pressable key={x.id} accessibilityRole="button" onPress={() => trail.length && setHead(nearest(x.raised_at))}>
+                <PanelRow first={i === 0}>
+                  <Siren size={16} color={color.sos} strokeWidth={2.2} />
+                  <View style={styles.flex}>
+                    <Text variant="label" weight="semibold" tone="danger">
+                      SOS · {SOS_KIND_LABEL[x.kind as keyof typeof SOS_KIND_LABEL] ?? "Emergency"}
+                    </Text>
+                    <Text variant="caption" tone="muted">
+                      Raised {clock(x.raised_at)}
+                      {x.closed_at ? ` · ${(SOS_STATUS_LABEL[x.status as keyof typeof SOS_STATUS_LABEL] ?? "closed").toLowerCase()} ${clock(x.closed_at)}` : " · still open"}
+                    </Text>
+                  </View>
+                  {x.closed_at ? <ShieldCheck size={16} color={color.mutedForeground} strokeWidth={2} /> : null}
+                </PanelRow>
+              </Pressable>
+            ))}
           </Panel>
         )}
 
