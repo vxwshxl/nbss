@@ -74,6 +74,16 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   /**
+   * Photos go out as AVIF where the browser takes it (about a fifth smaller than
+   * WebP), else WebP, and are kept for a year: a published photo never changes, and
+   * a new one gets a new file name.
+   */
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 31_536_000,
+  },
+
+  /**
    * `@nbss/shared` ships TypeScript source rather than a compiled `dist`, so
    * both this app and the Expo app bundle it from the same files. A build step
    * between them would only introduce a stale artefact to forget to rebuild.

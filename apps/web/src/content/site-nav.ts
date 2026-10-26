@@ -14,6 +14,7 @@ export const nav: NavEntry[] = [
   { label: "About", href: "/about" },
   { label: "Services", href: "/services", items: serviceLinks.slice(0, 6) },
   { label: "Training", href: "/training" },
+  { label: "Gallery", href: "/gallery" },
   { label: "Careers", href: "/careers" },
   { label: "Contact", href: "/contact" },
 ];

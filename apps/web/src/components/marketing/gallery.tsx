@@ -193,7 +193,8 @@ export function GalleryMosaic({
               </button>
             </div>
 
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black/40">
+            {/* A definite height: a `fill` image inside a box sized only by flex collapsed to nothing. */}
+            <div className="relative h-[calc(100svh-9rem)] overflow-hidden rounded-xl bg-black/40 sm:h-[calc(100svh-11rem)]">
               <Image
                 key={photo.src}
                 src={photo.src}
