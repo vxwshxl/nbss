@@ -213,6 +213,14 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
 
   return (
     <div className="space-y-4">
+      {/* The months shown, centred above the table (as Reports has its range). */}
+      <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-app-line bg-card p-3 text-sm shadow-e1">
+        <span className="text-muted-foreground">Months</span>
+        <input type="month" aria-label="From month" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="h-10 rounded-xl border border-border bg-background px-3 tabular-nums" />
+        <span className="text-muted-foreground">to</span>
+        <input type="month" aria-label="To month" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-10 rounded-xl border border-border bg-background px-3 tabular-nums" />
+      </div>
+
       <DataTable
         title="Monthly invoices"
         columns={columns}
@@ -223,13 +231,6 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
         emptyMessage="No invoices yet."
         interactiveRows
         rowClassName={(r) => (r.status === "unpaid" ? "bg-amber-50/40" : undefined)}
-        toolbar={
-          <span className="flex items-center gap-1.5 text-xs text-white/80">
-            <input type="month" aria-label="From month" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="h-9 rounded-full border border-white/20 bg-white/10 px-3 text-white [color-scheme:dark]" />
-            <span>to</span>
-            <input type="month" aria-label="To month" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-9 rounded-full border border-white/20 bg-white/10 px-3 text-white [color-scheme:dark]" />
-          </span>
-        }
       />
 
       {canEdit && settings && <RateForm settings={settings} />}

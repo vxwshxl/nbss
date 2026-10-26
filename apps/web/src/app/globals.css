@@ -1557,6 +1557,21 @@ body[data-sos-live] [data-nibo] {
 @media print {
   body.printing-fees > *:not(#fee-print-root) { display: none !important; }
   body.printing-fees #fee-print-root { display: block !important; }
-  .fee-print-page { break-after: page; page-break-after: always; }
+  /* Each invoice centred on its page, both ways, with its colours as on screen
+   * (browsers drop backgrounds in print, which left the white header text on white). */
+  #fee-print-root,
+  #fee-print-root * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fee-print-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    break-after: page;
+    page-break-after: always;
+  }
+  .fee-print-page > * { width: 100%; max-width: 760px; }
   .fee-print-page:last-child { break-after: auto; page-break-after: auto; }
 }
