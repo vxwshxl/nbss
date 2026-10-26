@@ -146,6 +146,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         // Android SDK levels are left to Expo: SDK 58's libraries need compileSdk 37,
         // and a pin here (36, from the MapLibre days) is what broke the first build.
+        android: {
+          // No R8 in release. It renamed WorkManager's Room database (androidx.work.impl.
+          // WorkDatabase, which Room finds by name at run time), and every release APK
+          // closed within a second of opening: "Unable to get provider
+          // androidx.startup.InitializationProvider … Failed to create an instance of class
+          // androidx.work.impl.WorkDatabase". A larger APK is the price of nothing being
+          // renamed. The rules below keep Room's classes whole if shrinking is ever turned
+          // back on.
+          enableMinifyInReleaseBuilds: false,
+          enableShrinkResourcesInReleaseBuilds: false,
+          extraProguardRules: [
+            "-keep class androidx.work.impl.WorkDatabase { *; }",
+            "-keep class androidx.work.impl.WorkDatabase_Impl { *; }",
+            "-keep class * extends androidx.room.RoomDatabase { <init>(); }",
+            "-keepnames class * extends androidx.room.RoomDatabase",
+          ].join("\n"),
+        },
         ios: {
           deploymentTarget: "16.4",
           useFrameworks: "static",
