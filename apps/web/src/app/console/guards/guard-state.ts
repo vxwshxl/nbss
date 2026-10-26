@@ -1,11 +1,11 @@
-import type { Role } from "@/lib/auth";
+import type { RoleChoice } from "@nbss/shared/identity";
 
 export type GuardFormValues = {
   employee_code: string;
   full_name: string;
   phone: string;
   email: string;
-  role: Role;
+  role: RoleChoice;
   pin: string;
 };
 

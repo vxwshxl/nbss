@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { BellRing, CalendarCheck, LogOut, Mail, MapPin, Phone } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { ROLE_LABEL } from "@nbss/shared/identity";
+import { roleLabel } from "@nbss/shared/identity";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
@@ -44,7 +44,7 @@ export function Account() {
             </View>
             <View style={[styles.badge, styles.badgeSoft]}>
               <Text variant="caption" weight="semibold" tone="inherit" style={styles.white}>
-                {profile ? ROLE_LABEL[profile.role] : "-"}
+                {profile ? roleLabel(profile.role, profile.trade) : "-"}
               </Text>
             </View>
           </View>

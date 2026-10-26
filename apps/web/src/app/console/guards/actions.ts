@@ -5,14 +5,13 @@ import { cookies, headers } from "next/headers";
 import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { revalidatePath } from "next/cache";
 
-import { isAdmin, isValidEmail, isValidPhone, pinPassword, ROLES } from "@nbss/shared/identity";
+import { fromRoleChoice, isAdmin, isValidEmail, isValidPhone, pinPassword, ROLE_CHOICES, type RoleChoice } from "@nbss/shared/identity";
 
 import {
   audit,
   codeToEmail,
   createStaffAccount,
   requireRoleSession,
-  type Role,
 } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -42,12 +41,14 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
   const fullName = String(data.get("full_name") ?? "").trim();
   const phone = String(data.get("phone") ?? "").trim();
   const email = String(data.get("email") ?? "").trim().toLowerCase();
-  const role = String(data.get("role") ?? "guard") as Role;
+  // A choice, not a role: Housekeeper is the guard role with the housekeeping trade.
+  const choice = String(data.get("role") ?? "guard") as RoleChoice;
   const supplied = String(data.get("pin") ?? "").trim();
 
-  const values = { employee_code: number, full_name: fullName, phone, email, role, pin: supplied };
+  const values = { employee_code: number, full_name: fullName, phone, email, role: choice, pin: supplied };
 
-  if (!ROLES.includes(role)) return { ok: false, values, error: "Choose a role." };
+  if (!ROLE_CHOICES.includes(choice)) return { ok: false, values, error: "Choose a role." };
+  const { role, trade } = fromRoleChoice(choice);
   if (role === "developer" && session.realProfile.role !== "developer") {
     return { ok: false, values, error: "Only a developer can create another developer." };
   }
@@ -65,6 +66,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     pin,
     fullName,
     role,
+    trade,
     phone,
     email: email || undefined,
   });
@@ -84,7 +86,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     action: "account_created",
     entity: "profiles",
     entityId: created.id,
-    detail: { employee_code: employeeCode, role, email: !!email },
+    detail: { employee_code: employeeCode, role, trade, email: !!email },
     ip: await clientIp(),
   });
 
@@ -235,8 +237,9 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
   revalidatePath("/console/users");
 }
 
-export async function changeRole(profileId: string, role: Role): Promise<void> {
+export async function changeRole(profileId: string, choice: RoleChoice): Promise<void> {
   const session = await requireRoleSession("admin");
+  const { role, trade } = fromRoleChoice(choice);
 
   if (profileId === session.realProfile.id && !isAdmin(role)) {
     throw new Error("You cannot remove your own administrator access.");
@@ -252,7 +255,7 @@ export async function changeRole(profileId: string, role: Role): Promise<void> {
   ) {
     throw new Error("Only a developer can grant or remove the developer role.");
   }
-  const { error } = await admin.from("profiles").update({ role }).eq("id", profileId);
+  const { error } = await admin.from("profiles").update({ role, trade }).eq("id", profileId);
   if (error) throw new Error(error.message);
 
   await audit({
@@ -260,7 +263,7 @@ export async function changeRole(profileId: string, role: Role): Promise<void> {
     action: "role_changed",
     entity: "profiles",
     entityId: profileId,
-    detail: { role },
+    detail: { role, trade },
     ip: await clientIp(),
   });
 

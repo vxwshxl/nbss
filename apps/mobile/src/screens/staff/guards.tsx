@@ -24,6 +24,8 @@ type Guard = {
   code: string;
   phone: string | null;
   avatar: string | null;
+  /** A housekeeper works as a guard does; the list says which they are. */
+  housekeeper: boolean;
   /** Checked in now: where, and since when. */
   dutySiteId: string | null;
   dutySite: string | null;
@@ -36,7 +38,7 @@ const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? nu
 
 async function load(): Promise<{ guards: Guard[]; sites: SiteChip[] }> {
   const [people, open, posts, sites] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, employee_code, phone, avatar_url").eq("role", "guard").eq("active", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name, employee_code, phone, avatar_url, trade").eq("role", "guard").eq("active", true).order("full_name"),
     supabase.from("attendance").select("guard_id, site_id, check_in_at, sites(name)").is("check_out_at", null),
     supabase.from("site_postings").select("guard_id, site_id").eq("active", true).is("dates", null),
     supabase.from("sites").select("id, name, district").eq("active", true).order("name"),
@@ -53,6 +55,7 @@ async function load(): Promise<{ guards: Guard[]; sites: SiteChip[] }> {
         code: p.employee_code,
         phone: p.phone,
         avatar: p.avatar_url,
+        housekeeper: p.trade === "housekeeping",
         dutySiteId: a?.site_id ?? null,
         dutySite: a ? (one(a.sites as unknown as { name: string } | null)?.name ?? "a site") : null,
         since: a?.check_in_at ?? null,
@@ -89,7 +92,7 @@ export function StaffGuards() {
 
   return (
     <Screen topInset={false} bottomInset={false} contentStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh()} />}>
-      <PageHeader eyebrow="Security management" title="Guards" />
+      <PageHeader eyebrow="Security management" title="Guards & housekeepers" />
       <View style={styles.search}>
         <Search size={18} color={color.mutedForeground} strokeWidth={2} />
         <TextInput value={q} onChangeText={setQ} placeholder="Search name, code or site" placeholderTextColor={color.mutedForeground} style={styles.input} />
@@ -140,6 +143,7 @@ export function StaffGuards() {
                 </Text>
                 <Text variant="caption" tone="muted" numberOfLines={1}>
                   {g.code}
+                  {g.housekeeper ? " · Housekeeper" : ""}
                   {g.dutySite ? ` · ${g.dutySite} since ${istTime(g.since!)}` : g.postSiteId ? ` · posted at ${siteName.get(g.postSiteId) ?? "a site"}` : " · not posted"}
                 </Text>
               </View>

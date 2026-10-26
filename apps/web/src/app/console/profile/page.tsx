@@ -12,18 +12,10 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { site } from "@/content/site";
 import { requireSession } from "@/lib/auth";
 import { initials } from "@/lib/ui/initials";
-import type { Role } from "@/lib/auth";
+import { roleLabel } from "@nbss/shared/identity";
 
 export const metadata: Metadata = { title: "My profile" };
 export const dynamic = "force-dynamic";
-
-const ROLE_LABEL: Record<Role, string> = {
-  developer: "Developer",
-  admin: "Administrator",
-  supervisor: "Supervisor",
-  guard: "Guard",
-  client: "Client",
-};
 
 export default async function ProfilePage() {
   const { profile, impersonating } = await requireSession();
@@ -48,7 +40,7 @@ export default async function ProfilePage() {
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span className="font-mono">{profile.employee_code}</span>
-              <StatusPill label={ROLE_LABEL[profile.role]} tone="violet" />
+              <StatusPill label={roleLabel(profile.role, profile.trade)} tone="violet" />
             </p>
           </div>
         </div>

@@ -42,12 +42,12 @@ if (existing) {
   process.exit(0);
 }
 
-// The next free DEV-nnn code.
-const { data: devs } = await admin.from("profiles").select("employee_code").like("employee_code", "DEV-%");
-const used = new Set((devs ?? []).map((d) => d.employee_code));
-let n = 1;
-while (used.has(`DEV-${String(n).padStart(3, "0")}`)) n += 1;
-const code = `DEV-${String(n).padStart(3, "0")}`;
+// Every account is NBSS-n, developers included (0051).
+const { data: code, error: codeError } = await admin.rpc("next_employee_code");
+if (codeError || !code) {
+  console.error(`Could not pick an employee code: ${codeError?.message ?? "unknown error"}`);
+  process.exit(1);
+}
 
 const { data: created, error: authError } = await admin.auth.admin.createUser({
   email,

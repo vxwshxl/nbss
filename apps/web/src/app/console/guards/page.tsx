@@ -16,14 +16,14 @@ export default async function GuardsPage() {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, employee_code, full_name, role, phone, email, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
+      "id, employee_code, full_name, role, trade, phone, email, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
     )
     .eq("role", "guard")
     .order("employee_code");
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="People" title="Guards" />
+      <PageHeader eyebrow="People" title="Guards &amp; housekeepers" />
 
       <GuardsWorkspace
         rows={(data ?? []) as PersonRow[]}

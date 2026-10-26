@@ -852,7 +852,13 @@
   outline: 3px solid color-mix(in srgb, var(--c) 35%, transparent);
   outline-offset: 2px;
 }
+/* Out of the flow, hanging under the avatar: the marker is centred on its box,
+ * so the box must be the avatar alone or the avatar sits above the real point. */
 .gm-guard span {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   margin-top: 3px;
   padding: 1px 7px;
   border-radius: 6px;

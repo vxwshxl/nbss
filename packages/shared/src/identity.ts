@@ -26,6 +26,35 @@ export const ROLE_LABEL: Record<Role, string> = {
   client: "Client",
 };
 
+/**
+ * What a guard-role account does on site (0050_housekeeping.sql). A housekeeper works
+ * a site exactly as a guard does, so in the database they are the guard role with a
+ * trade; everywhere a person reads, the trade is shown as its own role.
+ */
+export type Trade = "security" | "housekeeping";
+
+/** The roles a person picks from: the five, with Housekeeper beside Guard. */
+export type RoleChoice = Role | "housekeeping";
+
+export const ROLE_CHOICES: readonly RoleChoice[] = ["developer", "admin", "supervisor", "guard", "housekeeping", "client"];
+
+export const ROLE_CHOICE_LABEL: Record<RoleChoice, string> = { ...ROLE_LABEL, housekeeping: "Housekeeper" };
+
+/** The choice a profile is shown as. */
+export function roleChoice(role: Role, trade?: string | null): RoleChoice {
+  return role === "guard" && trade === "housekeeping" ? "housekeeping" : role;
+}
+
+/** What a choice is stored as. */
+export function fromRoleChoice(choice: RoleChoice): { role: Role; trade: Trade } {
+  return choice === "housekeeping" ? { role: "guard", trade: "housekeeping" } : { role: choice, trade: "security" };
+}
+
+/** "Guard", "Housekeeper", "Supervisor" … for a profile. */
+export function roleLabel(role: Role, trade?: string | null): string {
+  return ROLE_CHOICE_LABEL[roleChoice(role, trade)];
+}
+
 /** Staff and guards. Everyone who works for NBSS rather than buys from it. */
 export function isWorker(role: Role): boolean {
   return role !== "client";

@@ -16,7 +16,7 @@ import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY, istTime, tel } from "@nbss/shared/company";
-import { ROLE_LABEL, type Role } from "@nbss/shared/identity";
+import { roleLabel, type Role } from "@nbss/shared/identity";
 import { freshness } from "@nbss/shared/location";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
 
@@ -54,6 +54,7 @@ type Detail = {
   name: string;
   code: string;
   role: Role;
+  trade: string;
   email: string | null;
   phone: string | null;
   avatar: string | null;
@@ -70,7 +71,7 @@ type Detail = {
 async function load(id: string): Promise<Detail | null> {
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const [p, pin, att, post, pos, dev] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, employee_code, role, email, phone, avatar_url, active, joined_at, created_at, last_seen_at").eq("id", id).maybeSingle(),
+    supabase.from("profiles").select("id, full_name, employee_code, role, trade, email, phone, avatar_url, active, joined_at, created_at, last_seen_at").eq("id", id).maybeSingle(),
     supabase.from("staff_pins").select("pin").eq("profile_id", id).maybeSingle(),
     supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, sites(name)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
     supabase.from("site_postings").select("starts, ends, days, shift_type, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
@@ -85,6 +86,7 @@ async function load(id: string): Promise<Detail | null> {
     name: r.full_name,
     code: r.employee_code,
     role: r.role as Role,
+    trade: r.trade,
     email: r.email,
     phone: r.phone,
     avatar: r.avatar_url,
@@ -170,7 +172,7 @@ export function PersonPage({ id }: { id: string }) {
                 {d.name}
               </Text>
               <Text variant="label" tone="muted">
-                {d.code} · {ROLE_LABEL[d.role]}
+                {d.code} · {roleLabel(d.role, d.trade)}
               </Text>
               <View style={styles.pills}>
                 {!d.active ? (

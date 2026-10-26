@@ -1,4 +1,4 @@
-import { isStaff, ROLE_LABEL } from "@nbss/shared/identity";
+import { isStaff, roleLabel } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { signOut } from "@/app/console/actions";
@@ -121,7 +121,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       }
       navIndex={navIndexFor(profile.role)}
       mark={<BrandLockup size="sm" priority />}
-      sidebarFooter={<WebsiteTag label={`${ROLE_LABEL[profile.role]} console · nbss.co.in`} />}
+      sidebarFooter={<WebsiteTag label={`${roleLabel(profile.role, profile.trade)} console · nbss.co.in`} />}
       companion={{ person: realProfile.id }}
       nav={<ConsoleNav role={profile.role} sites={sites} badges={badges} />}
       sites={staff ? sites : undefined}
@@ -153,7 +153,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           key="user"
           name={profile.full_name}
           code={profile.employee_code}
-          roleLabel={ROLE_LABEL[profile.role]}
+          roleLabel={roleLabel(profile.role, profile.trade)}
           photoUrl={profile.avatar_url}
           signOut={signOut}
         />

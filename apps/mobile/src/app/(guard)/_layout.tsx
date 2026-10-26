@@ -81,7 +81,7 @@ export default function GuardLayout() {
          * is why every screen underneath passes `topInset={false}` to <Screen>.
          */
         header: () => (
-          <TopBar role={role ?? "guard"} name={profile?.full_name ?? "-"} account={false} />
+          <TopBar role={role ?? "guard"} trade={profile?.trade} name={profile?.full_name ?? "-"} account={false} />
         ),
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color.mutedForeground,

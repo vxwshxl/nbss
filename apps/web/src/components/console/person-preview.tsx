@@ -33,6 +33,9 @@ export const ROLE_LABEL: Record<Role, string> = {
   client: "Client",
 };
 
+/** "Housekeeper" for a guard-role account in the housekeeping trade. */
+const labelOf = (p: { role: Role; trade?: string | null }) => (p.role === "guard" && p.trade === "housekeeping" ? "Housekeeper" : ROLE_LABEL[p.role]);
+
 const IST = "Asia/Kolkata";
 
 function when(iso: string | null, withTime = false): string {
@@ -95,7 +98,7 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-white/85">
               <span className="font-mono">{p.code}</span>
               <span aria-hidden>·</span>
-              {ROLE_LABEL[p.role]}
+              {labelOf(p)}
               {!p.active && (
                 <span className="rounded-md bg-white/20 px-2 py-0.5 text-xs font-semibold">Inactive</span>
               )}

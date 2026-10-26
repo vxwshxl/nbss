@@ -155,6 +155,9 @@ export function MapCanvas({
               key={`label-${f.id}-${f.tone}`}
               coordinate={c}
               anchor={{ x: 0.5, y: 1 }}
+              // Apple Maps ignores `anchor` and centres the view: lift it by half its
+              // height so the stick, not the middle of the label, is on the site.
+              centerOffset={{ x: 0, y: -((f.quiet ? PIN_QUIET_H : PIN_H) + PIN_STICK_H) / 2 }}
               tracksViewChanges={false}
               onPress={onFencePress ? () => onFencePress(f.id) : undefined}
             >
@@ -193,12 +196,17 @@ export function MapCanvas({
           <Marker
             key={`${p.id}-${p.tone}-${p.label ?? ""}`}
             coordinate={{ latitude: p.lat, longitude: p.lng }}
-            anchor={{ x: 0.5, y: p.big ? 0.2 : 0.25 }}
+            // The dot is the exact centre of the marker (a spacer above matches the label
+            // below), so it sits on the coordinate on both platforms: Apple Maps ignores
+            // `anchor` and centres the view, and a fraction of a view whose label comes and
+            // goes put the dot metres off the place an SOS was raised.
+            anchor={{ x: 0.5, y: 0.5 }}
             tracksViewChanges={false}
             zIndex={p.big ? 900 : 100}
             onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
           >
             <View style={styles.who}>
+              {p.label ? <View style={styles.whoSpacer} /> : null}
               {p.big ? (
                 <View style={[styles.bigRing, { borderColor: alpha(p.tone, 0.35) }]}>
                   <View style={[styles.bigDot, { backgroundColor: p.tone }]} />
@@ -270,20 +278,28 @@ function centre(ring: [number, number][]): { latitude: number; longitude: number
   return { latitude: lat / Math.max(1, ring.length), longitude: lng / Math.max(1, ring.length) };
 }
 
+const WHO_LABEL_H = 17;
+/** A site's name pin: fixed heights, so iOS can be told where its stick ends. */
+const PIN_H = 24;
+const PIN_QUIET_H = 18;
+const PIN_STICK_H = 10;
+
 const styles = StyleSheet.create({
   fill: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "#eef0ee", overflow: "hidden" },
   pin: { alignItems: "center" },
-  pinLabel: { maxWidth: 180, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  pinText: { color: "#fff", fontFamily: font.semibold, fontSize: 12 },
-  pinStick: { width: 3, height: 10 },
-  pinQuiet: { paddingHorizontal: 7, paddingVertical: 2, opacity: 0.9 },
-  pinTextQuiet: { fontSize: 10 },
+  pinLabel: { maxWidth: 180, height: PIN_H, justifyContent: "center", paddingHorizontal: 10, borderRadius: 999 },
+  pinText: { color: "#fff", fontFamily: font.semibold, fontSize: 12, lineHeight: 16 },
+  pinStick: { width: 3, height: PIN_STICK_H },
+  pinQuiet: { height: PIN_QUIET_H, paddingHorizontal: 7, opacity: 0.9 },
+  pinTextQuiet: { fontSize: 10, lineHeight: 13 },
   bigRing: { width: 40, height: 40, borderRadius: 20, borderWidth: 8, alignItems: "center", justifyContent: "center" },
   bigDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 3, borderColor: "#fff" },
   who: { alignItems: "center" },
   whoDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: "#fff" },
-  whoLabel: { marginTop: 2, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },
-  whoText: { fontFamily: font.semibold, fontSize: 11, color: "#111" },
+  // A fixed height, so the spacer above the dot can match it exactly.
+  whoLabel: { marginTop: 2, height: WHO_LABEL_H, justifyContent: "center", paddingHorizontal: 6, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },
+  whoSpacer: { height: WHO_LABEL_H + 2 },
+  whoText: { fontFamily: font.semibold, fontSize: 11, lineHeight: 14, color: "#111" },
   meBox: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   meHalo: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: alpha(MAP_COLOR.me, 0.2) },
   meDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: MAP_COLOR.me, borderWidth: 3, borderColor: "#fff" },

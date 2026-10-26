@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
-import { isAdmin, roleAllowed } from "@nbss/shared/identity";
+import { isAdmin, roleAllowed, type Trade } from "@nbss/shared/identity";
 import { expandEmployeeCode, isShortPin, pinPassword } from "@nbss/shared/identity";
 
 import { impersonatedId, type Session } from "@/lib/impersonation";
@@ -174,6 +174,8 @@ export async function createStaffAccount(input: {
   pin: string;
   fullName: string;
   role: Role;
+  /** A guard-role account's trade (0050); security unless said. */
+  trade?: Trade;
   phone?: string;
   email?: string;
 }): Promise<{ id: string } | { error: string }> {
@@ -222,6 +224,7 @@ export async function createStaffAccount(input: {
     id: created.user.id,
     employee_code: code,
     role: input.role,
+    trade: input.role === "guard" ? (input.trade ?? "security") : "security",
     full_name: input.fullName.trim(),
     phone: input.phone?.trim() || null,
     email,

@@ -55,6 +55,8 @@ import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { StatusPill } from "@/components/ui/status-pill";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
+import { roleChoice, type RoleChoice } from "@nbss/shared/identity";
+
 import type { Role } from "@/lib/auth";
 
 export type PersonRow = {
@@ -62,6 +64,8 @@ export type PersonRow = {
   employee_code: string;
   full_name: string;
   role: Role;
+  /** security, or housekeeping for a Housekeeper (0050). */
+  trade: string;
   phone: string | null;
   email: string | null;
   active: boolean;
@@ -72,36 +76,43 @@ export type PersonRow = {
   last_seen_at: string | null;
 };
 
-const ROLES: { value: Role; label: string; note: string }[] = [
+/** A person's role as it is shown and picked: a Housekeeper is the guard role with a trade. */
+const choiceOf = (r: { role: Role; trade?: string | null }): RoleChoice => roleChoice(r.role, r.trade);
+
+const ROLES: { value: RoleChoice; label: string; note: string }[] = [
   { value: "guard", label: "Guard", note: "Own shifts and attendance only" },
+  { value: "housekeeping", label: "Housekeeper", note: "Works a site as a guard does: shifts, attendance, SOS" },
   { value: "supervisor", label: "Supervisor", note: "Sites they are responsible for" },
   { value: "admin", label: "Administrator", note: "Everything, including settings" },
   { value: "developer", label: "Developer", note: "Everything, and can appoint developers" },
   { value: "client", label: "Client", note: "Read-only view of their own site" },
 ];
 
-const ROLE_LABEL: Record<Role, string> = {
+const ROLE_LABEL: Record<RoleChoice, string> = {
   developer: "Developer",
   guard: "Guard",
+  housekeeping: "Housekeeper",
   supervisor: "Supervisor",
   admin: "Administrator",
   client: "Client",
 };
 
-const ROLE_TONE: Record<Role, "emerald" | "violet" | "rose" | "sky" | "amber"> = {
+const ROLE_TONE: Record<RoleChoice, "emerald" | "violet" | "rose" | "sky" | "amber"> = {
   developer: "amber",
   guard: "emerald",
+  housekeeping: "sky",
   supervisor: "violet",
   admin: "rose",
   client: "sky",
 };
 
-const TABS: { value: Role | "all"; label: string }[] = [
+const TABS: { value: RoleChoice | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "developer", label: "Developers" },
   { value: "admin", label: "Admins" },
   { value: "supervisor", label: "Supervisors" },
   { value: "guard", label: "Guards" },
+  { value: "housekeeping", label: "Housekeepers" },
   { value: "client", label: "Clients" },
 ];
 
@@ -183,7 +194,7 @@ export function GuardsWorkspace({
   /** The Users page: every account, split by role. */
   showRoleTabs?: boolean;
   /** What "Add person" starts on. */
-  defaultRole?: Role;
+  defaultRole?: RoleChoice;
   /** The next free NBSS-### code, offered in the form. */
   nextCode?: string;
 }) {
@@ -195,14 +206,14 @@ export function GuardsWorkspace({
   const params = useSearchParams();
   const [detailId, setDetailId] = useState<string | null>(params.get("person"));
   const [version, setVersion] = useState(0);
-  const [tab, setTab] = useState<Role | "all">("all");
+  const [tab, setTab] = useState<RoleChoice | "all">("all");
   const [editing, setEditing] = useState(false);
   const detail = rows.find((r) => r.id === detailId) ?? null;
   const setDetail = (row: PersonRow | null) => {
     setEditing(false);
     setDetailId(row?.id ?? null);
   };
-  const visible = tab === "all" ? rows : rows.filter((r) => r.role === tab);
+  const visible = tab === "all" ? rows : rows.filter((r) => choiceOf(r) === tab);
   const [confirm, setConfirm] = useState<
     null | { kind: "deactivate" | "reset" | "delete"; row: PersonRow }
   >(null);
@@ -218,7 +229,7 @@ export function GuardsWorkspace({
   const [issued, setIssued] = useState<null | { pin: string; who: string }>(null);
 
   const [addState, addAction] = useActionState(addGuard, emptyGuardForm);
-  const [role, setRole] = useState<Role>(defaultRole);
+  const [role, setRole] = useState<RoleChoice>(defaultRole);
 
   function runContact(row: PersonRow, form: FormData) {
     start(async () => {
@@ -299,7 +310,7 @@ export function GuardsWorkspace({
     });
   }
 
-  function runRole(row: PersonRow, next: Role) {
+  function runRole(row: PersonRow, next: RoleChoice) {
     start(async () => {
       try {
         await changeRole(row.id, next);
@@ -355,10 +366,10 @@ export function GuardsWorkspace({
     },
     {
       header: "Role",
-      cell: (r) => <StatusPill label={ROLE_LABEL[r.role]} tone={ROLE_TONE[r.role]} />,
-      sortValue: (r) => ROLE_LABEL[r.role],
-      searchValue: (r) => ROLE_LABEL[r.role],
-      printCell: (r) => ROLE_LABEL[r.role],
+      cell: (r) => <StatusPill label={ROLE_LABEL[choiceOf(r)]} tone={ROLE_TONE[choiceOf(r)]} />,
+      sortValue: (r) => ROLE_LABEL[choiceOf(r)],
+      searchValue: (r) => ROLE_LABEL[choiceOf(r)],
+      printCell: (r) => ROLE_LABEL[choiceOf(r)],
     },
     {
       header: "Contact",
@@ -400,7 +411,7 @@ export function GuardsWorkspace({
       {showRoleTabs && (
         <div className="scrollbar-none -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1">
           {TABS.map((t) => {
-            const count = t.value === "all" ? rows.length : rows.filter((r) => r.role === t.value).length;
+            const count = t.value === "all" ? rows.length : rows.filter((r) => choiceOf(r) === t.value).length;
             const active = tab === t.value;
             return (
               <button
@@ -535,7 +546,7 @@ export function GuardsWorkspace({
                 </Label>
                 {/* Radix's Select is not a form control, so the chosen value is
                     mirrored into a hidden input for the server action. */}
-                <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+                <Select value={role} onValueChange={(v) => setRole(v as RoleChoice)}>
                   <SelectTrigger id="role" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -667,8 +678,8 @@ export function GuardsWorkspace({
                 <div className="flex flex-col gap-2 sm:max-w-xs">
                   <Label htmlFor="change-role">Role</Label>
                   <Select
-                    value={p.role}
-                    onValueChange={(v) => runRole(detail, v as Role)}
+                    value={choiceOf(p)}
+                    onValueChange={(v) => runRole(detail, v as RoleChoice)}
                     disabled={pending}
                   >
                     <SelectTrigger id="change-role" className="w-full">

@@ -520,6 +520,7 @@ export type Database = {
           email: string | null;
           is_test: boolean;
           avatar_url: string | null;
+          trade: string;
         };
         Insert: {
           id: string;
@@ -539,6 +540,7 @@ export type Database = {
           email?: string | null;
           is_test?: boolean;
           avatar_url?: string | null;
+          trade?: string;
         };
         Update: {
           id?: string;
@@ -558,6 +560,7 @@ export type Database = {
           email?: string | null;
           is_test?: boolean;
           avatar_url?: string | null;
+          trade?: string;
         };
         Relationships: [];
       };

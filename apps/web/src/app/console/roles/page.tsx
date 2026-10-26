@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Check, KeyRound } from "lucide-react";
 
-import { ROLE_LABEL, ROLES, type Role } from "@nbss/shared/identity";
+import { fromRoleChoice, ROLE_CHOICE_LABEL, ROLE_CHOICES, roleChoice, type RoleChoice } from "@nbss/shared/identity";
 
 import { pagesFor } from "@/components/console/nav-items";
 import { PageHeader } from "@/components/console/page-header";
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Roles" };
 export const dynamic = "force-dynamic";
 
 /** What each role is for, in a line, and what it may change. */
-const ROLE_INFO: Record<Role, { summary: string; can: string[]; tone: string; chip: string }> = {
+const ROLE_INFO: Record<RoleChoice, { summary: string; can: string[]; tone: string; chip: string }> = {
   developer: {
     summary: "Builds and runs the software. Sees everything an administrator does, plus Test / Live and View as.",
     can: ["Switch between Test and Live data", "View the console as any person", "Change the software fee rate", "Everything an administrator can do"],
@@ -38,6 +38,12 @@ const ROLE_INFO: Record<Role, { summary: string; can: string[]; tone: string; ch
     tone: "from-amber-50 to-orange-50 border-amber-200",
     chip: "bg-amber-500",
   },
+  housekeeping: {
+    summary: "Keeps the premises, through the app, exactly as a guard works a post: posted, rostered, checked in and tracked.",
+    can: ["Check in and out at their site", "Raise and answer SOS", "See their own duties, route and attendance", "Ask for cover"],
+    tone: "from-lime-50 to-green-50 border-lime-200",
+    chip: "bg-lime-600",
+  },
   client: {
     summary: "Buys the service: their own sites' cover, guards on duty, SOS and bookings.",
     can: ["See who is on duty at their sites", "Get SOS alerts from their sites", "Book guards", "See man-hours for their invoice"],
@@ -54,11 +60,11 @@ const ROLE_INFO: Record<Role, { summary: string; can: string[]; tone: string; ch
 export default async function RolesPage() {
   const session = await requireRoleSession("admin", "supervisor");
   const viewer = session.realProfile.role;
-  const shown = ROLES.filter((r) => r !== "developer" || viewer === "developer");
+  const shown = ROLE_CHOICES.filter((r) => r !== "developer" || viewer === "developer");
 
   const supabase = await supabaseServer();
-  const { data } = await supabase.from("profiles").select("role").eq("active", true);
-  const count = (r: Role) => (data ?? []).filter((p) => p.role === r).length;
+  const { data } = await supabase.from("profiles").select("role, trade").eq("active", true);
+  const count = (r: RoleChoice) => (data ?? []).filter((p) => roleChoice(p.role, p.trade) === r).length;
 
   return (
     <div className="space-y-6">
@@ -67,7 +73,7 @@ export default async function RolesPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         {shown.map((r) => {
           const info = ROLE_INFO[r];
-          const pages = pagesFor(r);
+          const pages = pagesFor(fromRoleChoice(r).role);
           return (
             <section key={r} className={cn("rounded-2xl border bg-gradient-to-br p-5 shadow-e1", info.tone)}>
               <div className="flex items-center gap-3">
@@ -75,7 +81,7 @@ export default async function RolesPage() {
                   <KeyRound className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg font-bold">{ROLE_LABEL[r]}</h2>
+                  <h2 className="text-lg font-bold">{ROLE_CHOICE_LABEL[r]}</h2>
                   <p className="text-xs text-muted-foreground">
                     {count(r)} active {count(r) === 1 ? "account" : "accounts"}
                   </p>
@@ -92,7 +98,7 @@ export default async function RolesPage() {
               </ul>
               <div className="mt-4 rounded-xl bg-white/70 p-3">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase">Pages on the website</p>
-                {r === "guard" || r === "client" ? (
+                {r === "guard" || r === "housekeeping" || r === "client" ? (
                   <p className="mt-1 text-xs text-muted-foreground">Mostly the phone app. On the website: {pages.flatMap((g) => g.pages).join(", ")}.</p>
                 ) : (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">

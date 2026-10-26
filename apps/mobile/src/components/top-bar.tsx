@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY } from "@nbss/shared/company";
-import { ROLE_LABEL, type Role } from "@nbss/shared/identity";
+import { roleLabel, type Role } from "@nbss/shared/identity";
 
 import { useLayout } from "@/hooks/use-breakpoint";
 import { color, space } from "@/theme/tokens";
@@ -29,12 +29,15 @@ import { Text } from "./text";
  */
 export function TopBar({
   role,
+  trade,
   name,
   onPressAccount,
   right,
   account = true,
 }: {
   role: Role;
+  /** Shown as "Housekeeper" for a guard in the housekeeping trade. */
+  trade?: string | null;
   name: string;
   onPressAccount?: () => void;
   right?: React.ReactNode;
@@ -55,7 +58,7 @@ export function TopBar({
         <BrandMark size={34} />
 
         <View style={styles.brandText}>
-          <Wordmark role={ROLE_LABEL[role]} />
+          <Wordmark role={roleLabel(role, trade)} />
         </View>
 
         {/* The website's Test / Live switch, for developers, as its header has it. */}

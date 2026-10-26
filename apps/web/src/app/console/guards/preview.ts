@@ -18,6 +18,7 @@ export type PersonPreview = {
   name: string;
   code: string;
   role: Role;
+  trade: string;
   email: string | null;
   phone: string | null;
   active: boolean;
@@ -50,7 +51,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
 
   const { data: p } = await supabase
     .from("profiles")
-    .select("id, full_name, employee_code, role, email, phone, active, joined_at, created_at, last_seen_at, must_change_pin")
+    .select("id, full_name, employee_code, role, trade, email, phone, active, joined_at, created_at, last_seen_at, must_change_pin")
     .eq("id", id)
     .maybeSingle();
 
@@ -62,6 +63,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
     name: p.full_name,
     code: p.employee_code,
     role: p.role,
+    trade: p.trade,
     email: p.email,
     phone: p.phone,
     active: p.active,
