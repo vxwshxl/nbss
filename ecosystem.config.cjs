@@ -8,7 +8,12 @@ module.exports = {
       script: "node_modules/next/dist/bin/next",
       args: "start -p 3040 -H 127.0.0.1",
       env: { NODE_ENV: "production", NBSS_DATA: "/var/lib/nbss/submissions.json" },
-      max_memory_restart: "700M",
+      // The heap is capped below the restart limit, so Node collects garbage before PM2
+      // has to kill it. At 700M a burst of console pages (750–935 MB) restarted the site
+      // several times a day, and every restart dropped pages for a few seconds. The box
+      // has 16 GB.
+      node_args: "--max-old-space-size=1280",
+      max_memory_restart: "1536M",
       time: true,
     },
     {
