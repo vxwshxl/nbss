@@ -53,7 +53,8 @@ export function LiveMap({
   /** The selected guard's path since check-in. */
   trail?: { lat: number; lng: number; inside: boolean | null }[];
   /** Pan here when it changes (a guard picked from the list). */
-  focus?: { lat: number; lng: number; key: string } | null;
+  /** `offset` (pixels) moves the camera off the point, so it sits clear of a card drawn over the map. */
+  focus?: { lat: number; lng: number; key: string; offset?: { x: number; y: number } } | null;
   frameKey?: string;
   height?: number | string;
   className?: string;
@@ -215,8 +216,9 @@ export function LiveMap({
 
   useEffect(() => {
     if (!map || !focus) return;
-    map.panTo(focus);
     if ((map.getZoom() ?? 0) < 16) map.setZoom(17);
+    map.setCenter({ lat: focus.lat, lng: focus.lng });
+    if (focus.offset) map.panBy(focus.offset.x, focus.offset.y);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, focus?.key]);
 

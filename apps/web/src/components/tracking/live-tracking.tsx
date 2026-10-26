@@ -126,7 +126,7 @@ export function LiveTracking({
   // positions below, the newer of the two winning, so a refresh never moves a dot back.
   const [heard, setHeard] = useState<Record<string, LivePosition>>({});
   const [selected, setSelected] = useState<string | null>(null);
-  const [focus, setFocus] = useState<{ lat: number; lng: number; key: string } | null>(null);
+  const [focus, setFocus] = useState<{ lat: number; lng: number; key: string; offset?: { x: number; y: number } } | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
   const [query, setQuery] = useState("");
   const [loadedTrail, setLoadedTrail] = useState<{ id: string; points: TrailPoint[] } | null>(null);
@@ -272,7 +272,18 @@ export function LiveTracking({
     const p = positions[id];
     const site = sites.find((s) => s.id === guards.find((g) => g.guardId === id)?.siteId);
     const at = p ? { lat: p.lat, lng: p.lng } : site ? { lat: site.lat, lng: site.lng } : null;
-    if (at) setFocus({ ...at, key: `${id}:${Date.now()}` });
+    // Only full screen draws the panel over the map; otherwise it has its own column.
+    if (at) setFocus({ ...at, key: `${id}:${Date.now()}`, offset: document.fullscreenElement ? clearOfCard() : undefined });
+  }
+
+  // Where the open card is not: the camera is moved half the card's size away from it,
+  // so the guard lands in the middle of the map that can still be seen. The card sits on
+  // the left on a desk (380 px, 12 px in) and along the bottom on a phone.
+  function clearOfCard(): { x: number; y: number } {
+    const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
+    if (wide) return { x: -Math.round((380 + 12) / 2), y: 0 };
+    const h = stage.current?.clientHeight ?? 500;
+    return { x: 0, y: Math.round(Math.min(h * 0.6, h - 120) / 2) };
   }
 
   // Full screen is the map and the guard's card together. The map's own button made only
@@ -290,8 +301,33 @@ export function LiveTracking({
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div ref={stage} className={cn("relative h-[62vh] min-h-[420px] bg-card lg:h-[calc(100dvh-210px)]", full && "h-screen lg:h-screen")}>
+    // Route history's shape: the guard on the left, the map in the middle, everyone on
+    // the right. Below xl the map comes first and the guard's panel follows it.
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[340px_minmax(0,1fr)_340px]">
+      <aside className="order-2 min-h-0 overflow-hidden rounded-2xl border border-app-line bg-card lg:col-span-2 xl:order-1 xl:col-span-1 xl:h-[calc(100dvh-210px)]">
+        {sel ? (
+          <GuardCard
+            docked
+            row={sel}
+            now={now}
+            walkedM={stats?.distanceM ?? null}
+            outsideMin={stats?.outsideMinutes ?? null}
+            points={trail.length}
+            onClose={() => setSelected(null)}
+            onProfile={() => openProfile(sel.g.guardId)}
+            onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}` })}
+          />
+        ) : (
+          <div className="grid h-full min-h-40 place-items-center p-6 text-center">
+            <div>
+              <p className="font-semibold">Pick a guard</p>
+              <p className="mt-1 text-sm text-muted-foreground">Tap a guard on the map or in the list to see where they are, their phone and their route.</p>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      <div ref={stage} className={cn("relative order-1 h-[62vh] min-h-[420px] bg-card lg:h-[calc(100dvh-210px)] xl:order-2", full && "h-screen lg:h-screen")}>
         <LiveMap
           sites={sites}
           guards={markers}
@@ -316,8 +352,8 @@ export function LiveTracking({
           {full ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
         </button>
 
-        {/* A guard picked on the map or in the list: everything about them, over the map. */}
-        {sel && (
+        {/* Full screen shows only the map, so there the guard's panel floats over it. */}
+        {full && sel && (
           <GuardCard
             row={sel}
             now={now}
@@ -326,7 +362,7 @@ export function LiveTracking({
             points={trail.length}
             onClose={() => setSelected(null)}
             onProfile={() => openProfile(sel.g.guardId)}
-            onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${now}:${trail.length}` })}
+            onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}`, offset: clearOfCard() })}
           />
         )}
       </div>
@@ -335,7 +371,7 @@ export function LiveTracking({
 
       {/* Below the map on a phone, beside it on a desk: always its own scroll, so a
           list of two hundred guards never pushes the map off the screen. */}
-      <aside className="flex max-h-[75vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card lg:h-[calc(100dvh-210px)] lg:max-h-none">
+      <aside className="order-3 flex max-h-[75vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card lg:order-2 lg:h-[calc(100dvh-210px)] lg:max-h-none xl:order-3">
         <div className="space-y-3 border-b border-app-line-soft p-3">
           <label className="flex h-10 items-center gap-2 rounded-full bg-muted/70 px-3.5 ring-1 ring-border/60 focus-within:ring-2 focus-within:ring-ring/50">
             <Search className="size-4 text-muted-foreground" />
@@ -437,6 +473,7 @@ type Row = { g: DutyGuard; p: LivePosition | null; state: GuardState };
  */
 function GuardCard({
   row: { g, p, state },
+  docked = false,
   now,
   walkedM,
   outsideMin,
@@ -446,6 +483,8 @@ function GuardCard({
   onCenter,
 }: {
   row: Row;
+  /** In the page's own column rather than floating over the map. */
+  docked?: boolean;
   now: number;
   walkedM: number | null;
   outsideMin: number | null;
@@ -457,7 +496,13 @@ function GuardCard({
   const since = new Date(g.checkInAt).getTime();
   const warn = g.device && (g.device.permission !== "always" || g.device.gps === false || g.device.batteryOptimized === true);
   return (
-    <div className="absolute inset-x-3 bottom-3 z-10 max-h-[calc(100%-4.5rem)] overflow-y-auto rounded-2xl bg-card/98 shadow-xl ring-1 ring-border backdrop-blur sm:right-auto sm:w-[380px]">
+    <div
+      className={
+        docked
+          ? "h-full overflow-y-auto"
+          : "absolute inset-x-3 bottom-3 z-10 max-h-[calc(100%-4.5rem)] overflow-y-auto rounded-2xl bg-card/98 shadow-xl ring-1 ring-border backdrop-blur sm:right-auto sm:w-[380px]"
+      }
+    >
       <div className="flex items-start gap-3 p-4 pb-3">
         <button type="button" onClick={onProfile} aria-label={`${g.name}: full profile`} className="press grid size-12 shrink-0 place-items-center rounded-full text-base font-semibold text-white" style={{ background: STATE_COLOR[state] }}>
           {initials(g.name)}
