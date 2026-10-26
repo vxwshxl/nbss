@@ -1572,13 +1572,13 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Enums["user_role"];
       };
-      next_client_code: {
-        Args: Record<PropertyKey, never>;
-        Returns: string;
-      };
       my_sos_allowed: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
+      };
+      next_client_code: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
       };
       next_employee_code: {
         Args: Record<PropertyKey, never>;
@@ -1771,6 +1771,13 @@ export type Database = {
       software_fee_sync: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      sos_allowed: {
+        Args: {
+          p_profile: string;
+          p_site?: string;
+        };
+        Returns: boolean;
       };
       sos_map: {
         Args: {
