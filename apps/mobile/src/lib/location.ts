@@ -5,7 +5,7 @@ import { AppState, Linking } from "react-native";
 import { policyFor, type TrackingMode } from "@nbss/shared/location";
 
 import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
-import { LOCATION_TASK, clearTrackingState, readMode, readPace, wireTaskControls, writeMode } from "./location-task";
+import { LOCATION_TASK, clearTrackingState, readMode, wireTaskControls, writeMode } from "./location-task";
 
 /**
  * Permissions and the lifecycle of the background stream.
@@ -99,9 +99,6 @@ export async function isTracking(): Promise<boolean> {
 export async function startTracking(mode: TrackingMode = "on_duty"): Promise<void> {
   const policy = policyFor(mode);
   await writeMode(mode);
-  // Standing at a post on an ordinary duty: a reading about once a minute (location-task
-  // explains the pace). Kept under the one-minute heartbeat so the map never goes amber.
-  const still = mode === "on_duty" && (await readPace()) === "still";
   // Expo Go and the browser have no background location service: asking for one
   // throws ("UIBackgroundModes" on iOS). The open duty screen sends positions there.
   if (!CAN_TRACK_IN_BACKGROUND) return;
@@ -121,7 +118,10 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
     // heartbeat and went "Signal late" after three minutes. The cadence filter in
     // location-task (20 m or one minute) decides what is actually sent.
     distanceInterval: 0,
-    timeInterval: still ? 55_000 : Math.max(5_000, Math.round(policy.heartbeatMs / 4)),
+    // A reading every 15 seconds on duty (5 in an SOS), the whole shift, standing or not:
+    // the office hears from every guard at least once a minute. No slower pace to save
+    // battery; a guard whose dot goes quiet is a guard nobody can vouch for.
+    timeInterval: Math.max(5_000, Math.round(policy.heartbeatMs / 4)),
 
     /**
      * The Android foreground service. Without it the OS kills the task within
@@ -147,9 +147,9 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
     activityType: Location.ActivityType.Other,
     showsBackgroundLocationIndicator: true,
 
-    // Deferred updates are a battery optimisation that batches positions and delivers
-    // them late. An emergency cannot afford it; normal duty can, a little.
-    deferredUpdatesInterval: mode === "emergency" ? 0 : still ? 55_000 : 30_000,
+    // No batching. Each reading reaches the task as it is taken, so the minute's heartbeat
+    // goes out on time and a failed send is tried again fifteen seconds later.
+    deferredUpdatesInterval: 0,
     // Zero. In the background Android hands over held readings only once BOTH the interval
     // has passed AND the guard has moved this far (expo-location's
     // shouldReportDeferredLocations), so a guard standing still reported nothing at all.

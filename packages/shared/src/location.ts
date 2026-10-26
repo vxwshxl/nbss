@@ -51,7 +51,8 @@ export const ON_DUTY_POLICY: PingPolicy = {
   // well as along roads, and 50 m cut corners off every turn. 20 m keeps a GPS
   // jitter of ~10 m from writing anything while standing still.
   minDistanceM: 20,
-  heartbeatMs: 60_000,
+  // 45 s, not 60: readings come every ~11 s, so a send is never more than a minute apart.
+  heartbeatMs: 45_000,
   minIntervalMs: 10_000,
   maxAccuracyM: 150,
   desiredAccuracy: "high",
@@ -110,9 +111,13 @@ export function shouldSendPing(
 ): PingDecision {
   const policy = policyFor(mode);
 
-  // Accuracy first. A useless fix should not reset the heartbeat clock, or a
-  // phone with a poor sky view would go quiet and still look healthy.
+  // Accuracy first: a vague fix never counts as movement or starts a trail. But it is
+  // still sent as the heartbeat when one is due, with its accuracy, so a phone indoors
+  // on a table is heard every minute rather than going quiet (the map shows ±m).
   if (!Number.isFinite(fix.accuracyM) || fix.accuracyM > policy.maxAccuracyM) {
+    if (Number.isFinite(fix.accuracyM) && previous && now - previous.at >= policy.heartbeatMs) {
+      return { send: true, reason: "heartbeat" };
+    }
     return { send: false, reason: "inaccurate" };
   }
 

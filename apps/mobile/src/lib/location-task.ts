@@ -68,65 +68,9 @@ async function writeMode(mode: TrackingMode): Promise<void> {
  * walked before a check-out still belong to that shift and are sent first.
  */
 export async function clearTrackingState(): Promise<void> {
-  await AsyncStorage.multiRemove([LAST_FIX_KEY, MODE_KEY, PACE_KEY, ANCHOR_KEY]).catch(() => undefined);
+  await AsyncStorage.multiRemove([LAST_FIX_KEY, MODE_KEY, "nbss.trackingPace", "nbss.trackingAnchor"]).catch(() => undefined);
 }
 
-/**
- * Pace: how hard the GPS works while on duty.
- *
- * A guard spends most of a shift standing at a post, and asking the GPS for a fix every
- * 15 seconds there is most of what warms the phone and drains it. So the stream has two
- * paces. "moving" is the full one. "still" asks for a fix about once a minute (still
- * high accuracy: the low-power network fix wanders 100 m and would put a guard at the
- * gate outside the fence), which lets the chip sleep between readings. The OS still
- * reports any 15 m of movement at once, and that switches straight back.
- *
- * Decided against an anchor: the place the guard last moved to. More than 30 m from it
- * is moving; three minutes within it is still. An emergency always runs the full pace.
- */
-export type Pace = "moving" | "still";
-const PACE_KEY = "nbss.trackingPace";
-const ANCHOR_KEY = "nbss.trackingAnchor";
-const MOVE_M = 30;
-const STILL_AFTER_MS = 3 * 60_000;
-/** A fix vaguer than this says nothing about whether the guard moved. */
-const PACE_ACCURACY_M = 50;
-/** At most one restart of the OS stream a minute, whatever the readings do. */
-const PACE_COOLDOWN_MS = 60_000;
-let paceChangedAt = 0;
-
-export async function readPace(): Promise<Pace> {
-  const stored = await AsyncStorage.getItem(PACE_KEY).catch(() => null);
-  return stored === "still" ? "still" : "moving";
-}
-
-async function updatePace(locations: { lat: number; lng: number; accuracyM: number; at: number }[]): Promise<void> {
-  if ((await readMode()) !== "on_duty") return;
-  let anchor: { lat: number; lng: number; at: number } | null = null;
-  try {
-    anchor = JSON.parse((await AsyncStorage.getItem(ANCHOR_KEY)) ?? "null");
-  } catch {
-    anchor = null;
-  }
-  const current = await readPace();
-  let next: Pace = current;
-
-  for (const l of [...locations].sort((a, b) => a.at - b.at)) {
-    if (!(l.accuracyM <= PACE_ACCURACY_M)) continue;
-    if (!anchor || distanceMetres(anchor, l) > MOVE_M) {
-      anchor = { lat: l.lat, lng: l.lng, at: l.at };
-      next = "moving";
-    } else if (l.at - anchor.at >= STILL_AFTER_MS) {
-      next = "still";
-    }
-  }
-
-  if (anchor) await AsyncStorage.setItem(ANCHOR_KEY, JSON.stringify(anchor)).catch(() => undefined);
-  if (next === current || Date.now() - paceChangedAt < PACE_COOLDOWN_MS) return;
-  paceChangedAt = Date.now();
-  await AsyncStorage.setItem(PACE_KEY, next).catch(() => undefined);
-  await restartTracking("on_duty");
-}
 
 /**
  * The outbox: positions accepted by the policy but not yet confirmed by the
@@ -319,8 +263,6 @@ TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async ({ data, error }) 
     at: l.timestamp,
   }));
   await feedLocations(locations);
-  // After the points are safe in the outbox: a restart of the stream must never cost one.
-  await updatePace(locations).catch(() => undefined);
 });
 
 /** Imported by ./location, which owns starting and stopping. Kept here to avoid a cycle. */
