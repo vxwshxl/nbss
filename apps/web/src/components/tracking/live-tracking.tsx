@@ -303,9 +303,10 @@ export function LiveTracking({
   return (
     // Route history's shape: the guard on the left, the map in the middle, everyone on
     // the right. Below xl the map comes first and the guard's panel follows it.
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[340px_minmax(0,1fr)_340px]">
-      <aside className="order-2 min-h-0 overflow-hidden rounded-2xl border border-app-line bg-card lg:col-span-2 xl:order-1 xl:col-span-1 xl:h-[calc(100dvh-210px)]">
-        {sel ? (
+    // With nobody picked, the map takes the left column too.
+    <div className={cn("grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]", sel && "xl:grid-cols-[340px_minmax(0,1fr)_340px]")}>
+      {sel && (
+        <aside className="order-2 min-h-0 overflow-hidden rounded-2xl border border-app-line bg-card lg:col-span-2 xl:order-1 xl:col-span-1 xl:h-[calc(100dvh-210px)]">
           <GuardCard
             docked
             row={sel}
@@ -317,15 +318,8 @@ export function LiveTracking({
             onProfile={() => openProfile(sel.g.guardId)}
             onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}` })}
           />
-        ) : (
-          <div className="grid h-full min-h-40 place-items-center p-6 text-center">
-            <div>
-              <p className="font-semibold">Pick a guard</p>
-              <p className="mt-1 text-sm text-muted-foreground">Tap a guard on the map or in the list to see where they are, their phone and their route.</p>
-            </div>
-          </div>
-        )}
-      </aside>
+        </aside>
+      )}
 
       <div ref={stage} className={cn("relative order-1 h-[62vh] min-h-[420px] bg-card lg:h-[calc(100dvh-210px)] xl:order-2", full && "h-screen lg:h-screen")}>
         <LiveMap
