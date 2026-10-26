@@ -5,6 +5,9 @@ import { z } from "zod";
 
 import { supabaseServer } from "@/lib/supabase/server";
 import type { AiContext } from "./context";
+
+/** The IST calendar day of an instant, for counting days rather than check-ins. */
+const istDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 import type { Role } from "@/lib/auth";
 
 /**
@@ -146,16 +149,19 @@ const attendanceSummary: AiTool = {
     const supabase = await supabaseServer();
     const { data } = await supabase
       .from("attendance")
-      .select("worked_minutes, overtime_minutes, status, check_out_at")
+      .select("guard_id, check_in_at, worked_minutes, overtime_minutes, status, check_out_at")
       .gte("check_in_at", since);
 
     const rows = data ?? [];
+    // Guard-days, as the register counts them: two check-ins on one day are one day present.
+    const guardDay = (r: (typeof rows)[number]) => `${r.guard_id}|${r.check_in_at ? istDay(r.check_in_at) : ""}`;
     return {
       window: days && days > 1 ? `last ${days} days` : "today",
-      shifts: rows.length,
+      checkIns: rows.length,
+      guardDaysPresent: new Set(rows.filter((r) => r.status !== "absent" && r.status !== "rejected").map(guardDay)).size,
       hoursWorked: hours(rows.reduce((s, r) => s + (r.worked_minutes ?? 0), 0)),
       overtime: hours(rows.reduce((s, r) => s + (r.overtime_minutes ?? 0), 0)),
-      late: rows.filter((r) => r.status === "late").length,
+      lateGuardDays: new Set(rows.filter((r) => r.status === "late").map(guardDay)).size,
       absent: rows.filter((r) => r.status === "absent").length,
       awaitingReview: rows.filter((r) => r.status === "pending_review").length,
       stillOnDuty: rows.filter((r) => !r.check_out_at).length,
@@ -339,10 +345,11 @@ const guardAttendance: AiTool = {
       found: true,
       guard: { name: person.full_name, code: person.employee_code, active: person.active },
       window: `last ${days} days`,
-      shifts: rows.length,
+      checkIns: rows.length,
+      daysPresent: new Set(rows.filter((r) => r.check_in_at && r.status !== "rejected").map((r) => istDay(r.check_in_at!))).size,
       hoursWorked: hours(rows.reduce((s, r) => s + (r.worked_minutes ?? 0), 0)),
       overtime: hours(rows.reduce((s, r) => s + (r.overtime_minutes ?? 0), 0)),
-      late: rows.filter((r) => r.status === "late").length,
+      lateDays: new Set(rows.filter((r) => r.status === "late" && r.check_in_at).map((r) => istDay(r.check_in_at!))).size,
       recent: rows.slice(0, 15).map((r) => {
         const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
         return {

@@ -49,7 +49,7 @@ export function ClientHome() {
     const [sites, live, month, alerts] = await Promise.all([
       supabase.from("sites").select("id, name, address, district, lat, lng, geofence_radius_m, polygon").eq("client_id", me).eq("active", true).order("name"),
       supabase.from("client_attendance").select("id, site_id, guard_name, check_in_at").is("check_out_at", null).order("check_in_at"),
-      supabase.from("client_attendance").select("worked_minutes, overtime_minutes").gte("check_in_at", monthStart.toISOString()),
+      supabase.from("client_attendance").select("guard_id, check_in_at, worked_minutes, overtime_minutes").gte("check_in_at", monthStart.toISOString()),
       liveAlerts(),
     ]);
     const rows = month.data ?? [];
@@ -58,7 +58,8 @@ export function ClientHome() {
       onDuty: (live.data ?? []) as OnDuty[],
       minutes: rows.reduce((n, r) => n + (r.worked_minutes ?? 0), 0),
       overtime: rows.reduce((n, r) => n + (r.overtime_minutes ?? 0), 0),
-      shifts: rows.length,
+      // Guard-days: two check-ins by one guard on one day are one shift worked.
+      shifts: new Set(rows.map((r) => `${r.guard_id}|${r.check_in_at ? new Date(r.check_in_at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) : ""}`)).size,
       alerts,
     };
   }, [profile?.id]);

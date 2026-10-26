@@ -118,13 +118,25 @@ export async function registerBetween(
   return out;
 }
 
-/** The register's counts for a set of entries. */
+/** Outcomes that mean the guard came that day. */
+export const CAME: readonly Outcome[] = ["present", "late", "on_duty", "review", "off_roster"];
+
+/**
+ * The register's counts for a set of entries, by guard-day, not by row.
+ *
+ * Two check-ins on one day (out and back, a second punch at the same site, an off-roster
+ * punch beside the rostered one) are all listed, but they are one day present: counting
+ * rows let a guard double a day by checking in twice. A day is absent only when the
+ * guard did not come at all; the rate is days attended of days rostered. Hours are the
+ * sum of everything worked.
+ */
 export function tallyRegister(rows: RegisterEntry[]) {
-  const due = rows.filter((r) => r.outcome !== "upcoming" && r.outcome !== "replaced" && r.outcome !== "off_roster");
-  const present = rows.filter((r) => ["present", "late", "on_duty", "review", "off_roster"].includes(r.outcome)).length;
-  const late = rows.filter((r) => r.outcome === "late").length;
-  const absent = rows.filter((r) => r.outcome === "absent").length;
+  const key = (r: RegisterEntry) => `${r.guardId}|${r.day}`;
+  const came = new Set(rows.filter((r) => CAME.includes(r.outcome)).map(key));
+  const late = new Set(rows.filter((r) => r.outcome === "late").map(key)).size;
+  const absent = new Set(rows.filter((r) => r.outcome === "absent" && !came.has(key(r))).map(key)).size;
+  const dueDays = [...new Set(rows.filter((r) => r.outcome !== "upcoming" && r.outcome !== "replaced" && r.outcome !== "off_roster").map(key))];
   const minutes = rows.reduce((n, r) => n + r.workedMinutes, 0);
-  const rate = due.length ? Math.round((due.filter((r) => r.outcome !== "absent" && r.outcome !== "not_arrived").length / due.length) * 100) : null;
-  return { present, late, absent, minutes, rate, due: due.length };
+  const rate = dueDays.length ? Math.round((dueDays.filter((k) => came.has(k)).length / dueDays.length) * 100) : null;
+  return { present: came.size, late, absent, minutes, rate, due: dueDays.length };
 }

@@ -97,7 +97,7 @@ export default async function ConsoleDashboard() {
       .order("check_in_at", { ascending: false }),
     supabase
       .from("attendance")
-      .select("id, worked_minutes, overtime_minutes, status")
+      .select("id, guard_id, worked_minutes, overtime_minutes, status")
       .gte("check_in_at", startOfToday.toISOString()),
     supabase
       .from("sos_alerts")
@@ -132,7 +132,8 @@ export default async function ConsoleDashboard() {
   const punches = todayPunches.data ?? [];
 
   const overtimeToday = punches.reduce((sum, p) => sum + (p.overtime_minutes ?? 0), 0);
-  const lateToday = punches.filter((p) => p.status === "late").length;
+  // Guards who were late today, not late punches: a second check-in is not a second lateness.
+  const lateToday = new Set(punches.filter((p) => p.status === "late").map((p) => p.guard_id)).size;
   const needsReview = punches.filter((p) => p.status === "pending_review").length;
 
   const noSites = (sites.count ?? 0) === 0;

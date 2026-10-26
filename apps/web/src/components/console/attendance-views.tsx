@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { Outcome, RegisterEntry } from "@/lib/attendance-register";
-import { tallyRegister } from "@/lib/attendance-register";
+import { CAME, tallyRegister } from "@/lib/attendance-register";
 import { cn } from "@/lib/utils";
 
 /** One letter and one colour per outcome: the key to the month grid. */
@@ -70,7 +70,11 @@ export function MonthGrid({ rows, days, today }: { rows: RegisterEntry[]; days: 
                 </td>
                 {days.map((d) => {
                   const list = cell.get(`${g.id}|${d}`) ?? [];
-                  const worst = list.length ? RANK.find((o) => list.some((r) => r.outcome === o))! : null;
+                  // A day the guard came is never shown as absent: the mark is the worst of the
+                  // check-ins that day, and only a day with none shows a missed duty.
+                  const attended = list.filter((r) => CAME.includes(r.outcome));
+                  const pool = attended.length ? attended : list;
+                  const worst = pool.length ? RANK.find((o) => pool.some((r) => r.outcome === o))! : null;
                   return (
                     <td key={d} className="border-t border-app-line-soft px-0.5 py-1.5 text-center">
                       {worst ? (

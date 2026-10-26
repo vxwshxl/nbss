@@ -80,7 +80,7 @@ export default async function ClientSitePage() {
       .order("check_in_at", { ascending: false }),
     supabase
       .from("client_attendance")
-      .select("worked_minutes, overtime_minutes, status")
+      .select("guard_id, check_in_at, worked_minutes, overtime_minutes, status")
       .gte("check_in_at", monthStart.toISOString()),
     supabase
       .from("sites")
@@ -141,7 +141,8 @@ export default async function ClientSitePage() {
         />
         <StatCard
           label="Shifts"
-          value={String(punches.length)}
+          // Guard-days: a guard who checks in twice in a day has worked one shift that day.
+          value={String(new Set(punches.map((p) => `${p.guard_id}|${p.check_in_at ? new Date(p.check_in_at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) : ""}`)).size)}
           hint="This month"
           icon={CalendarCheck}
           tone="sky"

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireRoleSession } from "@/lib/auth";
+import { istDate } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
 
@@ -119,9 +120,10 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
       .map(({ p, shifts, last }) => ({ id: p.id, name: p.full_name, code: p.employee_code, phone: p.phone, shifts, last })),
     client,
     stats: {
-      shifts30: rows.length,
+      // Guard-days, not punches: a second check-in the same day is not a second shift.
+      shifts30: new Set(rows.filter((r) => r.check_in_at).map((r) => `${r.guard_id}|${istDate(new Date(r.check_in_at!))}`)).size,
       guards30: byGuard.size,
-      late30: rows.filter((r) => r.status === "late").length,
+      late30: new Set(rows.filter((r) => r.status === "late" && r.check_in_at).map((r) => `${r.guard_id}|${istDate(new Date(r.check_in_at!))}`)).size,
       hours30: Math.round(worked.reduce((sum, r) => sum + (r.worked_minutes ?? 0), 0) / 60),
     },
     sos: (sos ?? []).map((a) => ({
