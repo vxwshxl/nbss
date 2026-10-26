@@ -1,8 +1,8 @@
 import * as WebBrowser from "expo-web-browser";
 import { LinearGradient } from "expo-linear-gradient";
 import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, IdCard } from "lucide-react-native";
-import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
+import { useRef, useState } from "react";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions, type TextInputInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BrandLockup } from "@/components/brand-lockup";
@@ -134,6 +134,20 @@ function StaffForm({ onBack }: { onBack: () => void }) {
   const { signIn, loading } = useAuth();
   const [number, setNumber] = useState("");
   const [secret, setSecret] = useState("");
+  const pinRef = useRef<TextInputInstance>(null);
+  /**
+   * The keypad for the PIN. Android does not focus a fully transparent input on a tap, so
+   * the boxes are a button that focuses it; blurring first brings the keyboard back if it
+   * was put away while the field kept focus.
+   */
+  const openPin = () => {
+    const input = pinRef.current;
+    if (!input) return;
+    if (input.isFocused()) {
+      input.blur();
+      setTimeout(() => input.focus(), 50);
+    } else input.focus();
+  };
   const [shown, setShown] = useState(false);
   const [focus, setFocus] = useState<"code" | "pin" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +202,10 @@ function StaffForm({ onBack }: { onBack: () => void }) {
               // Digits first, but a TEST- code or an email can still be typed.
               keyboardType={custom ? "default" : Platform.OS === "ios" ? "numbers-and-punctuation" : "visible-password"}
               autoFocus
+              // "Next" on the keyboard goes straight to the PIN.
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={openPin}
               onFocus={() => setFocus("code")}
               onBlur={() => setFocus((f) => (f === "code" ? null : f))}
               style={[styles.input, styles.codeText]}
@@ -200,7 +218,7 @@ function StaffForm({ onBack }: { onBack: () => void }) {
             PIN
           </Text>
           <View style={styles.pinRow}>
-            <View style={styles.pinCells}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Enter your 4-digit PIN" onPress={openPin} style={styles.pinCells}>
               {[0, 1, 2, 3].map((i) => {
                 const active = focus === "pin" && (i === secret.length || (i === 3 && secret.length === 4));
                 return (
@@ -211,8 +229,10 @@ function StaffForm({ onBack }: { onBack: () => void }) {
                   </View>
                 );
               })}
-              {/* One real input over the cells: the keypad, paste and a password manager all work as usual. */}
+              {/* One real input behind the cells: the keypad, paste and a password manager all work as usual. */}
               <TextInput
+                ref={pinRef}
+                pointerEvents="none"
                 value={secret}
                 onChangeText={(v) => {
                   const pin = v.replace(/\D/g, "").slice(0, 4);
@@ -232,7 +252,7 @@ function StaffForm({ onBack }: { onBack: () => void }) {
                 onBlur={() => setFocus((f) => (f === "pin" ? null : f))}
                 style={styles.pinInput}
               />
-            </View>
+            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel={shown ? "Hide PIN" : "Show PIN"} hitSlop={10} onPress={() => setShown((v) => !v)} style={styles.eyeButton}>
               {shown ? <EyeOff size={18} color={color.mutedForeground} strokeWidth={2} /> : <Eye size={18} color={color.mutedForeground} strokeWidth={2} />}
             </Pressable>
@@ -408,14 +428,16 @@ const styles = StyleSheet.create({
   },
   cellDigit: { fontSize: 20, lineHeight: 26, color: color.foreground },
   cellDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.foreground },
-  // Invisible, over the cells, so a tap anywhere on them opens the keypad.
+  // Behind the cells and all but invisible: 0.01, not 0, which Android will not focus.
+  // The cells' button focuses it (openPin), so it takes no touches of its own.
   pinInput: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0,
+    zIndex: -1,
+    opacity: 0.01,
     color: "transparent",
     ...(Platform.OS === "web" ? ({ outlineWidth: 0, outlineStyle: "none" } as object) : null),
   },
