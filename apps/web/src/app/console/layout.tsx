@@ -1,4 +1,4 @@
-import { isStaff, roleLabel } from "@nbss/shared/identity";
+import { isStaff, roleChoice, roleLabel } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { signOut } from "@/app/console/actions";
@@ -8,8 +8,7 @@ import { ConsoleNav } from "@/components/console/console-nav";
 import { SosAlarm } from "@/components/console/sos-alarm";
 import { navIndexFor } from "@/components/console/nav-items";
 import {
-  ImpersonationPicker,
-  ViewingAs,
+  ImpersonationControl,
   type Person,
 } from "@/components/console/impersonation";
 import { UserMenu } from "@/components/console/user-menu";
@@ -76,7 +75,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     ? ((
         await supabaseAdmin()
           .from("profiles")
-          .select("id, employee_code, full_name, role")
+          .select("id, employee_code, full_name, role, trade")
           .eq("active", true)
           .neq("id", realProfile.id)
           // View as: only the people on the side being looked at.
@@ -126,18 +125,18 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       nav={<ConsoleNav role={profile.role} sites={sites} badges={badges} />}
       sites={staff ? sites : undefined}
       topbarSecondary={
-        // Viewing as someone: their icon, name and Exit in the header. Otherwise the
-        // picker, for a developer (chaining impersonation is refused by the action).
-        impersonating ? (
-          <ViewingAs
-            name={profile.full_name}
-            code={profile.employee_code}
-            role={profile.role}
-            adminName={realProfile.full_name}
+        // View as, as schoolerp has it: a pill, or while viewing a round icon whose panel
+        // says who and offers Exit. A developer's alone.
+        canImpersonate ? (
+          <ImpersonationControl
+            people={people}
+            impersonating={impersonating}
+            label={profile.full_name}
+            currentRole={impersonating ? roleChoice(profile.role, profile.trade) : null}
+            currentUserId={impersonating ? profile.id : null}
+            start={startImpersonation}
             stop={stopImpersonation}
           />
-        ) : canImpersonate ? (
-          <ImpersonationPicker people={people} start={startImpersonation} />
         ) : undefined
       }
       topbarRight={

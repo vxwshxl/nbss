@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { Eye, LogOut, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Check, Eye, Filter, Loader2, Search, UserCog, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { initials } from "@/lib/ui/initials";
+import { ROLE_CHOICE_LABEL, roleChoice, type RoleChoice } from "@nbss/shared/identity";
+
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/auth";
 
@@ -16,167 +14,245 @@ export type Person = {
   employee_code: string;
   full_name: string;
   role: Role;
+  /** security, or housekeeping for a Housekeeper (0050). */
+  trade?: string | null;
 };
 
-export const ROLE_LABEL: Record<Role, string> = {
-  developer: "Developer",
-  admin: "Administrator",
-  supervisor: "Supervisor",
-  guard: "Guard",
-  client: "Client",
-};
+/** The roles the list can be narrowed to, in this order. */
+const ROLES: RoleChoice[] = ["admin", "supervisor", "guard", "housekeeping", "client", "developer"];
 
 /**
- * While viewing as someone: their icon and name in the header, and Exit beside it.
- * Amber, so it cannot be mistaken for your own account, and always in view.
+ * View as, as schoolerp has it: one control in the header.
+ *
+ * Not viewing: a "View as" pill. Viewing as someone: a round icon (who it is lives in
+ * the tooltip and the top of the panel). Either opens the same panel: while viewing,
+ * who you are viewing as and Exit; then the roles on the left, which narrow the people
+ * on the right, with a search. Picking a role answers "which guard?", never "be a
+ * generic guard": every view is a real account, which is what the audit log records.
  */
-export function ViewingAs({
-  name,
-  code,
-  role,
-  adminName,
+export function ImpersonationControl({
+  people,
+  impersonating,
+  label,
+  currentRole = null,
+  currentUserId = null,
+  start,
   stop,
 }: {
-  name: string;
-  code: string;
-  role: Role;
-  adminName: string;
-  stop: () => Promise<void>;
-}) {
-  const [pending, start] = useTransition();
-  return (
-    <div
-      role="status"
-      title={`Viewing as ${name} (${code}). Signed in as ${adminName}; attendance cannot be recorded from this view.`}
-      className="inline-flex h-9 min-w-0 items-center gap-2 rounded-full border-2 border-amber-500/50 bg-amber-100 pr-1 pl-1 text-amber-950 dark:bg-amber-500/20 dark:text-amber-100 print:hidden"
-    >
-      <Avatar className="size-7 border border-amber-500/40">
-        <AvatarFallback className="bg-amber-200 text-[11px] font-semibold text-amber-950">{initials(name)}</AvatarFallback>
-      </Avatar>
-      <span className="min-w-0 max-sm:hidden">
-        <span className="block max-w-40 truncate text-sm leading-tight font-semibold">{name}</span>
-        <span className="block truncate text-[11px] leading-tight text-amber-900/70 dark:text-amber-200/70">
-          {ROLE_LABEL[role]} · {code}
-        </span>
-      </span>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => start(async () => void (await stop()))}
-        className="inline-flex h-7 items-center gap-1 rounded-full bg-amber-600 px-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
-      >
-        <LogOut className="size-3.5" />
-        {pending ? "Exiting…" : "Exit"}
-      </button>
-    </div>
-  );
-}
-
-/**
- * The picker an admin opens to view the console as somebody else.
- *
- * A dropdown under the button, with a search at the top: the person is one tap
- * away, and Exit in the header takes you back.
- */
-export function ImpersonationPicker({
-  people,
-  start,
-}: {
   people: Person[];
+  impersonating: boolean;
+  /** Who is being viewed as (shown in the tooltip and the panel). */
+  label: string;
+  /** Their role, preselected when the panel is reopened. */
+  currentRole?: RoleChoice | null;
+  /** Their account, pinned to the top of the list and marked "Viewing now". */
+  currentUserId?: string | null;
   start: (profileId: string) => Promise<void>;
+  stop: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleChoice | null>(null);
+  // What the screen says while the switch happens: the next screen is a full render away.
+  const [switching, setSwitching] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  const matches = useMemo(() => {
+  const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return people;
-    return people.filter((p) =>
-      `${p.full_name} ${p.employee_code} ${ROLE_LABEL[p.role]}`.toLowerCase().includes(q),
-    );
-  }, [people, query]);
+    return people
+      .filter((p) => !roleFilter || roleChoice(p.role, p.trade) === roleFilter)
+      .filter((p) => !q || `${p.full_name} ${p.employee_code}`.toLowerCase().includes(q))
+      .sort((a, b) => Number(b.id === currentUserId) - Number(a.id === currentUserId));
+  }, [people, query, roleFilter, currentUserId]);
 
-  function view(id: string) {
+  // Close on an outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // A redirect throws by design; only a real Error is a real problem.
+  const run = (fn: () => Promise<void>) =>
     startTransition(async () => {
       try {
-        await start(id);
+        await fn();
       } catch (error) {
-        // A redirect throws by design, and catching it here would report the
-        // successful case as a failure. Only a real Error is a real problem.
         if (error instanceof Error && !error.message.includes("NEXT_REDIRECT")) {
+          setSwitching(null);
           toast.error(error.message);
         }
       }
     });
+
+  function pick(p: Person) {
+    setOpen(false);
+    setSwitching(`Opening as ${p.full_name}…`);
+    run(() => start(p.id));
+  }
+  function exit() {
+    setOpen(false);
+    setSwitching("Back to your own console…");
+    run(stop);
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="View console as someone else"
-          className="inline-flex h-9 min-w-0 items-center gap-2 rounded-full border-2 border-border bg-elevated px-3.5 text-sm font-semibold shadow-[0_2px_0_var(--ds-border)] transition-[filter,background-color] hover:bg-subtle"
-        >
-          <Eye className="size-4 shrink-0 text-secondary-fg" />
-          <span className="shrink-0 max-sm:hidden">View as</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-[min(92vw,360px)] space-y-2 p-2">
-        <p className="px-1 pt-1 text-xs text-muted-foreground">See the console exactly as this person does. What you do is recorded against your own account.</p>
+    <div ref={rootRef} className="relative min-w-0">
+      <button
+        type="button"
+        onClick={() => {
+          // Reopening while viewing starts where you are: their role, them first.
+          if (!open) {
+            setRoleFilter(impersonating && currentRole ? currentRole : null);
+            setQuery("");
+          }
+          setOpen((v) => !v);
+        }}
+        title={impersonating ? `Viewing as ${label}` : undefined}
+        aria-label={impersonating ? `Viewing as ${label}. Change or exit` : "View console as someone else"}
+        className={cn(
+          "inline-flex min-w-0 items-center gap-2 rounded-full text-sm font-medium transition-colors",
+          impersonating
+            ? "size-9 justify-center bg-primary text-primary-foreground shadow-[0_3px_0_color-mix(in_srgb,var(--primary)_60%,black)] hover:brightness-105"
+            : "border border-border bg-card px-3.5 py-2 text-foreground hover:bg-accent/40",
+        )}
+      >
+        {impersonating ? <UserCog className="size-4 shrink-0" /> : <Eye className="size-4 shrink-0 text-muted-foreground" />}
+        {!impersonating && <span className="shrink-0 text-muted-foreground max-sm:hidden">View as</span>}
+      </button>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, code or role…"
-            aria-label="Search people"
-            className="pl-9"
-            autoFocus
-          />
+      {switching && pending && (
+        <div role="status" aria-live="polite" className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-sm animate-in fade-in-0 duration-150">
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-popover px-5 py-4 text-sm font-medium shadow-xl">
+            <Loader2 className="size-4 animate-spin text-primary" />
+            {switching}
+          </div>
         </div>
+      )}
 
-        <div className="-mx-1 max-h-[50vh] min-h-0 overflow-y-auto px-1">
-          {matches.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Nobody matches that.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-0.5">
-              {matches.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => view(p.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg p-2 text-left outline-none transition-colors",
-                      "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
-                      "disabled:pointer-events-none disabled:opacity-50",
-                    )}
-                  >
-                    <Avatar className="size-8 border border-border">
-                      <AvatarFallback className="bg-muted text-[11px] font-semibold">
-                        {initials(p.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {p.full_name}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {ROLE_LABEL[p.role]} · <span className="font-mono">{p.employee_code}</span>
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+      {open && (
+        <div className="absolute right-0 z-50 mt-2 max-h-[80vh] w-[34rem] max-w-[calc(100vw-2rem)] origin-top-right overflow-y-auto rounded-2xl border border-border bg-popover shadow-xl duration-200 ease-out-strong animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 max-sm:fixed max-sm:inset-x-3 max-sm:top-16 max-sm:mt-0 max-sm:w-auto max-sm:max-w-none">
+          {impersonating && (
+            <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-5 py-3 text-sm">
+              <UserCog className="size-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 truncate">
+                Viewing as <b>{label}</b>
+                {currentRole && <span className="text-muted-foreground"> · {ROLE_CHOICE_LABEL[currentRole]}</span>}
+              </span>
+            </div>
           )}
+          {impersonating && (
+            <div className="border-b border-border">
+              <button
+                type="button"
+                onClick={exit}
+                disabled={pending}
+                className="flex w-full items-center gap-2 px-5 py-3.5 text-sm font-semibold text-destructive hover:bg-destructive/5"
+              >
+                {pending ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                Exit impersonation
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-col divide-y divide-border sm:grid sm:grid-cols-[40%_60%] sm:divide-x sm:divide-y-0">
+            {/* Role filter: narrows the list on the right. */}
+            <div className="p-3">
+              <p className="flex items-center gap-2 px-2 pb-2 text-xs font-medium tracking-wide text-muted-foreground">
+                <Filter className="size-3.5" /> Filter by role
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setRoleFilter(null);
+                  setQuery("");
+                }}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-accent/50",
+                  roleFilter === null ? "bg-accent/60 font-semibold" : "text-foreground/80 hover:text-foreground",
+                )}
+              >
+                All roles
+                {roleFilter === null && <Check className="size-4" />}
+              </button>
+              {ROLES.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => setRoleFilter(role)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-accent/50",
+                    roleFilter === role ? "bg-accent/60 font-semibold" : "text-foreground/80 hover:text-foreground",
+                  )}
+                >
+                  {ROLE_CHOICE_LABEL[role]}
+                  {roleFilter === role && <Check className="size-4" />}
+                </button>
+              ))}
+            </div>
+
+            {/* The person to view as. */}
+            <div className="flex max-h-[26rem] flex-col p-3">
+              <p className="flex items-center gap-2 px-2 pb-2 text-xs font-medium tracking-wide text-muted-foreground">
+                <UserCog className="size-3.5" />
+                {roleFilter ? `Pick a ${ROLE_CHOICE_LABEL[roleFilter].toLowerCase()} to impersonate` : "Pick someone to impersonate"}
+              </p>
+              <div className="relative mb-2">
+                <Search className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search name or employee code…"
+                  className="w-full rounded-lg border border-border bg-background py-2 pr-3 pl-9 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                />
+              </div>
+
+              <div className="-mr-1 flex-1 space-y-0.5 overflow-y-auto pr-1">
+                {results.length === 0 ? (
+                  <p className="px-3 py-6 text-sm text-muted-foreground">
+                    {roleFilter ? `No ${ROLE_CHOICE_LABEL[roleFilter].toLowerCase()} accounts match.` : "No users found."}
+                  </p>
+                ) : (
+                  results.map((u) => {
+                    const current = impersonating && u.id === currentUserId;
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        disabled={pending || current}
+                        onClick={() => pick(u)}
+                        className={cn("block w-full rounded-lg px-3 py-2 text-left hover:bg-accent/50", current && "bg-accent/60 ring-1 ring-primary/30")}
+                      >
+                        <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                          <span className="min-w-0 truncate">{u.full_name}</span>
+                          {current && (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground uppercase">
+                              <Check className="size-3" /> Viewing now
+                            </span>
+                          )}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {ROLE_CHOICE_LABEL[roleChoice(u.role, u.trade)]} · <span className="font-mono">{u.employee_code}</span>
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      )}
+    </div>
   );
 }
