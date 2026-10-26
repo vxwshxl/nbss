@@ -14,6 +14,8 @@ import {
   Play,
   Route as RouteIcon,
   Search,
+  ShieldCheck,
+  Siren,
   TriangleAlert,
   WifiOff,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { SOS_KIND_LABEL, SOS_STATUS_LABEL } from "@nbss/shared/sos";
 import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
 import {
   duration,
@@ -50,7 +53,9 @@ export type RouteShift = {
   deviceFlag: string | null;
 };
 
-type Event = { at: number; kind: "in" | "out" | "left" | "back" | "stop" | "gap" | "now"; text: string; lat?: number; lng?: number; index: number };
+type Event = { at: number; kind: "in" | "out" | "left" | "back" | "stop" | "gap" | "now" | "sos" | "sos_end"; text: string; lat?: number; lng?: number; index: number };
+
+type SosRow = { id: string; kind: string; status: string; raised_at: string; closed_at: string | null; lat: number | null; lng: number | null };
 
 const SPEEDS = [30, 120, 600] as const;
 /** Radix Select cannot hold an empty value, so "every guard" is this. */
@@ -190,6 +195,34 @@ export function RouteHistory({
 
   const stats = useMemo(() => (points.length > 1 ? trailStats(points) : null), [points]);
 
+  // The SOS this guard raised during the shift, for the timeline. Live while the shift is
+  // open: read again whenever an SOS changes.
+  const [sos, setSos] = useState<SosRow[]>([]);
+  const sosShift = shift ? `${shift.attendanceId}|${shift.guardId}|${shift.checkInAt}|${shift.checkOutAt ?? ""}` : null;
+  useEffect(() => {
+    if (!sosShift) return;
+    const [attendanceId, guardId, from, to] = sosShift.split("|");
+    const supabase = supabaseBrowser();
+    let cancelled = false;
+    const load = async () => {
+      let q = supabase.from("sos_alerts").select("id, kind, status, raised_at, closed_at, lat, lng").eq("raised_by", guardId!).gte("raised_at", from!).order("raised_at");
+      if (to) q = q.lte("raised_at", to);
+      const { data } = await q;
+      if (!cancelled) setSos((data ?? []) as SosRow[]);
+    };
+    void load();
+    const channel = to
+      ? null
+      : supabase
+          .channel(`route-sos:${attendanceId}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts", filter: `raised_by=eq.${guardId}` }, () => void load())
+          .subscribe();
+    return () => {
+      cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
+    };
+  }, [sosShift]);
+
   const events: Event[] = useMemo(() => {
     if (points.length === 0) return [];
     const out: Event[] = [];
@@ -206,12 +239,28 @@ export function RouteHistory({
       const index = points.findIndex((p) => p.at >= s.from);
       out.push({ at: s.from, kind: "stop", text: `Stop ${n + 1} · ${duration((s.to - s.from) / 60_000)}${s.inside === false ? ", outside" : ""}`, lat: s.lat, lng: s.lng, index: Math.max(0, index) });
     });
+    // Each SOS where and when it was raised, and how it ended.
+    const nearest = (t: number) => {
+      const i = points.findIndex((p) => p.at >= t);
+      return i < 0 ? points.length - 1 : i;
+    };
+    for (const a of sos) {
+      const at = new Date(a.raised_at).getTime();
+      const i = nearest(at);
+      const p = points[i]!;
+      out.push({ at, kind: "sos", text: `SOS · ${SOS_KIND_LABEL[a.kind as keyof typeof SOS_KIND_LABEL] ?? "Emergency"}`, lat: a.lat ?? p.lat, lng: a.lng ?? p.lng, index: i });
+      if (a.closed_at) {
+        const end = new Date(a.closed_at).getTime();
+        const j = nearest(end);
+        out.push({ at: end, kind: "sos_end", text: `SOS ${(SOS_STATUS_LABEL[a.status as keyof typeof SOS_STATUS_LABEL] ?? "closed").toLowerCase()}`, lat: points[j]!.lat, lng: points[j]!.lng, index: j });
+      }
+    }
     const last = points.at(-1)!;
     if (points.length > 1) {
       out.push({ at: last.at, kind: last.reason === "check_out" ? "out" : "now", text: last.reason === "check_out" ? "Checked out" : "Latest position", lat: last.lat, lng: last.lng, index: points.length - 1 });
     }
     return out.sort((x, y) => x.at - y.at);
-  }, [points, stats]);
+  }, [points, stats, sos]);
 
   function setFilter(key: "guard" | "date", value: string) {
     const next = new URLSearchParams(params.toString());
@@ -431,6 +480,8 @@ const EVENT_TONE: Record<Event["kind"], string> = {
   back: "bg-emerald-500/20 text-emerald-700",
   stop: "bg-slate-200 text-slate-700",
   gap: "bg-rose-500/15 text-rose-700",
+  sos: "bg-red-600 text-white",
+  sos_end: "bg-red-500/15 text-red-700",
 };
 
 function EventIcon({ kind }: { kind: Event["kind"] }) {
@@ -446,6 +497,10 @@ function EventIcon({ kind }: { kind: Event["kind"] }) {
       return <WifiOff className={cls} />;
     case "stop":
       return <Clock className={cls} />;
+    case "sos":
+      return <Siren className={cls} />;
+    case "sos_end":
+      return <ShieldCheck className={cls} />;
     default:
       return <CircleDot className={cls} />;
   }
