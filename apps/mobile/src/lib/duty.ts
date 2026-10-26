@@ -710,15 +710,24 @@ export type MapAlert = {
   responders: number;
 };
 
-export type DutyAreas = { areas: DutyArea[]; friends: Friend[]; alerts: MapAlert[] };
+export type DutyAreas = {
+  areas: DutyArea[];
+  friends: Friend[];
+  alerts: MapAlert[];
+  /** False when SOS is switched off for this person or their site (0052): no button. */
+  sosAllowed: boolean;
+};
 
 /** Where duties are going on, who is on duty with this guard, and the open SOS they may see. */
 export async function dutyAreas(): Promise<DutyAreas> {
-  const { data, error } = await supabase.rpc("duty_areas_now");
+  const [{ data, error }, sos] = await Promise.all([supabase.rpc("duty_areas_now"), supabase.rpc("my_sos_allowed")]);
+  // Unknown is allowed: a button that is there when it should not be is refused by the
+  // database; a button missing when it is needed cannot be undone.
+  const sosAllowed = sos.error ? true : sos.data !== false;
   if (error) {
     console.warn("[duty] duty_areas_now failed", error.message);
-    return { areas: [], friends: [], alerts: [] };
+    return { areas: [], friends: [], alerts: [], sosAllowed };
   }
   const d = (data ?? {}) as Partial<DutyAreas>;
-  return { areas: d.areas ?? [], friends: d.friends ?? [], alerts: d.alerts ?? [] };
+  return { areas: d.areas ?? [], friends: d.friends ?? [], alerts: d.alerts ?? [], sosAllowed };
 }

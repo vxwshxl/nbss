@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import { router, usePathname } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
@@ -15,17 +14,16 @@ import { useLiveFeed } from "@/lib/live-feed";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 const SEEN_KEY = "nbss-sos-seen";
-const SIREN = require("../../assets/sounds/sos-siren.wav");
 
 /**
  * The alarm while the app is open: any SOS this person may see and has not opened yet,
- * whoever raised it (a guard, a supervisor, an admin), rings a siren on a loop with a
- * vibration, and Nibo calls it out under the header. Opening the alert, or the guard's
- * SOS tab that shows it, stops both. Their own SOS never rings at them.
+ * whoever raised it (a guard, a supervisor, an admin), vibrates the phone on a loop
+ * and Nibo calls it out under the header. Opening the alert, or the guard's SOS tab
+ * that shows it, stops both. Their own SOS never rings at them.
  *
- * Loud on purpose: the audio session plays through the silent switch on iOS, and on
- * Android it is media audio, which the ringer's silent mode does not mute. With the app
- * closed, the SOS push does the same job on the "sos" channel (lib/push.ts).
+ * Vibration, not a siren: a sound at a post gives the guard away, and the vibration
+ * works on silent too. With the app closed, the SOS push does the same job on the
+ * "sos" channel (lib/push.ts).
  */
 export function SosRinger({ staff = false }: { staff?: boolean }) {
   const feed = useLiveFeed();
@@ -60,21 +58,8 @@ export function SosRinger({ staff = false }: { staff?: boolean }) {
 
   useEffect(() => {
     if (!loud) return;
-    // A player of its own while it rings, released when it stops.
-    const player = createAudioPlayer(SIREN);
-    void setAudioModeAsync({ playsInSilentMode: true, interruptionMode: "doNotMix", shouldPlayInBackground: true })
-      .catch(() => undefined)
-      .then(() => {
-        player.loop = true;
-        player.volume = 1;
-        player.play();
-      });
     Vibration.vibrate([0, 700, 500], true);
-    return () => {
-      player.pause();
-      player.remove();
-      Vibration.cancel();
-    };
+    return () => Vibration.cancel();
   }, [loud]);
 
   const pulse = useSharedValue(1);

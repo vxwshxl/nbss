@@ -1,6 +1,6 @@
 import { Check, ChevronDown, Search, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, TextInput, View, useWindowDimensions, type ViewStyle } from "react-native";
+import { Keyboard, Modal, Platform, Pressable, StyleSheet, TextInput, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView, ScrollView } from "react-native-gesture-handler";
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +12,26 @@ import { Text } from "./text";
 export type SelectOption<T extends string> = { value: T; label: string; hint?: string };
 
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
+
+/**
+ * Runs `open` once the keyboard is away. A sheet opened over a keyboard that is still
+ * up (a field focused, then the dropdown tapped) saw the window resize as the keyboard
+ * folded under it, and the same tap closed it again: it appeared and was gone.
+ */
+export function afterKeyboard(open: () => void): void {
+  if (!Keyboard.isVisible()) return open();
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    sub.remove();
+    open();
+  };
+  const sub = Keyboard.addListener("keyboardDidHide", go);
+  Keyboard.dismiss();
+  // Some keyboards never report hiding; never leave the tap unanswered.
+  setTimeout(go, 400);
+}
 
 /**
  * A dropdown: a field showing the choice, and a sheet of options from the bottom.
@@ -44,7 +64,7 @@ export function Select<T extends string>({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${title}: ${current?.label ?? ""}. Change`}
-        onPress={() => setOpen(true)}
+        onPress={() => afterKeyboard(() => setOpen(true))}
         style={({ pressed }) => [styles.field, pressed && styles.pressed, style]}
       >
         <View style={styles.fieldText}>
@@ -111,6 +131,13 @@ function Sheet<T extends string>({
   const y = useSharedValue(CLOSED);
   const shade = useSharedValue(0);
   const start = useSharedValue(0);
+  // The backdrop ignores taps for its first moments: the tail of the tap that opened
+  // the sheet must not be read as a tap outside it.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), 250);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     shade.set(withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) }));
@@ -155,7 +182,7 @@ function Sheet<T extends string>({
     <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={() => close()}>
       <GestureHandlerRootView style={styles.fill}>
         <Animated.View style={[styles.scrim, shadeStyle]}>
-          <Pressable accessibilityLabel="Close" style={styles.fill} onPress={() => close()} />
+          <Pressable accessibilityLabel="Close" style={styles.fill} onPress={() => settled && close()} />
         </Animated.View>
 
         <Animated.View style={[styles.sheet, { height: sheetH, paddingBottom: insets.bottom + space[2] }, sheetStyle]}>

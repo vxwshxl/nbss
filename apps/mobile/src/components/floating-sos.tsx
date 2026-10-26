@@ -73,6 +73,8 @@ export function FloatingSos({
 
   // Hidden on an alert's own map, which is already about an SOS.
   if (pathname.startsWith("/sos/")) return null;
+  // Switched off for this person or their site, unless their own SOS is still to stop.
+  if (feed.data?.sosAllowed === false && !mine) return null;
 
   const fire = async () => {
     fired.current = true;

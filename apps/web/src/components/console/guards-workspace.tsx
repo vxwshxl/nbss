@@ -26,6 +26,7 @@ import {
   deleteAccount,
   resetPin,
   setAccountActive,
+  setPersonSos,
   updateContact,
 } from "@/app/console/guards/actions";
 import { emptyGuardForm } from "@/app/console/guards/guard-state";
@@ -53,6 +54,7 @@ import {
 } from "@/components/ui/select";
 import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { StatusPill } from "@/components/ui/status-pill";
+import { Switch } from "@/components/ui/switch";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 import { roleChoice, type RoleChoice } from "@nbss/shared/identity";
@@ -66,6 +68,8 @@ export type PersonRow = {
   role: Role;
   /** security, or housekeeping for a Housekeeper (0050). */
   trade: string;
+  /** Whether they have the SOS button (0052). */
+  sos_enabled: boolean;
   phone: string | null;
   email: string | null;
   active: boolean;
@@ -230,6 +234,7 @@ export function GuardsWorkspace({
 
   const [addState, addAction] = useActionState(addGuard, emptyGuardForm);
   const [role, setRole] = useState<RoleChoice>(defaultRole);
+  const [sosOn, setSosOn] = useState(true);
 
   function runContact(row: PersonRow, form: FormData) {
     start(async () => {
@@ -307,6 +312,18 @@ export function GuardsWorkspace({
     setDetail(null);
     toast.success("Account deleted", {
       description: `${row.full_name} · ${row.employee_code}`,
+    });
+  }
+
+  function runSos(row: PersonRow, enabled: boolean) {
+    start(async () => {
+      try {
+        await setPersonSos(row.id, enabled);
+        setVersion((v) => v + 1);
+        toast.success(`SOS switched ${enabled ? "on" : "off"} for ${row.full_name}.`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not change SOS.");
+      }
     });
   }
 
@@ -577,6 +594,15 @@ export function GuardsWorkspace({
                 />
               </div>
             </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
+              <div>
+                <Label htmlFor="sos_enabled">SOS button</Label>
+                <p className="text-xs text-muted-foreground">Off: they cannot raise an SOS from the app.</p>
+              </div>
+              <Switch id="sos_enabled" checked={sosOn} onCheckedChange={setSosOn} aria-label="SOS button" />
+              <input type="hidden" name="sos_enabled" value={sosOn ? "on" : "off"} />
+            </div>
           </form>
 
           <DialogFooter>
@@ -693,6 +719,16 @@ export function GuardsWorkspace({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {detail.id !== selfId && (
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3 sm:max-w-xs">
+                  <div>
+                    <Label htmlFor="person-sos">SOS button</Label>
+                    <p className="text-xs text-muted-foreground">{detail.sos_enabled ? "On: they can raise an SOS." : "Off: no SOS from their app."}</p>
+                  </div>
+                  <Switch id="person-sos" checked={detail.sos_enabled} disabled={pending} onCheckedChange={(on) => runSos(detail, on)} aria-label="SOS button" />
                 </div>
               )}
 

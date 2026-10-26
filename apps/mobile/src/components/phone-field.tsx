@@ -7,7 +7,7 @@ import { COUNTRY_CODES, joinPhone, splitPhone } from "@nbss/shared/identity";
 import { color, space } from "@/theme/tokens";
 
 import { Field } from "./field";
-import { OptionSheet } from "./select";
+import { OptionSheet, afterKeyboard } from "./select";
 import { Text } from "./text";
 
 /**
@@ -39,7 +39,7 @@ export function PhoneField({ label, value, onChange }: { label: string; value: s
         autoComplete="tel"
         hint={national && national.length !== 10 ? `${national.length}/10 digits` : undefined}
         left={
-          <Pressable accessibilityRole="button" accessibilityLabel={`Country code ${code}`} onPress={() => setPicking(true)} style={styles.code}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Country code ${code}`} onPress={() => afterKeyboard(() => setPicking(true))} style={styles.code}>
             <Text weight="semibold" mono>
               {code}
             </Text>

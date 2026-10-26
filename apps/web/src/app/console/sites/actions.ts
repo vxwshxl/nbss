@@ -151,6 +151,24 @@ export async function createSite(
   return { ok: true, values: null, created: name };
 }
 
+/** Switches SOS on or off for everyone working a site (0052). */
+export async function setSiteSos(id: string, enabled: boolean): Promise<void> {
+  const profile = await requireRole("admin");
+  const supabase = await supabaseServer();
+
+  const { error } = await supabase.from("sites").update({ sos_enabled: enabled }).eq("id", id);
+  if (error) throw new Error(error.message);
+
+  await audit({
+    actor: profile,
+    action: enabled ? "site_sos_on" : "site_sos_off",
+    entity: "sites",
+    entityId: id,
+  });
+
+  revalidatePath("/console/sites");
+}
+
 /** Takes a site out of service without deleting the attendance recorded at it. */
 export async function setSiteActive(id: string, active: boolean): Promise<void> {
   const profile = await requireRole("admin");

@@ -521,6 +521,7 @@ export type Database = {
           is_test: boolean;
           avatar_url: string | null;
           trade: string;
+          sos_enabled: boolean;
         };
         Insert: {
           id: string;
@@ -541,6 +542,7 @@ export type Database = {
           is_test?: boolean;
           avatar_url?: string | null;
           trade?: string;
+          sos_enabled?: boolean;
         };
         Update: {
           id?: string;
@@ -561,6 +563,7 @@ export type Database = {
           is_test?: boolean;
           avatar_url?: string | null;
           trade?: string;
+          sos_enabled?: boolean;
         };
         Relationships: [];
       };
@@ -929,6 +932,7 @@ export type Database = {
           notify_client_on_sos: boolean;
           guards_required: number | null;
           is_test: boolean;
+          sos_enabled: boolean;
         };
         Insert: {
           id?: string;
@@ -952,6 +956,7 @@ export type Database = {
           notify_client_on_sos?: boolean;
           guards_required?: number | null;
           is_test?: boolean;
+          sos_enabled?: boolean;
         };
         Update: {
           id?: string;
@@ -975,6 +980,7 @@ export type Database = {
           notify_client_on_sos?: boolean;
           guards_required?: number | null;
           is_test?: boolean;
+          sos_enabled?: boolean;
         };
         Relationships: [];
       };
@@ -1569,6 +1575,10 @@ export type Database = {
       next_client_code: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      my_sos_allowed: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
       };
       next_employee_code: {
         Args: Record<PropertyKey, never>;

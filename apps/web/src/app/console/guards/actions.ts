@@ -44,6 +44,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
   // A choice, not a role: Housekeeper is the guard role with the housekeeping trade.
   const choice = String(data.get("role") ?? "guard") as RoleChoice;
   const supplied = String(data.get("pin") ?? "").trim();
+  const sosEnabled = data.get("sos_enabled") !== "off";
 
   const values = { employee_code: number, full_name: fullName, phone, email, role: choice, pin: supplied };
 
@@ -67,6 +68,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     fullName,
     role,
     trade,
+    sosEnabled,
     phone,
     email: email || undefined,
   });
@@ -86,7 +88,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     action: "account_created",
     entity: "profiles",
     entityId: created.id,
-    detail: { employee_code: employeeCode, role, trade, email: !!email },
+    detail: { employee_code: employeeCode, role, trade, sos: sosEnabled, email: !!email },
     ip: await clientIp(),
   });
 
@@ -228,6 +230,24 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
   await audit({
     actor: session.realProfile,
     action: active ? "account_reactivated" : "account_deactivated",
+    entity: "profiles",
+    entityId: profileId,
+    ip: await clientIp(),
+  });
+
+  revalidatePath("/console/guards");
+  revalidatePath("/console/users");
+}
+
+/** Switches someone's SOS button on or off (0052). */
+export async function setPersonSos(profileId: string, enabled: boolean): Promise<void> {
+  const session = await requireRoleSession("admin");
+  const { error } = await supabaseAdmin().from("profiles").update({ sos_enabled: enabled }).eq("id", profileId);
+  if (error) throw new Error(error.message);
+
+  await audit({
+    actor: session.realProfile,
+    action: enabled ? "sos_switched_on" : "sos_switched_off",
     entity: "profiles",
     entityId: profileId,
     ip: await clientIp(),

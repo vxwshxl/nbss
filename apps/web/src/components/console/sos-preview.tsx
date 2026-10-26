@@ -59,6 +59,9 @@ function minutesBetween(a: string, b: string | null): string {
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
+/** Sent when an SOS's details are opened anywhere in the console. */
+export const SOS_OPENED_EVENT = "nbss:sos-opened";
+
 /**
  * One SOS, opened from the dashboard's alert strip, the SOS log or a site.
  *
@@ -72,6 +75,11 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
   const [saving, save] = useTransition();
   const [note, setNote] = useState("");
   const [version, setVersion] = useState(0);
+
+  // Opening the details is answering the alarm: the siren for this SOS stops (SosAlarm).
+  useEffect(() => {
+    if (id) window.dispatchEvent(new CustomEvent(SOS_OPENED_EVENT, { detail: id }));
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;

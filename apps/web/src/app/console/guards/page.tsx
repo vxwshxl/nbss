@@ -16,7 +16,7 @@ export default async function GuardsPage() {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, employee_code, full_name, role, trade, phone, email, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
+      "id, employee_code, full_name, role, trade, sos_enabled, phone, email, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
     )
     .eq("role", "guard")
     .order("employee_code");

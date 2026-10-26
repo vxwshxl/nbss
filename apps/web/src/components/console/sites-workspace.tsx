@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { MapPinned, PowerOff, Power, Radio, Shapes } from "lucide-react";
+import { BellOff, MapPinned, PowerOff, Power, Radio, Shapes, Siren } from "lucide-react";
 import { toast } from "sonner";
 
-import { setSiteActive } from "@/app/console/sites/actions";
+import { setSiteActive, setSiteSos } from "@/app/console/sites/actions";
 import { SiteMap, type MapSite } from "@/components/console/site-map";
 import { SitePreviewDialog } from "@/components/console/site-preview";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ export type SiteRow = {
   grace_minutes: number;
   standard_shift_minutes: number;
   active: boolean;
+  /** Whether anyone working here has the SOS button (0052). */
+  sos_enabled: boolean;
   created_at: string;
   /** Guards checked in here right now. */
   onDuty: number;
@@ -111,6 +113,18 @@ export function SitesWorkspace({
         );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not change the site.");
+      }
+    });
+  }
+
+  function toggleSos(site: SiteRow, enabled: boolean) {
+    start(async () => {
+      try {
+        await setSiteSos(site.id, enabled);
+        setDetail(null);
+        toast.success(enabled ? "SOS switched on" : "SOS switched off", { description: site.name });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not change SOS for the site.");
       }
     });
   }
@@ -251,6 +265,20 @@ export function SitesWorkspace({
         canReview={canReview}
         actions={
           canManage && detail ? (
+            <>
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSos(detail, !detail.sos_enabled)}>
+              {detail.sos_enabled ? (
+                <>
+                  <BellOff data-icon="inline-start" />
+                  Switch SOS off
+                </>
+              ) : (
+                <>
+                  <Siren data-icon="inline-start" />
+                  Switch SOS on
+                </>
+              )}
+            </Button>
             <Button
               size="sm"
               variant={detail.active ? "destructive" : "default"}
@@ -269,6 +297,7 @@ export function SitesWorkspace({
                 </>
               )}
             </Button>
+            </>
           ) : null
         }
       />

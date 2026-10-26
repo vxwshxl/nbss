@@ -176,6 +176,8 @@ export async function createStaffAccount(input: {
   role: Role;
   /** A guard-role account's trade (0050); security unless said. */
   trade?: Trade;
+  /** The SOS button; on unless said (0052). */
+  sosEnabled?: boolean;
   phone?: string;
   email?: string;
 }): Promise<{ id: string } | { error: string }> {
@@ -225,6 +227,7 @@ export async function createStaffAccount(input: {
     employee_code: code,
     role: input.role,
     trade: input.role === "guard" ? (input.trade ?? "security") : "security",
+    sos_enabled: input.sosEnabled ?? true,
     full_name: input.fullName.trim(),
     phone: input.phone?.trim() || null,
     email,

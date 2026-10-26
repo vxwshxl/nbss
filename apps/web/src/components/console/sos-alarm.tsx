@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { SOS_KIND_LABEL, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
-import { SosPreviewDialog } from "@/components/console/sos-preview";
+import { SOS_OPENED_EVENT, SosPreviewDialog } from "@/components/console/sos-preview";
 import { Nibo } from "@/components/nibo/nibo";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
@@ -20,11 +20,13 @@ type Alert = { id: string; status: SosStatus; kind: SosKind; site: string; guard
  * on it, without leaving the page.
  *
  * The siren repeats while any alert is still waiting for a first response, and stops by
- * itself the moment someone answers. Silence only quietens this tab.
+ * itself the moment someone answers. Silence, or opening its details, quietens this browser until it is resolved.
  *
  * Browsers will not play sound before the page has been clicked or typed in, so the
  * audio is unlocked on the first gesture, and an alarm already waiting starts then.
  */
+const HUSHED_KEY = "nbss-sos-hushed";
+
 export function SosAlarm() {
   const [open, setOpen] = useState<string | null>(null);
   // What the mascot shows: every SOS still open, newest first.
@@ -33,6 +35,15 @@ export function SosAlarm() {
   const hush = useRef<(id: string) => void>(() => undefined);
   const waiting = useRef(new Map<string, Alert>());
   const silenced = useRef(new Set<string>());
+
+  // Silenced alerts stay silent across a reload, until they are resolved.
+  useEffect(() => {
+    try {
+      for (const id of JSON.parse(localStorage.getItem(HUSHED_KEY) ?? "[]") as string[]) silenced.current.add(id);
+    } catch {
+      // No storage: silencing lasts for this page only.
+    }
+  }, []);
 
   useEffect(() => {
     const supabase = supabaseBrowser();
@@ -51,10 +62,23 @@ export function SosAlarm() {
       else delete document.body.dataset.sosLive;
     };
 
+    const remember = () => {
+      try {
+        localStorage.setItem(HUSHED_KEY, JSON.stringify([...silenced.current].filter((id) => waiting.current.has(id))));
+      } catch {
+        // No storage: nothing to remember it in.
+      }
+    };
+
     hush.current = (id: string) => {
       silenced.current.add(id);
+      remember();
       sync();
     };
+
+    // The details opened from anywhere (the SOS page, the dashboard, a site) silence it.
+    const opened = (e: Event) => hush.current((e as CustomEvent<string>).detail);
+    addEventListener(SOS_OPENED_EVENT, opened);
 
     const show = (a: Alert) => {
       if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
@@ -88,6 +112,7 @@ export function SosAlarm() {
     const track = async (id: string, status: SosStatus) => {
       if (status !== "active" && status !== "acknowledged") {
         waiting.current.delete(id);
+        silenced.current.delete(id);
         sync();
         return;
       }
@@ -140,6 +165,7 @@ export function SosAlarm() {
     return () => {
       cancelled = true;
       s.stop();
+      removeEventListener(SOS_OPENED_EVENT, opened);
       delete document.body.dataset.sosLive;
       removeEventListener("pointerdown", unlock);
       removeEventListener("keydown", unlock);
@@ -218,7 +244,7 @@ function SosNibo({ alerts, quiet, onOpen, onSilence }: { alerts: Alert[]; quiet:
             <button
               type="button"
               onClick={onSilence}
-              title="Stops the siren in this tab only"
+              title="Stops the siren in this browser until the SOS is resolved"
               className="inline-flex h-9 items-center gap-1 rounded-full border border-[#d1d5db] px-3 text-sm font-semibold text-[#111827] hover:bg-[#f3f4f6]"
             >
               <BellOff className="size-4" /> Silence
