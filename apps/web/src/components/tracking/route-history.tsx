@@ -18,6 +18,7 @@ import {
   WifiOff,
 } from "lucide-react";
 
+import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,6 +80,8 @@ export function RouteHistory({
   const [head, setHead] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(120);
+  // The guard's full profile, from their name on the summary.
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [pan, setPan] = useState<{ lat: number; lng: number; key: string } | null>(null);
 
@@ -305,12 +308,16 @@ export function RouteHistory({
         )}
       </div>
 
+      <PersonPreviewDialog personId={profileId} onClose={() => setProfileId(null)} />
+
       {/* Summary and timeline */}
       <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-210px)] xl:max-h-none">
         {shift ? (
           <>
             <div className="border-b border-app-line-soft p-4">
-              <p className="font-semibold">{shift.guardName}</p>
+              <button type="button" onClick={() => setProfileId(shift.guardId)} className="block max-w-full truncate text-left font-semibold hover:underline">
+                {shift.guardName}
+              </button>
               <p className="text-xs text-muted-foreground">
                 {shift.guardCode} · {shift.siteName}
               </p>

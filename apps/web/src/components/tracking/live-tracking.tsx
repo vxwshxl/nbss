@@ -26,6 +26,7 @@ import {
 
 import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 
+import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { LiveMap, type LiveMarker, type LiveSite } from "@/components/tracking/live-map";
 import { initials } from "@/lib/ui/initials";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -130,6 +131,13 @@ export function LiveTracking({
   const [query, setQuery] = useState("");
   const [loadedTrail, setLoadedTrail] = useState<{ id: string; points: TrailPoint[] } | null>(null);
   const [live, setLive] = useState(false);
+  // The guard's full profile, from their name or photo on the card.
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const openProfile = (id: string) => {
+    // The dialog draws outside the map, so full screen would hide it.
+    if (document.fullscreenElement) void document.exitFullscreen();
+    setProfileId(id);
+  };
 
   const positions = useMemo(() => {
     const next: Record<string, LivePosition> = Object.fromEntries(initialPositions.map((p) => [p.guard_id, p]));
@@ -317,10 +325,13 @@ export function LiveTracking({
             outsideMin={stats?.outsideMinutes ?? null}
             points={trail.length}
             onClose={() => setSelected(null)}
+            onProfile={() => openProfile(sel.g.guardId)}
             onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${now}:${trail.length}` })}
           />
         )}
       </div>
+
+      <PersonPreviewDialog personId={profileId} onClose={() => setProfileId(null)} />
 
       {/* Below the map on a phone, beside it on a desk: always its own scroll, so a
           list of two hundred guards never pushes the map off the screen. */}
@@ -431,6 +442,7 @@ function GuardCard({
   outsideMin,
   points,
   onClose,
+  onProfile,
   onCenter,
 }: {
   row: Row;
@@ -439,6 +451,7 @@ function GuardCard({
   outsideMin: number | null;
   points: number;
   onClose: () => void;
+  onProfile: () => void;
   onCenter: () => void;
 }) {
   const since = new Date(g.checkInAt).getTime();
@@ -446,11 +459,13 @@ function GuardCard({
   return (
     <div className="absolute inset-x-3 bottom-3 z-10 max-h-[calc(100%-4.5rem)] overflow-y-auto rounded-2xl bg-card/98 shadow-xl ring-1 ring-border backdrop-blur sm:right-auto sm:w-[380px]">
       <div className="flex items-start gap-3 p-4 pb-3">
-        <span className="grid size-12 shrink-0 place-items-center rounded-full text-base font-semibold text-white" style={{ background: STATE_COLOR[state] }}>
+        <button type="button" onClick={onProfile} aria-label={`${g.name}: full profile`} className="press grid size-12 shrink-0 place-items-center rounded-full text-base font-semibold text-white" style={{ background: STATE_COLOR[state] }}>
           {initials(g.name)}
-        </span>
+        </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold">{g.name}</p>
+          <button type="button" onClick={onProfile} className="block max-w-full truncate text-left text-base font-semibold hover:underline">
+            {g.name}
+          </button>
           <p className="truncate text-xs text-muted-foreground">
             <span className="font-mono">{g.code}</span> · {g.siteName}
           </p>
