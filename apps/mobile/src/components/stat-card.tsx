@@ -29,6 +29,8 @@ export function StatCard({
   href,
   cta,
   tone,
+  onPress,
+  selected,
 }: {
   label: string;
   value: string;
@@ -38,6 +40,10 @@ export function StatCard({
   href?: Href;
   cta?: string;
   tone?: Tone;
+  /** A card that does something on the screen it is on (narrows a list), not a link. */
+  onPress?: () => void;
+  /** Shown as the one chosen: a ring in its tone. */
+  selected?: boolean;
 }) {
   const t = TONES[tone ?? toneFor(label)];
   const { isTablet } = useLayout();
@@ -91,13 +97,13 @@ export function StatCard({
         )}
       </View>
 
-      {href && (
+      {(href || onPress) && (
         // Spelled out rather than left to a hover state, exactly as the web component
         // does — on a touch screen there is no cursor to change, and a card that
         // silently happens to be a link is a card nobody taps.
         <View style={styles.cta}>
           <Text variant="label" weight="semibold" tone="primary">
-            {cta ?? "View"}
+            {cta ?? (onPress ? (selected ? "Showing these" : "Show these") : "View")}
           </Text>
           <ArrowRight size={16} strokeWidth={2} color={color.primaryInk} />
         </View>
@@ -115,6 +121,19 @@ export function StatCard({
           {body}
         </Pressable>
       </Link>
+    );
+  }
+
+  if (onPress) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: Boolean(selected) }}
+        onPress={onPress}
+        style={({ pressed }) => [styles.card, selected && { borderColor: t.chipText, borderWidth: 2 }, pressed && styles.pressed]}
+      >
+        {body}
+      </Pressable>
     );
   }
 

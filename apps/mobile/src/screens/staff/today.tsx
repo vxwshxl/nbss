@@ -143,6 +143,10 @@ const mins = (ms: number) => {
 export function StaffToday() {
   const [day, setDay] = useState<Day>("0");
   const [site, setSite] = useState<string | null>(null);
+  // A card tapped: only its people below. Tapped again: everyone.
+  const [only, setOnly] = useState<"late" | "on" | "coming" | "done" | null>(null);
+  const toggle = (k: NonNullable<typeof only>) => setOnly((cur) => (cur === k ? null : k));
+  const shows = (k: NonNullable<typeof only>) => only === null || only === k;
   const loader = useCallback(() => load(day), [day]);
   const { data, refreshing, reload, refresh } = useLoader(loader);
   useLiveTables(["shifts", "attendance"], reload);
@@ -177,6 +181,7 @@ export function StaffToday() {
         onChange={(v) => {
           setDay(v);
           setSite(null);
+          setOnly(null);
         }}
         options={[
           { value: "-1", label: "Yesterday" },
@@ -193,15 +198,17 @@ export function StaffToday() {
         />
       )}
       <CardGrid columns={2}>
-        <StatCard label="Not arrived" value={String(late.length)} hint="Late, not checked in" icon={UserRoundX} tone={late.length ? "rose" : "slate"} />
-        <StatCard label="On duty" value={String(on.length)} hint="Checked in now" icon={CircleCheckBig} tone="emerald" />
-        <StatCard label="Starting later" value={String(coming.length)} hint="Duty not started yet" icon={CalendarClock} tone="sky" />
+        <StatCard label="Not arrived" value={String(late.length)} hint="Late, not checked in" icon={UserRoundX} tone={late.length ? "rose" : "slate"} onPress={() => toggle("late")} selected={only === "late"} />
+        <StatCard label="On duty" value={String(on.length)} hint="Checked in now" icon={CircleCheckBig} tone="emerald" onPress={() => toggle("on")} selected={only === "on"} />
+        <StatCard label="Starting later" value={String(coming.length)} hint="Duty not started yet" icon={CalendarClock} tone="sky" onPress={() => toggle("coming")} selected={only === "coming"} />
         <StatCard
           label="Completed"
           value={String(completed.length)}
           hint={missed.length ? `${missed.length} missed (never came)` : "Came and checked out"}
           icon={Clock3}
           tone={missed.length ? "amber" : "violet"}
+          onPress={() => toggle("done")}
+          selected={only === "done"}
         />
       </CardGrid>
       {data && all.length === 0 && (
@@ -209,8 +216,19 @@ export function StaffToday() {
           No duty on the roster for this day.
         </Text>
       )}
-      <Group title="Not arrived" hint="Their duty has started; they have not checked in" tone="rose" rows={late} onPress={open} note={(d) => `Due ${istTime(d.starts_at)} · ${mins(now - new Date(d.starts_at).getTime())} late`} />
+      {only && (
+        <Text variant="caption" weight="semibold" tone="primary" style={styles.centred} onPress={() => setOnly(null)}>
+          Showing one group. Tap here, or the card again, for everyone.
+        </Text>
+      )}
+      {only && (only === "late" ? late : only === "on" ? on : only === "coming" ? coming : [...missed, ...completed]).length === 0 && (
+        <Text variant="label" tone="muted" style={styles.centred}>
+          Nobody here right now.
+        </Text>
+      )}
+      <Group show={shows("late")} title="Not arrived" hint="Their duty has started; they have not checked in" tone="rose" rows={late} onPress={open} note={(d) => `Due ${istTime(d.starts_at)} · ${mins(now - new Date(d.starts_at).getTime())} late`} />
       <Group
+        show={shows("on")}
         title="On duty now"
         hint="Checked in and working"
         tone="emerald"
@@ -218,9 +236,10 @@ export function StaffToday() {
         onPress={open}
         note={(d) => `In ${istTime(d.inAt!)} · ${mins(now - new Date(d.inAt!).getTime())}${d.offRoster ? " · not rostered" : ` · ends ${istTime(d.ends_at)}`}`}
       />
-      <Group title="Starting later" hint="Duty begins later" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
-      <Group title="Missed" hint="The duty ended and they never checked in" tone="amber" rows={missed} onPress={open} note={(d) => `Was due ${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
+      <Group show={shows("coming")} title="Starting later" hint="Duty begins later" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
+      <Group show={shows("done")} title="Missed" hint="The duty ended and they never checked in" tone="amber" rows={missed} onPress={open} note={(d) => `Was due ${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
       <Group
+        show={shows("done")}
         title="Completed"
         hint="Came, worked and checked out"
         tone="slate"
@@ -232,8 +251,8 @@ export function StaffToday() {
   );
 }
 
-function Group({ title, hint, tone, rows, note, onPress }: { title: string; hint: string; tone: "rose" | "emerald" | "sky" | "slate" | "amber"; rows: Duty[]; note: (d: Duty) => string; onPress: (d: Duty) => void }) {
-  if (rows.length === 0) return null;
+function Group({ show = true, title, hint, tone, rows, note, onPress }: { show?: boolean; title: string; hint: string; tone: "rose" | "emerald" | "sky" | "slate" | "amber"; rows: Duty[]; note: (d: Duty) => string; onPress: (d: Duty) => void }) {
+  if (!show || rows.length === 0) return null;
   return (
     <Panel tone={tone} title={`${title} · ${rows.length}`} subtitle={hint} bare>
       {rows.map((d, i) => (

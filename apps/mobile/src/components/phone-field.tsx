@@ -1,12 +1,13 @@
 import { ChevronDown } from "lucide-react-native";
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { COUNTRY_CODES, joinPhone, splitPhone } from "@nbss/shared/identity";
 
-import { color, radius, space } from "@/theme/tokens";
+import { color, space } from "@/theme/tokens";
 
 import { Field } from "./field";
+import { OptionSheet } from "./select";
 import { Text } from "./text";
 
 /**
@@ -46,36 +47,22 @@ export function PhoneField({ label, value, onChange }: { label: string; value: s
           </Pressable>
         }
       />
-      <Modal visible={picking} transparent animationType="fade" onRequestClose={() => setPicking(false)}>
-        <Pressable style={styles.scrim} onPress={() => setPicking(false)}>
-          <View style={styles.sheet}>
-            {COUNTRY_CODES.map((c) => (
-              <Pressable
-                key={c.code}
-                onPress={() => {
-                  update(c.code, national);
-                  setPicking(false);
-                }}
-                style={({ pressed }) => [styles.row, (pressed || c.code === code) && styles.rowOn]}
-              >
-                <Text weight="semibold" mono style={styles.rowCode}>
-                  {c.code}
-                </Text>
-                <Text tone="muted">{c.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+      {picking && (
+        <OptionSheet
+          title="Country code"
+          value={code}
+          options={COUNTRY_CODES.map((c) => ({ value: c.code, label: `${c.code}  ${c.label}` }))}
+          onClose={() => setPicking(false)}
+          onPick={(c) => {
+            update(c, national);
+            setPicking(false);
+          }}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   code: { flexDirection: "row", alignItems: "center", gap: 4, paddingRight: space[3], marginRight: space[2], borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: color.border, alignSelf: "stretch" },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: space[6] },
-  sheet: { backgroundColor: color.card, borderRadius: radius["2xl"], padding: space[2] },
-  row: { flexDirection: "row", alignItems: "center", gap: space[3], paddingHorizontal: space[3], paddingVertical: space[3], borderRadius: radius.lg },
-  rowOn: { backgroundColor: color.muted },
-  rowCode: { width: 56 },
 });

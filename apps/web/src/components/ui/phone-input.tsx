@@ -53,7 +53,7 @@ export function PhoneInput({
         <SelectTrigger aria-label="Country code" className="h-full w-auto shrink-0 rounded-none border-0 border-r border-input bg-muted px-2.5 font-mono text-sm font-semibold shadow-none focus-visible:ring-0">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent searchable={false}>
+        <SelectContent searchPlaceholder="Search country or code">
           {COUNTRY_CODES.map((c) => (
             <SelectItem key={c.code} value={c.code} description={c.label}>
               {c.code}
