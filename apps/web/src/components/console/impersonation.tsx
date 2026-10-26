@@ -1,18 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Eye, EyeOff, Search } from "lucide-react";
+import { Eye, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initials } from "@/lib/ui/initials";
@@ -35,17 +27,10 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 /**
- * The band across the top while an admin is viewing the console as someone
- * else.
- *
- * Deliberately loud, fixed to the top of the shell and impossible to dismiss.
- * The failure mode of an impersonation feature is forgetting it is on: an admin
- * who believes they are looking at their own console, finds a guard's empty
- * roster and reports a bug that does not exist — or, worse, changes something
- * believing it is theirs. Amber rather than red because nothing is wrong; it is
- * a state, not an error.
+ * While viewing as someone: their icon and name in the header, and Exit beside it.
+ * Amber, so it cannot be mistaken for your own account, and always in view.
  */
-export function ImpersonationBanner({
+export function ViewingAs({
   name,
   code,
   role,
@@ -59,36 +44,30 @@ export function ImpersonationBanner({
   stop: () => Promise<void>;
 }) {
   const [pending, start] = useTransition();
-
   return (
     <div
       role="status"
-      className="z-40 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-amber-500/30 bg-amber-100/80 px-4 py-2 text-amber-950 lg:rounded-xl lg:border dark:bg-amber-500/15 dark:text-amber-100 print:hidden"
+      title={`Viewing as ${name} (${code}). Signed in as ${adminName}; attendance cannot be recorded from this view.`}
+      className="inline-flex h-9 min-w-0 items-center gap-2 rounded-full border-2 border-amber-500/50 bg-amber-100 pr-1 pl-1 text-amber-950 dark:bg-amber-500/20 dark:text-amber-100 print:hidden"
     >
-      <Eye className="size-4 shrink-0" strokeWidth={2} />
-      <p className="min-w-0 text-sm">
-        Viewing as <strong className="font-semibold">{name}</strong>{" "}
-        <span className="text-amber-900/70 dark:text-amber-200/70">
-          {code} · {ROLE_LABEL[role]}
+      <Avatar className="size-7 border border-amber-500/40">
+        <AvatarFallback className="bg-amber-200 text-[11px] font-semibold text-amber-950">{initials(name)}</AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 max-sm:hidden">
+        <span className="block max-w-40 truncate text-sm leading-tight font-semibold">{name}</span>
+        <span className="block truncate text-[11px] leading-tight text-amber-900/70 dark:text-amber-200/70">
+          {ROLE_LABEL[role]} · {code}
         </span>
-      </p>
-      <p className="w-full text-xs text-amber-900/70 sm:w-auto dark:text-amber-200/70">
-        Signed in as {adminName}. Attendance cannot be recorded from this view.
-      </p>
-      <Button
-        size="sm"
-        variant="outline"
-        className="ml-auto border-amber-600/40 bg-transparent hover:bg-amber-500/20"
+      </span>
+      <button
+        type="button"
         disabled={pending}
-        onClick={() =>
-          start(async () => {
-            await stop();
-          })
-        }
+        onClick={() => start(async () => void (await stop()))}
+        className="inline-flex h-7 items-center gap-1 rounded-full bg-amber-600 px-2.5 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:opacity-60"
       >
-        <EyeOff data-icon="inline-start" />
-        {pending ? "Returning…" : "Stop viewing"}
-      </Button>
+        <LogOut className="size-3.5" />
+        {pending ? "Exiting…" : "Exit"}
+      </button>
     </div>
   );
 }
@@ -96,10 +75,8 @@ export function ImpersonationBanner({
 /**
  * The picker an admin opens to view the console as somebody else.
  *
- * A dialog rather than a dropdown: the roster is a searchable list of every
- * active account, which is the wrong shape for a menu, and picking the wrong
- * row here silently changes what every subsequent screen means. A dialog makes
- * it a deliberate act.
+ * A dropdown under the button, with a search at the top: the person is one tap
+ * away, and Exit in the header takes you back.
  */
 export function ImpersonationPicker({
   people,
@@ -135,8 +112,8 @@ export function ImpersonationPicker({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <button
           type="button"
           aria-label="View console as someone else"
@@ -145,15 +122,9 @@ export function ImpersonationPicker({
           <Eye className="size-4 shrink-0 text-secondary-fg" />
           <span className="shrink-0 max-sm:hidden">View as</span>
         </button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>View as someone else</DialogTitle>
-          <DialogDescription>
-            The console will show exactly what this person sees. Everything you do
-            while viewing is recorded against your own account in the audit log.
-          </DialogDescription>
-        </DialogHeader>
+      </PopoverTrigger>
+      <PopoverContent align="end" sideOffset={8} className="w-[min(92vw,360px)] space-y-2 p-2">
+        <p className="px-1 pt-1 text-xs text-muted-foreground">See the console exactly as this person does. What you do is recorded against your own account.</p>
 
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -167,7 +138,7 @@ export function ImpersonationPicker({
           />
         </div>
 
-        <div className="-mx-1 max-h-[45vh] min-h-0 overflow-y-auto px-1">
+        <div className="-mx-1 max-h-[50vh] min-h-0 overflow-y-auto px-1">
           {matches.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               Nobody matches that.
@@ -205,7 +176,7 @@ export function ImpersonationPicker({
             </ul>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 }

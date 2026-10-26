@@ -8,8 +8,8 @@ import { ConsoleNav } from "@/components/console/console-nav";
 import { SosAlarm } from "@/components/console/sos-alarm";
 import { navIndexFor } from "@/components/console/nav-items";
 import {
-  ImpersonationBanner,
   ImpersonationPicker,
+  ViewingAs,
   type Person,
 } from "@/components/console/impersonation";
 import { UserMenu } from "@/components/console/user-menu";
@@ -125,22 +125,18 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       companion={{ person: realProfile.id }}
       nav={<ConsoleNav role={profile.role} sites={sites} badges={badges} />}
       sites={staff ? sites : undefined}
-      banner={
+      topbarSecondary={
+        // Viewing as someone: their icon, name and Exit in the header. Otherwise the
+        // picker, for a developer (chaining impersonation is refused by the action).
         impersonating ? (
-          <ImpersonationBanner
+          <ViewingAs
             name={profile.full_name}
             code={profile.employee_code}
             role={profile.role}
             adminName={realProfile.full_name}
             stop={stopImpersonation}
           />
-        ) : undefined
-      }
-      topbarSecondary={
-        // Only offered to a developer who is not already viewing as someone —
-        // chaining impersonation is refused by the action anyway, and a control
-        // that always fails is worse than no control.
-        canImpersonate && !impersonating ? (
+        ) : canImpersonate ? (
           <ImpersonationPicker people={people} start={startImpersonation} />
         ) : undefined
       }
