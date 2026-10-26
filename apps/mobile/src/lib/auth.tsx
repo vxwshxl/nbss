@@ -14,9 +14,13 @@ import {
 } from "@nbss/shared/identity";
 
 import { WEB_URL } from "./config";
+import { IS_EXPO_GO } from "./runtime";
 import { releasePush } from "./push";
 import { stopTracking } from "./location";
 import { supabase } from "./supabase";
+
+/** The public website: Supabase's own site, always on its allow list (unlike an IP address). */
+const PUBLIC_SITE = "https://nbsskokrajhar.com";
 
 export type Profile = Row<"profiles">;
 
@@ -230,14 +234,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     setLoading(true);
     try {
-      const redirectTo = Linking.createURL("auth/callback");
+      // Where the browser sheet hands back to: this app's own link. In Expo Go that link
+      // is exp://<the computer's IP>, which Supabase refuses, so the sign-in returns by
+      // way of the public website's /auth/app, which passes the code straight on.
+      const appLink = Linking.createURL("auth/callback");
+      const redirectTo = IS_EXPO_GO ? `${PUBLIC_SITE}/auth/app?to=${encodeURIComponent(appLink)}` : appLink;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: "select_account" } },
       });
       if (error || !data.url) return { error: "Google sign-in is not available right now." };
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, appLink);
       if (result.type !== "success") return {};
 
       const url = new URL(result.url);
