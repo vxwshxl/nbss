@@ -57,7 +57,8 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
         shifts: mine.length,
         workedMinutes: mine.reduce((n, a) => n + (a.worked_minutes ?? 0), 0),
         overtimeMinutes: mine.reduce((n, a) => n + (a.overtime_minutes ?? 0), 0),
-        late: mine.filter((a) => a.status === "late").length,
+        // Late days, not late punches, as days present are counted.
+        late: new Set(mine.filter((a) => a.status === "late").map((a) => dayOf(a.check_in_at))).size,
         missed: sh.filter((s) => s.status === "missed").length,
         replaced: sh.filter((s) => s.replaced_by_shift).length,
         covered: sh.filter((s) => s.replaces_shift).length,

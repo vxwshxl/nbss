@@ -122,7 +122,8 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
         ? { site: (open.sites as unknown as { name: string } | null)?.name ?? "A site", since: open.check_in_at! }
         : null,
       days30: new Set(worked.map((r) => istDate(new Date(r.check_in_at!)))).size,
-      late30: list.filter((r) => r.status === "late").length,
+      // Days, not punches: two late check-ins on one day are one late day.
+      late30: new Set(list.filter((r) => r.status === "late" && r.check_in_at).map((r) => istDate(new Date(r.check_in_at!)))).size,
       hours30: Math.round(worked.reduce((sum, r) => sum + (r.worked_minutes ?? 0), 0) / 60),
       lastPunch: list[0]?.check_in_at ?? null,
       strip,

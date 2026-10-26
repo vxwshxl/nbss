@@ -140,7 +140,8 @@ export function PersonPage({ id }: { id: string }) {
   const open = d?.sessions.find((s) => !s.out) ?? null;
   const worked = d?.sessions.filter((s) => s.status === "present" || s.status === "late") ?? [];
   const days30 = new Set(worked.map((s) => dayOf(s.in))).size;
-  const late30 = d?.sessions.filter((s) => s.status === "late").length ?? 0;
+  // Days, not check-ins: two late punches on one day are one late day.
+  const late30 = new Set(d?.sessions.filter((s) => s.status === "late").map((s) => dayOf(s.in)) ?? []).size;
   const hours30 = Math.round(worked.reduce((sum, s) => sum + (s.minutes ?? 0), 0) / 60);
   const marks = new Map<string, string>();
   for (const s of d?.sessions ?? []) {

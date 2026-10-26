@@ -138,12 +138,18 @@ export default async function GuardAttendancePage({
   }
   rows.sort((x, y) => x.date.localeCompare(y.date) || (x.checkIn ?? "").localeCompare(y.checkIn ?? ""));
 
-  const due = rows.filter((r) => r.status !== "upcoming" && r.status !== "replaced" && r.shift !== "Not on the roster");
-  const present = rows.filter((r) => r.status === "present" || r.status === "late" || r.status === "on_duty" || r.status === "pending_review").length;
-  const absent = rows.filter((r) => r.status === "absent").length;
-  const late = rows.filter((r) => r.status === "late").length;
+  // Counted by day, not by row: two check-ins on one day (out and back, or a second punch
+  // at the same site) are both listed, but they are one day present. Hours add up as worked.
+  const came = (r: RegisterRow) => r.status === "present" || r.status === "late" || r.status === "on_duty" || r.status === "pending_review";
+  const presentDays = new Set(rows.filter(came).map((r) => r.date));
+  const present = presentDays.size;
+  const late = new Set(rows.filter((r) => r.status === "late").map((r) => r.date)).size;
+  // Absent: a rostered day with no check-in at all that day.
+  const absent = new Set(rows.filter((r) => r.status === "absent" && !presentDays.has(r.date)).map((r) => r.date)).size;
   const minutes = rows.reduce((n, r) => n + (r.workedMinutes ?? 0), 0);
-  const rate = due.length ? Math.round((due.filter((r) => r.status !== "absent" && r.status !== "not_arrived").length / due.length) * 100) : null;
+  const dueDays = new Set(rows.filter((r) => r.status !== "upcoming" && r.status !== "replaced" && r.shift !== "Not on the roster").map((r) => r.date));
+  const due = [...dueDays];
+  const rate = due.length ? Math.round((due.filter((d) => presentDays.has(d)).length / due.length) * 100) : null;
 
   return (
     <div className="space-y-6">

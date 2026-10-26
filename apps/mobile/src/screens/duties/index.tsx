@@ -337,14 +337,16 @@ function range(p: Period): [string, string] {
 
 /** The register's counts, from the same rules as the console's. */
 function tally(rows: MyDuty[], now: number) {
-  const out = rows.map((d) => ({ d, o: dutyOutcome(d, now) }));
-  const due = out.filter(({ d, o }) => o !== "upcoming" && o !== "replaced" && d.kind !== "off_roster");
-  const present = out.filter(({ o }) => o === "present" || o === "late" || o === "on_duty" || o === "pending_review").length;
-  const late = out.filter(({ o }) => o === "late").length;
-  const absent = out.filter(({ o }) => o === "absent").length;
+  // Counted by day, as the console counts: two check-ins on one day are one day present.
+  const out = rows.map((d) => ({ d, o: dutyOutcome(d, now), day: dayKey(d.attendance?.check_in_at ?? d.starts_at) }));
+  const came = (o: DutyOutcome) => o === "present" || o === "late" || o === "on_duty" || o === "pending_review";
+  const presentDays = new Set(out.filter(({ o }) => came(o)).map(({ day }) => day));
+  const late = new Set(out.filter(({ o }) => o === "late").map(({ day }) => day)).size;
+  const absent = new Set(out.filter(({ o, day }) => o === "absent" && !presentDays.has(day)).map(({ day }) => day)).size;
   const minutes = rows.reduce((n, d) => n + (d.attendance?.worked_minutes ?? 0), 0);
-  const rate = due.length ? Math.round((due.filter(({ o }) => o !== "absent" && o !== "not_arrived").length / due.length) * 100) : null;
-  return { present, late, absent, minutes, rate, due: due.length };
+  const dueDays = [...new Set(out.filter(({ d, o }) => o !== "upcoming" && o !== "replaced" && d.kind !== "off_roster").map(({ day }) => day))];
+  const rate = dueDays.length ? Math.round((dueDays.filter((day) => presentDays.has(day)).length / dueDays.length) * 100) : null;
+  return { present: presentDays.size, late, absent, minutes, rate, due: dueDays.length };
 }
 
 function History({ pulls }: { pulls: number }) {
