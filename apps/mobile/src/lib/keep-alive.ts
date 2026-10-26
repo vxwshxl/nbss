@@ -1,5 +1,5 @@
 import { openPunch } from "./duty";
-import { checkTracking, isTracking, readMode, startTracking, stopTracking } from "./location";
+import { applyPendingRestart, checkTracking, isTracking, readMode, startTracking, stopTracking } from "./location";
 import { flush } from "./location-task";
 import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
 
@@ -26,6 +26,7 @@ export async function ensureTracking(): Promise<KeepAlive> {
       return "off_duty";
     }
     if (await isTracking()) {
+      await applyPendingRestart();
       await flush();
       return "tracking";
     }

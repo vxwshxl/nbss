@@ -90,6 +90,24 @@ export async function savePosting(input: {
     existing = data;
   }
 
+  // One guard, one place at a time: the same guard at another site is fine at other
+  // hours (A 8–12, B 1–4), never at overlapping ones.
+  const { data: others } = await supabase
+    .from("site_postings")
+    .select("id, starts, ends, days, dates, sites(name)")
+    .eq("guard_id", input.guardId)
+    .eq("active", true);
+  const clash = (others ?? [])
+    .filter((o) => o.id !== existing?.id && o.id !== input.postingId)
+    .find((o) => postingsOverlap({ starts, ends, days, dates }, { starts: o.starts, ends: o.ends, days: o.days, dates: o.dates }));
+  if (clash) {
+    const where = (Array.isArray(clash.sites) ? clash.sites[0] : clash.sites) as { name: string } | null;
+    return {
+      ok: false,
+      error: `${guard.full_name} is already posted at ${where?.name ?? "another site"} ${clockLabel(clash.starts)}–${clockLabel(clash.ends)} at those times. Choose hours that do not overlap.`,
+    };
+  }
+
   const row = {
     site_id: input.siteId,
     guard_id: input.guardId,
@@ -255,4 +273,45 @@ export async function approveOffRoster(attendanceId: string): Promise<RosterResu
   await audit({ actor: session.realProfile, action: "off_roster_approved", entity: "attendance", entityId: attendanceId });
   done(["/console/attendance"]);
   return { ok: true };
+}
+
+/** "20:00:00" → "8:00 pm", for the overlap message. */
+function clockLabel(t: string): string {
+  const [h = 0, m = 0] = t.split(":").map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+}
+
+type PostingTimes = { starts: string; ends: string; days: number[] | null; dates: string[] | null };
+
+/**
+ * Whether two postings put the guard in two places at once, on any day in the next
+ * five weeks or up to the last dated day. Each is laid out as real intervals (an
+ * overnight post runs into the next morning, a start equal to its end is 24 hours) and
+ * any intersection is a clash.
+ */
+function postingsOverlap(a: PostingTimes, b: PostingTimes): boolean {
+  const toMin = (t: string) => {
+    const [h = 0, m = 0] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const today = new Date(`${istDay(0)}T00:00:00Z`);
+  const last = [...(a.dates ?? []), ...(b.dates ?? [])].sort().pop();
+  const horizon = Math.max(35, last ? Math.ceil((new Date(`${last}T00:00:00Z`).getTime() - today.getTime()) / 86_400_000) + 2 : 0);
+  const intervals = (p: PostingTimes) => {
+    const s = toMin(p.starts);
+    let e = toMin(p.ends);
+    if (e <= s) e += 1440;
+    const out: [number, number][] = [];
+    for (let d = -1; d <= horizon; d++) {
+      const day = new Date(today.getTime() + d * 86_400_000);
+      const iso = day.toISOString().slice(0, 10);
+      const dow = ((day.getUTCDay() + 6) % 7) + 1; // 1 = Monday … 7 = Sunday
+      const runs = p.dates ? p.dates.includes(iso) : (p.days ?? []).includes(dow);
+      if (runs) out.push([d * 1440 + s, d * 1440 + e]);
+    }
+    return out;
+  };
+  const ia = intervals(a);
+  const ib = intervals(b);
+  return ia.some(([s1, e1]) => ib.some(([s2, e2]) => s1 < e2 && s2 < e1));
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Battery,
@@ -12,10 +12,13 @@ import {
   BellRing,
   Crosshair,
   Loader2,
+  Maximize,
+  Minimize,
   LocateOff,
   Phone,
   Route,
   Search,
+  ShieldCheck,
   Smartphone,
   UserRoundX,
   X,
@@ -27,6 +30,8 @@ import { LiveMap, type LiveMarker, type LiveSite } from "@/components/tracking/l
 import { initials } from "@/lib/ui/initials";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { toast } from "sonner";
+
+import { reviewFlaggedPunch, setDeviceStatus } from "@/app/console/devices/actions";
 import {
   STATE_CHIP,
   STATE_COLOR,
@@ -59,6 +64,8 @@ export type DutyGuard = {
   /** When the watchdog last told the guard (and, after 20 min, the supervisors) the phone went silent. */
   silentAlertedAt: string | null;
   device: {
+    /** guard_devices.id, for approving it from the card. */
+    id: string;
     label: string;
     platform: string | null;
     appVersion: string | null;
@@ -134,6 +141,12 @@ export function LiveTracking({
   }, [initialPositions, heard]);
 
   const onDuty = useMemo(() => new Set(guards.map((g) => g.guardId)), [guards]);
+  // Read by the channel below through a ref: as a dependency, every refresh of the guard
+  // list tore the channel down and opened it again, and the map sat on "Connecting…".
+  const onDutyRef = useRef(onDuty);
+  useEffect(() => {
+    onDutyRef.current = onDuty;
+  }, [onDuty]);
 
   // The batch, and a slow re-read behind it.
   useEffect(() => {
@@ -152,13 +165,18 @@ export function LiveTracking({
         const batch = payload as PositionBatch;
         merge(batch.positions ?? []);
         // Somebody checked in since the page was drawn.
-        if ((batch.positions ?? []).some((p) => !onDuty.has(p.guard_id))) router.refresh();
+        if ((batch.positions ?? []).some((p) => !onDutyRef.current.has(p.guard_id))) router.refresh();
       });
 
     void supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
       if (data.session?.access_token) await supabase.realtime.setAuth(data.session.access_token);
-      channel.subscribe((status) => setLive(status === "SUBSCRIBED"));
+      // Live once subscribed; back to Connecting only if the socket really drops
+      // (supabase-js rejoins by itself and reports SUBSCRIBED again).
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") setLive(true);
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setLive(false);
+      });
     });
 
     const reread = setInterval(async () => {
@@ -171,7 +189,7 @@ export function LiveTracking({
       clearInterval(reread);
       void supabase.removeChannel(channel);
     };
-  }, [onDuty, router]);
+  }, [router]);
 
   const rows = useMemo(
     () =>
@@ -239,15 +257,33 @@ export function LiveTracking({
 
   const stats = trail.length > 1 ? trailStats(trail) : null;
 
+  // A guard picked: the camera goes to them, or to their site while no fix has come in yet.
   function pick(id: string | null) {
     setSelected(id);
-    const p = id ? positions[id] : null;
-    if (p) setFocus({ lat: p.lat, lng: p.lng, key: `${id}:${Date.now()}` });
+    if (!id) return;
+    const p = positions[id];
+    const site = sites.find((s) => s.id === guards.find((g) => g.guardId === id)?.siteId);
+    const at = p ? { lat: p.lat, lng: p.lng } : site ? { lat: site.lat, lng: site.lng } : null;
+    if (at) setFocus({ ...at, key: `${id}:${Date.now()}` });
   }
+
+  // Full screen is the map and the guard's card together. The map's own button made only
+  // the map full screen, and the card (drawn over it, outside it) vanished.
+  const stage = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    const on = () => setFull(document.fullscreenElement === stage.current);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, []);
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void stage.current?.requestFullscreen?.();
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="relative h-[62vh] min-h-[420px] lg:h-[calc(100dvh-210px)]">
+      <div ref={stage} className={cn("relative h-[62vh] min-h-[420px] bg-card lg:h-[calc(100dvh-210px)]", full && "h-screen lg:h-screen")}>
         <LiveMap
           sites={sites}
           guards={markers}
@@ -263,6 +299,14 @@ export function LiveTracking({
             {live ? `Live · ${rows.length} on duty` : "Connecting…"}
           </span>
         </div>
+        <button
+          type="button"
+          onClick={toggleFull}
+          aria-label={full ? "Leave full screen" : "Full screen"}
+          className="absolute top-[60px] right-3 z-10 grid size-10 place-items-center rounded-md bg-card text-foreground shadow-md ring-1 ring-border hover:bg-muted"
+        >
+          {full ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
+        </button>
 
         {/* A guard picked on the map or in the list: everything about them, over the map. */}
         {sel && (
@@ -443,6 +487,7 @@ function GuardCard({
             {g.deviceFlag === "shared_device" ? "Checked in on a phone registered to another guard." : "Checked in on a phone not yet approved for them."} Held for review in Devices.
           </p>
         )}
+        {g.device && (!g.device.approved || g.deviceFlag) && <ApproveDevice g={g} />}
         {warn && (
           <p className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-2.5 text-amber-800 dark:text-amber-200">
             <LocateOff className="mt-0.5 size-3.5 shrink-0" />
@@ -539,5 +584,36 @@ function Fact({ label, value, icon: Icon }: { label: string; value: string; icon
         {value}
       </dd>
     </div>
+  );
+}
+
+/**
+ * Approves the guard's phone from the map card, and accepts the check-in it held, so a
+ * supervisor who has just seen the guard on the map does not have to go to Devices.
+ */
+function ApproveDevice({ g }: { g: DutyGuard }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const approve = async () => {
+    if (!g.device) return;
+    setBusy(true);
+    const r = await setDeviceStatus(g.device.id, "approved");
+    const held = r.ok && g.deviceFlag ? await reviewFlaggedPunch(g.attendanceId, true) : { ok: true as const };
+    setBusy(false);
+    if (!r.ok) return void toast.error(r.error);
+    if (!held.ok) toast.error("The phone is approved, but the check-in could not be accepted. Accept it in Devices.");
+    else toast.success(`${g.device.label} approved for ${g.name}.`);
+    router.refresh();
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void approve()}
+      disabled={busy}
+      className="press inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+    >
+      <ShieldCheck className="size-4" />
+      {busy ? "Approving…" : g.deviceFlag ? "Approve phone and check-in" : "Approve phone"}
+    </button>
   );
 }

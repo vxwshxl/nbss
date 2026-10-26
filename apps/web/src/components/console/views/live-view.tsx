@@ -39,7 +39,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
     supabase.from("sites").select("id, name, lat, lng, geofence_radius_m, polygon").eq("active", true).match(siteId ? { id: siteId } : {}).order("name"),
     supabase
       .from("guard_devices")
-      .select("profile_id, device_id, brand, model, platform, os_version, app_version, status, location_permission, gps_enabled, battery_optimized, last_seen_at")
+      .select("id, profile_id, device_id, brand, model, platform, os_version, app_version, status, location_permission, gps_enabled, battery_optimized, last_seen_at")
       .order("last_seen_at", { ascending: false }),
     supabase.from("sos_alerts").select("raised_by").in("status", ["active", "acknowledged"]),
     supabase
@@ -74,6 +74,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
       silentAlertedAt: a.silent_staff_alerted_at ?? a.silent_alerted_at,
       device: d
         ? {
+            id: d.id,
             label: [d.brand, d.model].filter(Boolean).join(" ") || "Unknown phone",
             platform: d.platform,
             appVersion: d.app_version,

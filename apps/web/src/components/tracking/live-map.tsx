@@ -59,7 +59,7 @@ export function LiveMap({
   className?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const { maps, map, error } = useGoogleMap(host, { zoom: 12, gestureHandling: "greedy" });
+  const { maps, map, error } = useGoogleMap(host, { zoom: 12, gestureHandling: "greedy", fullscreenControl: false });
   const markers = useRef(new Map<string, HtmlMarker>());
   const accuracy = useRef(new Map<string, google.maps.Circle>());
   const framedFor = useRef<string | null>(null);

@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
-import { Linking } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState, Linking } from "react-native";
 
 import { policyFor, type TrackingMode } from "@nbss/shared/location";
 
@@ -156,6 +157,9 @@ export async function stopTracking(): Promise<void> {
   await clearTrackingState();
 }
 
+/** Set when a change of cadence had to wait for the app to be in front. */
+const PENDING_RESTART_KEY = "nbss.trackingRestartPending";
+
 /**
  * Switching cadence.
  *
@@ -163,14 +167,33 @@ export async function stopTracking(): Promise<void> {
  * stream is stopped and started again. The last-fix baseline is deliberately kept —
  * only the mode changes, and forgetting where the guard was would produce one
  * spurious 'first' ping.
+ *
+ * Only with the app in front. Android 12 and later refuse to start a foreground service
+ * from the background (expo-location throws ForegroundServiceStartNotAllowedException),
+ * so a restart from a locked phone stopped the stream and could not start it again:
+ * tracking died a few minutes after the screen went off. In the background the running
+ * stream is left exactly as it is, the new mode is remembered (the cadence filter reads
+ * it at once), and the restart happens the next time the app comes to the front.
  */
 export async function restartTracking(mode: TrackingMode): Promise<void> {
   await writeMode(mode);
   if (!CAN_TRACK_IN_BACKGROUND) return;
+  if (AppState.currentState !== "active" && (await isTracking())) {
+    await AsyncStorage.setItem(PENDING_RESTART_KEY, "1").catch(() => undefined);
+    return;
+  }
   if (await isTracking()) {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK).catch(() => undefined);
   }
   await startTracking(mode);
+  await AsyncStorage.removeItem(PENDING_RESTART_KEY).catch(() => undefined);
+}
+
+/** With the app in front: applies a change of cadence that had to wait (see restartTracking). */
+export async function applyPendingRestart(): Promise<void> {
+  if (AppState.currentState !== "active") return;
+  if ((await AsyncStorage.getItem(PENDING_RESTART_KEY).catch(() => null)) !== "1") return;
+  await restartTracking(await readMode());
 }
 
 // Closes the loop with the task, which has to be able to stop and restart itself
