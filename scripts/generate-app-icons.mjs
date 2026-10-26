@@ -55,12 +55,14 @@ await sharp({
  * then every visible pixel is painted white. Without the threshold, antialiased edges
  * become semi-transparent white fringes that Android renders as a smudge at 24dp.
  */
-async function silhouette(size, file) {
+async function silhouette(size, file, inset = 0) {
   // The logo's own alpha channel, hardened into a stencil. Without the threshold the
   // antialiased edges stay semi-transparent and Android renders them as a grey smudge
   // at 24dp.
+  const inner = size - inset * 2;
   const mask = await sharp(SRC)
-    .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extend({ top: inset, bottom: inset, left: inset, right: inset, background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .ensureAlpha()
     .extractChannel("alpha")
     .threshold(40)
@@ -83,7 +85,9 @@ async function silhouette(size, file) {
 // 96px is Android's recommended small-icon size; it is downscaled to 24dp in the status
 // bar and used at full size in the shade.
 await silhouette(96, "notification-icon.png");
-await silhouette(1024, "android-icon-monochrome.png");
+// Android's themed icon: the same 660px crest in the same 182px margin as the colour
+// foreground. Full-bleed, Android's mask cut it down to a solid disc on the home screen.
+await silhouette(1024, "android-icon-monochrome.png", 182);
 
 /**
  * The in-app mark: the logo as it appears in the topbar and on the sign-in screen, where
