@@ -66,6 +66,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const canImpersonate = realProfile.role === "developer";
   // Test / Live: a developer's switch. Everyone else sees their own side.
   const mode = parseMode((await cookies()).get(DATA_MODE_COOKIE)?.value);
+  // The side this browser is on, kept on the profile for the realtime feed (0059): it
+  // has no request headers, and a developer on Test otherwise heard nothing live.
+  if (canImpersonate && (realProfile as { dev_view_test?: boolean }).dev_view_test !== (mode === "test")) {
+    await supabaseAdmin().from("profiles").update({ dev_view_test: mode === "test" }).eq("id", realProfile.id);
+  }
 
   // The impersonation picker needs the roster. Only a developer ever sees it, so
   // it is only fetched for one — and on the admin client, because a developer

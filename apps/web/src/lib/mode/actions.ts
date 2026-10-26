@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { currentSession } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 import { DATA_MODE_COOKIE, type DataMode } from "./shared";
 
@@ -23,6 +24,9 @@ export async function setDataMode(mode: DataMode): Promise<{ ok: boolean }> {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
+  // Kept on the profile too: realtime has no request headers, so this is the side its
+  // change feed uses for a developer (0059).
+  await supabaseAdmin().from("profiles").update({ dev_view_test: mode === "test" }).eq("id", session.realProfile.id);
   revalidatePath("/", "layout");
   return { ok: true };
 }

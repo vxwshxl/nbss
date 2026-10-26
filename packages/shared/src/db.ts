@@ -522,6 +522,7 @@ export type Database = {
           avatar_url: string | null;
           trade: string;
           sos_enabled: boolean;
+          dev_view_test: boolean;
         };
         Insert: {
           id: string;
@@ -543,6 +544,7 @@ export type Database = {
           avatar_url?: string | null;
           trade?: string;
           sos_enabled?: boolean;
+          dev_view_test?: boolean;
         };
         Update: {
           id?: string;
@@ -564,6 +566,7 @@ export type Database = {
           avatar_url?: string | null;
           trade?: string;
           sos_enabled?: boolean;
+          dev_view_test?: boolean;
         };
         Relationships: [];
       };
@@ -1481,6 +1484,12 @@ export type Database = {
           p_name: string;
         };
         Returns: string;
+      };
+      guard_may_see_site: {
+        Args: {
+          p_site: string;
+        };
+        Returns: boolean;
       };
       guard_rostered_to_site: {
         Args: {
