@@ -87,18 +87,28 @@ export function SosRinger({ staff = false }: { staff?: boolean }) {
 
   useEffect(() => {
     if (!loud || !siren) return;
-    // A player of its own while it rings, released when it stops.
+    // A player of its own while it rings, released when it stops. `stopped` closes a
+    // race that left a siren playing after the SOS was resolved: the audio mode is set
+    // asynchronously, and a stop that landed before it finished was followed by a play()
+    // on a player nothing would ever stop again.
+    let stopped = false;
     const player = createAudioPlayer(SIREN);
     void setAudioModeAsync({ playsInSilentMode: true, interruptionMode: "doNotMix", shouldPlayInBackground: true })
       .catch(() => undefined)
       .then(() => {
+        if (stopped) return;
         player.loop = true;
         player.volume = 1;
         player.play();
       });
     return () => {
-      player.pause();
-      player.remove();
+      stopped = true;
+      try {
+        player.pause();
+        player.remove();
+      } catch {
+        // Already released: nothing left to stop.
+      }
     };
   }, [loud, siren]);
 

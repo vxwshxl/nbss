@@ -4,7 +4,7 @@ import { Linking } from "react-native";
 import { policyFor, type TrackingMode } from "@nbss/shared/location";
 
 import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
-import { LOCATION_TASK, clearTrackingState, readMode, wireTaskControls, writeMode } from "./location-task";
+import { LOCATION_TASK, clearTrackingState, readMode, readPace, wireTaskControls, writeMode } from "./location-task";
 
 /**
  * Permissions and the lifecycle of the background stream.
@@ -98,6 +98,9 @@ export async function isTracking(): Promise<boolean> {
 export async function startTracking(mode: TrackingMode = "on_duty"): Promise<void> {
   const policy = policyFor(mode);
   await writeMode(mode);
+  // Standing at a post on an ordinary duty: a reading about once a minute (location-task
+  // explains the pace). Kept under the one-minute heartbeat so the map never goes amber.
+  const still = mode === "on_duty" && (await readPace()) === "still";
   // Expo Go and the browser have no background location service: asking for one
   // throws ("UIBackgroundModes" on iOS). The open duty screen sends positions there.
   if (!CAN_TRACK_IN_BACKGROUND) return;
@@ -112,8 +115,8 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
           ? Location.Accuracy.High
           : Location.Accuracy.Balanced,
 
-    distanceInterval: Math.max(5, Math.round(policy.minDistanceM / 2)),
-    timeInterval: Math.max(5_000, Math.round(policy.heartbeatMs / 4)),
+    distanceInterval: still ? 15 : Math.max(5, Math.round(policy.minDistanceM / 2)),
+    timeInterval: still ? 55_000 : Math.max(5_000, Math.round(policy.heartbeatMs / 4)),
 
     /**
      * The Android foreground service. Without it the OS kills the task within
@@ -141,7 +144,7 @@ export async function startTracking(mode: TrackingMode = "on_duty"): Promise<voi
 
     // Deferred updates are a battery optimisation that batches positions and delivers
     // them late. An emergency cannot afford it; normal duty can, a little.
-    deferredUpdatesInterval: mode === "emergency" ? 0 : 30_000,
+    deferredUpdatesInterval: mode === "emergency" ? 0 : still ? 55_000 : 30_000,
     deferredUpdatesDistance: mode === "emergency" ? 0 : 20,
   });
 }
