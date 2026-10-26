@@ -34,7 +34,7 @@ import { color, radius, shadow, space } from "@/theme/tokens";
 
 const IST = "Asia/Kolkata";
 const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { timeZone: IST, weekday: "long", day: "numeric", month: "long", year: "numeric" });
-const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: IST, day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: IST, day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
 
 const REQUEST_LABEL = { open: "Waiting for the office", assigned: "Cover found", declined: "Declined by the office", withdrawn: "Withdrawn" } as const;
 
@@ -287,7 +287,7 @@ export function DutyDetail({ id }: { id: string }) {
   );
 }
 
-const clockOf = (ms: number) => new Date(ms).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" });
+const clockOf = (ms: number) => new Date(ms).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true });
 
 /** Start (S), end (E) and, while playing, where the guard was at that moment. */
 function routeMarks(route: RoutePoint[], head: number | null, ended: boolean): MapPerson[] {

@@ -54,6 +54,7 @@ import { SiteMap, type MapSite } from "@/components/console/site-map";
 import { SosPreviewDialog } from "@/components/console/sos-preview";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
+import { TimePicker } from "@/components/ui/time-picker";
 import { BOOKING_STATUS_LABEL, type BookingStatus } from "@/lib/bookings";
 import { mapsUrl } from "@/lib/fence";
 import { datesLabel, daysLabel, windowLabel } from "@/lib/roster";
@@ -547,8 +548,8 @@ function PostGuard({
           options={choices.map((g) => ({ value: g.id, label: `${g.name} · ${g.code}${g.posted ? " (posted elsewhere)" : ""}` }))}
           className="h-9 bg-card"
         />
-        <input type="time" value={starts} onChange={(e) => setStarts(e.target.value)} aria-label="Starts" className="h-9 rounded-lg border border-input bg-card px-2 text-sm" />
-        <input type="time" value={ends} onChange={(e) => setEnds(e.target.value)} aria-label="Ends" className="h-9 rounded-lg border border-input bg-card px-2 text-sm" />
+        <TimePicker value={starts} onChange={setStarts} placeholder="Starts" className="h-9 bg-card" />
+        <TimePicker value={ends} onChange={setEnds} placeholder="Ends" className="h-9 bg-card" />
       </div>
       <div className="flex flex-wrap gap-1.5">
         {WEEK.map((w) => {

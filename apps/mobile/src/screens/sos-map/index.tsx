@@ -23,7 +23,7 @@ import { SosAlarm } from "@/screens/sos-alarm";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 const IST = "Asia/Kolkata";
-const time = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" });
+const time = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true });
 const ago = (iso: string | null, now: number) => {
   if (!iso) return "no signal";
   const m = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));

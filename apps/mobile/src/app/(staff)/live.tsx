@@ -3,7 +3,7 @@ import { ChevronRight, LocateFixed, Maximize2, MapPin, Navigation, SatelliteDish
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
-import { istTime } from "@nbss/shared/company";
+import { clock12, istTime } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
 import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
@@ -326,7 +326,7 @@ function SiteBody({
         <Count value={alerts.length} label="SOS" tone={color.sos} />
       </View>
       <View style={styles.facts}>
-        <Fact label="Shift" value={site.shift_start && site.shift_end ? `${site.shift_start.slice(0, 5)} – ${site.shift_end.slice(0, 5)}` : "Not set"} />
+        <Fact label="Shift" value={site.shift_start && site.shift_end ? `${clock12(site.shift_start)} – ${clock12(site.shift_end)}` : "Not set"} />
         <Fact label="Boundary" value={site.polygon ? "Drawn area" : `${site.geofence_radius_m} m circle`} />
       </View>
       <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => void Linking.openURL(directionsUrl(site))} />

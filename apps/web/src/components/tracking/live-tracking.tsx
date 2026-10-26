@@ -354,7 +354,7 @@ export function LiveTracking({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{n.name}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {n.siteName} · due {new Date(n.startsAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" })}
+                        {n.siteName} · due {new Date(n.startsAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true })}
                       </span>
                     </span>
                     {n.phone && (

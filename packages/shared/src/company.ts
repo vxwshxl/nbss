@@ -31,6 +31,15 @@ export function tel(value: string): string {
   return value.replace(/[\s\-()]/g, "");
 }
 
+/** A time of day from the database ("20:00" or "20:00:00") in 12-hour form: "8:00 pm". */
+export function clock12(value: string | null | undefined): string {
+  if (!value) return "-";
+  const [h, m] = value.split(":");
+  const hour = Number(h);
+  if (!Number.isFinite(hour)) return value;
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${(m ?? "00").slice(0, 2)} ${hour < 12 ? "am" : "pm"}`;
+}
+
 /**
  * A clock time in IST, 12-hour, the way the client, the guards and the callers all say
  * it. The zone is printed rather than assumed.

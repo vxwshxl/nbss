@@ -53,7 +53,7 @@ export type GuardOption = { id: string; name: string; code: string; phone: strin
 
 const IST = "Asia/Kolkata";
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { timeZone: IST, weekday: "short", day: "numeric", month: "short" });
-const time = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" });
+const time = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true });
 const typeLabel = (t: string | null) => (isShiftType(t) ? SHIFT_LABEL[t] : "Custom");
 
 function overlaps(a: { startsAt: string; endsAt: string }, b: { startsAt: string; endsAt: string }) {

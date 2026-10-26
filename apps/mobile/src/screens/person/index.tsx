@@ -15,7 +15,7 @@ import { useCallback } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { COMPANY, istTime, tel } from "@nbss/shared/company";
+import { COMPANY, istTime, tel, clock12 } from "@nbss/shared/company";
 import { roleLabel, type Role } from "@nbss/shared/identity";
 import { freshness } from "@nbss/shared/location";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
@@ -237,7 +237,7 @@ export function PersonPage({ id }: { id: string }) {
                 {d.posting ? (
                   <>
                     <Row label="Site" value={d.posting.site} first />
-                    <Row label="Hours" value={`${d.posting.starts.slice(0, 5)} – ${d.posting.ends.slice(0, 5)}${d.posting.shift ? ` · ${shiftTypeLabel(d.posting.shift)}` : ""}`} />
+                    <Row label="Hours" value={`${clock12(d.posting.starts)} – ${clock12(d.posting.ends)}${d.posting.shift ? ` · ${shiftTypeLabel(d.posting.shift)}` : ""}`} />
                     <Row label="Days" value={d.posting.days.length === 7 || d.posting.days.length === 0 ? "Every day" : d.posting.days.map((n) => WEEK[n]).join(", ")} />
                   </>
                 ) : (

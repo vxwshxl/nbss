@@ -147,7 +147,7 @@ function Fig({ v, l, c }: { v: number | string; l: string; c: string }) {
 /** One day: every duty with its outcome, worst first. */
 export function DayList({ rows }: { rows: RegisterEntry[] }) {
   const sorted = [...rows].sort((a, b) => RANK.indexOf(a.outcome) - RANK.indexOf(b.outcome) || a.startsAt.localeCompare(b.startsAt));
-  const clock = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" }) : "-");
+  const clock = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }) : "-");
   if (sorted.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">No duties on this day.</p>;
   return (
     <ul className="divide-y divide-app-line-soft">

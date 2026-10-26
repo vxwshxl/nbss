@@ -63,7 +63,7 @@ const RESPONSE_LABEL: Record<NonNullable<Person["response"]>, string> = {
 const TONE = { sos: color.sos, help: "#059669", guard: "#64748b" };
 
 const IST = "Asia/Kolkata";
-const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" });
+const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true });
 const first = (name: string) => name.split(" ")[0] ?? name;
 
 /**

@@ -227,7 +227,7 @@ function SosNibo({ alerts, quiet, onOpen, onSilence }: { alerts: Alert[]; quiet:
             {a.guard} needs help at {a.site}
           </p>
           <p className="text-xs text-[#6b7280]">
-            Raised {new Date(a.raisedAt).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" })} ·{" "}
+            Raised {new Date(a.raisedAt).toLocaleTimeString("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit", hour12: true })} ·{" "}
             {mins < 1 ? "just now" : `${mins} min ago`}
             {alerts.length > 1 ? ` · and ${alerts.length - 1} more` : ""}
           </p>
