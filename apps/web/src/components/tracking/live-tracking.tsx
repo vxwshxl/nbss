@@ -10,6 +10,10 @@ import {
   BatteryLow,
   BatteryWarning,
   BellRing,
+  CircleCheck,
+  CircleMinus,
+  CircleX,
+  Clock,
   Crosshair,
   Loader2,
   Maximize,
@@ -60,6 +64,11 @@ export type DutyGuard = {
   siteId: string;
   siteName: string;
   checkInAt: string;
+  /**
+   * When the guard is meant to be on duty: the rostered shift this punch answered
+   * (timestamps), else the site's daily window ("HH:MM:SS", IST), else null.
+   */
+  duty: { kind: "shift" | "site"; start: string; end: string } | null;
   status: string;
   deviceFlag: string | null;
   /** When the watchdog last told the guard (and, after 20 min, the supervisors) the phone went silent. */
@@ -73,6 +82,12 @@ export type DutyGuard = {
     permission: string | null;
     gps: boolean | null;
     batteryOptimized: boolean | null;
+    /** The three below arrive from app builds after 0060; null from older ones. */
+    notifications: boolean | null;
+    precise: boolean | null;
+    autostart: string | null;
+    /** When the phone last reported its permissions (or was last seen, before 0060). */
+    checkedAt: string | null;
     approved: boolean;
   } | null;
 };
@@ -515,6 +530,8 @@ function GuardCard({
         </button>
       </div>
 
+      <DutyLine duty={g.duty} now={now} />
+
       <dl className="grid grid-cols-3 gap-x-3 gap-y-2.5 border-y border-app-line-soft px-4 py-3 text-xs">
         <Fact label="On duty" value={duration((now - since) / 60_000)} />
         <Fact label="Checked in" value={istClock(since)} />
@@ -562,6 +579,8 @@ function GuardCard({
           <p className="text-muted-foreground">No path yet beyond the check-in point.</p>
         )}
       </div>
+
+      {g.device && <Permissions device={g.device} now={now} />}
 
       <div className="px-4 pb-2">
         <WakeButton guardId={g.guardId} name={g.name} />
@@ -612,6 +631,136 @@ function WakeButton({ guardId, name }: { guardId: string; name: string }) {
     >
       {busy ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} Wake up phone
     </button>
+  );
+}
+
+const IST_MS = 330 * 60_000;
+
+/** "17:00:00" → "5:00 pm". */
+function wallClock(value: string): string {
+  const [h, m] = value.split(":");
+  const hour = Number(h);
+  if (!Number.isFinite(hour)) return value;
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${m ?? "00"} ${hour < 12 ? "am" : "pm"}`;
+}
+
+/** The site's daily window as instants around `now`, an overnight window ending the next morning. */
+function siteWindow(start: string, end: string, now: number): { from: number; to: number } {
+  const mins = (v: string) => {
+    const [h, m] = v.split(":").map(Number);
+    return (h ?? 0) * 60 + (m ?? 0);
+  };
+  const midnight = Math.floor((now + IST_MS) / 86_400_000) * 86_400_000 - IST_MS;
+  let from = midnight + mins(start) * 60_000;
+  let to = midnight + mins(end) * 60_000;
+  if (to <= from) {
+    // Overnight: before the end this morning, it is still last night's shift.
+    if (now < to) from -= 86_400_000;
+    else to += 86_400_000;
+  }
+  return { from, to };
+}
+
+/** When this guard is meant to be on duty, and how far into it they are. */
+function DutyLine({ duty, now }: { duty: DutyGuard["duty"]; now: number }) {
+  if (!duty) {
+    return (
+      <p className="flex items-center gap-2 border-t border-app-line-soft px-4 py-2.5 text-xs text-muted-foreground">
+        <Clock className="size-3.5 shrink-0" /> No duty time set: not rostered, and the site has no shift window.
+      </p>
+    );
+  }
+  const { from, to } =
+    duty.kind === "shift"
+      ? { from: new Date(duty.start).getTime(), to: new Date(duty.end).getTime() }
+      : siteWindow(duty.start, duty.end, now);
+  const label = duty.kind === "shift" ? `${istClock(from)} – ${istClock(to)}` : `${wallClock(duty.start)} – ${wallClock(duty.end)}`;
+  const over = now > to;
+  const note = now < from ? `starts in ${duration((from - now) / 60_000)}` : over ? `ended ${duration((now - to) / 60_000)} ago` : `ends in ${duration((to - now) / 60_000)}`;
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-app-line-soft px-4 py-2.5 text-xs">
+      <Clock className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="text-muted-foreground">{duty.kind === "shift" ? "Duty" : "Site hours"}</span>
+      <span className="font-semibold tabular-nums">{label}</span>
+      <span className={cn("tabular-nums", over ? "font-semibold text-rose-600" : "text-muted-foreground")}>· {note}</span>
+    </p>
+  );
+}
+
+type Verdict = "ok" | "bad" | "unknown";
+
+/**
+ * What the phone has allowed the app, each a line with a tick or a cross, so a
+ * supervisor can see at a glance why a phone stops tracking. Read at the app's
+ * last launch or return to the front, not live.
+ */
+function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device"]>; now: number }) {
+  const android = d.platform !== "ios";
+  const older = "update the app to see";
+  const rows: { label: string; value: string; verdict: Verdict }[] = [
+    {
+      label: "Location",
+      value: d.permission === "always" ? "Allow all the time" : d.permission === "foreground" ? "Only while using the app" : d.permission === "denied" ? "Not allowed" : "Not reported",
+      verdict: d.permission === "always" ? "ok" : d.permission ? "bad" : "unknown",
+    },
+    {
+      label: "Precise location",
+      value: d.precise == null ? older : d.precise ? "On" : "Approximate only",
+      verdict: d.precise == null ? "unknown" : d.precise ? "ok" : "bad",
+    },
+    {
+      label: "GPS",
+      value: d.gps == null ? "Not reported" : d.gps ? "On" : "Switched off",
+      verdict: d.gps == null ? "unknown" : d.gps ? "ok" : "bad",
+    },
+    {
+      label: "Notifications",
+      value: d.notifications == null ? older : d.notifications ? "Allowed" : "Blocked: wake-ups cannot reach it",
+      verdict: d.notifications == null ? "unknown" : d.notifications ? "ok" : "bad",
+    },
+  ];
+  if (android) {
+    rows.push(
+      {
+        label: "Battery saver",
+        value: d.batteryOptimized == null ? "Not reported" : d.batteryOptimized ? "Restricting the app" : "Unrestricted",
+        verdict: d.batteryOptimized == null ? "unknown" : d.batteryOptimized ? "bad" : "ok",
+      },
+      {
+        label: "Autostart",
+        value: d.autostart == null ? older : d.autostart === "confirmed" ? "Turned on (confirmed by guard)" : d.autostart === "needed" ? "Not confirmed" : "Not needed on this phone",
+        verdict: d.autostart == null ? "unknown" : d.autostart === "needed" ? "bad" : "ok",
+      },
+    );
+  }
+  const bad = rows.filter((r) => r.verdict === "bad").length;
+  return (
+    <div className="border-t border-app-line-soft px-4 py-3 text-xs">
+      <p className="mb-2 flex items-center justify-between gap-2">
+        <span className="font-semibold">Phone permissions</span>
+        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", bad ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300")}>
+          {bad ? `${bad} to fix` : "All set"}
+        </span>
+      </p>
+      <ul className="space-y-1.5">
+        {rows.map((r) => {
+          const Icon = r.verdict === "ok" ? CircleCheck : r.verdict === "bad" ? CircleX : CircleMinus;
+          return (
+            <li key={r.label} className="flex items-start gap-2">
+              <Icon
+                className={cn(
+                  "mt-px size-3.5 shrink-0",
+                  r.verdict === "ok" ? "text-emerald-600" : r.verdict === "bad" ? "text-rose-600" : "text-muted-foreground",
+                )}
+              />
+              <span className="w-28 shrink-0 text-muted-foreground">{r.label}</span>
+              <span className={cn("min-w-0 flex-1", r.verdict === "bad" && "font-semibold text-rose-700 dark:text-rose-300", r.verdict === "unknown" && "text-muted-foreground")}>{r.value}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {d.checkedAt && <p className="mt-2 text-muted-foreground">Reported by the phone {ago(new Date(d.checkedAt).getTime(), now)}.</p>}
+    </div>
   );
 }
 

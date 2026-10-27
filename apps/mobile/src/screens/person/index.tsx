@@ -48,7 +48,16 @@ const ago = (iso: string | null, now: number) => {
 };
 const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-type Session = { id: string; in: string; out: string | null; minutes: number | null; status: string; site: string };
+type Session = {
+  id: string;
+  in: string;
+  out: string | null;
+  minutes: number | null;
+  status: string;
+  site: string;
+  /** When they were meant to be on duty: the rostered shift, else the site's hours. */
+  duty: string | null;
+};
 type Detail = {
   id: string;
   name: string;
@@ -64,8 +73,22 @@ type Detail = {
   pin: string | null;
   posting: { site: string; starts: string; ends: string; days: number[]; shift: string | null } | null;
   sessions: Session[];
-  position: { lat: number; lng: number; inside: boolean | null; distance: number | null; battery: number | null; at: string; mode: string } | null;
-  device: { model: string; os: string | null; app: string | null; status: string; gps: boolean | null; permission: string | null; seen: string } | null;
+  position: { lat: number; lng: number; inside: boolean | null; distance: number | null; battery: number | null; charging: boolean | null; at: string; mode: string } | null;
+  device: {
+    model: string;
+    os: string | null;
+    app: string | null;
+    status: string;
+    platform: string | null;
+    gps: boolean | null;
+    permission: string | null;
+    batteryOptimized: boolean | null;
+    /** From app builds after 0060; null from older ones. */
+    notifications: boolean | null;
+    precise: boolean | null;
+    autostart: string | null;
+    seen: string;
+  } | null;
 };
 
 async function load(id: string): Promise<Detail | null> {
@@ -73,10 +96,10 @@ async function load(id: string): Promise<Detail | null> {
   const [p, pin, att, post, pos, dev] = await Promise.all([
     supabase.from("profiles").select("id, full_name, employee_code, role, trade, email, phone, avatar_url, active, joined_at, created_at, last_seen_at").eq("id", id).maybeSingle(),
     supabase.from("staff_pins").select("pin").eq("profile_id", id).maybeSingle(),
-    supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, sites(name)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
+    supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, sites(name, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
     supabase.from("site_postings").select("starts, ends, days, shift_type, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
-    supabase.from("guard_positions").select("lat, lng, inside_fence, distance_m, battery, recorded_at, received_at, mode").eq("guard_id", id).maybeSingle(),
-    supabase.from("guard_devices").select("brand, model, os_version, app_version, status, gps_enabled, location_permission, last_seen_at").eq("profile_id", id).order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("guard_positions").select("lat, lng, inside_fence, distance_m, battery, charging, recorded_at, received_at, mode").eq("guard_id", id).maybeSingle(),
+    supabase.from("guard_devices").select("brand, model, os_version, app_version, status, platform, gps_enabled, location_permission, battery_optimized, notifications_enabled, precise_location, autostart, permissions_at, last_seen_at").eq("profile_id", id).order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const r = p.data;
   if (!r) return null;
@@ -97,7 +120,16 @@ async function load(id: string): Promise<Detail | null> {
     posting: post.data ? { site: site(post.data.sites), starts: post.data.starts, ends: post.data.ends, days: post.data.days ?? [], shift: post.data.shift_type } : null,
     sessions: (att.data ?? [])
       .filter((a) => a.check_in_at)
-      .map((a) => ({ id: a.id, in: a.check_in_at!, out: a.check_out_at, minutes: a.worked_minutes, status: a.status, site: site(a.sites) })),
+      .map((a) => {
+        const shift = one(a.shifts as unknown as { starts_at: string; ends_at: string } | { starts_at: string; ends_at: string }[] | null);
+        const hours = one(a.sites as unknown as { shift_start: string | null; shift_end: string | null } | { shift_start: string | null; shift_end: string | null }[] | null);
+        const duty = shift
+          ? `${istTime(shift.starts_at)} – ${istTime(shift.ends_at)}`
+          : hours?.shift_start && hours.shift_end
+            ? `${clock12(hours.shift_start)} – ${clock12(hours.shift_end)} (site hours)`
+            : null;
+        return { id: a.id, in: a.check_in_at!, out: a.check_out_at, minutes: a.worked_minutes, status: a.status, site: site(a.sites), duty };
+      }),
     position: pos.data
       ? {
           lat: pos.data.lat,
@@ -105,6 +137,7 @@ async function load(id: string): Promise<Detail | null> {
           inside: pos.data.inside_fence,
           distance: pos.data.distance_m,
           battery: pos.data.battery,
+          charging: pos.data.charging,
           at: pos.data.received_at ?? pos.data.recorded_at,
           mode: pos.data.mode,
         }
@@ -115,9 +148,14 @@ async function load(id: string): Promise<Detail | null> {
           os: dev.data.os_version,
           app: dev.data.app_version,
           status: dev.data.status,
+          platform: dev.data.platform,
           gps: dev.data.gps_enabled,
           permission: dev.data.location_permission,
-          seen: dev.data.last_seen_at,
+          batteryOptimized: dev.data.battery_optimized,
+          notifications: dev.data.notifications_enabled,
+          precise: dev.data.precise_location,
+          autostart: dev.data.autostart,
+          seen: dev.data.permissions_at ?? dev.data.last_seen_at,
         }
       : null,
   };
@@ -222,7 +260,8 @@ export function PersonPage({ id }: { id: string }) {
                       value={`${d.position.inside ? "Inside the boundary" : `${Math.round(d.position.distance ?? 0)} m outside`} · ${age === "live" ? "live" : `heard ${ago(d.position.at, now).replace(/^(Just now|\d+ (min|h) ago)$/, (m) => m.toLowerCase())}`}`}
                       first
                     />
-                    <Row label="Battery" value={d.position.battery != null ? `${d.position.battery}%` : "-"} />
+                    <Row label="Duty" value={open.duty ?? "No set time"} />
+                    <Row label="Battery" value={d.position.battery != null ? `${d.position.battery}%${d.position.charging ? " · charging" : ""}` : "-"} />
                     <PanelRow>
                       <View style={styles.flex}>
                         <Button label="Directions to them" icon={Navigation} variant="outline" fullWidth onPress={() => void Linking.openURL(directionsUrl(d.position!))} />
@@ -296,8 +335,10 @@ export function PersonPage({ id }: { id: string }) {
           {d.device && (
             <Panel tone="slate" icon={Smartphone} title={d.device.model} subtitle={[d.device.os, d.device.app ? `app ${d.device.app}` : null].filter(Boolean).join(" · ")} bare>
               <Row label="Approval" value={d.device.status === "approved" ? "Approved" : d.device.status === "pending" ? "Waiting for approval" : "Blocked"} first />
-              <Row label="Location" value={d.device.gps === false ? "GPS off" : d.device.permission === "always" ? "Always allowed" : d.device.permission ?? "Unknown"} />
-              <Row label="Phone last seen" value={ago(d.device.seen, now)} />
+              {permissionRows(d.device).map((r) => (
+                <Row key={r.label} label={r.label} value={`${r.ok === false ? "✕ " : r.ok ? "✓ " : ""}${r.value}`} />
+              ))}
+              <Row label="Reported" value={ago(d.device.seen, now)} />
             </Panel>
           )}
 
@@ -306,6 +347,39 @@ export function PersonPage({ id }: { id: string }) {
       )}
     </Screen>
   );
+}
+
+/**
+ * What the phone has allowed the app, as the website's guard card lists it. Read at
+ * the app's last launch or return to the front; `ok` null is "not reported".
+ */
+function permissionRows(d: NonNullable<Detail["device"]>): { label: string; value: string; ok: boolean | null }[] {
+  const older = "Update the app to see";
+  const rows = [
+    {
+      label: "Location",
+      value: d.permission === "always" ? "Allow all the time" : d.permission === "foreground" ? "Only while using the app" : d.permission === "denied" ? "Not allowed" : "Not reported",
+      ok: d.permission ? d.permission === "always" : null,
+    },
+    { label: "Precise location", value: d.precise == null ? older : d.precise ? "On" : "Approximate only", ok: d.precise },
+    { label: "GPS", value: d.gps == null ? "Not reported" : d.gps ? "On" : "Switched off", ok: d.gps },
+    { label: "Notifications", value: d.notifications == null ? older : d.notifications ? "Allowed" : "Blocked", ok: d.notifications },
+  ];
+  if (d.platform !== "ios") {
+    rows.push(
+      {
+        label: "Battery saver",
+        value: d.batteryOptimized == null ? "Not reported" : d.batteryOptimized ? "Restricting the app" : "Unrestricted",
+        ok: d.batteryOptimized == null ? null : !d.batteryOptimized,
+      },
+      {
+        label: "Autostart",
+        value: d.autostart == null ? older : d.autostart === "confirmed" ? "On (confirmed)" : d.autostart === "needed" ? "Not confirmed" : "Not needed",
+        ok: d.autostart == null ? null : d.autostart !== "needed",
+      },
+    );
+  }
+  return rows;
 }
 
 function Tile({ label, value, tone }: { label: string; value: string; tone: "emerald" | "violet" }) {

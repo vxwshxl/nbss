@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { BellOff, MapPinned, PowerOff, Power, Radio, Shapes, Siren, Volume2, VolumeX } from "lucide-react";
+import { BellOff, MapPinned, Pencil, PowerOff, Power, Radio, Shapes, Siren, Trash2, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 
-import { setSiteActive, setSiteSiren, setSiteSos } from "@/app/console/sites/actions";
+import { deleteSite, setSiteActive, setSiteSiren, setSiteSos } from "@/app/console/sites/actions";
+import { SiteForm } from "@/components/console/site-form";
 import { SiteMap, type MapSite } from "@/components/console/site-map";
 import { SitePreviewDialog } from "@/components/console/site-preview";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,9 @@ export function SitesWorkspace({
   const detail = rows.find((r) => r.id === detailId) ?? null;
   const setDetail = (r: SiteRow | null) => setDetailId(r?.id ?? null);
   const [confirming, setConfirming] = useState(false);
+  // The site being edited in the register form, and the one asked about deleting.
+  const [editing, setEditing] = useState<SiteRow | null>(null);
+  const [deleting, setDeleting] = useState<SiteRow | null>(null);
 
   // Only live sites are drawn. A decommissioned fence on the map is a fence
   // somebody will try to send a guard to.
@@ -140,6 +144,16 @@ export function SitesWorkspace({
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not change the siren for the site.");
       }
+    });
+  }
+
+  function remove(site: SiteRow) {
+    start(async () => {
+      const r = await deleteSite(site.id);
+      setDeleting(null);
+      if (!r.ok) return void toast.error("Site not deleted", { description: r.error });
+      setDetail(null);
+      toast.success("Site deleted", { description: site.name });
     });
   }
 
@@ -280,6 +294,18 @@ export function SitesWorkspace({
         actions={
           canManage && detail ? (
             <>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                setEditing(detail);
+                setDetail(null);
+              }}
+            >
+              <Pencil data-icon="inline-start" />
+              Edit site
+            </Button>
             <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSos(detail, !detail.sos_enabled)}>
               {detail.sos_enabled ? (
                 <>
@@ -326,8 +352,33 @@ export function SitesWorkspace({
                 </>
               )}
             </Button>
+            {/* Only an empty site can go for good; the action refuses one with history. */}
+            {detail.onDuty === 0 && (
+              <Button size="sm" variant="outline" disabled={pending} onClick={() => setDeleting(detail)} className="text-destructive hover:text-destructive">
+                <Trash2 data-icon="inline-start" />
+                Delete
+              </Button>
+            )}
             </>
           ) : null
+        }
+      />
+
+      {editing && <SiteForm key={editing.id} site={editing} onClose={() => setEditing(null)} />}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) remove(deleting);
+        }}
+        destructive
+        title="Delete this site for good?"
+        confirmLabel="Delete site"
+        description={
+          deleting
+            ? `${deleting.name} and its fence, roster postings and future shifts are removed, and it cannot be undone. A site where anyone has ever checked in or raised an SOS cannot be deleted: take it out of service instead, which keeps its records.`
+            : ""
         }
       />
 

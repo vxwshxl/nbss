@@ -2,11 +2,11 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, MapPinPlus, Plus } from "lucide-react";
+import { AlertCircle, MapPinPlus, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 
-import { createSite } from "@/app/console/sites/actions";
-import { emptySiteForm } from "@/app/console/sites/site-form-state";
+import { createSite, updateSite } from "@/app/console/sites/actions";
+import { emptySiteForm, type SiteFormState } from "@/app/console/sites/site-form-state";
 import { FenceMap, type Fence } from "@/components/console/fence-map";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,14 +23,60 @@ import { Label } from "@/components/ui/label";
 import { TimePicker } from "@/components/ui/time-picker";
 
 
-function Submit({ disabled }: { disabled: boolean }) {
+function Submit({ disabled, editing }: { disabled: boolean; editing: boolean }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending || disabled}>
-      <MapPinPlus data-icon="inline-start" />
-      {pending ? "Saving…" : "Register site"}
+      {editing ? <Save data-icon="inline-start" /> : <MapPinPlus data-icon="inline-start" />}
+      {pending ? "Saving…" : editing ? "Save changes" : "Register site"}
     </Button>
   );
+}
+
+/** A saved site, as the edit form starts from it. */
+export type EditableSite = {
+  id: string;
+  name: string;
+  client_name: string | null;
+  address: string | null;
+  district: string | null;
+  lat: number;
+  lng: number;
+  geofence_radius_m: number;
+  ring: [number, number][] | null;
+  max_accuracy_m: number;
+  grace_minutes: number;
+  standard_shift_minutes: number;
+  shift_start: string | null;
+  shift_end: string | null;
+};
+
+function stateOf(site: EditableSite): SiteFormState {
+  return {
+    ok: false,
+    values: {
+      name: site.name,
+      client_name: site.client_name ?? "",
+      address: site.address ?? "",
+      district: site.district ?? "",
+      lat: String(site.lat),
+      lng: String(site.lng),
+      geofence_radius_m: String(site.geofence_radius_m),
+      max_accuracy_m: String(site.max_accuracy_m),
+      grace_minutes: String(site.grace_minutes),
+      standard_shift_minutes: String(site.standard_shift_minutes),
+      // "09:55:00" from Postgres; the picker works in "09:55".
+      shift_start: site.shift_start?.slice(0, 5) ?? "",
+      shift_end: site.shift_end?.slice(0, 5) ?? "",
+    },
+  };
+}
+
+function fenceOf(site: EditableSite | undefined): Fence {
+  if (!site) return { mode: "radius", lat: 0, lng: 0, radius: 150 };
+  return site.ring && site.ring.length >= 3
+    ? { mode: "polygon", lat: site.lat, lng: site.lng, ring: site.ring }
+    : { mode: "radius", lat: site.lat, lng: site.lng, radius: site.geofence_radius_m };
 }
 
 /** A labelled field, since this form has eleven of them and they are all alike. */
@@ -70,16 +116,19 @@ function Field({
  * A dialog rather than a panel that expands in place: the map wants real size,
  * and an inline form that pushes the site table two screens down is a form that
  * makes you lose your place every time you open it.
+ *
+ * Given a `site`, the same form edits it: opened by the caller (the site's
+ * popup), starting from what is saved, and closing through `onClose`.
  */
-export function SiteForm() {
-  const [state, action] = useActionState(createSite, emptySiteForm);
-  const [open, setOpen] = useState(false);
-  const [fence, setFence] = useState<Fence>({
-    mode: "radius",
-    lat: 0,
-    lng: 0,
-    radius: 150,
-  });
+export function SiteForm({ site, onClose }: { site?: EditableSite; onClose?: () => void } = {}) {
+  const editing = !!site;
+  const [state, action] = useActionState(editing ? updateSite : createSite, site ? stateOf(site) : emptySiteForm);
+  const [open, setOpenState] = useState(editing);
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    if (!v) onClose?.();
+  };
+  const [fence, setFence] = useState<Fence>(() => fenceOf(site));
 
   // A save closes the dialog and says so. Before, the form emptied itself and
   // stayed open, which read as "nothing happened" and invited a duplicate.
@@ -87,36 +136,42 @@ export function SiteForm() {
   if (seen !== state) {
     setSeen(state);
     if (state.ok && state.created) {
-      setOpen(false);
-      setFence({ mode: "radius", lat: 0, lng: 0, radius: 150 });
+      setOpenState(false);
+      setFence(fenceOf(undefined));
     }
   }
   useEffect(() => {
-    if (state.ok && state.created) toast.success("Site registered", { description: state.created });
-  }, [state]);
+    if (!state.ok || !state.created) return;
+    toast.success(editing ? "Site saved" : "Site registered", { description: state.created });
+    if (editing) onClose?.();
+  }, [state, editing, onClose]);
 
   const placed =
     fence.mode === "radius" ? !!(fence.lat || fence.lng) : fence.ring.length >= 3;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus data-icon="inline-start" />
-          Register a site
-        </Button>
-      </DialogTrigger>
+      {!editing && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus data-icon="inline-start" />
+            Register a site
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent className="max-h-[94dvh] overflow-y-auto p-6 sm:max-w-[min(72rem,calc(100%-3rem))] sm:p-7">
         <DialogHeader>
-          <DialogTitle>Register a site</DialogTitle>
+          <DialogTitle>{editing ? `Edit ${site.name}` : "Register a site"}</DialogTitle>
           <DialogDescription>
-            Place the boundary on the map, then describe the site and how attendance
-            inside it is judged.
+            {editing
+              ? "Move or redraw the boundary, or change the details and shift rules. Punches already recorded keep their verdict; the new fence judges the next ones."
+              : "Place the boundary on the map, then describe the site and how attendance inside it is judged."}
           </DialogDescription>
         </DialogHeader>
 
         <form action={action} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+          {site && <input type="hidden" name="id" value={site.id} />}
           {state.error && (
             <div
               role="alert"
@@ -257,7 +312,7 @@ export function SiteForm() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Submit disabled={!placed} />
+            <Submit disabled={!placed} editing={editing} />
           </DialogFooter>
         </form>
       </DialogContent>

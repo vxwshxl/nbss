@@ -276,6 +276,10 @@ export type Database = {
           approved_by: string | null;
           approved_at: string | null;
           battery_optimized: boolean | null;
+          notifications_enabled: boolean | null;
+          precise_location: boolean | null;
+          autostart: string | null;
+          permissions_at: string | null;
         };
         Insert: {
           id?: string;
@@ -297,6 +301,10 @@ export type Database = {
           approved_by?: string | null;
           approved_at?: string | null;
           battery_optimized?: boolean | null;
+          notifications_enabled?: boolean | null;
+          precise_location?: boolean | null;
+          autostart?: string | null;
+          permissions_at?: string | null;
         };
         Update: {
           id?: string;
@@ -318,6 +326,10 @@ export type Database = {
           approved_by?: string | null;
           approved_at?: string | null;
           battery_optimized?: boolean | null;
+          notifications_enabled?: boolean | null;
+          precise_location?: boolean | null;
+          autostart?: string | null;
+          permissions_at?: string | null;
         };
         Relationships: [];
       };
@@ -1726,6 +1738,9 @@ export type Database = {
           p_location_permission?: string;
           p_gps_enabled?: boolean;
           p_battery_optimized?: boolean;
+          p_notifications?: boolean;
+          p_precise_location?: boolean;
+          p_autostart?: string;
         };
         Returns: Json;
       };

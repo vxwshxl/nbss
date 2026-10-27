@@ -8,19 +8,30 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 import type { SiteFormState } from "./site-form-state";
 
+type SiteFields = {
+  name: string;
+  client_name: string | null;
+  address: string | null;
+  district: string | null;
+  lat: number;
+  lng: number;
+  geofence_radius_m: number;
+  polygon: [number, number][] | null;
+  max_accuracy_m: number;
+  grace_minutes: number;
+  standard_shift_minutes: number;
+  shift_start: string | null;
+  shift_end: string | null;
+};
+
 /**
- * Creates a site and the fence around it.
+ * The site form, read and checked. Shared by registering and editing a site.
  *
  * Coordinates are validated here rather than trusted from the form: a site
  * saved at a wrong latitude is not a cosmetic error, it is a fence in the
  * wrong place, and every check-in against it afterwards is meaningless.
  */
-export async function createSite(
-  _prev: SiteFormState,
-  data: FormData,
-): Promise<SiteFormState> {
-  const profile = await requireRole("admin");
-
+function readSiteForm(data: FormData): { fail: (error: string) => SiteFormState; error?: string; fields?: SiteFields } {
   const name = String(data.get("name") ?? "").trim();
   const clientName = String(data.get("client_name") ?? "").trim();
   const address = String(data.get("address") ?? "").trim();
@@ -53,20 +64,21 @@ export async function createSite(
   };
 
   const fail = (error: string): SiteFormState => ({ ok: false, values, error });
+  const bad = (error: string) => ({ fail, error });
 
-  if (!name) return fail("Give the site a name.");
+  if (!name) return bad("Give the site a name.");
 
   if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-    return fail("Latitude must be a number between −90 and 90.");
+    return bad("Latitude must be a number between −90 and 90.");
   }
   if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
-    return fail("Longitude must be a number between −180 and 180.");
+    return bad("Longitude must be a number between −180 and 180.");
   }
 
   // 0,0 is in the Gulf of Guinea. It is what an empty form and a failed parse
   // both produce, so it is almost always a mistake rather than a site.
   if (lat === 0 && lng === 0) {
-    return fail("Those coordinates are in the Atlantic Ocean. Check the pin.");
+    return bad("Those coordinates are in the Atlantic Ocean. Check the pin.");
   }
 
   /**
@@ -95,27 +107,25 @@ export async function createSite(
             (pt[1] as number) <= 90,
         );
 
-      if (!ok) return fail("That boundary is not a usable shape. Redraw it with at least three points.");
+      if (!ok) return bad("That boundary is not a usable shape. Redraw it with at least three points.");
       polygon = parsed as [number, number][];
     } catch {
-      return fail("That boundary could not be read. Redraw it.");
+      return bad("That boundary could not be read. Redraw it.");
     }
   }
 
   // The radius still has to be sane even when a polygon supersedes it: it is
   // what the record falls back to if the drawn shape is ever cleared.
   if (!Number.isFinite(radius) || radius < 25 || radius > 5000) {
-    return fail("The fence radius must be between 25 m and 5000 m.");
+    return bad("The fence radius must be between 25 m and 5000 m.");
   }
   if (!Number.isFinite(accuracy) || accuracy < 10 || accuracy > 1000) {
-    return fail("Required GPS accuracy must be between 10 m and 1000 m.");
+    return bad("Required GPS accuracy must be between 10 m and 1000 m.");
   }
 
-  const supabase = await supabaseServer();
-
-  const { data: created, error } = await supabase
-    .from("sites")
-    .insert({
+  return {
+    fail,
+    fields: {
       name,
       client_name: clientName || null,
       address: address || null,
@@ -123,32 +133,129 @@ export async function createSite(
       lat,
       lng,
       geofence_radius_m: Math.round(radius),
-      polygon: polygon as never,
+      polygon,
       max_accuracy_m: Math.round(accuracy),
       grace_minutes: Number.isFinite(grace) ? Math.round(grace) : 10,
       standard_shift_minutes: Number.isFinite(standard) ? Math.round(standard) : 480,
       shift_start: shiftStart || null,
       shift_end: shiftEnd || null,
-    })
+    },
+  };
+}
+
+async function clientIp(): Promise<string | null> {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+}
+
+/** Creates a site and the fence around it. */
+export async function createSite(
+  _prev: SiteFormState,
+  data: FormData,
+): Promise<SiteFormState> {
+  const profile = await requireRole("admin");
+  const { fail, error: invalid, fields: f } = readSiteForm(data);
+  if (!f) return fail(invalid ?? "Check the form.");
+
+  const supabase = await supabaseServer();
+
+  const { data: created, error } = await supabase
+    .from("sites")
+    .insert({ ...f, polygon: f.polygon as never })
     .select("id")
     .single();
 
   if (error) return fail(error.message);
 
-  const h = await headers();
   await audit({
     actor: profile,
     action: "site_created",
     entity: "sites",
     entityId: created.id,
-    detail: { name, lat, lng, radius, shape: polygon ? `polygon:${polygon.length}` : "circle" },
-    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    detail: { name: f.name, lat: f.lat, lng: f.lng, radius: f.geofence_radius_m, shape: f.polygon ? `polygon:${f.polygon.length}` : "circle" },
+    ip: await clientIp(),
   });
 
   revalidatePath("/console/sites");
   revalidatePath("/console");
 
-  return { ok: true, values: null, created: name };
+  return { ok: true, values: null, created: f.name };
+}
+
+/**
+ * Edits a site: its details, its fence and its shift rules. Punches already
+ * recorded keep the verdict they were given; the new fence judges the next ones.
+ */
+export async function updateSite(
+  _prev: SiteFormState,
+  data: FormData,
+): Promise<SiteFormState> {
+  const profile = await requireRole("admin");
+  const id = String(data.get("id") ?? "");
+  const { fail, error: invalid, fields: f } = readSiteForm(data);
+  if (!id) return fail("Which site is this? Close the form and open it again.");
+  if (!f) return fail(invalid ?? "Check the form.");
+
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from("sites")
+    .update({ ...f, polygon: f.polygon as never })
+    .eq("id", id);
+  if (error) return fail(error.message);
+
+  await audit({
+    actor: profile,
+    action: "site_updated",
+    entity: "sites",
+    entityId: id,
+    detail: { name: f.name, lat: f.lat, lng: f.lng, radius: f.geofence_radius_m, shape: f.polygon ? `polygon:${f.polygon.length}` : "circle" },
+    ip: await clientIp(),
+  });
+
+  revalidatePath("/console/sites");
+  revalidatePath("/console");
+
+  return { ok: true, values: null, created: f.name };
+}
+
+/**
+ * Deletes a site, but only one nothing has happened at. Deleting a site deletes
+ * its attendance, SOS and handover records with it (the foreign keys cascade), so
+ * a site with any history is refused and is taken out of service instead.
+ */
+export async function deleteSite(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const profile = await requireRole("admin");
+  const supabase = await supabaseServer();
+
+  const [punches, sos, site] = await Promise.all([
+    supabase.from("attendance").select("id", { count: "exact", head: true }).eq("site_id", id),
+    supabase.from("sos_alerts").select("id", { count: "exact", head: true }).eq("site_id", id),
+    supabase.from("sites").select("name").eq("id", id).maybeSingle(),
+  ]);
+  if (punches.error || sos.error) return { ok: false, error: "Could not check the site's records. Try again." };
+  const history = (punches.count ?? 0) + (sos.count ?? 0);
+  if (history > 0) {
+    return {
+      ok: false,
+      error: `This site has ${punches.count ?? 0} attendance and ${sos.count ?? 0} SOS records, which deleting it would erase. Take it out of service instead.`,
+    };
+  }
+
+  const { error } = await supabase.from("sites").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+
+  await audit({
+    actor: profile,
+    action: "site_deleted",
+    entity: "sites",
+    entityId: id,
+    detail: { name: site.data?.name ?? null },
+    ip: await clientIp(),
+  });
+
+  revalidatePath("/console/sites");
+  revalidatePath("/console");
+  return { ok: true };
 }
 
 /** Switches SOS on or off for everyone working a site (0052). */

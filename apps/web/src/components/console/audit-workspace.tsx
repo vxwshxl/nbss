@@ -56,6 +56,8 @@ const ACTION_LABEL: Record<string, string> = {
   own_pin_changed: "Changed their own PIN",
   profile_updated: "Updated a profile",
   site_created: "Registered a site",
+  site_updated: "Edited a site",
+  site_deleted: "Deleted a site",
   site_deactivated: "Took a site out of service",
   site_reactivated: "Put a site back in service",
   check_in: "Checked in",
