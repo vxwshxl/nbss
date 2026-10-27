@@ -888,6 +888,7 @@ export type Database = {
           ends: string;
           days: number[];
           active: boolean;
+          held_for_inactive: boolean;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -902,6 +903,7 @@ export type Database = {
           ends: string;
           days?: number[];
           active?: boolean;
+          held_for_inactive?: boolean;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -916,6 +918,7 @@ export type Database = {
           ends?: string;
           days?: number[];
           active?: boolean;
+          held_for_inactive?: boolean;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
