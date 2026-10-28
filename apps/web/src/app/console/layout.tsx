@@ -59,8 +59,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const { profile, realProfile, impersonating } = session;
   // "Last seen" (0048), after the page is sent so it never slows one down. The real
   // person's, even while viewing as someone else: the cookie is theirs.
+  // The client is made here, not inside the callback: it reads the request's
+  // cookies, and `after()` runs once the request is gone.
+  const presence = await supabaseServer();
   after(async () => {
-    await (await supabaseServer()).rpc("touch_presence");
+    await presence.rpc("touch_presence");
   });
   const persona = personaFor(profile.role);
   const canImpersonate = realProfile.role === "developer";

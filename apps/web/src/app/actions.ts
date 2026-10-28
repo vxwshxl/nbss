@@ -177,23 +177,31 @@ export async function updateStatus(id: string, status: Status): Promise<void> {
   revalidatePath("/console/submissions");
 }
 
-/** Spam and test entries go for good. Administrators only, and logged. */
-export async function deleteSubmission(id: string): Promise<void> {
+/**
+ * Spam and test entries go for good. Administrators only, and logged.
+ *
+ * One that is already gone counts as deleted: a retry after a dropped response
+ * must clear the card, not report a failure. Refusals come back as a value, not a
+ * throw, because production replaces a thrown message with a generic one.
+ */
+export async function deleteSubmission(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireRoleSession("admin");
-  if (session.impersonating) throw new Error("Stop viewing as someone else to delete an enquiry.");
+  if (session.impersonating) return { ok: false, error: "Stop viewing as someone else to delete an enquiry." };
   const removed = await removeSubmission(id);
-  if (!removed) throw new Error("That enquiry has already been deleted.");
 
-  const h = await headers();
-  await audit({
-    actor: session.realProfile,
-    action: "submission_deleted",
-    entity: "submissions",
-    entityId: id,
-    detail: { kind: removed.kind, name: removed.name, phone: removed.phone, email: removed.email ?? null },
-    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
-  });
+  if (removed) {
+    const h = await headers();
+    await audit({
+      actor: session.realProfile,
+      action: "submission_deleted",
+      entity: "submissions",
+      entityId: id,
+      detail: { kind: removed.kind, name: removed.name, phone: removed.phone, email: removed.email ?? null },
+      ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    });
+  }
 
   revalidatePath("/console/submissions");
   revalidatePath("/console");
+  return { ok: true };
 }

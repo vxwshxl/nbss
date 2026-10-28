@@ -327,7 +327,9 @@ export function SubmissionsWorkspace({ rows, canDelete }: { rows: Submission[]; 
         open={!!deleting}
         onOpenChange={(v) => !v && setDeleting(null)}
         onConfirm={async () => {
-          if (deleting) await deleteSubmission(deleting.id);
+          if (!deleting) return;
+          const res = await deleteSubmission(deleting.id);
+          if (!res.ok) throw new Error(res.error);
         }}
         destructive
         title="Delete this enquiry?"

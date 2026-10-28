@@ -94,7 +94,11 @@ export async function deleteBooking(id: string): Promise<{ ok: true } | { ok: fa
     .select("id, reference, status, contact_name, organisation, phone")
     .eq("id", id)
     .maybeSingle();
-  if (!row) return { ok: false, error: "That booking has already been deleted." };
+  // Already gone — a retry after a dropped response. Refresh the list rather than fail.
+  if (!row) {
+    revalidatePath("/console/bookings");
+    return { ok: true };
+  }
 
   const { error } = await supabase.from("service_requests").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
