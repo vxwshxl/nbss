@@ -7,7 +7,7 @@ import { AuthShell } from "../login/auth-shell";
 
 export const metadata: Metadata = {
   title: "NBSS app for Android",
-  description: "Download and install the NBSS Kokrajhar app for guards, supervisors and the office.",
+  description: "Download and install the NBSS Kokrajhar app for guards, supervisors, the office and clients.",
   robots: { index: false, follow: false },
 };
 
@@ -41,7 +41,7 @@ const STEPS: { title: string; text: string }[] = [
     title: "Install",
     text: "Tap Install. If Play Protect warns you, tap More details → Install anyway. Already have the app? Installing over it keeps you signed in.",
   },
-  { title: "Sign in", text: "Open NBSS Kokrajhar and sign in with your full name and mobile number." },
+  { title: "Sign in", text: "Open NBSS Kokrajhar. Staff and guards sign in with their full name and mobile number; clients sign in with Google." },
 ];
 
 export default async function AndroidPage() {
@@ -58,9 +58,9 @@ export default async function AndroidPage() {
           <Smartphone className="size-3.5" />
           Android app
         </span>
-        <h1 className="mt-3 font-display text-[32px] leading-tight font-extrabold tracking-[-0.025em]">Get the NBSS app</h1>
+        <h1 className="mt-3 font-display text-[32px] leading-tight font-extrabold tracking-[-0.025em]">Get the NBSS Kokrajhar app</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          For guards, housekeepers, supervisors and the office. Works on Android 7.0 and newer.
+          For guards, housekeepers, supervisors, the office and our clients. Works on Android 7.0 and newer.
         </p>
       </div>
 

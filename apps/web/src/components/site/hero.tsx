@@ -127,6 +127,30 @@ export function Hero() {
                 Our services
               </Link>
             </div>
+            {/* The app, for guards, the office and clients. */}
+            <div data-intro className="mt-4 flex flex-wrap items-center justify-center gap-2.5 lg:justify-start">
+              <Link
+                href="/android"
+                className="inline-flex h-11 items-center gap-2.5 rounded-xl bg-ink px-3.5 text-ink-fg transition-transform duration-[120ms] ease-quick hover:scale-[1.03] active:scale-[0.98]"
+              >
+                <AndroidMark className="size-5" />
+                <span className="flex flex-col text-left leading-none">
+                  <span className="text-[10px] text-ink-fg/70">Get it on</span>
+                  <span className="text-sm font-semibold">Android</span>
+                </span>
+              </Link>
+              <span
+                aria-disabled
+                title="The iPhone app is on its way"
+                className="inline-flex h-11 cursor-default items-center gap-2.5 rounded-xl bg-white/50 px-3.5 text-ink/55 shadow-[0_0_0_1px_rgb(255_255_255/0.7)] backdrop-blur-md"
+              >
+                <AppleMark className="size-5" />
+                <span className="flex flex-col text-left leading-none">
+                  <span className="text-[10px]">Coming soon on</span>
+                  <span className="text-sm font-semibold">iOS</span>
+                </span>
+              </span>
+            </div>
           </div>
 
           {/* What is left of the screen, as a size container: the wall below scales to fit
@@ -278,5 +302,21 @@ function Feed({
         {label}
       </span>
     </div>
+  );
+}
+
+function AndroidMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="#3DDC84">
+      <path d="M17.6 9.48l1.84-3.18a.38.38 0 0 0-.66-.38l-1.86 3.22A11.4 11.4 0 0 0 12 8.13c-1.77 0-3.43.38-4.92 1.01L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.78 10.78 0 0 0 1 18h22a10.78 10.78 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
+    </svg>
+  );
+}
+
+function AppleMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="currentColor">
+      <path d="M16.37 12.7c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.71-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.87-.76-1.47.02-2.83.86-3.59 2.18-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.25 2.73 2.2 1.1-.04 1.51-.7 2.84-.7 1.32 0 1.7.7 2.86.68 1.18-.02 1.93-1.07 2.65-2.13.84-1.22 1.18-2.41 1.2-2.47-.03-.01-2.3-.88-2.29-3.52zM14.2 6.23c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.64-1.05 1.68-.92 2.67.97.07 1.96-.49 2.56-1.22z" />
+    </svg>
   );
 }
