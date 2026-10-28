@@ -4,19 +4,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 
 import { useActionState, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  Check,
-  Copy,
-  Eye,
-  KeyRound,
-  Mail,
-  Pencil,
-  Plus,
-  Power,
-  PowerOff,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react";
+import { Eye, Pencil, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -24,7 +12,6 @@ import {
   addGuard,
   changeRole,
   deleteAccount,
-  resetPin,
   setAccountActive,
   setPersonSos,
   updateContact,
@@ -75,8 +62,6 @@ export type PersonRow = {
   active: boolean;
   joined_at: string | null;
   created_at: string;
-  must_change_pin: boolean;
-  pin_reset_at: string | null;
   last_seen_at: string | null;
 };
 
@@ -152,35 +137,6 @@ function dateOnly(iso: string | null): string {
  * down a phone line or copied onto a slip of paper — the two cases where a 0
  * and an O being indistinguishable costs somebody a trip back to the office.
  */
-function Secret({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-app-line bg-muted/60 p-3">
-      <code className="flex-1 text-center font-mono text-2xl font-bold tracking-[0.2em] tabular-nums">
-        {value}
-      </code>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        aria-label="Copy"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(value);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1600);
-          } catch {
-            toast.error("Could not copy. Select the text and copy it by hand.");
-          }
-        }}
-      >
-        {copied ? <Check className="text-primary" /> : <Copy />}
-      </Button>
-    </div>
-  );
-}
-
 export function GuardsWorkspace({
   rows,
   canManage,
@@ -188,7 +144,6 @@ export function GuardsWorkspace({
   isDeveloper = false,
   showRoleTabs = false,
   defaultRole = "guard",
-  nextCode = "NBSS-1",
 }: {
   rows: PersonRow[];
   canManage: boolean;
@@ -199,8 +154,6 @@ export function GuardsWorkspace({
   showRoleTabs?: boolean;
   /** What "Add person" starts on. */
   defaultRole?: RoleChoice;
-  /** The next free NBSS-### code, offered in the form. */
-  nextCode?: string;
 }) {
   const [pending, start] = useTransition();
 
@@ -219,7 +172,7 @@ export function GuardsWorkspace({
   };
   const visible = tab === "all" ? rows : rows.filter((r) => choiceOf(r) === tab);
   const [confirm, setConfirm] = useState<
-    null | { kind: "deactivate" | "reset" | "delete"; row: PersonRow }
+    null | { kind: "deactivate" | "delete"; row: PersonRow }
   >(null);
   /**
    * What deleting the person in `confirm` would destroy, read from the server when the
@@ -230,7 +183,6 @@ export function GuardsWorkspace({
   const [footprint, setFootprint] = useState<Awaited<ReturnType<typeof accountFootprint>> | null>(
     null,
   );
-  const [issued, setIssued] = useState<null | { pin: string; who: string }>(null);
 
   const [addState, addAction] = useActionState(addGuard, emptyGuardForm);
   const [role, setRole] = useState<RoleChoice>(defaultRole);
@@ -249,19 +201,6 @@ export function GuardsWorkspace({
       setEditing(false);
       setVersion((v) => v + 1);
       toast.success("Contact details saved", { description: row.full_name });
-    });
-  }
-
-  function runReset(row: PersonRow) {
-    start(async () => {
-      const result = await resetPin(row.id);
-      setConfirm(null);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      setIssued({ pin: result.pin, who: `${result.fullName} (${result.employeeCode})` });
-      setDetail(null);
     });
   }
 
@@ -363,13 +302,6 @@ export function GuardsWorkspace({
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 font-medium">
               {r.full_name}
-              {r.must_change_pin && (
-                <TriangleAlert
-                  className="size-3.5 text-amber-600 dark:text-amber-400"
-                  strokeWidth={2}
-                  aria-label="Temporary PIN"
-                />
-              )}
             </span>
             <span className="block font-mono text-xs text-muted-foreground">
               {r.employee_code}
@@ -419,9 +351,7 @@ export function GuardsWorkspace({
     },
   ];
 
-  // Shown once, after a create or a reset, and never again.
-  const secret = issued?.pin ?? addState.created?.pin ?? null;
-  const createdShown = !!issued || !!addState.created;
+  const created = addState.created ?? null;
 
   return (
     <>
@@ -488,7 +418,7 @@ export function GuardsWorkspace({
           <DialogHeader>
             <DialogTitle>Add a person</DialogTitle>
             <DialogDescription>
-              They sign in with their employee code and a 4-digit PIN. Tell them both.
+              They sign in with their full name and mobile number, so type both exactly as they will. The employee code is given automatically.
             </DialogDescription>
           </DialogHeader>
 
@@ -514,41 +444,19 @@ export function GuardsWorkspace({
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="employee_number">
-                Employee code <span className="text-destructive">*</span>
-              </Label>
-              <div className="flex h-10 items-center overflow-hidden rounded-lg border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-                <span className="flex h-full items-center bg-muted px-3 font-mono text-sm font-semibold tracking-wider text-muted-foreground">NBSS-</span>
-                <input
-                  id="employee_number"
-                  name="employee_number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  // Digits only, as on the sign-in page: "NBSS-" is fixed in front.
-                  onInput={(e) => {
-                    const el = e.currentTarget;
-                    el.value = el.value.replace(/\D/g, "").slice(0, 6);
-                  }}
-                  defaultValue={addState.values?.employee_code || nextCode.replace(/^NBSS-/, "")}
-                  required
-                  className="h-full min-w-0 flex-1 bg-transparent px-3 font-mono text-sm tracking-wider outline-none"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">The next free number is filled in. They sign in with this code.</p>
-            </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="phone">
-                  Phone <span className="text-destructive">*</span>
+                  Mobile <span className="text-destructive">*</span>
                 </Label>
                 <PhoneInput id="phone" name="phone" defaultValue={addState.values?.phone} required />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">
-                  Email <span className="font-normal text-muted-foreground">(optional)</span>
+                  Email{" "}
+                  <span className="font-normal text-muted-foreground">
+                    {role === "client" ? "(their Google account)" : "(optional)"}
+                  </span>
                 </Label>
                 <Input
                   id="email"
@@ -556,6 +464,7 @@ export function GuardsWorkspace({
                   type="email"
                   defaultValue={addState.values?.email}
                   placeholder="name@example.com"
+                  required={role === "client"}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
@@ -563,7 +472,6 @@ export function GuardsWorkspace({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="role">
                   Role <span className="text-destructive">*</span>
@@ -584,23 +492,6 @@ export function GuardsWorkspace({
                 </Select>
                 <input type="hidden" name="role" value={role} />
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="pin">
-                  PIN <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="pin"
-                  name="pin"
-                  inputMode="numeric"
-                  maxLength={4}
-                  pattern="\d{4}"
-                  defaultValue={addState.values?.pin}
-                  placeholder="4 digits"
-                  required
-                  className="font-mono tracking-[0.3em]"
-                />
-              </div>
-            </div>
 
             <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
               <div>
@@ -625,49 +516,43 @@ export function GuardsWorkspace({
 
       {/* ------------------------------------------------- the one showing -- */}
       <Dialog
-        open={createdShown}
+        open={!!created}
         onOpenChange={(o) => {
           if (o) return;
-          setIssued(null);
           setAdding(false);
-          // `useActionState` has no reset, so the created-secret state is
-          // cleared by reloading against the data the action already
-          // revalidated. Crude, and the only thing that cannot show it twice.
+          // `useActionState` has no reset, so the created state is cleared by
+          // reloading against the data the action already revalidated.
           window.location.reload();
         }}
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{issued ? "New PIN issued" : "Account created"}</DialogTitle>
+            <DialogTitle>Account created</DialogTitle>
             <DialogDescription>
-              {issued
-                ? `Tell ${issued.who} their new PIN.`
-                : addState.created
-                  ? addState.created.email
-                    ? `${addState.created.fullName} signs in with ${addState.created.email}. A code is emailed each time.`
-                    : `${addState.created.fullName} signs in with ${addState.created.employeeCode} and this PIN.`
-                  : ""}
+              {created ? `Tell ${created.fullName} how to sign in, on the app or the website.` : ""}
             </DialogDescription>
           </DialogHeader>
 
-          {secret ? (
-            <>
-              <p className="text-sm font-medium">PIN</p>
-              <Secret value={secret} />
-              <p className="text-xs text-muted-foreground">
-                You can see it again any time in their profile.
-              </p>
-            </>
-          ) : (
-            <p className="flex items-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm text-accent-foreground">
-              <Mail className="size-4" /> No PIN needed. Sign-in is by emailed code.
-            </p>
+          {created && (
+            <dl className="grid gap-3 rounded-xl border border-app-line bg-muted/50 p-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Name</dt>
+                <dd className="font-medium">{created.fullName}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Mobile</dt>
+                <dd className="font-mono font-medium">{created.phone}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Employee code</dt>
+                <dd className="font-mono font-medium">{created.employeeCode}</dd>
+              </div>
+            </dl>
           )}
 
           <DialogFooter>
             <Button
               onClick={() => {
-                setIssued(null);
                 setAdding(false);
                 window.location.reload();
               }}
@@ -758,15 +643,6 @@ export function GuardsWorkspace({
                   </Button>
                 )}
                 <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => setConfirm({ kind: "reset", row: detail })}
-                >
-                  <KeyRound data-icon="inline-start" />
-                  Reset PIN
-                </Button>
-                <Button
                   size="sm"
                   variant={detail.active ? "destructive" : "default"}
                   disabled={pending || detail.id === selfId}
@@ -799,11 +675,6 @@ export function GuardsWorkspace({
                   Delete
                 </Button>
               </div>
-              {p.mustChangePin && (
-                <p className="flex items-center gap-1.5 text-xs text-amber-700">
-                  <TriangleAlert className="size-3.5" /> Using a temporary PIN issued by the office.
-                </p>
-              )}
             </div>
           ) : null
         }
@@ -888,20 +759,6 @@ export function GuardsWorkspace({
         }
       />
 
-      <ConfirmDialog
-        open={confirm?.kind === "reset"}
-        onOpenChange={(o) => !o && setConfirm(null)}
-        onConfirm={() => {
-          if (confirm) runReset(confirm.row);
-        }}
-        title="Issue a new PIN?"
-        confirmLabel="Issue new PIN"
-        description={
-          confirm
-            ? `${confirm.row.full_name}'s current PIN stops working immediately. The new one is shown once on the next screen. Write it down before closing it.`
-            : ""
-        }
-      />
     </>
   );
 }

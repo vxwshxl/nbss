@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
+import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 
 import { TOUCH_MIN, color, radius, space, text } from "@/theme/tokens";
 
@@ -78,39 +78,6 @@ export function Field({
   );
 }
 
-/** The PIN field. Numeric keypad, and a reveal control, because six digits get mistyped. */
-export function SecretField({
-  label,
-  ...rest
-}: TextInputProps & { label: string; hint?: string; error?: string }) {
-  const [shown, setShown] = useState(false);
-
-  return (
-    <Field
-      label={label}
-      secureTextEntry={!shown}
-      autoCapitalize="none"
-      autoCorrect={false}
-      // `oneTimeCode` would fight a password manager; `password` lets one fill it.
-      textContentType="password"
-      right={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={shown ? "Hide" : "Show"}
-          hitSlop={12}
-          onPress={() => setShown((v) => !v)}
-          style={styles.reveal}
-        >
-          <Text weight="semibold" variant="caption" tone="primary">
-            {shown ? "Hide" : "Show"}
-          </Text>
-        </Pressable>
-      }
-      {...rest}
-    />
-  );
-}
-
 const styles = StyleSheet.create({
   afterPrefix: { paddingLeft: 1 },
   prefix: { fontSize: 16 },
@@ -134,5 +101,4 @@ const styles = StyleSheet.create({
     lineHeight: text.body.lineHeight,
     color: color.foreground,
   },
-  reveal: { paddingLeft: space[2], paddingVertical: space[2] },
 });

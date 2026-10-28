@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { revalidatePath } from "next/cache";
 
-import { fromRoleChoice, isAdmin, isValidEmail, isValidPhone, pinPassword, ROLE_CHOICES, type RoleChoice } from "@nbss/shared/identity";
+import { fromRoleChoice, isAdmin, isValidEmail, isValidPhone, normaliseName, ROLE_CHOICES, type RoleChoice } from "@nbss/shared/identity";
 
 import {
   audit,
@@ -15,38 +15,24 @@ import {
 } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
-import type { GuardFormState, PinResetResult } from "./guard-state";
+import type { GuardFormState } from "./guard-state";
 
 async function clientIp(): Promise<string | null> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 }
 
-/** Four digits, never starting with a zero (some keypads eat a leading 0). */
-function generatePin(): string {
-  return String(Math.floor(1000 + Math.random() * 9000));
-}
-
-/** Kept where the office can read it again: they tell the guard. */
-async function rememberPin(profileId: string, pin: string, by: string): Promise<void> {
-  await supabaseAdmin().from("staff_pins").upsert({ profile_id: profileId, pin, set_at: new Date().toISOString(), set_by: by });
-}
-
 export async function addGuard(_prev: GuardFormState, data: FormData): Promise<GuardFormState> {
   const session = await requireRoleSession("admin");
 
-  // The office types the number; "NBSS-" is fixed.
-  const number = String(data.get("employee_number") ?? "").replace(/\D/g, "");
-  const employeeCode = number ? `NBSS-${Number(number)}` : "";
-  const fullName = String(data.get("full_name") ?? "").trim();
+  const fullName = String(data.get("full_name") ?? "").trim().replace(/\s+/g, " ");
   const phone = String(data.get("phone") ?? "").trim();
   const email = String(data.get("email") ?? "").trim().toLowerCase();
   // A choice, not a role: Housekeeper is the guard role with the housekeeping trade.
   const choice = String(data.get("role") ?? "guard") as RoleChoice;
-  const supplied = String(data.get("pin") ?? "").trim();
   const sosEnabled = data.get("sos_enabled") !== "off";
 
-  const values = { employee_code: number, full_name: fullName, phone, email, role: choice, pin: supplied };
+  const values = { full_name: fullName, phone, email, role: choice };
 
   if (!ROLE_CHOICES.includes(choice)) return { ok: false, values, error: "Choose a role." };
   const { role, trade } = fromRoleChoice(choice);
@@ -54,27 +40,16 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     return { ok: false, values, error: "Only a developer can create another developer." };
   }
   if (!fullName) return { ok: false, values, error: "Enter the person's full name." };
-  if (!number) return { ok: false, values, error: "Enter the employee number." };
-  if (!isValidPhone(phone)) return { ok: false, values, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
+  if (!isValidPhone(phone)) return { ok: false, values, error: "Enter a 10-digit mobile number (an Indian mobile starts with 6–9)." };
   if (email && !isValidEmail(email)) return { ok: false, values, error: "That email address does not look right." };
-  if (!/^\d{4}$/.test(supplied)) return { ok: false, values, error: "Set a 4-digit PIN for them." };
+  if (role === "client" && !email) {
+    return { ok: false, values, error: "Clients sign in with Google: enter the Gmail address they will use." };
+  }
 
-  // Everyone signs in with their employee code and the 4-digit PIN the office sets.
-  const pin = supplied;
-
-  const created = await createStaffAccount({
-    employeeCode,
-    pin,
-    fullName,
-    role,
-    trade,
-    sosEnabled,
-    phone,
-    email: email || undefined,
-  });
+  const created = await createStaffAccount({ fullName, role, trade, sosEnabled, phone, email: email || undefined });
   if ("error" in created) return { ok: false, values, error: created.error };
+  const employeeCode = created.employeeCode;
 
-  await rememberPin(created.id, pin, session.realProfile.id);
   // Test or Live, as its creator sees: a developer by their header switch, anyone else
   // by their own side. (The service key creates it, so the database cannot tell.)
   const isTest =
@@ -95,7 +70,11 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
 
-  return { ok: true, values: null, created: { employeeCode, fullName, email: email || null, pin, generated: false } };
+  return {
+    ok: true,
+    values: null,
+    created: { employeeCode, fullName, phone, email: email || null },
+  };
 }
 
 /**
@@ -113,17 +92,32 @@ export async function updateContact(
 
   const { data: target } = await admin
     .from("profiles")
-    .select("id, role, email, phone, employee_code")
+    .select("id, role, email, phone, employee_code, full_name")
     .eq("id", profileId)
     .maybeSingle();
   if (!target) return { ok: false, error: "That account no longer exists." };
 
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
-  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
+  const worker = target.role !== "client";
+  // The mobile is half of a worker's sign-in, so it cannot be taken away.
+  if (worker && !phone) return { ok: false, error: "A mobile number is needed: it is how they sign in." };
+  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit mobile number (an Indian mobile starts with 6–9)." };
 
   if (email && !isValidEmail(email)) return { ok: false, error: "That email address does not look right." };
-  // Email is optional: everyone signs in with their employee code and PIN.
+
+  if (worker && phone !== (target.phone ?? "")) {
+    const { data: sameNumber } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("active", true)
+      .neq("role", "client")
+      .neq("id", profileId)
+      .like("phone", `%${phone.replace(/\D/g, "").slice(-10)}`);
+    if ((sameNumber ?? []).some((p) => normaliseName(p.full_name) === normaliseName(target.full_name))) {
+      return { ok: false, error: `Someone else named ${target.full_name} has this mobile number, so they could not be told apart at sign-in.` };
+    }
+  }
 
   if (email !== (target.email ?? "")) {
     if (email) {
@@ -159,56 +153,6 @@ export async function updateContact(
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
   return { ok: true };
-}
-
-/**
- * Issues a new PIN.
- *
- * There is no way to read the existing one — Supabase stores it bcrypt-hashed,
- * which is correct and not reversible. So "show me their PIN" is necessarily
- * "give them a new one and show me that". The value returned here has just
- * been set; it was never retrieved from anywhere.
- */
-export async function resetPin(profileId: string): Promise<PinResetResult> {
-  const session = await requireRoleSession("admin");
-  const admin = supabaseAdmin();
-
-  const { data: target } = await admin
-    .from("profiles")
-    .select("id, employee_code, full_name, role")
-    .eq("id", profileId)
-    .maybeSingle();
-
-  if (!target) return { ok: false, error: "That account no longer exists." };
-
-  const pin = generatePin();
-
-  const { error } = await admin.auth.admin.updateUserById(profileId, { password: pinPassword(pin) });
-  if (error) return { ok: false, error: error.message };
-  await rememberPin(profileId, pin, session.realProfile.id);
-
-  await admin
-    .from("profiles")
-    .update({
-      must_change_pin: false,
-      pin_reset_at: new Date().toISOString(),
-      pin_reset_by: session.realProfile.id,
-    })
-    .eq("id", profileId);
-
-  await audit({
-    actor: session.realProfile,
-    action: "pin_reset",
-    entity: "profiles",
-    entityId: profileId,
-    detail: { employee_code: target.employee_code },
-    ip: await clientIp(),
-  });
-
-  revalidatePath("/console/guards");
-  revalidatePath("/console/users");
-
-  return { ok: true, pin, employeeCode: target.employee_code, fullName: target.full_name };
 }
 
 /** Deactivating keeps every attendance row the person ever produced. */
@@ -268,12 +212,17 @@ export async function changeRole(profileId: string, choice: RoleChoice): Promise
   const admin = supabaseAdmin();
 
   // Granting or taking away the developer role is a developer's call alone.
-  const { data: current } = await admin.from("profiles").select("role").eq("id", profileId).maybeSingle();
+  const { data: current } = await admin.from("profiles").select("role, email, phone").eq("id", profileId).maybeSingle();
   if (
     session.realProfile.role !== "developer" &&
     (role === "developer" || current?.role === "developer")
   ) {
     throw new Error("Only a developer can grant or remove the developer role.");
+  }
+  // Everyone but a client signs in with their mobile: a role they could not sign
+  // in under is refused before it is given.
+  if (role !== "client" && !current?.phone) {
+    throw new Error("Add a mobile number to their contact details first: it is how they sign in.");
   }
   const { error } = await admin.from("profiles").update({ role, trade }).eq("id", profileId);
   if (error) throw new Error(error.message);

@@ -1,11 +1,10 @@
-import { pinPassword } from "@nbss/shared/identity";
 import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { isValidEmail } from "@nbss/shared/identity";
+import { isValidMobile, normaliseName } from "@nbss/shared/identity";
 
-import { homeFor, isValidCode, normaliseCode, type Role } from "@/lib/auth";
+import { homeFor, type Role } from "@/lib/auth";
 import { SUPABASE_PUBLISHABLE_KEY, serverSupabaseUrl } from "@/lib/supabase/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
@@ -14,15 +13,12 @@ import type { Database } from "@/lib/supabase/types";
  * The one door, shared by the website's sign-in form and the app's JSON
  * endpoints, so both admit exactly the same people by exactly the same rules.
  *
- * Every role signs in here. What they type is an email address or an employee
- * code; what proves it is either a six-digit code that Supabase Auth mails
- * through ZeptoMail, or the password / PIN they already hold. Which dashboard
- * they land on is decided afterwards from their profile — never from anything
- * the form sent.
+ * Everyone who works for NBSS — guards, housekeepers, supervisors, administrators
+ * and developers — types their name and their 10-digit mobile number, and is in.
+ * Clients sign in with Google (app/auth/callback), not here.
  *
- * The answers are deliberately uniform: an unknown address, a deactivated
- * account and a wrong code all fail the same way, so the form cannot be used to
- * discover who works here.
+ * Which dashboard someone lands on is decided afterwards from their profile —
+ * never from anything the form sent.
  */
 
 type Client = SupabaseClient<Database>;
@@ -32,82 +28,47 @@ export type SignInResult =
   | { ok: false; error: string };
 
 export const REFUSED = "Those details were not accepted.";
-export const BAD_CODE = "That code is invalid or has expired.";
-
-/** The address the login is registered under, or null. Never throws. */
-export async function resolveLoginEmail(identifier: string): Promise<string | null> {
-  const raw = identifier.trim();
-  if (!raw) return null;
-
-  try {
-    const admin = supabaseAdmin();
-    let profile: { id: string; active: boolean } | null = null;
-
-    if (raw.includes("@")) {
-      if (!isValidEmail(raw)) return null;
-      const { data } = await admin
-        .from("profiles")
-        .select("id, active")
-        .eq("email", raw.toLowerCase())
-        .maybeSingle();
-      profile = data;
-    } else {
-      const code = normaliseCode(raw);
-      if (!isValidCode(code)) return null;
-      const { data } = await admin
-        .from("profiles")
-        .select("id, active")
-        .eq("employee_code", code)
-        .maybeSingle();
-      profile = data;
-    }
-
-    if (!profile?.active) return null;
-    const { data } = await admin.auth.admin.getUserById(profile.id);
-    return data.user?.email ?? null;
-  } catch {
-    return null;
-  }
+export const NO_MATCH = "No account matches that name and mobile number. Check the spelling of your name, or ask the office.";
+export const TWO_MATCH = "Two accounts have this name and mobile number. Ask the office to correct one of them.";
+/** The 10 digits of what was typed in the mobile box, or "" when it is not a mobile. */
+export function cleanMobile(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  return isValidMobile(digits) ? digits : "";
 }
 
-/** Synthesized logins have no mailbox behind them, so a code is never sent there. */
-function deliverable(email: string): boolean {
-  return !email.endsWith("@staff.nbss.co.in");
+type Worker = { id: string; role: Role; email: string };
+
+/** The one active worker with this name and mobile, or why there is not one. */
+async function findWorker(name: string, mobile: string): Promise<Worker | { error: string }> {
+  if (!normaliseName(name) || !isValidMobile(mobile)) return { error: NO_MATCH };
+  const { data, error } = await supabaseAdmin().rpc("worker_for_sign_in", { p_name: name, p_mobile: mobile });
+  if (error) return { error: "Sign-in is not available right now. Try again in a minute." };
+  const rows = (data ?? []) as Worker[];
+  if (rows.length === 0) return { error: NO_MATCH };
+  if (rows.length > 1) return { error: TWO_MATCH };
+  return rows[0]!;
 }
 
 /**
- * Mails a sign-in code if the identifier belongs to an active account with a
- * real address. Always reports success, for the reason at the top of the file.
+ * Opens a session for a worker the server has already identified, on `client` —
+ * the cookie client on the website, a throwaway one for the app. The admin API
+ * makes a one-time sign-in token (nothing is mailed) and the client spends it
+ * at once, so no password is involved at any point.
  */
-export async function sendSignInCode(identifier: string, client: Client): Promise<void> {
-  const email = await resolveLoginEmail(identifier);
-  if (email) {
-    if (!deliverable(email)) return;
-    await client.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-    return;
-  }
-
-  // One door for everyone: an address nobody has used yet becomes a client account the
-  // moment its code is asked for. `signup: "client"` is what the handle_new_auth_user
-  // trigger reads to create the profile (role client, next CL- code). An address that
-  // already belongs to someone, active or not, is never re-created here.
-  const raw = identifier.trim().toLowerCase();
-  if (!raw.includes("@") || !isValidEmail(raw) || !deliverable(raw)) return;
-  if (await addressTaken(raw)) return;
-  await client.auth.signInWithOtp({
-    email: raw,
-    options: { shouldCreateUser: true, data: { signup: "client" } },
-  });
+async function openSession(email: string, client: Client): Promise<string | undefined> {
+  const { data, error } = await supabaseAdmin().auth.admin.generateLink({ type: "magiclink", email });
+  const tokenHash = data?.properties?.hashed_token;
+  if (error || !tokenHash) return undefined;
+  const { data: verified, error: verifyError } = await client.auth.verifyOtp({ type: "magiclink", token_hash: tokenHash });
+  if (verifyError) return undefined;
+  return verified.user?.id;
 }
 
-/** Whether any profile (active or deactivated) already holds this address. */
-async function addressTaken(email: string): Promise<boolean> {
-  try {
-    const { data } = await supabaseAdmin().from("profiles").select("id").eq("email", email).maybeSingle();
-    return Boolean(data);
-  } catch {
-    return true;
-  }
+/** Name and mobile, for everyone who works for NBSS. */
+export async function signInWorker(name: string, mobile: string, client: Client): Promise<SignInResult> {
+  const worker = await findWorker(name, mobile);
+  if ("error" in worker) return { ok: false, error: worker.error };
+  return finish(client, await openSession(worker.email, client));
 }
 
 /**
@@ -147,36 +108,6 @@ export async function finish(client: Client, userId: string | undefined): Promis
     return { ok: false, error: REFUSED };
   }
   return { ok: true, userId, role: profile.role };
-}
-
-export async function verifySignInCode(
-  identifier: string,
-  code: string,
-  client: Client,
-): Promise<SignInResult> {
-  const token = code.replace(/\D/g, "");
-  if (token.length !== 6) return { ok: false, error: BAD_CODE };
-
-  const email = await resolveLoginEmail(identifier);
-  if (!email) return { ok: false, error: BAD_CODE };
-
-  const { data, error } = await client.auth.verifyOtp({ email, token, type: "email" });
-  if (error) return { ok: false, error: BAD_CODE };
-  return finish(client, data.user?.id);
-}
-
-export async function passwordSignIn(
-  identifier: string,
-  secret: string,
-  client: Client,
-): Promise<SignInResult> {
-  if (!secret) return { ok: false, error: REFUSED };
-  const email = await resolveLoginEmail(identifier);
-  if (!email) return { ok: false, error: REFUSED };
-
-  const { data, error } = await client.auth.signInWithPassword({ email, password: pinPassword(secret) });
-  if (error) return { ok: false, error: REFUSED };
-  return finish(client, data.user?.id);
 }
 
 /**
@@ -224,48 +155,3 @@ export function clearFailures(...keys: string[]): void {
 }
 
 export const THROTTLED = "Too many attempts. Wait ten minutes and try again.";
-
-/**
- * Starts a client account: mails a sign-in code and, if the address has no
- * account yet, creates one on the spot. The profile is made by the database
- * trigger from 0007/0009 — which hardcodes the role 'client' and never reads it
- * from what was sent — so this cannot be used to mint staff.
- *
- * An address that already has an account simply gets a sign-in code, and the
- * name and organisation typed here are ignored rather than overwriting theirs.
- */
-export async function startClientSignup(
-  input: { email: string; fullName: string; phone: string; organisation: string },
-  client: Client,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { error } = await client.auth.signInWithOtp({
-    email: input.email,
-    options: {
-      shouldCreateUser: true,
-      data: {
-        signup: "client",
-        full_name: input.fullName,
-        phone: input.phone,
-        organisation: input.organisation || undefined,
-      },
-    },
-  });
-  if (error) {
-    return {
-      ok: false,
-      error: /rate|seconds/i.test(error.message)
-        ? "A code was sent a moment ago. Wait half a minute and try again."
-        : "We could not send a code to that address. Check it and try again.",
-    };
-  }
-  return { ok: true };
-}
-
-/** Verifies a code sent to an email address directly (registration has no code). */
-export async function verifyEmailCode(email: string, code: string, client: Client): Promise<SignInResult> {
-  const token = code.replace(/\D/g, "");
-  if (token.length !== 6) return { ok: false, error: BAD_CODE };
-  const { data, error } = await client.auth.verifyOtp({ email, token, type: "email" });
-  if (error) return { ok: false, error: BAD_CODE };
-  return finish(client, data.user?.id);
-}

@@ -70,7 +70,6 @@ type Detail = {
   active: boolean;
   joined: string | null;
   lastSeen: string | null;
-  pin: string | null;
   posting: { site: string; starts: string; ends: string; days: number[]; shift: string | null } | null;
   sessions: Session[];
   position: { lat: number; lng: number; inside: boolean | null; distance: number | null; battery: number | null; charging: boolean | null; at: string; mode: string } | null;
@@ -93,9 +92,8 @@ type Detail = {
 
 async function load(id: string): Promise<Detail | null> {
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [p, pin, att, post, pos, dev] = await Promise.all([
+  const [p, att, post, pos, dev] = await Promise.all([
     supabase.from("profiles").select("id, full_name, employee_code, role, trade, email, phone, avatar_url, active, joined_at, created_at, last_seen_at").eq("id", id).maybeSingle(),
-    supabase.from("staff_pins").select("pin").eq("profile_id", id).maybeSingle(),
     supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, sites(name, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
     supabase.from("site_postings").select("starts, ends, days, shift_type, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
     supabase.from("guard_positions").select("lat, lng, inside_fence, distance_m, battery, charging, recorded_at, received_at, mode").eq("guard_id", id).maybeSingle(),
@@ -116,7 +114,6 @@ async function load(id: string): Promise<Detail | null> {
     active: r.active,
     joined: r.joined_at ?? r.created_at,
     lastSeen: r.last_seen_at,
-    pin: pin.data?.pin ?? null,
     posting: post.data ? { site: site(post.data.sites), starts: post.data.starts, ends: post.data.ends, days: post.data.days ?? [], shift: post.data.shift_type } : null,
     sessions: (att.data ?? [])
       .filter((a) => a.check_in_at)
@@ -240,7 +237,7 @@ export function PersonPage({ id }: { id: string }) {
 
           <View style={styles.tiles}>
             <Tile tone="emerald" label="Employee code" value={d.code} />
-            <Tile tone="violet" label="PIN" value={d.pin ? d.pin.split("").join(" ") : "Not on file"} />
+            <Tile tone="violet" label="Signs in with" value={d.phone ? `Name + ${d.phone}` : "No mobile"} />
           </View>
 
           <Panel tone="slate" bare>
@@ -342,7 +339,7 @@ export function PersonPage({ id }: { id: string }) {
             </Panel>
           )}
 
-          {d.pin === null && <Note icon={KeyRound} text="No PIN on file. Reset it from the website to issue one." />}
+          {!d.phone && <Note icon={KeyRound} text="No mobile number on file, so they cannot sign in. Add one from the website." />}
         </>
       )}
     </Screen>

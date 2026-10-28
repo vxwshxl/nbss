@@ -65,7 +65,7 @@ const SECTIONS: Section[] = [
     title: "Roles and sign-in",
     icon: UsersRound,
     hue: "brick",
-    intro: "Everyone signs in at /login with Google, using the account their email is registered under. A Google account nobody has used yet becomes a client account on the spot, and lands on the booking form. Guards and anyone else without Google use their employee code and PIN or password.",
+    intro: "Everyone signs in at /login. Guards, housekeepers, supervisors, administrators and developers type their full name and 10-digit mobile number; capitals and spaces before or after the name do not matter. Clients sign in with Google: a Google account nobody has used yet becomes a client account on the spot, and lands on the booking form.",
     steps: [
       { text: "Developer: everything an administrator can do, plus making or removing other developers." },
       { text: "Administrator: everything, including users, sites, settings and View as." },
@@ -92,7 +92,7 @@ const FLOW: { title: string; where: string; href?: string; text: string }[] = [
   { title: "A client books", where: "Website → Book guards", text: "They sign in with Google; the first sign-in makes their client account, and the booking form opens straight away." },
   { title: "It lands in Bookings", where: "Bookings", href: "/console/bookings", text: "New requests show first. Open one to call the client, set a quotation and add a note they can read." },
   { title: "Register the site", where: "Sites & geofences", href: "/console/sites", text: "Draw the boundary on the map. A guard can only check in inside it." },
-  { title: "Add the people", where: "Users → Add person", href: "/console/users", text: "Guards get an employee code and PIN for the gate; office staff and clients sign in with Google." },
+  { title: "Add the people", where: "Users → Add person", href: "/console/users", text: "Everyone is added with their full name and mobile number, which is how they sign in; the employee code is given automatically. Clients use Google." },
   { title: "Roster the posts", where: "Roster", href: "/console/roster", text: "Post guards to sites and shifts. Whoever has not arrived after the grace window shows on the dashboard." },
   { title: "Guards check in", where: "The app → Duty", text: "At the gate they tap check in. The fence decides whether it counts; anything doubtful goes to review." },
   { title: "Review attendance", where: "Attendance", href: "/console/attendance", text: "Approve or reject flagged punches, with a reason that stays on the record." },

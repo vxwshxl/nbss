@@ -6,12 +6,11 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
-import { changeOwnPin, updateOwnProfile } from "@/app/console/profile/actions";
+import { updateOwnProfile } from "@/app/console/profile/actions";
 import { emptyProfileState } from "@/app/console/profile/profile-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PinInput } from "@/components/ui/pin-input";
 
 function Save({ label = "Save changes" }: { label?: string }) {
   const { pending } = useFormStatus();
@@ -77,48 +76,6 @@ export function DetailsForm({ fullName, phone }: { fullName: string; phone: stri
 
       <div className="sm:col-span-2">
         <Save />
-      </div>
-    </form>
-  );
-}
-
-/** Everyone, every role, signs in with a 4-digit PIN. */
-export function PinForm({ mustChange }: { mustChange: boolean }) {
-  const [state, action] = useActionState(changeOwnPin, emptyProfileState);
-  const word = "PIN";
-
-  return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
-      <div className="space-y-3 sm:col-span-2">
-        {mustChange && !state.ok && (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-100/50 px-3 py-2.5 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
-            This {word} was issued to you by the office. Choose your own. Nobody else
-            should know how you sign in.
-          </p>
-        )}
-        <Note state={state} />
-      </div>
-
-      <div className="flex flex-col gap-2 sm:col-span-2">
-        <Label htmlFor="current">Current {word}</Label>
-        <PinInput id="current" name="current" autoComplete="current-password" required />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="next">New {word}</Label>
-        <PinInput id="next" name="next" autoComplete="new-password" required />
-        <p className="text-xs text-muted-foreground">
-          Four digits.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="confirm">Repeat new {word}</Label>
-        <PinInput id="confirm" name="confirm" autoComplete="new-password" required />
-      </div>
-
-      <div className="sm:col-span-2">
-        <Save label={`Change ${word}`} />
       </div>
     </form>
   );

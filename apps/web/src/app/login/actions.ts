@@ -5,13 +5,13 @@ import { redirect } from "next/navigation";
 
 import { audit } from "@/lib/auth";
 import {
-  REFUSED,
   THROTTLED,
+  cleanMobile,
   clearFailures,
   isThrottled,
   landingFor,
-  passwordSignIn,
   recordFailure,
+  signInWorker,
 } from "@/lib/sign-in";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -22,31 +22,24 @@ async function clientIp(): Promise<string> {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
 }
 
-/**
- * The staff door beside Google: employee code (or email) and the password or
- * PIN they were issued. Guards' logins are synthesized addresses with no Google
- * account behind them, so this is how they get in.
- */
+/** The workers' door beside Google: name and mobile number, for every role but client. */
 export async function signInAction(_prev: SignInState, data: FormData): Promise<SignInState> {
-  const identifier = String(data.get("identifier") ?? "").trim();
+  const name = String(data.get("name") ?? "");
+  const mobile = cleanMobile(String(data.get("mobile") ?? ""));
   const from = String(data.get("from") ?? "");
   const ip = await clientIp();
-  const idKey = `id:${identifier.toLowerCase()}`;
+  const kept = { name, mobile: String(data.get("mobile") ?? "") };
 
-  if (!identifier) {
-    return { identifier, error: "Enter your employee code or email." };
-  }
+  if (!name.trim()) return { ...kept, error: "Enter your name." };
+  if (!mobile) return { ...kept, error: "Enter your 10-digit mobile number." };
 
-  if (isThrottled(ip, idKey)) {
-    return { identifier, error: THROTTLED };
-  }
+  const idKey = `id:${mobile}`;
+  if (isThrottled(ip, idKey)) return { ...kept, error: THROTTLED };
 
-  // Read straight off the FormData: trimming a secret makes it a different one.
-  const secret = typeof data.get("secret") === "string" ? String(data.get("secret")) : "";
-  const result = await passwordSignIn(identifier, secret, await supabaseServer());
+  const result = await signInWorker(name, mobile, await supabaseServer());
   if (!result.ok) {
     recordFailure(ip, idKey);
-    return { identifier, error: REFUSED };
+    return { ...kept, error: result.error };
   }
 
   clearFailures(ip, idKey);
@@ -55,7 +48,7 @@ export async function signInAction(_prev: SignInState, data: FormData): Promise<
     action: "sign_in",
     entity: "profiles",
     entityId: result.userId,
-    detail: { method: "password" },
+    detail: { method: "name_mobile" },
     ip,
   });
 

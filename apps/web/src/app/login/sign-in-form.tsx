@@ -2,11 +2,11 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, ArrowLeft, ArrowRight, IdCard, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PinInput } from "@/components/ui/pin-input";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 import { signInAction } from "./actions";
@@ -82,40 +82,36 @@ function Submit() {
   );
 }
 
-/**
- * The employee code as it is printed: "NBSS-" fixed, the number typed after it. A code
- * from before (TEST-ADMIN) or an email still works: typing a letter, "-" or "@" drops
- * the prefix and the field takes the whole thing as written.
- */
-/** "NBSS-" fixed and digits only after it: the number pad, as for the PIN. */
-function CodeField({ defaultValue }: { defaultValue?: string }) {
-  const [value, setValue] = useState((defaultValue ?? "").replace(/^NBSS-/i, "").replace(/\D/g, ""));
+/** "+91" fixed, then exactly ten digits on the number pad. */
+function MobileField({ defaultValue }: { defaultValue?: string }) {
+  const [value, setValue] = useState((defaultValue ?? "").replace(/\D/g, "").slice(-10));
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor="identifier-input">Employee code</Label>
+      <Label htmlFor="mobile">Mobile number</Label>
       <div className="flex h-11 items-center overflow-hidden rounded-xl border border-input bg-background transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-        <span className="flex h-full items-center bg-muted px-3.5 font-mono text-[15px] font-semibold tracking-wider text-muted-foreground">NBSS-</span>
+        <span className="flex h-full items-center bg-muted px-3.5 font-mono text-[15px] font-semibold text-muted-foreground">+91</span>
         <input
-          id="identifier-input"
+          id="mobile"
+          name="mobile"
+          type="tel"
           value={value}
-          onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          placeholder=""
-          autoComplete="username"
+          onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 10))}
+          autoComplete="tel-national"
           inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={6}
+          pattern="[0-9]{10}"
+          minLength={10}
+          maxLength={10}
           required
-          autoFocus
+          title="10 digits"
           className="h-full min-w-0 flex-1 bg-transparent px-3.5 font-mono text-[15px] tracking-wider outline-none"
         />
       </div>
-      <input type="hidden" name="identifier" value={value ? `NBSS-${value}` : ""} />
     </div>
   );
 }
 
-/** Employee code and PIN, for staff whose login has no Google account. */
-function StaffForm({ from, onBack }: { from: string; onBack: () => void }) {
+/** Name and mobile, for everyone who works for NBSS. */
+function WorkerForm({ from, onBack }: { from: string; onBack: () => void }) {
   const [state, action] = useActionState<SignInState, FormData>(signInAction, initialSignInState);
 
   return (
@@ -124,21 +120,20 @@ function StaffForm({ from, onBack }: { from: string; onBack: () => void }) {
         <input type="hidden" name="from" value={from} />
         {state.error && <Alert>{state.error}</Alert>}
 
-        <CodeField defaultValue={state.identifier} />
-
         <div className="flex flex-col gap-2">
-          <Label htmlFor="secret">PIN</Label>
-          <PinInput
-            id="secret"
-            name="secret"
+          <Label htmlFor="name">Full name</Label>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={state.name}
+            autoComplete="name"
+            autoCapitalize="words"
             required
-            // The fourth digit signs in, as an OTP box does, once the code is there.
-            onComplete={(_, input) => {
-              const form = input.form;
-              if (form && new FormData(form).get("identifier")) form.requestSubmit();
-            }}
+            autoFocus
+            className="h-11 rounded-xl text-[15px]"
           />
         </div>
+        <MobileField defaultValue={state.mobile} />
 
         <div className="mt-1">
           <Submit />
@@ -165,11 +160,11 @@ export function SignInForm({ from, error }: { from: string; error?: string }) {
     <div className="w-full">
       <div className="mb-7 text-center [@media(max-height:740px)]:mb-4">
         <h1 className="font-display text-[32px] leading-tight font-extrabold tracking-[-0.025em]">Login</h1>
-        {staff && <p className="mt-1.5 text-sm text-muted-foreground">With the employee code and PIN the office gave you.</p>}
+        {staff && <p className="mt-1.5 text-sm text-muted-foreground">With your name and mobile number, as the office has them.</p>}
       </div>
 
       {staff ? (
-        <StaffForm from={from} onBack={() => setStaff(false)} />
+        <WorkerForm from={from} onBack={() => setStaff(false)} />
       ) : (
         <div className="flex flex-col gap-4">
           {googleError && <Alert>{googleError}</Alert>}
@@ -186,8 +181,8 @@ export function SignInForm({ from, error }: { from: string; error?: string }) {
             onClick={() => setStaff(true)}
             className="h-12 w-full rounded-xl text-[15px] font-semibold shadow-sm"
           >
-            <IdCard className="size-4" />
-            Sign in with employee code
+            <Smartphone className="size-4" />
+            Staff &amp; guards: name and mobile
           </Button>
         </div>
       )}

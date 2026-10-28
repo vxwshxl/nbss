@@ -1,10 +1,11 @@
 /**
  * Who someone is, decided identically on every client.
  *
- * A guard signs in with the employee code printed on their card and a PIN.
- * Supabase Auth is built around an email address, so one is synthesized from
- * the code and kept entirely internal — never displayed, never sent to, never
- * typed by anyone. The subdomain deliberately accepts no mail, so a
+ * A worker signs in with their name and their 10-digit mobile number (staff add
+ * a code emailed to them); a client signs in with Google. Supabase Auth is built
+ * around an email address, so a worker without one gets an address synthesized
+ * from their employee code and kept entirely internal — never displayed, never
+ * sent to, never typed by anyone. The subdomain deliberately accepts no mail, so a
  * misconfiguration cannot quietly deliver a password reset somewhere.
  *
  * These rules were previously only in the web app's `lib/auth.ts`. The phone
@@ -102,17 +103,17 @@ export function isValidCode(code: string): boolean {
 }
 
 /**
- * One shape of secret: a 4-digit PIN, for every role. It is typed on a phone at a
- * gate as often as at a desk; the sign-in's throttle carries the security, not the
- * length. Stored as `pinPassword(pin)` below.
+ * A name as sign-in compares it: case does not matter, a space typed before or after
+ * it is dropped, and a run of spaces counts as one. A space between words still
+ * matters — "Veeshal Bodosa" is not "VeeshalBodosa".
  */
-export function isValidSecret(secret: string): boolean {
-  return /^\d{4}$/.test(secret);
+export function normaliseName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** The same 4-digit rule. */
-export function isValidPin(pin: string): boolean {
-  return /^\d{4}$/.test(pin);
+/** The sign-in mobile: exactly 10 digits, an Indian mobile starting 6–9. */
+export function isValidMobile(mobile: string): boolean {
+  return /^[6-9]\d{9}$/.test(mobile);
 }
 
 /**
@@ -195,21 +196,7 @@ export function initials(name: string): string {
   return `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase() || "?";
 }
 
-/**
- * A 4-digit PIN as the password Supabase stores. Auth needs at least six characters,
- * and a guard types four digits, so the PIN is wrapped the same way on every side
- * (console account creation, website and app sign-in). Older 6–12 digit PINs and
- * passphrases are used as typed.
- */
 export const EMPLOYEE_PREFIX = "NBSS-";
-
-export function isShortPin(secret: string): boolean {
-  return /^\d{4}$/.test(secret);
-}
-
-export function pinPassword(secret: string): string {
-  return isShortPin(secret) ? `nbss-pin-${secret}` : secret;
-}
 
 /**
  * "42", "042", "NBSS-42" and "nbss-042" all mean NBSS-42: codes run 1, 2, 3… with no

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, IdCard, KeyRound, UserRound } from "lucide-react";
+import { ExternalLink, IdCard, UserRound } from "lucide-react";
 
 import { Mark } from "@/components/brand";
 import { PageHeader } from "@/components/console/page-header";
-import { DetailsForm, PinForm } from "@/components/console/profile-forms";
+import { DetailsForm } from "@/components/console/profile-forms";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "My profile" };
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const { profile, impersonating } = await requireSession();
+  const { profile } = await requireSession();
 
   return (
     <div className="space-y-6">
@@ -52,27 +52,6 @@ export default async function ProfilePage() {
 
       <Panel tone="emerald" title="Your details" icon={UserRound}>
         <DetailsForm fullName={profile.full_name} phone={profile.phone ?? ""} />
-      </Panel>
-
-      <Panel
-        tone="amber"
-        title="Change your PIN"
-        icon={KeyRound}
-      >
-        {impersonating ? (
-          <p className="text-sm text-muted-foreground">
-            A credential cannot be changed from a &ldquo;view as&rdquo; session. Stop
-            viewing as this person, then issue a new PIN from the Guards screen. That
-            path is recorded in the audit log.
-          </p>
-        ) : (
-          <PinForm mustChange={profile.must_change_pin} />
-        )}
-        <p className="mt-4 text-xs text-muted-foreground">
-          Your PIN is stored hashed and cannot be read by
-          anyone, including an administrator. If you forget it, the office issues a new
-          one. They never see the old.
-        </p>
       </Panel>
 
       {/* The console's mark leads to the dashboard, so the way back out to the

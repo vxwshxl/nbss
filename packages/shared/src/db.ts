@@ -888,12 +888,12 @@ export type Database = {
           ends: string;
           days: number[];
           active: boolean;
-          held_for_inactive: boolean;
           created_by: string | null;
           created_at: string;
           updated_at: string;
           dates: string[] | null;
           shift_type: string | null;
+          held_for_inactive: boolean;
         };
         Insert: {
           id?: string;
@@ -903,12 +903,12 @@ export type Database = {
           ends: string;
           days?: number[];
           active?: boolean;
-          held_for_inactive?: boolean;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
           dates?: string[] | null;
           shift_type?: string | null;
+          held_for_inactive?: boolean;
         };
         Update: {
           id?: string;
@@ -918,12 +918,12 @@ export type Database = {
           ends?: string;
           days?: number[];
           active?: boolean;
-          held_for_inactive?: boolean;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
           dates?: string[] | null;
           shift_type?: string | null;
+          held_for_inactive?: boolean;
         };
         Relationships: [];
       };
@@ -1506,6 +1506,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      guard_off_roster: {
+        Args: {
+          p_guard: string;
+        };
+        Returns: string;
+      };
       guard_rostered_to_site: {
         Args: {
           p_guard_id: string;
@@ -1905,6 +1911,13 @@ export type Database = {
           p_id: string;
         };
         Returns: Json;
+      };
+      worker_for_sign_in: {
+        Args: {
+          p_name: string;
+          p_mobile: string;
+        };
+        Returns: { id: string; role: Enums["user_role"]; email: string }[];
       };
     };
     Enums: Enums;

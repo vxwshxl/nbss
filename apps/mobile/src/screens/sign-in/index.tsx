@@ -1,6 +1,6 @@
 import * as WebBrowser from "expo-web-browser";
 import { LinearGradient } from "expo-linear-gradient";
-import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, IdCard } from "lucide-react-native";
+import { AlertCircle, ArrowLeft, ArrowRight, Smartphone } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions, type TextInputInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,8 +17,8 @@ import { color, font, gradient, radius, space } from "@/theme/tokens";
 
 /**
  * The one sign-in for everybody, laid out as the website's /login is
- * (apps/web/src/app/login): the lockup, "Login", Google first and the employee code
- * and PIN behind "Sign in with employee code", the gate at night along the foot.
+ * (apps/web/src/app/login): the lockup, "Login", Google first (clients) and name and
+ * mobile behind "Staff & guards", the gate at night along the foot.
  * The whole page fits one screen: the gate takes whatever height the form leaves,
  * and a short phone gets the smaller lockup and tighter spacing.
  *
@@ -44,11 +44,11 @@ export function SignIn() {
           </Text>
           {staff && (
             <Text variant="label" tone="muted" style={styles.centred}>
-              With the employee code and PIN the office gave you.
+              With your name and mobile number, as the office has them.
             </Text>
           )}
         </View>
-        {staff ? <StaffForm onBack={() => setStaff(false)} /> : <GoogleStep onStaff={() => setStaff(true)} />}
+        {staff ? <WorkerForm onBack={() => setStaff(false)} /> : <GoogleStep onStaff={() => setStaff(true)} />}
       </View>
     </View>
   );
@@ -116,12 +116,12 @@ function GoogleStep({ onStaff }: { onStaff: () => void }) {
         <View style={styles.orLine} />
       </View>
 
-      {/* The highlighted way in: most people here are staff with a code. */}
+      {/* The highlighted way in: most people here are guards and staff. */}
       <Pressable accessibilityRole="button" onPress={onStaff} style={({ pressed }) => [styles.submitWrap, styles.raised, pressed && styles.pressed]}>
         <LinearGradient colors={gradient.strong} start={gradient.start} end={gradient.end} style={[styles.submit, styles.tall]}>
-          <IdCard size={16} color={color.primaryForeground} strokeWidth={2} />
+          <Smartphone size={16} color={color.primaryForeground} strokeWidth={2} />
           <Text weight="semibold" tone="inherit" style={[styles.button15, { color: color.primaryForeground }]}>
-            Sign in with employee code
+            Staff & guards: name and mobile
           </Text>
         </LinearGradient>
       </Pressable>
@@ -129,43 +129,21 @@ function GoogleStep({ onStaff }: { onStaff: () => void }) {
   );
 }
 
-/** Employee code and PIN, for staff whose login has no Google account. */
-function StaffForm({ onBack }: { onBack: () => void }) {
+/** Name and mobile, for everyone who works for NBSS. */
+function WorkerForm({ onBack }: { onBack: () => void }) {
   const { signIn, loading } = useAuth();
-  const [number, setNumber] = useState("");
-  const [secret, setSecret] = useState("");
-  const pinRef = useRef<TextInputInstance>(null);
-  /**
-   * The keypad for the PIN. Android does not focus a fully transparent input on a tap, so
-   * the boxes are a button that focuses it; blurring first brings the keyboard back if it
-   * was put away while the field kept focus.
-   */
-  const openPin = () => {
-    const input = pinRef.current;
-    if (!input) return;
-    if (input.isFocused()) {
-      input.blur();
-      setTimeout(() => input.focus(), 50);
-    } else input.focus();
-  };
-  const [shown, setShown] = useState(false);
-  const [focus, setFocus] = useState<"code" | "pin" | null>(null);
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const mobileRef = useRef<TextInputInstance>(null);
+  const [focus, setFocus] = useState<"name" | "mobile" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // "NBSS-" fixed and digits only after it, on the number pad, as for the PIN.
-  const identifier = number ? `NBSS-${number}` : "";
 
-  const submit = async (pin = secret) => {
-    if (!identifier || pin.length !== 4) {
-      setError(!identifier ? "Enter your employee code." : "Enter your 4-digit PIN.");
-      return;
-    }
+  const submit = async () => {
+    if (!name.trim()) return setError("Enter your name.");
+    if (mobile.length !== 10) return setError("Enter your 10-digit mobile number.");
     setError(null);
-    const result = await signIn(identifier, pin);
-    if (result.error) {
-      setError(result.error);
-      // A wrong PIN clears, ready for the next try, as an OTP box does.
-      setSecret("");
-    }
+    const result = await signIn(name, mobile);
+    if (result.error) setError(result.error);
   };
 
   return (
@@ -175,84 +153,62 @@ function StaffForm({ onBack }: { onBack: () => void }) {
 
         <View style={styles.field}>
           <Text variant="label" weight="medium">
-            Employee code
+            Full name
           </Text>
-          <Box focused={focus === "code"}>
-            <View style={styles.prefix}>
-              <Text weight="semibold" tone="muted" style={styles.codeText}>
-                NBSS-
-              </Text>
-            </View>
+          <Box focused={focus === "name"}>
             <TextInput
-              value={number}
+              value={name}
               onChangeText={(v) => {
-                setNumber(v.replace(/\D/g, "").slice(0, 6));
+                setName(v);
                 setError(null);
               }}
-              placeholder=""
               placeholderTextColor={color.mutedForeground}
-              autoCapitalize="none"
+              autoCapitalize="words"
               autoCorrect={false}
               spellCheck={false}
-              autoComplete="username"
-              keyboardType="number-pad"
-              maxLength={6}
+              autoComplete="name"
+              textContentType="name"
               autoFocus
-              // "Next" on the keyboard goes straight to the PIN.
+              // "Next" on the keyboard goes straight to the mobile.
               returnKeyType="next"
               blurOnSubmit={false}
-              onSubmitEditing={openPin}
-              onFocus={() => setFocus("code")}
-              onBlur={() => setFocus((f) => (f === "code" ? null : f))}
-              style={[styles.input, styles.codeText]}
+              onSubmitEditing={() => mobileRef.current?.focus()}
+              onFocus={() => setFocus("name")}
+              onBlur={() => setFocus((f) => (f === "name" ? null : f))}
+              style={styles.input}
             />
           </Box>
         </View>
 
         <View style={styles.field}>
           <Text variant="label" weight="medium">
-            PIN
+            Mobile number
           </Text>
-          <View style={styles.pinRow}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Enter your 4-digit PIN" onPress={openPin} style={styles.pinCells}>
-              {[0, 1, 2, 3].map((i) => {
-                const active = focus === "pin" && (i === secret.length || (i === 3 && secret.length === 4));
-                return (
-                  <View key={i} style={[styles.halo, styles.cellHalo, active && styles.haloOn]}>
-                    <View style={[styles.cell, active && styles.boxOn]}>
-                      {secret[i] ? shown ? <Text weight="semibold" style={styles.cellDigit}>{secret[i]}</Text> : <View style={styles.cellDot} /> : null}
-                    </View>
-                  </View>
-                );
-              })}
-              {/* One real input behind the cells: the keypad, paste and a password manager all work as usual. */}
-              <TextInput
-                ref={pinRef}
-                pointerEvents="none"
-                value={secret}
-                onChangeText={(v) => {
-                  const pin = v.replace(/\D/g, "").slice(0, 4);
-                  setSecret(pin);
-                  setError(null);
-                  // The fourth digit signs in, as an OTP box does.
-                  if (pin.length === 4 && identifier) void submit(pin);
-                }}
-                maxLength={4}
-                keyboardType="number-pad"
-                secureTextEntry
-                autoComplete="current-password"
-                textContentType="password"
-                caretHidden
-                accessibilityLabel="4-digit PIN"
-                onFocus={() => setFocus("pin")}
-                onBlur={() => setFocus((f) => (f === "pin" ? null : f))}
-                style={styles.pinInput}
-              />
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={shown ? "Hide PIN" : "Show PIN"} hitSlop={10} onPress={() => setShown((v) => !v)} style={styles.eyeButton}>
-              {shown ? <EyeOff size={18} color={color.mutedForeground} strokeWidth={2} /> : <Eye size={18} color={color.mutedForeground} strokeWidth={2} />}
-            </Pressable>
-          </View>
+          <Box focused={focus === "mobile"}>
+            <View style={styles.prefix}>
+              <Text weight="semibold" tone="muted" style={styles.codeText}>
+                +91
+              </Text>
+            </View>
+            <TextInput
+              ref={mobileRef}
+              value={mobile}
+              onChangeText={(v) => {
+                setMobile(v.replace(/\D/g, "").slice(-10));
+                setError(null);
+              }}
+              placeholderTextColor={color.mutedForeground}
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              keyboardType="number-pad"
+              maxLength={10}
+              returnKeyType="go"
+              onSubmitEditing={() => void submit()}
+              onFocus={() => setFocus("mobile")}
+              onBlur={() => setFocus((f) => (f === "mobile" ? null : f))}
+              style={[styles.input, styles.codeText]}
+            />
+          </Box>
         </View>
 
         <Pressable
@@ -410,34 +366,6 @@ const styles = StyleSheet.create({
     // The browser preview's own focus outline; the frame draws the ring.
     ...(Platform.OS === "web" ? ({ outlineWidth: 0, outlineStyle: "none" } as object) : null),
   },
-  pinRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  pinCells: { flex: 1, flexDirection: "row", gap: 10 },
-  cellHalo: { flex: 1, margin: 0 },
-  cell: {
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
-  },
-  cellDigit: { fontSize: 20, lineHeight: 26, color: color.foreground },
-  cellDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.foreground },
-  // Behind the cells and all but invisible: 0.01, not 0, which Android will not focus.
-  // The cells' button focuses it (openPin), so it takes no touches of its own.
-  pinInput: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-    opacity: 0.01,
-    color: "transparent",
-    ...(Platform.OS === "web" ? ({ outlineWidth: 0, outlineStyle: "none" } as object) : null),
-  },
-  eyeButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.xl },
   submitWrap: { marginTop: space[1], borderRadius: radius.xl, overflow: "hidden" },
   tall: { height: 48 },
   raised: { shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 },

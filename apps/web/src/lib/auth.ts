@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { isAdmin, roleAllowed, type Trade } from "@nbss/shared/identity";
-import { expandEmployeeCode, isShortPin, pinPassword } from "@nbss/shared/identity";
+import { expandEmployeeCode, normaliseName } from "@nbss/shared/identity";
 
 import { impersonatedId, type Session } from "@/lib/impersonation";
 import { bearerToken, supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
@@ -18,14 +18,14 @@ export type Profile = Row<"profiles">;
 /**
  * Identity for people who do not have email.
  *
- * A guard signs in with the employee code printed on their card and a PIN.
- * Supabase Auth is built around an email address, so one is synthesized from
- * the code and kept entirely internal — it is never displayed, never sent to,
+ * A guard signs in with their name and mobile number. Supabase Auth is built
+ * around an email address, so one is synthesized from their employee code and
+ * kept entirely internal — it is never displayed, never sent to,
  * and never typed by anyone. The subdomain is deliberately one that does not
  * accept mail, so a misconfiguration cannot quietly deliver a password reset
  * somewhere unintended.
  *
- * Staff with a real address keep it; the code is still their username.
+ * Staff with a real address keep it: their sign-in code is mailed there.
  */
 const STAFF_DOMAIN = "staff.nbss.co.in";
 
@@ -41,20 +41,6 @@ export function normaliseCode(code: string): string {
 /** Mirrors the CHECK constraint on profiles.employee_code. */
 export function isValidCode(code: string): boolean {
   return /^[A-Z0-9-]{3,20}$/.test(normaliseCode(code));
-}
-
-/**
- * One shape of secret: a 4-digit PIN, for every role. It is typed on a phone at a
- * gate as often as at a desk, and the sign-in's throttle carries the security, not
- * the length. Stored as `pinPassword(pin)` (packages/shared/identity).
- */
-export function isValidSecret(secret: string): boolean {
-  return isShortPin(secret);
-}
-
-/** The same 4-digit rule, for the screens that only ever handle a PIN. */
-export function isValidPin(pin: string): boolean {
-  return isShortPin(pin);
 }
 
 /**
@@ -170,34 +156,32 @@ export function homeFor(role: Role): string {
  * again, which is the closest thing to a transaction available across the two.
  */
 export async function createStaffAccount(input: {
-  employeeCode: string;
-  pin: string;
   fullName: string;
   role: Role;
   /** A guard-role account's trade (0050); security unless said. */
   trade?: Trade;
   /** The SOS button; on unless said (0052). */
   sosEnabled?: boolean;
-  phone?: string;
+  phone: string;
   email?: string;
-}): Promise<{ id: string } | { error: string }> {
-  const code = normaliseCode(input.employeeCode);
-
-  if (!isValidCode(code)) return { error: "Employee code must be 3–20 letters, digits or hyphens." };
-  if (!isValidSecret(input.pin)) {
-    return {
-      error: "The PIN must be 4 digits.",
-    };
-  }
-
+}): Promise<{ id: string; employeeCode: string } | { error: string }> {
   const admin = supabaseAdmin();
+  const fullName = input.fullName.trim().replace(/\s+/g, " ");
+  const phone = input.phone.trim();
 
-  const { data: taken } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("employee_code", code)
-    .maybeSingle();
-  if (taken) return { error: `Employee code ${code} is already in use.` };
+  // Name and mobile are the sign-in, so no two workers may share both. A shared
+  // number on its own is fine — the name tells them apart.
+  if (input.role !== "client") {
+    const { data: sameNumber } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("active", true)
+      .neq("role", "client")
+      .like("phone", `%${phone.replace(/\D/g, "").slice(-10)}`);
+    if ((sameNumber ?? []).some((p) => normaliseName(p.full_name) === normaliseName(fullName))) {
+      return { error: `Someone named ${fullName} already has this mobile number, so they could not be told apart at sign-in.` };
+    }
+  }
 
   const email = input.email?.trim().toLowerCase() || null;
   if (email) {
@@ -209,36 +193,53 @@ export async function createStaffAccount(input: {
     if (emailTaken) return { error: `${email} already belongs to another account.` };
   }
 
-  const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email: email ?? codeToEmail(code),
-    password: pinPassword(input.pin),
-    // Marked confirmed on creation, so Supabase never tries to deliver a
-    // verification mail to an address that does not receive any.
-    email_confirm: true,
-    user_metadata: { employee_code: code, full_name: input.fullName },
-  });
+  /**
+   * The code is never typed: the next free NBSS- number is taken. Two people added
+   * at the same moment would be handed the same one, and the second insert would hit
+   * the unique code — so on a clash the next number is tried, rather than failing.
+   */
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: next } = await admin.rpc("next_employee_code");
+    const base = Number(String(next ?? "NBSS-1").replace(/^NBSS-/, "")) || 1;
+    const code = `NBSS-${base + attempt}`;
 
-  if (authError || !created.user) {
-    return { error: authError?.message ?? "Could not create the login." };
+    const { data: taken } = await admin.from("profiles").select("id").eq("employee_code", code).maybeSingle();
+    if (taken) continue;
+
+    const { data: created, error: authError } = await admin.auth.admin.createUser({
+      email: email ?? codeToEmail(code),
+      // Marked confirmed on creation, so Supabase never tries to deliver a
+      // verification mail to an address that does not receive any. No password:
+      // nobody signs in with one.
+      email_confirm: true,
+      user_metadata: { employee_code: code, full_name: fullName },
+    });
+    if (authError || !created.user) {
+      // The synthesized address of a code someone else took a moment ago.
+      if (!email && /already|registered|exists/i.test(authError?.message ?? "")) continue;
+      return { error: authError?.message ?? "Could not create the login." };
+    }
+
+    const { error: profileError } = await admin.from("profiles").insert({
+      id: created.user.id,
+      employee_code: code,
+      role: input.role,
+      trade: input.role === "guard" ? (input.trade ?? "security") : "security",
+      sos_enabled: input.sosEnabled ?? true,
+      full_name: fullName,
+      phone: phone || null,
+      email,
+    });
+
+    if (profileError) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      if (profileError.code === "23505" && /employee_code/.test(profileError.message)) continue;
+      return { error: profileError.message };
+    }
+
+    return { id: created.user.id, employeeCode: code };
   }
-
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: created.user.id,
-    employee_code: code,
-    role: input.role,
-    trade: input.role === "guard" ? (input.trade ?? "security") : "security",
-    sos_enabled: input.sosEnabled ?? true,
-    full_name: input.fullName.trim(),
-    phone: input.phone?.trim() || null,
-    email,
-  });
-
-  if (profileError) {
-    await admin.auth.admin.deleteUser(created.user.id);
-    return { error: profileError.message };
-  }
-
-  return { id: created.user.id };
+  return { error: "Could not find a free employee code. Try again." };
 }
 
 /**

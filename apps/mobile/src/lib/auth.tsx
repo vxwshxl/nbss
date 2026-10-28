@@ -4,14 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import type { Row } from "@nbss/shared/db";
-import {
-  codeToEmail,
-  isValidCode,
-  isValidEmail,
-  normaliseCode,
-  type Role,
-  pinPassword,
-} from "@nbss/shared/identity";
+import { isValidMobile, type Role } from "@nbss/shared/identity";
 
 import { WEB_URL } from "./config";
 import { IS_EXPO_GO } from "./runtime";
@@ -38,10 +31,8 @@ type AuthState = {
   profile: Profile | null;
   role: Role | null;
   loading: boolean;
-  /** Mails a six-digit code. Always "succeeds" — see sendCode below. */
-  sendCode: (identifier: string) => Promise<{ error?: string }>;
-  verifyCode: (identifier: string, code: string) => Promise<{ error?: string }>;
-  signIn: (identifier: string, secret: string) => Promise<{ error?: string }>;
+  /** Name and mobile, for every role but client. */
+  signIn: (name: string, mobile: string) => Promise<{ error?: string }>;
   /** Google, as on the website: an account already on the books, or a new client. */
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
@@ -53,34 +44,20 @@ const AuthContext = createContext<AuthState | null>(null);
 /**
  * One sign-in for every role, with the website's rules.
  *
- * What someone types is an email address or an employee code:
- *
- *   an email      → Supabase Auth directly. The code is mailed by Auth itself
- *                   (through the ZeptoMail relay it is configured with) and
- *                   verified here, so this path needs nothing but Supabase.
- *   an employee   → the website's /api/auth endpoints, because turning a code
- *   code            into its login needs the server's secret key, which this app
- *                   must never hold. They hand back the session's tokens.
+ * Everyone who works for NBSS types their name and 10-digit mobile, and the
+ * website's /api/auth endpoint decides: finding someone by name and number needs
+ * the server's secret key, which this app must never hold. It hands back the
+ * session's tokens. Clients use Google.
  *
  * Where each person lands afterwards is decided by their profile (app/index.tsx),
  * never by anything typed here.
  */
 const REFUSED = "Those details were not accepted.";
-const BAD_CODE = "That code is invalid or has expired.";
 
-function isEmail(identifier: string): boolean {
-  return identifier.includes("@");
-}
-
-async function viaServer(
-  step: "code" | "verify" | "password",
-  body: Record<string, string>,
-): Promise<{ error?: string }> {
-  if (!WEB_URL) {
-    return { error: "Sign in with your email address. The office can tell you which one is on file." };
-  }
+async function viaServer(body: Record<string, string>): Promise<{ error?: string }> {
+  if (!WEB_URL) return { error: "Sign-in is not set up in this build of the app." };
   try {
-    const res = await fetch(`${WEB_URL}/api/auth/${step}`, {
+    const res = await fetch(`${WEB_URL}/api/auth/worker`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -88,7 +65,7 @@ async function viaServer(
     const data = (await res.json().catch(() => null)) as
       | { error?: string; session?: { access_token: string; refresh_token: string } }
       | null;
-    // A server that fails is not a wrong PIN, so it is not reported as one.
+    // A server that fails is not a wrong name, so it is not reported as one.
     if (res.status >= 500) return { error: "NBSS could not sign you in just now. Try again in a minute." };
     if (!res.ok) return { error: data?.error ?? REFUSED };
     if (data?.session) {
@@ -150,75 +127,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [loadProfile]);
 
-  const sendCode = useCallback(async (raw: string) => {
-    const identifier = raw.trim();
-    if (!identifier) return { error: "Enter your email or employee code." };
+  const signIn = useCallback(async (name: string, raw: string) => {
+    const mobile = raw.replace(/\D/g, "");
+    if (!name.trim()) return { error: "Enter your name." };
+    if (!isValidMobile(mobile)) return { error: "Enter your 10-digit mobile number." };
     setLoading(true);
     try {
-      if (isEmail(identifier)) {
-        if (!isValidEmail(identifier)) return { error: "That email address does not look right." };
-        // Errors are swallowed on purpose: an unknown address must look exactly
-        // like a known one, or this screen would say who works here.
-        await supabase.auth.signInWithOtp({
-          email: identifier.toLowerCase(),
-          options: { shouldCreateUser: false },
-        });
-        return {};
-      }
-      if (!isValidCode(normaliseCode(identifier))) {
-        return { error: "That does not look like an employee code or an email address." };
-      }
-      return await viaServer("code", { identifier });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const verifyCode = useCallback(async (raw: string, code: string) => {
-    const identifier = raw.trim();
-    const token = code.replace(/\D/g, "");
-    if (token.length !== 6) return { error: "Enter the 6-digit code from your email." };
-    setLoading(true);
-    try {
-      if (isEmail(identifier)) {
-        const { error } = await supabase.auth.verifyOtp({
-          email: identifier.toLowerCase(),
-          token,
-          type: "email",
-        });
-        return error ? { error: BAD_CODE } : {};
-      }
-      return await viaServer("verify", { identifier, code: token });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const signIn = useCallback(async (raw: string, secret: string) => {
-    const identifier = raw.trim();
-    if (!identifier) return { error: "Enter your email or employee code." };
-    if (secret.length < 4) return { error: "Enter your PIN or password." };
-
-    setLoading(true);
-    try {
-      if (isEmail(identifier)) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: identifier.toLowerCase(),
-          password: pinPassword(secret),
-        });
-        // One message for every failure, so the form cannot be used to discover
-        // which accounts exist.
-        return error ? { error: REFUSED } : {};
-      }
-      const code = normaliseCode(identifier);
-      if (!isValidCode(code)) {
-        return { error: "That does not look like an employee code or an email address." };
-      }
-      // Older logins still sit under their synthesized address, so that is
-      // tried first; it needs no server. Otherwise the server resolves the code.
-      const legacy = await supabase.auth.signInWithPassword({ email: codeToEmail(code), password: pinPassword(secret) });
-      if (!legacy.error) return {};
-      return await viaServer("password", { identifier: code, secret });
+      return await viaServer({ name, mobile });
     } finally {
       setLoading(false);
     }
@@ -263,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: profileRow } = await supabase.from("profiles").select("id, active").eq("id", exchanged.session.user.id).maybeSingle();
       if (!profileRow?.active) {
         await supabase.auth.signOut();
-        return { error: "This Google account is not registered with NBSS. Use your email or employee code, or ask the office." };
+        return { error: "This Google account is not registered with NBSS. Staff and guards sign in with their name and mobile number." };
       }
       return {};
     } catch {
@@ -304,14 +219,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       role: profile?.role ?? null,
       loading,
-      sendCode,
-      verifyCode,
       signIn,
       signInWithGoogle,
       signOut,
       refresh,
     }),
-    [settled, profile, loading, sendCode, verifyCode, signIn, signInWithGoogle, signOut, refresh],
+    [settled, profile, loading, signIn, signInWithGoogle, signOut, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

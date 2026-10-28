@@ -48,7 +48,6 @@ export default async function GuardAttendancePage({
   const supabase = await supabaseServer();
   const { data: guard } = await supabase.from("profiles").select("id, full_name, employee_code, role").eq("id", id).maybeSingle();
   if (!guard) notFound();
-  const { data: pinRow } = await supabase.from("staff_pins").select("pin").eq("profile_id", guard.id).maybeSingle();
 
   const [shifts, att] = await Promise.all([
     supabase
@@ -164,10 +163,6 @@ export default async function GuardAttendancePage({
             <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm">
               <span className="mr-2 text-[11px] font-bold tracking-widest text-emerald-700 uppercase">Code</span>
               <span className="font-mono font-bold">{guard.employee_code}</span>
-            </span>
-            <span className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm">
-              <span className="mr-2 text-[11px] font-bold tracking-widest text-violet-700 uppercase">PIN</span>
-              <span className="font-mono font-bold tracking-[0.25em]">{pinRow?.pin ?? "-"}</span>
             </span>
           </div>
         }

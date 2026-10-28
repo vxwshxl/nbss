@@ -40,7 +40,7 @@ export const PAGES: Record<string, PageKnowledge> = {
   "/console/guards": {
     title: "Guards",
     about: "Every guard account: code, email, phone and whether it is active. Clicking a row opens their profile with 30-day attendance.",
-    actions: ["Add a guard", "Edit contact details", "Reset a PIN", "Deactivate or reactivate", "View the console as them"],
+    actions: ["Add a guard", "Edit contact details", "Deactivate or reactivate", "View the console as them"],
     tools: ["roster_overview", "guard_attendance"],
   },
   "/console/users": {
@@ -58,7 +58,7 @@ export const PAGES: Record<string, PageKnowledge> = {
   },
   "/console/audit": {
     title: "Audit log",
-    about: "An append-only record of every privileged action: sign-ins, accounts created, PIN resets, fence changes, impersonation.",
+    about: "An append-only record of every privileged action: sign-ins, accounts created, fence changes, impersonation.",
   },
   "/console/duty": {
     title: "Today's duty",
@@ -75,7 +75,7 @@ export const PAGES: Record<string, PageKnowledge> = {
   "/console/profile": {
     title: "My profile",
     about: "The signed-in person's own details.",
-    actions: ["Edit their name or phone", "Change their PIN or passphrase"],
+    actions: ["Edit their name or mobile, which is also how they sign in"],
   },
 };
 

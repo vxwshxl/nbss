@@ -216,7 +216,7 @@ const listSites: AiTool = {
 const rosterOverview: AiTool = {
   name: "roster_overview",
   description:
-    "How many people hold each kind of login, how many accounts are active, and who is still on a temporary PIN issued by the office.",
+    "How many people hold each kind of login, how many accounts are active, and who has no mobile number on file (and so cannot sign in).",
   parameters: z.object({}),
   jsonSchema: empty,
   roles: ["admin", "supervisor"],
@@ -225,7 +225,7 @@ const rosterOverview: AiTool = {
     const supabase = await supabaseServer();
     const { data } = await supabase
       .from("profiles")
-      .select("role, active, must_change_pin, full_name, employee_code");
+      .select("role, active, phone, full_name, employee_code");
 
     const rows = data ?? [];
     const byRole = (role: Role) => rows.filter((r) => r.role === role && r.active).length;
@@ -237,8 +237,8 @@ const rosterOverview: AiTool = {
       supervisors: byRole("supervisor"),
       administrators: byRole("admin"),
       clients: byRole("client"),
-      onTemporaryPin: rows
-        .filter((r) => r.active && r.must_change_pin)
+      cannotSignInNoMobile: rows
+        .filter((r) => r.active && r.role !== "client" && !r.phone)
         .map((r) => ({ name: r.full_name, code: r.employee_code })),
     };
   },

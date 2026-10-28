@@ -1,10 +1,10 @@
 "use server";
 
-import { isValidPhone, pinPassword } from "@nbss/shared/identity";
+import { isValidPhone, normaliseName } from "@nbss/shared/identity";
 
 import { revalidatePath } from "next/cache";
 
-import { audit, isValidSecret, requireSession } from "@/lib/auth";
+import { audit, requireSession } from "@/lib/auth";
 import { assertCanWrite } from "@/lib/impersonation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -19,11 +19,28 @@ export async function updateOwnProfile(_prev: ProfileState, data: FormData): Pro
   const phone = String(data.get("phone") ?? "").trim();
 
   if (!fullName) return { ok: false, error: "Your name cannot be blank." };
+  const worker = session.profile.role !== "client";
+  // Name and mobile are a worker's sign-in, so the mobile cannot be left blank.
+  if (worker && !phone) return { ok: false, error: "Your mobile number is needed: you sign in with it." };
   if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
 
-  const { error } = await supabaseAdmin()
+  const admin = supabaseAdmin();
+  if (worker) {
+    const { data: sameNumber } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("active", true)
+      .neq("role", "client")
+      .neq("id", session.profile.id)
+      .like("phone", `%${phone.replace(/\D/g, "").slice(-10)}`);
+    if ((sameNumber ?? []).some((p) => normaliseName(p.full_name) === normaliseName(fullName))) {
+      return { ok: false, error: "Someone else with this name has this mobile number, so you could not be told apart at sign-in." };
+    }
+  }
+
+  const { error } = await admin
     .from("profiles")
-    .update({ full_name: fullName, phone: phone || null })
+    .update({ full_name: fullName.replace(/\s+/g, " "), phone: phone || null })
     .eq("id", session.profile.id);
 
   if (error) return { ok: false, error: error.message };
@@ -37,73 +54,8 @@ export async function updateOwnProfile(_prev: ProfileState, data: FormData): Pro
   });
 
   revalidatePath("/console/profile");
-  return { ok: true, message: "Your details are saved." };
-}
-
-/**
- * Changing your own PIN.
- *
- * The current one is required even though an admin could set it without —
- * because this form is used by whoever is sitting at the device, and a phone
- * left unlocked on a table should not be enough to lock its owner out.
- */
-export async function changeOwnPin(_prev: ProfileState, data: FormData): Promise<ProfileState> {
-  const session = await requireSession();
-
-  // An admin viewing as someone else must not be able to change that person's
-  // PIN from inside their view — that is a credential, not a detail. The reset
-  // flow on the People screen is the supported path, and it is audited.
-  if (session.impersonating) {
-    return { ok: false, error: "Stop viewing as this person before changing their PIN." };
-  }
-
-  const current = String(data.get("current") ?? "");
-  const next = String(data.get("next") ?? "");
-  const confirm = String(data.get("confirm") ?? "");
-
-  if (!current) return { ok: false, error: "Enter your current PIN." };
-  if (next !== confirm) return { ok: false, error: "The two new PINs do not match." };
-
-  if (!isValidSecret(next)) {
-    return {
-      ok: false,
-      error: "Your new PIN must be 4 digits.",
-    };
-  }
-  if (next === current) return { ok: false, error: "The new PIN must be different from the old one." };
-
-  const admin = supabaseAdmin();
-
-  // Verify the current secret by attempting a sign-in with it, which is the
-  // only way to check a bcrypt hash we never see.
-  const { data: user } = await admin.auth.admin.getUserById(session.profile.id);
-  const email = user.user?.email;
-  if (!email) return { ok: false, error: "That account has no sign-in address." };
-
-  const { createClient } = await import("@supabase/supabase-js");
-  const probe = createClient(
-    process.env.SUPABASE_INTERNAL_URL?.trim() || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-
-  const { error: wrong } = await probe.auth.signInWithPassword({ email, password: pinPassword(current) });
-  if (wrong) return { ok: false, error: "That is not your current PIN." };
-
-  const { error } = await admin.auth.admin.updateUserById(session.profile.id, { password: pinPassword(next) });
-  if (error) return { ok: false, error: error.message };
-
-  await admin
-    .from("profiles")
-    .update({ must_change_pin: false, pin_reset_at: new Date().toISOString() })
-    .eq("id", session.profile.id);
-  // The office's copy (0044), so the person popup shows the PIN that works now.
-  await admin
-    .from("staff_pins")
-    .upsert({ profile_id: session.profile.id, pin: next, set_at: new Date().toISOString(), set_by: session.profile.id });
-
-  await audit({ actor: session.realProfile, action: "own_pin_changed", entity: "profiles", entityId: session.profile.id });
-
-  revalidatePath("/console/profile");
-  return { ok: true, message: "Your PIN is changed. Use it the next time you sign in." };
+  return {
+    ok: true,
+    message: worker ? "Your details are saved. Sign in with this name and mobile from now on." : "Your details are saved.",
+  };
 }

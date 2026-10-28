@@ -9,7 +9,7 @@ const PAGE_TIPS: [prefix: string, tip: Omit<NiboLine, "kind" | "id">][] = [
   ["/console/attendance", { text: "Punches flagged for review are the ones to look at first. I can list them.", mood: "think", actions: [{ label: "What needs review?", ask: "Which attendance entries are waiting for review today?" }] }],
   ["/console/sites", { text: "Every site needs a geofence before a guard can check in there. Draw it on the map.", mood: "think" }],
   ["/console/roster", { text: "Want to know who is short of cover this week?", mood: "think", actions: [{ label: "Gaps this week", ask: "Which sites are short of guards on the roster this week?" }] }],
-  ["/console/guards", { text: "Open a guard to see their last two weeks, reset a PIN or post them to a site.", mood: "happy" }],
+  ["/console/guards", { text: "Open a guard to see their last two weeks, fix their name or mobile, or post them to a site.", mood: "happy" }],
   ["/console/sos", { text: "A live alert stays on top until someone stands it down. Every call is logged.", mood: "think" }],
   ["/console/bookings", { text: "New requests show first. Quote, then deploy once the client agrees.", mood: "happy" }],
   ["/console/users", { text: "Use View as in the top bar to see the console exactly as someone else does.", mood: "wave" }],

@@ -17,7 +17,7 @@ export default async function UsersPage() {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, employee_code, full_name, role, trade, sos_enabled, phone, email, active, joined_at, created_at, must_change_pin, pin_reset_at, last_seen_at",
+      "id, employee_code, full_name, role, trade, sos_enabled, phone, email, active, joined_at, created_at, last_seen_at",
     )
     .order("full_name");
 
@@ -29,7 +29,6 @@ export default async function UsersPage() {
         canManage={isAdmin(session.profile.role) && !session.impersonating}
         selfId={session.realProfile.id}
         isDeveloper={session.realProfile.role === "developer"}
-        nextCode={(await supabase.rpc("next_employee_code")).data ?? "NBSS-1"}
         showRoleTabs
       />
     </div>
