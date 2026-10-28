@@ -56,6 +56,12 @@ export const PAGES: Record<string, PageKnowledge> = {
     actions: ["Mark an enquiry contacted or closed"],
     tools: ["enquiry_inbox"],
   },
+  "/console/app-updates": {
+    title: "App updates",
+    about:
+      "Where an administrator publishes a new build of the phone app: its build number, version, Play Store link and what's new. Phones on an older build then show an Update available screen with a button to the Play Store. Also counts phones by the build they run.",
+    actions: ["Publish an app update"],
+  },
   "/console/audit": {
     title: "Audit log",
     about: "An append-only record of every privileged action: sign-ins, accounts created, fence changes, impersonation.",

@@ -1,3 +1,5 @@
+import { isRunningInExpoGo } from "expo";
+import * as Application from "expo-application";
 import Constants from "expo-constants";
 
 /**
@@ -52,8 +54,24 @@ function webUrl(): string {
 
 export const WEB_URL = webUrl();
 
-/** Used as the User-Agent-ish marker on a position, so a trail can name its source. */
-export const APP_VERSION = Constants.expoConfig?.version ?? "0.0.0";
+/**
+ * The installed build: the number Android compares (versionCode), or null in Expo Go
+ * and the browser preview, which are not installed builds. The update screen compares
+ * it with the release the office publishes in App updates.
+ */
+export const APP_BUILD: number | null = (() => {
+  // Expo Go reports its own build number, not this app's.
+  if (isRunningInExpoGo()) return null;
+  const n = Number(Application.nativeBuildVersion);
+  return Number.isInteger(n) && n > 0 ? n : null;
+})();
+
+/**
+ * "1.0.0 (24)": the version and the build. Sent with each phone's report, so the
+ * console can count phones by build, and used as the marker on a position so a
+ * trail can name its source.
+ */
+export const APP_VERSION = `${Constants.expoConfig?.version ?? "0.0.0"}${APP_BUILD ? ` (${APP_BUILD})` : ""}`;
 
 /**
  * Google Maps, for the browser preview (the native maps read it from the

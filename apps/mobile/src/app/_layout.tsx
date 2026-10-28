@@ -30,6 +30,7 @@ import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 import type { ErrorBoundaryProps } from "expo-router";
 import { ErrorScreen } from "@/components/error-screen";
+import { UpdateGate } from "@/components/update-screen";
 import { preloadBrandMark } from "@/components/brand-mark";
 import { LogBox } from "react-native";
 import { IS_EXPO_GO } from "@/lib/runtime";
@@ -196,6 +197,8 @@ export default function RootLayout() {
               </Stack>
             )}
           </DataModeProvider>
+          {/* Over every screen, signed in or not, when the office has published a newer build. */}
+          <UpdateGate />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

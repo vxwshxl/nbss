@@ -72,6 +72,7 @@ const ACTION_LABEL: Record<string, string> = {
   booking_updated: "Moved a booking along",
   booking_deleted: "Deleted a booking",
   submission_deleted: "Deleted an enquiry",
+  app_release_updated: "Published an app update",
 };
 
 /** Where each kind of record lives, so an entry can open the thing it is about. */

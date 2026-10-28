@@ -21,6 +21,36 @@ export type Enums = {
 export type Database = {
   public: {
     Tables: {
+      app_release: {
+        Row: {
+          id: number;
+          version_code: number;
+          version_name: string | null;
+          store_url: string | null;
+          notes: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: number;
+          version_code?: number;
+          version_name?: string | null;
+          store_url?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: number;
+          version_code?: number;
+          version_name?: string | null;
+          store_url?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       attendance: {
         Row: {
           id: string;

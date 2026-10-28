@@ -12,6 +12,7 @@ import {
   signInWorker,
   statelessClient,
 } from "@/lib/sign-in";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 /**
  * The app's side of the one sign-in door (the website uses the server action
@@ -33,13 +34,20 @@ const Body = z.object({
 
 const NO_STORE = { "Cache-Control": "no-store, private" };
 
-const OUTDATED =
-  "Sign-in has changed: it is now your name and mobile number. Install the latest NBSS app from the office to sign in.";
+/**
+ * What an app too old to know the update screen is told when it tries to sign in:
+ * the Play Store link the office set in App updates, when there is one.
+ */
+async function outdated(): Promise<string> {
+  const { data } = await supabaseAdmin().from("app_release").select("store_url").eq("id", 1).maybeSingle();
+  const where = data?.store_url ? `Update the app from the Play Store: ${data.store_url}` : "Install the latest NBSS app from the office.";
+  return `Sign-in has changed: it is now your name and mobile number. ${where}`;
+}
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ step: string }> }) {
   const { step } = await params;
   if (step === "code" || step === "verify" || step === "password") {
-    return NextResponse.json({ error: OUTDATED }, { status: 410, headers: NO_STORE });
+    return NextResponse.json({ error: await outdated() }, { status: 410, headers: NO_STORE });
   }
   if (step !== "worker") {
     return NextResponse.json({ error: "Not found." }, { status: 404, headers: NO_STORE });
