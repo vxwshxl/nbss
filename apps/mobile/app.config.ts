@@ -156,6 +156,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           // back on.
           enableMinifyInReleaseBuilds: false,
           enableShrinkResourcesInReleaseBuilds: false,
+          // Phones only: the two ARM builds. x86 is for emulators, and leaving it out
+          // takes tens of megabytes off an APK that guards download over WhatsApp onto
+          // low-end phones (a Tecno Spark Go would not install the 125 MB one).
+          // armeabi-v7a stays for Android Go phones that run 32-bit only.
+          buildArchs: ["arm64-v8a", "armeabi-v7a"],
           extraProguardRules: [
             "-keep class androidx.work.impl.WorkDatabase { *; }",
             "-keep class androidx.work.impl.WorkDatabase_Impl { *; }",
