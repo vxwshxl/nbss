@@ -173,7 +173,7 @@ export default async function GuardAttendancePage({
         <StatCard label="Hours" value={(minutes / 60).toFixed(1)} hint={`${from} to ${to}`} icon={Clock} tone="sky" />
         <StatCard label="Attendance" value={rate === null ? "-" : `${rate}%`} hint={`${due.length} duties due`} icon={Percent} tone="violet" />
       </div>
-      <GuardRegister guardName={guard.full_name} from={from} to={to} rows={rows} />
+      <GuardRegister guardName={guard.full_name} from={from} to={to} today={today} rows={rows} />
     </div>
   );
 }
