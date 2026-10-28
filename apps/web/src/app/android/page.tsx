@@ -3,13 +3,18 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Download, ShieldCheck, Smartphone } from "lucide-react";
 
+import { pageMetadata } from "@/lib/seo/page-metadata";
+
 import { AuthShell } from "../login/auth-shell";
 
-export const metadata: Metadata = {
-  title: "NBSS app for Android",
-  description: "Download and install the NBSS Kokrajhar app for guards, supervisors, the office and clients.",
-  robots: { index: false, follow: false },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "Download the NBSS Kokrajhar app for Android",
+  description:
+    "Get the NBSS Kokrajhar Android app: guards check in and out, share live location and raise SOS; supervisors and the office follow every post; clients see their site. Android 7.0 and newer.",
+  path: "/android",
+  image: { url: "/og/android", width: 1200, height: 630, alt: "Get the NBSS Kokrajhar app for Android" },
+  keywords: ["NBSS app", "NBSS Kokrajhar app", "security guard app Assam", "NBSS Android APK"],
+});
 
 export const dynamic = "force-dynamic";
 

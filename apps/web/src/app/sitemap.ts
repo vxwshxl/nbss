@@ -40,6 +40,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
+    // The app's download page lives outside the marketing pages, so it is listed here.
+    { url: `${BASE}/android`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 },
     ...vacancies.map((v) => ({
       url: `${BASE}/careers/${v.id}`,
       lastModified: now,

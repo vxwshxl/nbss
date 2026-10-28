@@ -23,64 +23,7 @@ import { site } from "@/content/site";
  */
 export const dynamic = "force-static";
 
-/* Literals, because Satori resolves no cascade. Same values as globals.css. */
-const BRAND = "#009164";
-const BRAND_DEEP = "#00714E";
-const INK = "#171717";
-const INK_DIM = "#4D4D4D";
-const PAPER = "#FFFFFF";
-const BAND = "#F2F8F4";
-const BAND_LINE = "#DCEBE1";
-
-/** One Aronai tile, repeated across the band. Mirrors the SVG pattern 1:1. */
-function AronaiTile({ x }: { x: number }) {
-  const diamond = (left: number, color: string) => ({
-    position: "absolute" as const,
-    left,
-    top: 2,
-    width: 10,
-    height: 10,
-    border: `1.5px solid ${color}`,
-    transform: "rotate(45deg)",
-  });
-  return (
-    <div style={{ position: "absolute", left: x, top: 0, width: 36, height: 14, display: "flex" }}>
-      <div style={diamond(4, BRAND_DEEP)} />
-      <div style={diamond(22, BRAND)} />
-      <div
-        style={{
-          position: "absolute",
-          left: 15,
-          top: 4,
-          width: 6,
-          height: 6,
-          background: BRAND_DEEP,
-          transform: "rotate(45deg)",
-        }}
-      />
-    </div>
-  );
-}
-
-function AronaiBand() {
-  return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        width: "100%",
-        height: 14,
-        background: BAND,
-        borderTop: `1px solid ${BAND_LINE}`,
-        borderBottom: `1px solid ${BAND_LINE}`,
-      }}
-    >
-      {Array.from({ length: 34 }, (_, i) => (
-        <AronaiTile key={i} x={i * 36} />
-      ))}
-    </div>
-  );
-}
+import { AronaiBand, BRAND, BRAND_DEEP, INK, INK_DIM, PAPER } from "@/lib/og/parts";
 
 export async function GET() {
   const root = process.cwd();
