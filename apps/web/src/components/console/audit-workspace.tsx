@@ -21,6 +21,10 @@ import type { Tone } from "@/lib/ui/tones";
 export type AuditRow = {
   id: number;
   actor_code: string | null;
+  /** The person the entry is about, by name (the page resolves it). */
+  who: { name: string; phone: string | null } | null;
+  /** The site it happened at, by name. */
+  site: string | null;
   action: string;
   entity: string | null;
   entity_id: string | null;
@@ -73,6 +77,23 @@ const ACTION_LABEL: Record<string, string> = {
   booking_deleted: "Deleted a booking",
   submission_deleted: "Deleted an enquiry",
   app_release_updated: "Published an app update",
+  auto_check_out: "Checked out automatically",
+  "sos.raise": "Raised an SOS",
+  "sos.close": "Closed an SOS",
+  ai_query: "Asked the assistant",
+  posting_created: "Posted a guard to a site",
+  booking_requested: "Requested guards",
+  device_pending: "Signed in on a new phone",
+  device_approved: "Approved a phone",
+  device_blocked: "Blocked a phone",
+  device_punch_accepted: "Accepted a held check-in",
+  replacement_requested: "Asked for cover",
+  replacement_assigned: "Assigned cover",
+  client_registered: "Registered as a client",
+  off_roster_approved: "Approved an off-roster check-in",
+  wake_phone: "Woke a phone",
+  contact_updated: "Changed contact details",
+  account_deleted: "Deleted an account",
 };
 
 /** Where each kind of record lives, so an entry can open the thing it is about. */
@@ -116,6 +137,34 @@ function toneFor(action: string): Tone {
   return "sky";
 }
 
+/** The entry in a line: what the recorded detail says, in words. */
+function summary(r: AuditRow): string {
+  const d = (r.detail ?? {}) as Record<string, unknown>;
+  const n = (k: string) => (typeof d[k] === "number" ? (d[k] as number) : null);
+  const hm = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`);
+  const parts: string[] = [];
+  if (r.action === "check_in" || r.action === "check_in_refused") {
+    if (typeof d.status === "string") parts.push(d.status === "late" ? "Late" : d.status === "on_time" ? "On time" : d.status.replace(/_/g, " "));
+    if (n("distance_m") != null) parts.push(`${n("distance_m")} m from the centre${n("accuracy_m") != null ? ` (±${n("accuracy_m")} m)` : ""}`);
+    if (d.off_roster === true) parts.push("off roster");
+    if (typeof d.device_flag === "string") parts.push(d.device_flag === "shared_device" ? "another guard's phone" : "unapproved phone");
+    if (typeof d.reason === "string") parts.push(d.reason);
+  } else if (r.action === "check_out" || r.action === "auto_check_out") {
+    if (n("worked_minutes") != null) parts.push(`Worked ${hm(n("worked_minutes")!)}`);
+    if (n("overtime_minutes")) parts.push(`${hm(n("overtime_minutes")!)} overtime`);
+    if (n("distance_m") != null) parts.push(`${n("distance_m")} m from the centre`);
+  } else if (r.action === "sign_in") {
+    const how = d.method === "name_mobile" ? "Name and mobile" : d.method === "google" ? "Google" : typeof d.method === "string" ? d.method.replace(/_/g, " ") : "";
+    if (how) parts.push(how);
+    if (d.client === "mobile") parts.push("app");
+  } else {
+    for (const k of ["reference", "name", "role", "employee_code", "kind", "status", "to"]) {
+      if (typeof d[k] === "string") parts.push(String(d[k]).replace(/_/g, " "));
+    }
+  }
+  return parts.join(" · ");
+}
+
 export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
   const [detail, setDetail] = useState<AuditRow | null>(null);
 
@@ -128,12 +177,18 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
     },
     {
       header: "Who",
-      cell: (r) => (
-        <span className="font-mono text-sm">{r.actor_code ?? "-"}</span>
-      ),
-      sortValue: (r) => r.actor_code ?? "",
-      searchValue: (r) => r.actor_code ?? "",
-      printCell: (r) => r.actor_code ?? "-",
+      cell: (r) =>
+        r.who ? (
+          <span className="block min-w-0">
+            <span className="block truncate text-sm font-medium">{r.who.name}</span>
+            {r.who.phone && <span className="block font-mono text-xs text-muted-foreground">{r.who.phone}</span>}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">{r.actor_code ?? "System"}</span>
+        ),
+      sortValue: (r) => r.who?.name ?? r.actor_code ?? "",
+      searchValue: (r) => `${r.who?.name ?? ""} ${r.who?.phone ?? ""} ${r.actor_code ?? ""}`,
+      printCell: (r) => (r.who ? `${r.who.name}${r.who.phone ? ` · ${r.who.phone}` : ""}` : (r.actor_code ?? "System")),
     },
     {
       header: "Action",
@@ -145,11 +200,17 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
       printCell: (r) => ACTION_LABEL[r.action] ?? r.action,
     },
     {
-      header: "Entity",
-      cell: (r) => <span className="font-mono text-sm">{r.entity ?? "-"}</span>,
-      sortValue: (r) => r.entity ?? "",
-      searchValue: (r) => `${r.entity ?? ""} ${r.entity_id ?? ""}`,
-      printCell: (r) => r.entity ?? "-",
+      header: "Where",
+      cell: (r) => <span className="text-sm">{r.site ?? <span className="text-muted-foreground">-</span>}</span>,
+      sortValue: (r) => r.site ?? "",
+      searchValue: (r) => r.site ?? "",
+      printCell: (r) => r.site ?? "-",
+    },
+    {
+      header: "Details",
+      cell: (r) => <span className="block max-w-[22rem] truncate text-sm text-muted-foreground">{summary(r) || "-"}</span>,
+      searchValue: (r) => `${summary(r)} ${r.entity ?? ""} ${r.entity_id ?? ""}`,
+      printCell: (r) => summary(r) || "-",
     },
     {
       header: "From",
@@ -172,7 +233,7 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
         onRowClick={setDetail}
         printTitle="Audit log"
         initialPageSize={50}
-        searchPlaceholder="Search by who, action, entity or address…"
+        searchPlaceholder="Search by name, mobile, action, site or address…"
         emptyMessage="Nothing recorded yet."
       />
 
@@ -186,14 +247,15 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
               meta={
                 <>
                   <span>{dateTime(detail.created_at)}</span>
-                  {detail.actor_code && <span aria-hidden>·</span>}
-                  {detail.actor_code && <span className="font-mono">{detail.actor_code}</span>}
+                  {(detail.who || detail.actor_code) && <span aria-hidden>·</span>}
+                  {detail.who ? <span>{detail.who.name}</span> : detail.actor_code && <span className="font-mono">{detail.actor_code}</span>}
                 </>
               }
             />
             <PreviewBody>
               <FieldGrid>
-                <Field icon={UserRound} label="Who" mono value={detail.actor_code} />
+                <Field icon={UserRound} label="Who" value={detail.who ? `${detail.who.name}${detail.who.phone ? ` · ${detail.who.phone}` : ""}` : detail.actor_code} />
+                <Field icon={Database} label="Where" value={detail.site} />
                 <Field icon={Globe} label="From" mono value={detail.ip} />
                 <Field icon={KeyRound} label="Action key" mono value={detail.action} />
                 <Field icon={Database} label="Record" mono value={detail.entity} />
