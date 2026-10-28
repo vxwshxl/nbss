@@ -1239,27 +1239,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      staff_pins: {
-        Row: {
-          profile_id: string;
-          pin: string;
-          set_at: string;
-          set_by: string | null;
-        };
-        Insert: {
-          profile_id: string;
-          pin: string;
-          set_at?: string;
-          set_by?: string | null;
-        };
-        Update: {
-          profile_id?: string;
-          pin?: string;
-          set_at?: string;
-          set_by?: string | null;
-        };
-        Relationships: [];
-      };
       submissions: {
         Row: {
           id: string;
