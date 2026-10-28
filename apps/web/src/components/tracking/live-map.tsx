@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
 import { MAP_COLOR, circlePath, createHtmlMarker, esc, type HtmlMarker } from "@/lib/google-maps";
+import { runsByFence } from "@/lib/tracking";
 
 export type LiveSite = {
   id: string;
@@ -167,34 +168,18 @@ export function LiveMap({
   // The selected guard's path, coloured by whether each stretch was inside the fence.
   useEffect(() => {
     if (!maps || !map || !trail || trail.length < 2) return;
-    const lines: google.maps.Polyline[] = [];
-    let run: google.maps.LatLngLiteral[] = [trail[0]!];
-    let inside = trail[0]!.inside !== false;
-    const flush = () => {
-      if (run.length < 2) return;
-      lines.push(
+    const lines = runsByFence(trail).map(
+      (r) =>
         new maps.Polyline({
           map,
-          path: run,
-          strokeColor: inside ? MAP_COLOR.route : MAP_COLOR.outside,
+          path: r.path,
+          strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside,
           strokeOpacity: 0.9,
           strokeWeight: 4,
           zIndex: 4,
           clickable: false,
         }),
-      );
-    };
-    for (let i = 1; i < trail.length; i++) {
-      const p = trail[i]!;
-      run.push(p);
-      const now = p.inside !== false;
-      if (now !== inside) {
-        flush();
-        run = [p];
-        inside = now;
-      }
-    }
-    flush();
+    );
     return () => lines.forEach((l) => l.setMap(null));
   }, [maps, map, trail]);
 

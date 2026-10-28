@@ -44,7 +44,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
     supabase.from("sos_alerts").select("raised_by").in("status", ["active", "acknowledged"]),
     supabase
       .from("shifts")
-      .select("id, guard_id, starts_at, profiles!shifts_guard_id_fkey(full_name, employee_code, phone), sites(name, grace_minutes)")
+      .select("id, guard_id, site_id, starts_at, profiles!shifts_guard_id_fkey(full_name, employee_code, phone), sites(name, grace_minutes)")
       .eq("status", "scheduled")
       .lte("starts_at", now)
       .gt("ends_at", now)
@@ -127,6 +127,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
         name: p?.full_name ?? "A guard",
         code: p?.employee_code ?? "",
         phone: p?.phone ?? null,
+        siteId: s.site_id,
         siteName: one(s.sites as unknown as { name: string } | null)?.name ?? "a site",
         startsAt: s.starts_at,
       };

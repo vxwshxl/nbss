@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
 import { MAP_COLOR, circlePath, createHtmlMarker, type HtmlMarker } from "@/lib/google-maps";
-import type { TrailPoint, TrailStats } from "@/lib/tracking";
+import { runsByFence, type TrailPoint, type TrailStats } from "@/lib/tracking";
 
 export type TrailSite = { lat: number; lng: number; radiusM: number; ring: [number, number][] | null; name: string };
 
@@ -45,7 +45,8 @@ export function TrailMap({
   const host = useRef<HTMLDivElement>(null);
   const { maps, map, error } = useGoogleMap(host, { zoom: 16, gestureHandling: "greedy" });
   const headMarker = useRef<HtmlMarker | null>(null);
-  const done = useRef<google.maps.Polyline | null>(null);
+  // The part already played, one line per stretch inside or outside the fence.
+  const done = useRef<google.maps.Polyline[]>([]);
   // The last stretch, from the last point passed to the head where it is right now.
   const tail = useRef<google.maps.Polyline | null>(null);
 
@@ -69,15 +70,12 @@ export function TrailMap({
     if (!maps || !map || points.length === 0) return;
     const drawn: { setMap: (m: google.maps.Map | null) => void }[] = [];
 
-    let run: google.maps.LatLngLiteral[] = [points[0]!];
-    let inside = points[0]!.inside !== false;
-    const flush = () => {
-      if (run.length < 2) return;
+    for (const r of runsByFence(points)) {
       drawn.push(
         new maps.Polyline({
           map,
-          path: run,
-          strokeColor: inside ? MAP_COLOR.route : MAP_COLOR.outside,
+          path: r.path,
+          strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside,
           strokeOpacity: 0.35,
           strokeWeight: 5,
           clickable: false,
@@ -85,17 +83,7 @@ export function TrailMap({
           icons: [{ icon: { path: maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2, strokeOpacity: 0.6 }, offset: "50%", repeat: "120px" }],
         }),
       );
-    };
-    for (let i = 1; i < points.length; i++) {
-      const p = points[i]!;
-      run.push(p);
-      if ((p.inside !== false) !== inside) {
-        flush();
-        run = [p];
-        inside = p.inside !== false;
-      }
     }
-    flush();
 
     const first = points[0]!;
     const last = points.at(-1)!;
@@ -148,10 +136,10 @@ export function TrailMap({
     ) * 180) / Math.PI;
     const moved = a !== to && (a.lat !== to.lat || a.lng !== to.lng);
     const headHtml = headIcon(moved ? bearing : null);
-    if (!done.current) {
-      done.current = new maps.Polyline({ map, strokeColor: MAP_COLOR.route, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false });
-    }
-    done.current.setPath(points.slice(0, head + 1));
+    done.current.forEach((l) => l.setMap(null));
+    done.current = runsByFence(points.slice(0, head + 1)).map(
+      (r) => new maps.Polyline({ map, path: r.path, strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false }),
+    );
     if (!headMarker.current) {
       headMarker.current = createHtmlMarker(maps, { position: at, html: headHtml, zIndex: 30 });
       headMarker.current.setMap(map);
@@ -186,6 +174,7 @@ export function TrailMap({
         const pos = { lat: a.lat + (b.lat - a.lat) * f, lng: a.lng + (b.lng - a.lng) * f };
         headMarker.current.setPosition(pos);
         tail.current?.setPath([a, pos]);
+        tail.current?.setOptions({ strokeColor: a.inside === false ? MAP_COLOR.outside : MAP_COLOR.route });
         if (i !== seg) {
           seg = i;
           const moved = a.lat !== b.lat || a.lng !== b.lng;
@@ -200,10 +189,10 @@ export function TrailMap({
 
   useEffect(
     () => () => {
-      done.current?.setMap(null);
+      done.current.forEach((l) => l.setMap(null));
       tail.current?.setMap(null);
       headMarker.current?.setMap(null);
-      done.current = null;
+      done.current = [];
       tail.current = null;
       headMarker.current = null;
     },

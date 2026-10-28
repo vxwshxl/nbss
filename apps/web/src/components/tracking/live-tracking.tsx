@@ -9,13 +9,10 @@ import {
   BatteryCharging,
   BatteryLow,
   BatteryWarning,
-  BellRing,
   CircleCheck,
   CircleMinus,
   CircleX,
-  Clock,
   Crosshair,
-  Loader2,
   Maximize,
   Minimize,
   LocateOff,
@@ -32,6 +29,7 @@ import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from 
 
 import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { LiveMap, type LiveMarker, type LiveSite } from "@/components/tracking/live-map";
+import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty, type RouteEvent } from "@/components/tracking/route-panel";
 import { initials } from "@/lib/ui/initials";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { toast } from "sonner";
@@ -42,7 +40,6 @@ import {
   STATE_COLOR,
   STATE_LABEL,
   ago,
-  duration,
   guardState,
   heardAt,
   istClock,
@@ -51,6 +48,7 @@ import {
   trailStats,
   type GuardState,
   type TrailPoint,
+  type TrailStats,
   type TrailTuple,
 } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
@@ -68,7 +66,7 @@ export type DutyGuard = {
    * When the guard is meant to be on duty: the rostered shift this punch answered
    * (timestamps), else the site's daily window ("HH:MM:SS", IST), else null.
    */
-  duty: { kind: "shift" | "site"; start: string; end: string } | null;
+  duty: Duty;
   status: string;
   deviceFlag: string | null;
   /** When the watchdog last told the guard (and, after 20 min, the supervisors) the phone went silent. */
@@ -92,7 +90,7 @@ export type DutyGuard = {
   } | null;
 };
 
-export type NotArrived = { shiftId: string; name: string; code: string; phone: string | null; siteName: string; startsAt: string };
+export type NotArrived = { shiftId: string; name: string; code: string; phone: string | null; siteId: string; siteName: string; startsAt: string };
 
 const FILTERS: { key: "all" | GuardState; label: string }[] = [
   { key: "all", label: "All" },
@@ -143,6 +141,9 @@ export function LiveTracking({
   const [selected, setSelected] = useState<string | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lng: number; key: string; offset?: { x: number; y: number } } | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  // One site, or every site (the default).
+  const [site, setSite] = useState<string>(ALL_SITES);
+  const atSite = (siteId: string) => site === ALL_SITES || siteId === site;
   const [query, setQuery] = useState("");
   const [loadedTrail, setLoadedTrail] = useState<{ id: string; points: TrailPoint[] } | null>(null);
   const [live, setLive] = useState(false);
@@ -216,12 +217,12 @@ export function LiveTracking({
 
   const rows = useMemo(
     () =>
-      guards.map((g) => {
+      guards.filter((g) => site === ALL_SITES || g.siteId === site).map((g) => {
         const p = positions[g.guardId] ?? null;
         const state = guardState(p, sosGuards.includes(g.guardId), now);
         return { g, p, state };
       }),
-    [guards, positions, sosGuards, now],
+    [guards, positions, sosGuards, now, site],
   );
 
   const counts = useMemo(() => {
@@ -278,7 +279,14 @@ export function LiveTracking({
   }, [selAttendance, selHeard]);
   const trail = loadedTrail && loadedTrail.id === selAttendance ? loadedTrail.points : NO_TRAIL;
 
-  const stats = trail.length > 1 ? trailStats(trail) : null;
+  const stats = useMemo(() => (trail.length > 1 ? trailStats(trail) : null), [trail]);
+  // The same timeline as Route history: check-in, stops, out of and back into the fence, SOS, now.
+  const selSos = useShiftSos(sel ? { attendanceId: sel.g.attendanceId, guardId: sel.g.guardId, from: sel.g.checkInAt, to: null } : null);
+  const events = useMemo(() => routeEvents(trail, stats, selSos), [trail, stats, selSos]);
+  const goTo = (e: RouteEvent, i: number) => {
+    if (e.lat == null || e.lng == null) return;
+    setFocus({ lat: e.lat, lng: e.lng, key: `${e.at}-${i}-${Date.now()}`, offset: document.fullscreenElement ? clearOfCard() : undefined });
+  };
 
   // A guard picked: the camera goes to them, or to their site while no fix has come in yet.
   function pick(id: string | null) {
@@ -326,9 +334,10 @@ export function LiveTracking({
             docked
             row={sel}
             now={now}
-            walkedM={stats?.distanceM ?? null}
-            outsideMin={stats?.outsideMinutes ?? null}
-            points={trail.length}
+            trail={trail}
+            stats={stats}
+            events={events}
+            onEvent={goTo}
             onClose={() => setSelected(null)}
             onProfile={() => openProfile(sel.g.guardId)}
             onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}` })}
@@ -338,7 +347,8 @@ export function LiveTracking({
 
       <div ref={stage} className={cn("relative order-1 h-[62vh] min-h-[420px] bg-card lg:h-[calc(100dvh-210px)] xl:order-2", full && "h-screen lg:h-screen")}>
         <LiveMap
-          sites={sites}
+          sites={site === ALL_SITES ? sites : sites.filter((x) => x.id === site)}
+          frameKey={site}
           guards={markers}
           selected={selected}
           onSelect={pick}
@@ -366,9 +376,10 @@ export function LiveTracking({
           <GuardCard
             row={sel}
             now={now}
-            walkedM={stats?.distanceM ?? null}
-            outsideMin={stats?.outsideMinutes ?? null}
-            points={trail.length}
+            trail={trail}
+            stats={stats}
+            events={events}
+            onEvent={goTo}
             onClose={() => setSelected(null)}
             onProfile={() => openProfile(sel.g.guardId)}
             onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}`, offset: clearOfCard() })}
@@ -382,6 +393,7 @@ export function LiveTracking({
           list of two hundred guards never pushes the map off the screen. */}
       <aside className="order-3 flex max-h-[75vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card lg:order-2 lg:h-[calc(100dvh-210px)] lg:max-h-none xl:order-3">
         <div className="space-y-3 border-b border-app-line-soft p-3">
+          {sites.length > 1 && <SiteFilter sites={sites} value={site} onChange={setSite} className="h-10" />}
           <label className="flex h-10 items-center gap-2 rounded-full bg-muted/70 px-3.5 ring-1 ring-border/60 focus-within:ring-2 focus-within:ring-ring/50">
             <Search className="size-4 text-muted-foreground" />
             <input
@@ -443,13 +455,13 @@ export function LiveTracking({
             })}
           </ul>
 
-          {notArrived.length > 0 && (
+          {notArrived.some((n) => atSite(n.siteId)) && (
             <div className="border-t border-app-line p-3">
               <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-rose-700">
-                <UserRoundX className="size-4" /> Not arrived · {notArrived.length}
+                <UserRoundX className="size-4" /> Not arrived · {notArrived.filter((n) => atSite(n.siteId)).length}
               </p>
               <ul className="space-y-1.5">
-                {notArrived.map((n) => (
+                {notArrived.filter((n) => atSite(n.siteId)).map((n) => (
                   <li key={n.shiftId} className="flex items-center gap-2 rounded-xl bg-rose-500/5 px-2.5 py-2 text-sm">
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{n.name}</span>
@@ -484,9 +496,10 @@ function GuardCard({
   row: { g, p, state },
   docked = false,
   now,
-  walkedM,
-  outsideMin,
-  points,
+  trail,
+  stats,
+  events,
+  onEvent,
   onClose,
   onProfile,
   onCenter,
@@ -495,9 +508,10 @@ function GuardCard({
   /** In the page's own column rather than floating over the map. */
   docked?: boolean;
   now: number;
-  walkedM: number | null;
-  outsideMin: number | null;
-  points: number;
+  trail: TrailPoint[];
+  stats: TrailStats | null;
+  events: RouteEvent[];
+  onEvent: (e: RouteEvent, i: number) => void;
   onClose: () => void;
   onProfile: () => void;
   onCenter: () => void;
@@ -530,19 +544,24 @@ function GuardCard({
         </button>
       </div>
 
-      <DutyLine duty={g.duty} now={now} />
+      <div className="border-t border-app-line-soft">
+        <DutyLine duty={g.duty} now={now} />
+      </div>
 
-      <dl className="grid grid-cols-3 gap-x-3 gap-y-2.5 border-y border-app-line-soft px-4 py-3 text-xs">
-        <Fact label="On duty" value={duration((now - since) / 60_000)} />
+      {/* Right now, from the phone's latest fix. */}
+      <dl className="grid grid-cols-3 gap-x-3 gap-y-2.5 border-t border-app-line-soft px-4 py-3 text-xs">
         <Fact label="Checked in" value={istClock(since)} />
         <Fact label="Last heard" value={ago(heardAt(p), now)} />
         <Fact label="Battery" value={p?.battery != null ? `${p.battery}%${p.charging ? " ⚡" : ""}` : "-"} />
         <Fact label="GPS" value={p ? `±${Math.round(p.accuracy_m)} m` : "-"} />
         <Fact label="Speed" value={p?.speed_mps != null ? `${(p.speed_mps * 3.6).toFixed(1)} km/h` : "-"} />
         <Fact label="From centre" value={p?.distance_m != null ? km(p.distance_m) : "-"} />
-        <Fact label="Walked" value={walkedM != null ? km(walkedM) : "-"} />
-        <Fact label="Outside fence" value={outsideMin != null ? duration(outsideMin) : "-"} />
       </dl>
+
+      {/* The shift so far, as Route history shows it. */}
+      <div className="border-y border-app-line-soft px-4 py-3">
+        <RouteStats onDutyMin={(now - since) / 60_000} stats={stats} points={trail} />
+      </div>
 
       <div className="space-y-2 px-4 py-3 text-xs">
         <p className="flex items-center gap-2 text-muted-foreground">
@@ -575,10 +594,17 @@ function GuardCard({
             The phone went quiet. NBSS wakes it every few minutes; the last wake-up was at {istClock(new Date(g.silentAlertedAt).getTime())} and asked the guard to open the app.
           </p>
         )}
-        {points <= 1 && (
+        {trail.length <= 1 && (
           <p className="text-muted-foreground">No path yet beyond the check-in point.</p>
         )}
       </div>
+
+      {events.length > 0 && (
+        <div className="border-t border-app-line-soft px-2 py-2">
+          <p className="px-2 pt-1 pb-1 text-xs font-semibold">Timeline</p>
+          <RouteTimeline events={events} onPick={onEvent} />
+        </div>
+      )}
 
       {g.device && <Permissions device={g.device} now={now} />}
 
@@ -602,88 +628,6 @@ function GuardCard({
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Wakes the guard's phone now: a silent push that restarts tracking in the
- * background, and a visible "the office is checking on you" in case it cannot.
- * The watchdog does the same on its own every few minutes while a phone is quiet.
- */
-function WakeButton({ guardId, name }: { guardId: string; name: string }) {
-  const [busy, setBusy] = useState(false);
-  const wake = async () => {
-    setBusy(true);
-    const { data, error } = await supabaseBrowser().rpc("wake_guard", { p_guard: guardId });
-    setBusy(false);
-    const r = data as { ok?: boolean; devices?: number; reason?: string } | null;
-    if (error) toast.error(error.message);
-    else if (!r?.ok) toast.error(r?.reason === "not_on_duty" ? `${name} is not checked in.` : "Could not send the wake-up.");
-    else if (!r.devices) toast.error(`${name}'s phone has no notifications registered, so it cannot be woken. Call instead.`);
-    else toast.success(`Wake-up sent to ${name}'s phone.`);
-  };
-  return (
-    <button
-      type="button"
-      onClick={() => void wake()}
-      disabled={busy}
-      className="press inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-amber-500/12 px-3 text-sm font-medium text-amber-800 ring-1 ring-amber-500/30 hover:bg-amber-500/20 disabled:opacity-60 dark:text-amber-200"
-    >
-      {busy ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} Wake up phone
-    </button>
-  );
-}
-
-const IST_MS = 330 * 60_000;
-
-/** "17:00:00" → "5:00 pm". */
-function wallClock(value: string): string {
-  const [h, m] = value.split(":");
-  const hour = Number(h);
-  if (!Number.isFinite(hour)) return value;
-  return `${hour % 12 === 0 ? 12 : hour % 12}:${m ?? "00"} ${hour < 12 ? "am" : "pm"}`;
-}
-
-/** The site's daily window as instants around `now`, an overnight window ending the next morning. */
-function siteWindow(start: string, end: string, now: number): { from: number; to: number } {
-  const mins = (v: string) => {
-    const [h, m] = v.split(":").map(Number);
-    return (h ?? 0) * 60 + (m ?? 0);
-  };
-  const midnight = Math.floor((now + IST_MS) / 86_400_000) * 86_400_000 - IST_MS;
-  let from = midnight + mins(start) * 60_000;
-  let to = midnight + mins(end) * 60_000;
-  if (to <= from) {
-    // Overnight: before the end this morning, it is still last night's shift.
-    if (now < to) from -= 86_400_000;
-    else to += 86_400_000;
-  }
-  return { from, to };
-}
-
-/** When this guard is meant to be on duty, and how far into it they are. */
-function DutyLine({ duty, now }: { duty: DutyGuard["duty"]; now: number }) {
-  if (!duty) {
-    return (
-      <p className="flex items-center gap-2 border-t border-app-line-soft px-4 py-2.5 text-xs text-muted-foreground">
-        <Clock className="size-3.5 shrink-0" /> No duty time set: not rostered, and the site has no shift window.
-      </p>
-    );
-  }
-  const { from, to } =
-    duty.kind === "shift"
-      ? { from: new Date(duty.start).getTime(), to: new Date(duty.end).getTime() }
-      : siteWindow(duty.start, duty.end, now);
-  const label = duty.kind === "shift" ? `${istClock(from)} – ${istClock(to)}` : `${wallClock(duty.start)} – ${wallClock(duty.end)}`;
-  const over = now > to;
-  const note = now < from ? `starts in ${duration((from - now) / 60_000)}` : over ? `ended ${duration((now - to) / 60_000)} ago` : `ends in ${duration((to - now) / 60_000)}`;
-  return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-app-line-soft px-4 py-2.5 text-xs">
-      <Clock className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="text-muted-foreground">{duty.kind === "shift" ? "Duty" : "Site hours"}</span>
-      <span className="font-semibold tabular-nums">{label}</span>
-      <span className={cn("tabular-nums", over ? "font-semibold text-rose-600" : "text-muted-foreground")}>· {note}</span>
-    </p>
   );
 }
 

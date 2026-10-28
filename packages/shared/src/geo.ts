@@ -137,3 +137,36 @@ export function toRing(value: unknown): Ring | null {
   }
   return ring.length >= 3 ? ring : null;
 }
+
+/** A fix on a route: where, when (epoch ms) and how sure the phone was (metres). */
+export type Fix = Point & { at: number; accuracy?: number | null };
+
+/**
+ * A route with the phone's wild guesses taken out.
+ *
+ * A phone indoors, or one the battery saver has throttled, now and then reports a point
+ * hundreds of metres to kilometres off and then comes straight back. Drawn as is, each
+ * one is a long straight spoke across the map, and it adds two false kilometres to
+ * "walked". A fix is dropped when:
+ *   - the phone itself says it could be more than 500 m out;
+ *   - reaching it from the last good fix would need more than 40 m/s (~145 km/h);
+ *   - it is an out-and-back: more than 150 m from the last good fix at faster than a
+ *     brisk walk (4 m/s), with the very next fix back near where it started.
+ * A real walk does neither. Order is kept; the first fix is always kept.
+ */
+export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
+  if (fixes.length < 3) return fixes.filter((f) => (f.accuracy ?? 0) <= 500 || fixes.length === 1);
+  const kept: T[] = [fixes[0]!];
+  for (let i = 1; i < fixes.length; i++) {
+    const b = fixes[i]!;
+    const a = kept[kept.length - 1]!;
+    if ((b.accuracy ?? 0) > 500) continue;
+    const d = distanceMetres(a, b);
+    const speed = d / Math.max(1, (b.at - a.at) / 1000);
+    if (d > 100 && speed > 40) continue;
+    const c = fixes[i + 1];
+    if (c && d > 150 && speed > 4 && distanceMetres(a, c) < d * 0.35 && distanceMetres(b, c) > 150) continue;
+    kept.push(b);
+  }
+  return kept;
+}

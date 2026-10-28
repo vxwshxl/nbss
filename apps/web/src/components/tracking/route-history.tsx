@@ -1,37 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  BatteryMedium,
-  CircleDot,
-  Clock,
-  Footprints,
-  LogIn,
-  LogOut,
-  MapPinOff,
-  Pause,
-  Play,
-  Route as RouteIcon,
-  Search,
-  ShieldCheck,
-  Siren,
-  TriangleAlert,
-  WifiOff,
-} from "lucide-react";
+import { MapPinOff, Pause, Phone, Play, Radar, Search, Smartphone, TriangleAlert } from "lucide-react";
 
 import { PersonPreviewDialog } from "@/components/console/person-preview";
+import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty } from "@/components/tracking/route-panel";
 import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
-import { SOS_KIND_LABEL, SOS_STATUS_LABEL } from "@nbss/shared/sos";
 import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
 import {
   duration,
   istClock,
   istClockSeconds,
-  km,
   toPoints,
   trailStats,
   type TrailPoint,
@@ -44,18 +28,18 @@ export type RouteShift = {
   guardId: string;
   guardName: string;
   guardCode: string;
+  phone: string | null;
+  siteId: string;
   siteName: string;
   site: TrailSite;
+  duty: Duty;
+  device: { label: string; appVersion: string | null } | null;
   checkInAt: string;
   checkOutAt: string | null;
   workedMinutes: number | null;
   status: string;
   deviceFlag: string | null;
 };
-
-type Event = { at: number; kind: "in" | "out" | "left" | "back" | "stop" | "gap" | "now" | "sos" | "sos_end"; text: string; lat?: number; lng?: number; index: number };
-
-type SosRow = { id: string; kind: string; status: string; raised_at: string; closed_at: string | null; lat: number | null; lng: number | null };
 
 const SPEEDS = [30, 120, 600] as const;
 /** Radix Select cannot hold an empty value, so "every guard" is this. */
@@ -72,11 +56,14 @@ const FILTER = "h-9 w-full rounded-full border-0 bg-muted/70 px-3 ring-1 ring-bo
 export function RouteHistory({
   shifts,
   guards,
+  sites,
   initial,
 }: {
   shifts: RouteShift[];
   guards: { id: string; name: string }[];
-  initial: { attendance: string | null; guard: string | null; date: string | null };
+  /** For the site picker; empty inside one site's own workspace. */
+  sites: { id: string; name: string }[];
+  initial: { attendance: string | null; guard: string | null; date: string | null; site: string | null };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -195,74 +182,17 @@ export function RouteHistory({
 
   const stats = useMemo(() => (points.length > 1 ? trailStats(points) : null), [points]);
 
-  // The SOS this guard raised during the shift, for the timeline. Live while the shift is
-  // open: read again whenever an SOS changes.
-  const [sos, setSos] = useState<SosRow[]>([]);
-  const sosShift = shift ? `${shift.attendanceId}|${shift.guardId}|${shift.checkInAt}|${shift.checkOutAt ?? ""}` : null;
+  // The SOS this guard raised during the shift, and the moments that matter (shared with Live tracking).
+  const sos = useShiftSos(shift ? { attendanceId: shift.attendanceId, guardId: shift.guardId, from: shift.checkInAt, to: shift.checkOutAt } : null);
+  const events = useMemo(() => routeEvents(points, stats, sos), [points, stats, sos]);
+  // A clock for the duty line while the shift is open.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!sosShift) return;
-    const [attendanceId, guardId, from, to] = sosShift.split("|");
-    const supabase = supabaseBrowser();
-    let cancelled = false;
-    const load = async () => {
-      let q = supabase.from("sos_alerts").select("id, kind, status, raised_at, closed_at, lat, lng").eq("raised_by", guardId!).gte("raised_at", from!).order("raised_at");
-      if (to) q = q.lte("raised_at", to);
-      const { data } = await q;
-      if (!cancelled) setSos((data ?? []) as SosRow[]);
-    };
-    void load();
-    const channel = to
-      ? null
-      : supabase
-          .channel(`route-sos:${attendanceId}`)
-          .on("postgres_changes", { event: "*", schema: "public", table: "sos_alerts", filter: `raised_by=eq.${guardId}` }, () => void load())
-          .subscribe();
-    return () => {
-      cancelled = true;
-      if (channel) void supabase.removeChannel(channel);
-    };
-  }, [sosShift]);
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
-  const events: Event[] = useMemo(() => {
-    if (points.length === 0) return [];
-    const out: Event[] = [];
-    const first = points[0]!;
-    out.push({ at: first.at, kind: "in", text: "Checked in", lat: first.lat, lng: first.lng, index: 0 });
-    for (let i = 1; i < points.length; i++) {
-      const a = points[i - 1]!;
-      const b = points[i]!;
-      if (a.inside !== false && b.inside === false) out.push({ at: b.at, kind: "left", text: "Left the fence", lat: b.lat, lng: b.lng, index: i });
-      if (a.inside === false && b.inside !== false) out.push({ at: b.at, kind: "back", text: "Back inside the fence", lat: b.lat, lng: b.lng, index: i });
-      if (b.at - a.at > 10 * 60_000) out.push({ at: a.at, kind: "gap", text: `No signal for ${duration((b.at - a.at) / 60_000)}`, lat: a.lat, lng: a.lng, index: i - 1 });
-    }
-    (stats?.stops ?? []).forEach((s, n) => {
-      const index = points.findIndex((p) => p.at >= s.from);
-      out.push({ at: s.from, kind: "stop", text: `Stop ${n + 1} · ${duration((s.to - s.from) / 60_000)}${s.inside === false ? ", outside" : ""}`, lat: s.lat, lng: s.lng, index: Math.max(0, index) });
-    });
-    // Each SOS where and when it was raised, and how it ended.
-    const nearest = (t: number) => {
-      const i = points.findIndex((p) => p.at >= t);
-      return i < 0 ? points.length - 1 : i;
-    };
-    for (const a of sos) {
-      const at = new Date(a.raised_at).getTime();
-      const i = nearest(at);
-      const p = points[i]!;
-      out.push({ at, kind: "sos", text: `SOS · ${SOS_KIND_LABEL[a.kind as keyof typeof SOS_KIND_LABEL] ?? "Emergency"}`, lat: a.lat ?? p.lat, lng: a.lng ?? p.lng, index: i });
-      if (a.closed_at) {
-        const end = new Date(a.closed_at).getTime();
-        const j = nearest(end);
-        out.push({ at: end, kind: "sos_end", text: `SOS ${(SOS_STATUS_LABEL[a.status as keyof typeof SOS_STATUS_LABEL] ?? "closed").toLowerCase()}`, lat: points[j]!.lat, lng: points[j]!.lng, index: j });
-      }
-    }
-    const last = points.at(-1)!;
-    if (points.length > 1) {
-      out.push({ at: last.at, kind: last.reason === "check_out" ? "out" : "now", text: last.reason === "check_out" ? "Checked out" : "Latest position", lat: last.lat, lng: last.lng, index: points.length - 1 });
-    }
-    return out.sort((x, y) => x.at - y.at);
-  }, [points, stats, sos]);
-
-  function setFilter(key: "guard" | "date", value: string) {
+  function setFilter(key: "guard" | "date" | "site", value: string) {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value);
     else next.delete(key);
@@ -273,7 +203,6 @@ export function RouteHistory({
   const q = query.trim().toLowerCase();
   const listed = q ? shifts.filter((s) => `${s.guardName} ${s.guardCode} ${s.siteName}`.toLowerCase().includes(q)) : shifts;
   const at = points[head];
-  const battery = points.filter((p) => p.battery != null);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_320px]">
@@ -302,6 +231,9 @@ export function RouteHistory({
             max={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })}
             className={FILTER}
           />
+          {sites.length > 1 && (
+            <SiteFilter sites={sites} value={initial.site ?? ALL_SITES} onChange={(v) => setFilter("site", v === ALL_SITES ? "" : v)} className="col-span-2" />
+          )}
           <label className="col-span-2 flex h-9 items-center gap-2 rounded-full bg-muted/70 px-3 ring-1 ring-border/60 focus-within:ring-2 focus-within:ring-ring/50">
             <Search className="size-4 text-muted-foreground" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${shifts.length} shifts by guard or site`} className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
@@ -420,100 +352,66 @@ export function RouteHistory({
       <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-210px)] xl:max-h-none">
         {shift ? (
           <>
-            <div className="border-b border-app-line-soft p-4">
-              <button type="button" onClick={() => setProfileId(shift.guardId)} className="block max-w-full truncate text-left font-semibold hover:underline">
-                {shift.guardName}
-              </button>
-              <p className="text-xs text-muted-foreground">
-                {shift.guardCode} · {shift.siteName}
-              </p>
-              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <Stat icon={Clock} label="On duty" value={duration(((shift.checkOutAt ? new Date(shift.checkOutAt).getTime() : points.at(-1)?.at ?? new Date(shift.checkInAt).getTime()) - new Date(shift.checkInAt).getTime()) / 60_000)} />
-                <Stat icon={Footprints} label="Walked" value={stats ? km(stats.distanceM) : "-"} />
-                <Stat icon={MapPinOff} label="Outside fence" value={stats ? duration(stats.outsideMinutes) : "-"} warn={(stats?.outsideMinutes ?? 0) > 15} />
-                <Stat icon={WifiOff} label="Signal gaps" value={String(stats?.gaps.length ?? 0)} warn={(stats?.gaps.length ?? 0) > 0} />
-                <Stat icon={RouteIcon} label="Points" value={String(points.length)} />
-                <Stat
-                  icon={BatteryMedium}
-                  label="Battery"
-                  value={battery.length ? `${battery[0]!.battery}% → ${battery.at(-1)!.battery}%` : "-"}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="p-4 pb-3">
+                <button type="button" onClick={() => setProfileId(shift.guardId)} className="block max-w-full truncate text-left font-semibold hover:underline">
+                  {shift.guardName}
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-mono">{shift.guardCode}</span> · {shift.siteName}
+                </p>
+                {!shift.checkOutAt && (
+                  <span className="mt-1 inline-block rounded-full bg-emerald-600/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">On duty</span>
+                )}
+              </div>
+              <div className="border-t border-app-line-soft">
+                <DutyLine duty={shift.duty} now={now} past={!!shift.checkOutAt} />
+              </div>
+              <div className="border-t border-app-line-soft px-4 py-3">
+                <RouteStats
+                  onDutyMin={((shift.checkOutAt ? new Date(shift.checkOutAt).getTime() : points.at(-1)?.at ?? new Date(shift.checkInAt).getTime()) - new Date(shift.checkInAt).getTime()) / 60_000}
+                  stats={stats}
+                  points={points}
                 />
-              </dl>
+              </div>
+              <p className="flex items-center gap-2 border-t border-app-line-soft px-4 py-2.5 text-xs text-muted-foreground">
+                <Smartphone className="size-3.5 shrink-0" />
+                <span className="truncate">
+                  {shift.device ? `${shift.device.label}${shift.device.appVersion ? ` · app ${shift.device.appVersion}` : ""}` : "Phone not registered"}
+                </span>
+              </p>
+              <div className="space-y-2 border-t border-app-line-soft px-4 py-3">
+                {!shift.checkOutAt && <WakeButton guardId={shift.guardId} name={shift.guardName} />}
+                <div className="flex gap-2">
+                  {shift.phone && (
+                    <a href={`tel:${shift.phone}`} className="press inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground">
+                      <Phone className="size-4" /> Call
+                    </a>
+                  )}
+                  {!shift.checkOutAt && (
+                    <Link href="/console/live" className="press inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-border hover:bg-muted">
+                      <Radar className="size-4" /> Live map
+                    </Link>
+                  )}
+                </div>
+              </div>
+              <div className="border-t border-app-line-soft p-2">
+                <p className="px-2 pt-1 pb-1 text-xs font-semibold">Timeline</p>
+                <RouteTimeline
+                  events={events}
+                  onPick={(e, i) => {
+                    setPlaying(false);
+                    setHead(e.index);
+                    if (e.lat != null && e.lng != null) setPan({ lat: e.lat, lng: e.lng, key: `${e.at}-${i}` });
+                  }}
+                />
+              </div>
             </div>
-            <ol className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
-              {events.map((e, i) => (
-                <li key={`${e.kind}-${e.at}-${i}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlaying(false);
-                      setHead(e.index);
-                      if (e.lat != null && e.lng != null) setPan({ lat: e.lat, lng: e.lng, key: `${e.at}-${i}` });
-                    }}
-                    className="flex w-full items-start gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted/70"
-                  >
-                    <span className={cn("mt-0.5 grid size-6 shrink-0 place-items-center rounded-full", EVENT_TONE[e.kind])}>
-                      <EventIcon kind={e.kind} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{e.text}</span>
-                      <span className="block text-xs tabular-nums text-muted-foreground">{istClock(e.at)}</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
           </>
         ) : (
           <p className="p-6 text-sm text-muted-foreground">The route&apos;s summary and timeline appear here.</p>
         )}
       </aside>
-    </div>
-  );
-}
-
-const EVENT_TONE: Record<Event["kind"], string> = {
-  in: "bg-emerald-600 text-white",
-  out: "bg-slate-800 text-white",
-  now: "bg-blue-600 text-white",
-  left: "bg-amber-500 text-white",
-  back: "bg-emerald-500/20 text-emerald-700",
-  stop: "bg-slate-200 text-slate-700",
-  gap: "bg-rose-500/15 text-rose-700",
-  sos: "bg-red-600 text-white",
-  sos_end: "bg-red-500/15 text-red-700",
-};
-
-function EventIcon({ kind }: { kind: Event["kind"] }) {
-  const cls = "size-3.5";
-  switch (kind) {
-    case "in":
-      return <LogIn className={cls} />;
-    case "out":
-      return <LogOut className={cls} />;
-    case "left":
-      return <MapPinOff className={cls} />;
-    case "gap":
-      return <WifiOff className={cls} />;
-    case "stop":
-      return <Clock className={cls} />;
-    case "sos":
-      return <Siren className={cls} />;
-    case "sos_end":
-      return <ShieldCheck className={cls} />;
-    default:
-      return <CircleDot className={cls} />;
-  }
-}
-
-function Stat({ icon: Icon, label, value, warn }: { icon: typeof Clock; label: string; value: string; warn?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5 shrink-0" strokeWidth={2} />
-        <span className="truncate">{label}</span>
-      </dt>
-      <dd className={cn("truncate font-semibold tabular-nums", warn && "text-amber-700")}>{value}</dd>
     </div>
   );
 }

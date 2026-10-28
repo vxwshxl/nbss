@@ -116,7 +116,8 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
               <p className="mt-1 text-sm">Google{p.email ? ` · ${p.email}` : ""}</p>
             ) : p.phone ? (
               <p className="mt-1 text-sm">
-                <span className="font-medium">{p.name}</span> · <span className="font-mono">{p.phone}</span>
+                <span className="block font-medium">{p.name}</span>
+                <span className="block font-mono">{p.phone}</span>
               </p>
             ) : (
               <p className="mt-1 text-sm text-destructive">No mobile on file, so they cannot sign in. Add one.</p>

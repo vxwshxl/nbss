@@ -1,3 +1,4 @@
+import { withoutSpikes } from "@nbss/shared/geo";
 import { STALE_AFTER_MS, OFFLINE_AFTER_MS } from "@nbss/shared/location";
 import type { LivePosition } from "@nbss/shared/realtime";
 
@@ -104,7 +105,12 @@ export type TrailPoint = {
   reason: string | null;
 };
 
+/** A route as the map draws it, with the phone's wild guesses taken out (withoutSpikes). */
 export function toPoints(tuples: TrailTuple[] | null | undefined): TrailPoint[] {
+  return withoutSpikes(rawPoints(tuples));
+}
+
+function rawPoints(tuples: TrailTuple[] | null | undefined): TrailPoint[] {
   return (tuples ?? []).map(([lat, lng, t, accuracy, inside, battery, speed, reason]) => ({
     lat: Number(lat),
     lng: Number(lng),
@@ -115,6 +121,29 @@ export function toPoints(tuples: TrailTuple[] | null | undefined): TrailPoint[] 
     speed: Number(speed),
     reason,
   }));
+}
+
+/**
+ * A route cut where it crosses the fence, so each stretch can be drawn in its own
+ * colour: inside (blue) or outside (orange). A stretch starts at the point that
+ * crossed, so the lines join up.
+ */
+export function runsByFence<T extends { lat: number; lng: number; inside: boolean | null }>(
+  points: readonly T[],
+): { inside: boolean; path: { lat: number; lng: number }[] }[] {
+  const runs: { inside: boolean; path: { lat: number; lng: number }[] }[] = [];
+  for (const p of points) {
+    const inside = p.inside !== false;
+    const last = runs.at(-1);
+    const at = { lat: p.lat, lng: p.lng };
+    if (last && last.inside === inside) last.path.push(at);
+    else {
+      // The crossing stretch is drawn in the new colour, from the last point before it.
+      const prev = last?.path.at(-1);
+      runs.push({ inside, path: prev ? [prev, at] : [at] });
+    }
+  }
+  return runs.filter((r) => r.path.length > 1);
 }
 
 export type TrailStats = {

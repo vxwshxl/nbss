@@ -5,7 +5,7 @@
 import "@/lib/location-task";
 // The background push handler, for the same reason: the watchdog's wake arrives
 // with no component tree. See src/lib/push-task.ts.
-import { pushType } from "@/lib/push-task";
+import "@/lib/push-task";
 
 import {
   Geist_400Regular,
@@ -15,7 +15,7 @@ import {
   Geist_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/geist";
-import { Stack, router } from "expo-router";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
@@ -25,12 +25,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "@/lib/auth";
 import { DataModeProvider } from "@/lib/data-mode";
 import { usePresence } from "@/lib/presence";
-import { ensureTracking } from "@/lib/keep-alive";
-import { Notifications, asSosPush, ensureChannels } from "@/lib/push";
+import { ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 import type { ErrorBoundaryProps } from "expo-router";
 import { ErrorScreen } from "@/components/error-screen";
 import { UpdateGate } from "@/components/update-screen";
+import { NotificationRouter } from "@/lib/notification-router";
 import { preloadBrandMark } from "@/components/brand-mark";
 import { LogBox } from "react-native";
 import { IS_EXPO_GO } from "@/lib/runtime";
@@ -50,18 +50,10 @@ if (IS_EXPO_GO) {
 void SplashScreen.preventAutoHideAsync();
 
 /**
- * The root.
- *
- * Its one interesting job is routing an SOS from wherever the phone was to the alarm
- * screen, and there are two paths into that which behave differently:
- *
- *   TAPPED — `getLastNotificationResponse` covers the cold start, where the app was
- *   closed and the person tapped the notification to open it. Without it, the app
- *   launches to the duty screen and the emergency is a banner they have to find again.
- *
- *   ARRIVED — `addNotificationReceivedListener` covers the app already being open. It
- *   navigates without being asked, which is normally rude and is right here: an SOS is
- *   not a message to be read at leisure.
+ * The root: fonts, providers and the stack. Following a tapped notification to its
+ * screen (an SOS to the alarm, a duty to its shift) is NotificationRouter's job
+ * (lib/notification-router.tsx): it waits until the navigator and the sign-in are
+ * ready, because navigating before then left the app on a white screen.
  */
 /** A screen that throws shows this in its place, with a retry, instead of a red box or a blank app. */
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
@@ -99,59 +91,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     void ensureChannels();
-  }, []);
-
-  useEffect(() => {
-    // Nothing to listen to in a browser or in Expo Go on Android, where every call
-    // below throws rather than returning empty. See `Notifications` in lib/push.ts.
-    if (!Notifications) return;
-
-    let cancelled = false;
-
-    // Where a tapped notification leads. SOS opens the alarm; the rest open the
-    // screen the message is about. Guard and staff layouts redirect anyone the
-    // screen is not for, so a wrong guess costs a hop, not a dead end.
-    const open = (data: unknown) => {
-      const sos = asSosPush(data);
-      // A guard's SOS lives in their SOS tab; the office and clients get the alert's own page.
-      if (sos) return (data as { audience?: string }).audience === "on_duty_guard" ? router.navigate("/(guard)/alerts") : router.push(`/sos/${sos.alert_id}`);
-      const type = pushType(data);
-      const shiftId = (data as { shift_id?: unknown } | null)?.shift_id;
-      if (type === "duty" && typeof shiftId === "string") router.push({ pathname: "/shift/[id]", params: { id: shiftId } });
-      else if (type === "duty" || type === "replacement") router.push("/(guard)/duties");
-      else if (type === "check_in" || type === "check_out") router.push("/(guard)/duty");
-      else if (type === "resume_tracking") {
-        void ensureTracking();
-        router.push("/(guard)/duty");
-      } else if (type === "silent_guard" || type === "device") router.push("/(staff)/live");
-    };
-
-    // Cold start from a tapped notification.
-    void Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (cancelled || !response) return;
-      open(response.notification.request.content.data);
-    });
-
-    const tapped = Notifications.addNotificationResponseReceivedListener((response) => {
-      open(response.notification.request.content.data);
-    });
-
-    const arrived = Notifications.addNotificationReceivedListener((notification) => {
-      const data = notification.request.content.data;
-      const sos = asSosPush(data);
-      if (sos) {
-        if ((data as { audience?: string }).audience === "on_duty_guard") router.navigate("/(guard)/alerts");
-        else router.push(`/sos/${sos.alert_id}`);
-      }
-      // The app is open: restart tracking quietly rather than sending the guard anywhere.
-      else if (pushType(data) === "resume_tracking") void ensureTracking();
-    });
-
-    return () => {
-      cancelled = true;
-      tapped.remove();
-      arrived.remove();
-    };
   }, []);
 
   if ((!fontsLoaded && !fontError) || !markReady) return null;
@@ -197,6 +136,7 @@ export default function RootLayout() {
               </Stack>
             )}
           </DataModeProvider>
+          <NotificationRouter />
           {/* Over every screen, signed in or not, when the office has published a newer build. */}
           <UpdateGate />
         </AuthProvider>

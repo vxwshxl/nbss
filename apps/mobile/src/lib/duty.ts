@@ -1,3 +1,4 @@
+import { withoutSpikes } from "@nbss/shared/geo";
 import type { Row } from "@nbss/shared/db";
 import { checkFence, toRing, type Fence } from "@nbss/shared/geo";
 import type { SosKind, SosResponse } from "@nbss/shared/sos";
@@ -653,14 +654,19 @@ export type RoutePoint = { lat: number; lng: number; at: number; inside: boolean
 export async function myRoute(attendanceId: string): Promise<RoutePoint[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
   const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number, boolean | null][];
-  return points.map(([lat, lng, t, , inside]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, inside: inside ?? null }));
+  // The phone's wild guesses out, as on the website (withoutSpikes).
+  return withoutSpikes(
+    points.map(([lat, lng, t, accuracy, inside]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy), inside: inside ?? null })),
+  ).map(({ accuracy: _accuracy, ...p }) => p);
 }
 
 /** The path walked since check-in, for the blue line on the duty map. */
 export async function myTrail(attendanceId: string): Promise<{ lat: number; lng: number }[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
-  const points = ((data as { points?: [number, number][] } | null)?.points ?? []) as [number, number][];
-  return points.map(([lat, lng]) => ({ lat: Number(lat), lng: Number(lng) }));
+  const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number][];
+  return withoutSpikes(points.map(([lat, lng, t, accuracy]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy) }))).map(
+    ({ lat, lng }) => ({ lat, lng }),
+  );
 }
 
 /* ─────────────────────────────────────────── areas, colleagues and SOS on the map ── */
