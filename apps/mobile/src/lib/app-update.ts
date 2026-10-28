@@ -19,7 +19,7 @@ export type AppRelease = {
  * the app sat in the background is noticed on the next look. Expo Go and the browser
  * preview have no build number and are never asked.
  *
- * "Later" hides it until the app is next started.
+ * There is no "later": an older build is not used until it is updated.
  */
 /** The published release when it is newer than this build and has a link, else null. */
 async function newerRelease(): Promise<AppRelease | null> {
@@ -33,9 +33,8 @@ async function newerRelease(): Promise<AppRelease | null> {
   return data && data.store_url && data.version_code > APP_BUILD ? data : null;
 }
 
-export function useAppUpdate(): { release: AppRelease | null; later: () => void } {
+export function useAppUpdate(): AppRelease | null {
   const [release, setRelease] = useState<AppRelease | null>(null);
-  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     const load = () => {
@@ -50,5 +49,5 @@ export function useAppUpdate(): { release: AppRelease | null; later: () => void 
     return () => sub.remove();
   }, []);
 
-  return { release: dismissed ? null : release, later: () => setDismissed(true) };
+  return release;
 }

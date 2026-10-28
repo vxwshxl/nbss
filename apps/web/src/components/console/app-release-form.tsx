@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Download, ExternalLink, Radio, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Download, Radio, Sparkles } from "lucide-react";
 
 import { saveRelease } from "@/app/console/app-updates/actions";
 import { emptyReleaseState } from "@/app/console/app-updates/state";
@@ -91,8 +91,8 @@ export function AppReleaseEditor({ release, latestBuild }: { release: Release; l
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="version_name">Version name</Label>
-              <Input id="version_name" name="version_name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 1.0.1" maxLength={40} />
-              <p className="text-xs text-muted-foreground">Shown to guards on the update screen.</p>
+              <Input id="version_name" name="version_name" value={name} onChange={(e) => setName(e.target.value)} placeholder="1.0.1" maxLength={40} />
+              <p className="text-xs text-muted-foreground">Shown to guards. Shared APKs are 1.0.0; the Play Store starts at 1.0.1.</p>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="version_code">Build number</Label>
@@ -146,50 +146,52 @@ export function AppReleaseEditor({ release, latestBuild }: { release: Release; l
 /** The app's Update available screen (apps/mobile/src/components/update-screen.tsx), in a phone. */
 function PhonePreview({ name, url, notes }: { name: string; url: string; notes: string }) {
   const ok = /^https:\/\//.test(url);
+  // Typing restarts the entrance, so each change is seen as a guard would see it.
+  const replay = `${name}|${notes}`;
   return (
     <div className="mx-auto w-full max-w-[300px] rounded-[2.6rem] bg-neutral-900 p-2.5 shadow-xl ring-1 ring-black/10">
       <div className="relative flex h-[600px] flex-col overflow-hidden rounded-[2.1rem] bg-background">
-        <div className="absolute top-2 left-1/2 h-5 w-20 -translate-x-1/2 rounded-full bg-neutral-900" />
-        <div className="flex flex-1 flex-col items-center px-5 pt-10 text-center">
-          <BrandLockup size="xs" />
-          <span className="mt-6 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            <Sparkles className="size-3" />
-            {name.trim() ? `Version ${name.trim()}` : "New version"}
-          </span>
-          <p className="mt-2 font-display text-[22px] leading-tight font-extrabold tracking-[-0.02em]">Update available</p>
-          <p className="mt-1.5 text-[11.5px] leading-snug text-muted-foreground">
-            A newer NBSS app is ready on the Play Store. Update to keep checking in, tracking and SOS working as they should.
-          </p>
-          {notes.trim() && (
-            <div className="mt-3 w-full rounded-xl border border-border bg-muted px-3 py-2 text-left">
-              <p className="text-[9.5px] font-semibold tracking-widest text-muted-foreground">WHAT&apos;S NEW</p>
-              <p className="mt-0.5 line-clamp-4 text-[11.5px] whitespace-pre-line">{notes.trim()}</p>
-            </div>
-          )}
-          <a
-            href={ok ? url : undefined}
-            target="_blank"
-            rel="noreferrer"
-            aria-disabled={!ok}
-            title={ok ? "Opens the link above" : "Add an https:// Play Store link to try it"}
-            className={cn(
-              "mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-gradient-strong text-[13px] font-semibold text-white shadow-sm",
-              !ok && "pointer-events-none opacity-60",
+        <div className="absolute top-2 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-full bg-neutral-900" />
+        {/* The white space above the gate, the block in its middle. */}
+        <div className="flex flex-1 items-center justify-center px-5 pt-6">
+          <div key={replay} className="animate-rise flex w-full flex-col items-center text-center">
+            <BrandLockup size="xs" />
+            <span className="mt-5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              <Sparkles className="size-3" />
+              {name.trim() ? `Version ${name.trim()}` : "New version"}
+            </span>
+            <p className="mt-2 font-display text-[22px] leading-tight font-extrabold tracking-[-0.02em]">Update available</p>
+            <p className="mt-1.5 text-[11.5px] leading-snug text-muted-foreground">
+              A newer NBSS app is ready on the Play Store. Update to keep checking in, tracking and SOS working as they should.
+            </p>
+            {notes.trim() && (
+              <div className="mt-3 w-full rounded-xl border border-border bg-muted px-3 py-2 text-left">
+                <p className="text-[9.5px] font-semibold tracking-widest text-muted-foreground">WHAT&apos;S NEW</p>
+                <p className="mt-0.5 line-clamp-4 text-[11.5px] whitespace-pre-line">{notes.trim()}</p>
+              </div>
             )}
-          >
-            <Download className="size-3.5" /> Update now <ArrowRight className="size-3.5" />
-          </a>
-          <p className="mt-2.5 text-[12px] font-medium text-muted-foreground">Later</p>
+            <a
+              href={ok ? url : undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!ok}
+              title={ok ? "Opens the link above" : "Add an https:// Play Store link to try it"}
+              className={cn(
+                "update-breathe mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-gradient-strong text-[13px] font-semibold text-white shadow-sm",
+                !ok && "pointer-events-none opacity-60",
+              )}
+            >
+              <Download className="size-3.5" /> Update now <ArrowRight className="size-3.5" />
+            </a>
+          </div>
         </div>
-        <div className="relative mt-auto h-[120px] overflow-hidden rounded-t-[20px] bg-[#06110d]">
+        <div className="relative h-[130px] shrink-0 overflow-hidden rounded-t-[20px] bg-[#06110d]">
           <GateScene className="absolute inset-0 h-full" />
         </div>
       </div>
-      {ok && (
-        <p className="mt-2 flex items-center justify-center gap-1 text-[11px] text-neutral-400">
-          <ExternalLink className="size-3" /> Update now opens your link
-        </p>
-      )}
+      <p className="mt-2 text-center text-[11px] text-neutral-400">
+        {ok ? "Update now opens your link" : "One button only: the app cannot be used until it is updated"}
+      </p>
     </div>
   );
 }

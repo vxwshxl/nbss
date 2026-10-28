@@ -19,6 +19,8 @@ export default async function AuditPage() {
   const { data } = await supabase
     .from("audit_log")
     .select("id, actor_id, actor_code, action, entity, entity_id, detail, ip, created_at")
+    // "View as" is a developer's tool, not something the office needs to read here.
+    .not("action", "in", "(impersonation_started,impersonation_stopped)")
     .order("created_at", { ascending: false })
     .limit(1000);
   const raw = data ?? [];

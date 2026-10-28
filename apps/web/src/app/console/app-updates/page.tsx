@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Smartphone } from "lucide-react";
 
 import { AppReleaseEditor } from "@/components/console/app-release-form";
+import { PhonesByBuild, type BuildGroup } from "@/components/console/phones-by-build";
 import { PageHeader } from "@/components/console/page-header";
 import { Panel } from "@/components/ui/panel";
 import { requireRole } from "@/lib/auth";
@@ -55,14 +56,16 @@ export default async function AppUpdatesPage() {
     .map((d) => ({ d, p: one(d.profiles as unknown as Person | null), v: parse(d.app_version) }))
     .filter(({ p, v }) => p && p.active && !p.is_test && !/^(TEST|LOAD|E2F)-/.test(p.employee_code) && !v.test);
 
-  const groups = new Map<string, { label: string; build: number | null; people: { name: string; phone: string | null; device: string }[] }>();
+  const groups = new Map<string, BuildGroup>();
   for (const { d, p, v } of real) {
     const key = v.build == null ? "old" : String(v.build);
-    const label = v.build == null ? "Before build 24" : `v${v.version ?? "?"} · build ${v.build}`;
-    const g = groups.get(key) ?? { label, build: v.build, people: [] };
-    g.people.push({ name: p!.full_name, phone: p!.phone, device: [d.brand, d.model].filter(Boolean).join(" ") || "Unknown phone" });
+    // Apps from before build 24 report only their version, so they are counted together.
+    const label = v.build == null ? "Build 23 or older" : `Build ${v.build}`;
+    const g = groups.get(key) ?? { key, label, build: v.build, version: v.version, people: [] };
+    g.people.push({ name: p!.full_name, phone: p!.phone, device: [d.brand, d.model].filter(Boolean).join(" ") || "Unknown phone", seen: d.last_seen_at });
     groups.set(key, g);
   }
+  for (const g of groups.values()) g.people.sort((a, b) => a.name.localeCompare(b.name));
   const list = [...groups.values()].sort((a, b) => (b.build ?? -1) - (a.build ?? -1));
   const latestBuild = list.find((g) => g.build != null)?.build ?? null;
   const behind = current.version_code > 0 ? real.filter(({ v }) => v.build == null || v.build < current.version_code).length : 0;
@@ -83,45 +86,9 @@ export default async function AppUpdatesPage() {
           ) : (
             "."
           )}{" "}
-          Test accounts and developers&apos; test apps are left out.
+          Test accounts and developers&apos; test apps are left out. Pick a build to see who is on it.
         </p>
-        {list.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No phones have reported in the last 30 days.</p>
-        ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
-            {list.map((g) => {
-              const old = current.version_code > 0 && (g.build == null || g.build < current.version_code);
-              return (
-                <details key={g.label} className="group rounded-2xl border border-app-line-soft bg-card" open={list.length <= 2}>
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-                    <span className="min-w-0">
-                      <span className="block font-semibold">{g.label}</span>
-                      <span className={old ? "text-xs font-medium text-amber-700" : "text-xs text-muted-foreground"}>
-                        {g.build == null ? "Installed before builds were reported" : old ? "Asked to update" : "Up to date"}
-                      </span>
-                    </span>
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-sm font-bold tabular-nums">{g.people.length}</span>
-                  </summary>
-                  <ul className="divide-y divide-app-line-soft border-t border-app-line-soft">
-                    {g.people.map((p, i) => (
-                      <li key={`${p.name}-${i}`} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{p.name}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{p.device}</span>
-                        </span>
-                        {p.phone && (
-                          <a href={`tel:${p.phone}`} className="shrink-0 font-mono text-xs text-primary hover:underline">
-                            {p.phone}
-                          </a>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              );
-            })}
-          </div>
-        )}
+        <PhonesByBuild groups={list} required={current.version_code} />
       </Panel>
     </div>
   );

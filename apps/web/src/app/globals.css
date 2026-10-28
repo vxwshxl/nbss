@@ -1575,3 +1575,13 @@ body[data-sos-live] [data-nibo] {
   .fee-print-page > * { width: 100%; max-width: 760px; }
   .fee-print-page:last-child { break-after: auto; page-break-after: auto; }
 }
+
+/* The update screen's one button breathes, so the eye goes to it (App updates preview). */
+@keyframes update-breathe {
+  0%, 55%, 100% { transform: scale(1); }
+  75% { transform: scale(1.035); }
+}
+.update-breathe { animation: update-breathe 2.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .update-breathe { animation: none; }
+}
