@@ -69,6 +69,9 @@ const ACTION_LABEL: Record<string, string> = {
   impersonation_stopped: "Stopped viewing as someone",
   sos_acknowledged: "Answered an SOS",
   sos_closed: "Closed an SOS",
+  booking_updated: "Moved a booking along",
+  booking_deleted: "Deleted a booking",
+  submission_deleted: "Deleted an enquiry",
 };
 
 /** Where each kind of record lives, so an entry can open the thing it is about. */
@@ -86,6 +89,7 @@ const ENTITY_LABEL: Record<string, string> = {
   attendance: "punch",
   service_requests: "booking",
   sos_alerts: "alert",
+  submissions: "enquiry",
 };
 
 /**
@@ -98,7 +102,7 @@ const ENTITY_LABEL: Record<string, string> = {
  */
 function toneFor(action: string): Tone {
   if (action.startsWith("impersonation")) return "amber";
-  if (action.includes("refused") || action.includes("deactivated")) return "rose";
+  if (action.includes("refused") || action.includes("deactivated") || action.endsWith("_deleted")) return "rose";
   if (
     action.includes("reset") ||
     action.includes("role_changed") ||

@@ -44,6 +44,7 @@ export default async function BookingsPage() {
         rows={rows}
         sites={sites ?? []}
         canDeploy={isAdmin(session.profile.role) && !session.impersonating}
+        canDelete={isAdmin(session.profile.role) && !session.impersonating}
       />
     </div>
   );

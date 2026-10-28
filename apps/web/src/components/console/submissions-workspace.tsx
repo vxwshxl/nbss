@@ -9,11 +9,13 @@ import {
   Phone,
   Search,
   SearchX,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { updateStatus } from "@/app/actions";
+import { deleteSubmission, updateStatus } from "@/app/actions";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -118,9 +120,10 @@ function Triage({ id, current }: { id: string; current: Status }) {
  * between "all" and "applications" is something a desk does dozens of times an
  * hour and a full page navigation for each is a page reload for each.
  */
-export function SubmissionsWorkspace({ rows }: { rows: Submission[] }) {
+export function SubmissionsWorkspace({ rows, canDelete }: { rows: Submission[]; canDelete: boolean }) {
   const [kind, setKind] = useState<Kind | "all">("all");
   const [query, setQuery] = useState("");
+  const [deleting, setDeleting] = useState<Submission | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -298,8 +301,20 @@ export function SubmissionsWorkspace({ rows }: { rows: Submission[] }) {
                     <Phone className="size-3" strokeWidth={1.9} />
                     {s.remoteIp ?? "-"}
                   </span>
-                  <span className="ml-auto">
+                  <span className="ml-auto flex items-center gap-2">
                     <Triage id={s.id} current={s.status} />
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Delete ${s.id}`}
+                        title="Delete"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setDeleting(s)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    )}
                   </span>
                 </footer>
               </article>
@@ -307,6 +322,23 @@ export function SubmissionsWorkspace({ rows }: { rows: Submission[] }) {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={async () => {
+          if (deleting) await deleteSubmission(deleting.id);
+        }}
+        destructive
+        title="Delete this enquiry?"
+        confirmLabel="Delete"
+        successMessage="Enquiry deleted"
+        description={
+          deleting
+            ? `${deleting.id} from ${deleting.name} is removed for good and cannot be brought back. The audit log keeps a note of who deleted it.`
+            : ""
+        }
+      />
     </div>
   );
 }

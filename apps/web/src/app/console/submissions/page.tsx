@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { isAdmin } from "@nbss/shared/identity";
 import { Briefcase, Inbox, Mail, MessageSquareQuote } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
 import { StatCard } from "@/components/console/stat-card";
 import { SubmissionsWorkspace } from "@/components/console/submissions-workspace";
-import { requireRole } from "@/lib/auth";
+import { requireRoleSession } from "@/lib/auth";
 import { countSubmissions, listSubmissions } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Enquiries" };
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic";
  * on a round trip to do it.
  */
 export default async function SubmissionsPage() {
-  await requireRole("admin", "supervisor");
+  const session = await requireRoleSession("admin", "supervisor");
 
   const [submissions, counts] = await Promise.all([
     listSubmissions(),
@@ -66,7 +67,10 @@ export default async function SubmissionsPage() {
         />
       </div>
 
-      <SubmissionsWorkspace rows={submissions} />
+      <SubmissionsWorkspace
+        rows={submissions}
+        canDelete={isAdmin(session.profile.role) && !session.impersonating}
+      />
 
       <p className="text-xs text-muted-foreground">
         Still stored in <code className="font-mono">data/submissions.json</code>. On a

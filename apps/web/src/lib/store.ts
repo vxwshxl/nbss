@@ -135,6 +135,18 @@ export function setStatus(id: string, status: Status): Promise<boolean> {
   });
 }
 
+/** Removes a submission for good. Its reference number is never reissued unless it was the highest. */
+export function deleteSubmission(id: string): Promise<Submission | null> {
+  return withLock(async () => {
+    const subs = await readAll();
+    const index = subs.findIndex((s) => s.id === id);
+    if (index === -1) return null;
+    const [removed] = subs.splice(index, 1);
+    await writeAll(subs);
+    return removed ?? null;
+  });
+}
+
 /** Fixed shape so the admin view can read every bucket without a fallback. */
 export type Counts = {
   total: number;

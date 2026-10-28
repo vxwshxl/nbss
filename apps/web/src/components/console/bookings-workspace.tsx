@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Building2, CalendarDays, Mail, MapPin, Phone, UserRound, X } from "lucide-react";
+import { Building2, CalendarDays, Mail, MapPin, Phone, Trash2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { updateBooking } from "@/app/console/bookings/actions";
+import { deleteBooking, updateBooking } from "@/app/console/bookings/actions";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -86,10 +87,12 @@ export function BookingsWorkspace({
   rows,
   sites,
   canDeploy,
+  canDelete,
 }: {
   rows: BookingInboxRow[];
   sites: Site[];
   canDeploy: boolean;
+  canDelete: boolean;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["value"]>("open");
   // `?open=<id>` opens a booking directly — how a site links to its booking.
@@ -98,6 +101,7 @@ export function BookingsWorkspace({
   const [mode, setMode] = useState<"idle" | "quote" | "deploy">("idle");
   const [siteId, setSiteId] = useState("");
   const [pending, start] = useTransition();
+  const [deleting, setDeleting] = useState<BookingInboxRow | null>(null);
 
   const visible =
     tab === "all" ? rows : tab === "open" ? rows.filter((r) => OPEN.has(r.status)) : rows.filter((r) => r.status === tab);
@@ -348,11 +352,48 @@ export function BookingsWorkspace({
                     </Button>
                   </div>
                 )}
+
+                {mode === "idle" && canDelete && (
+                  <div className="flex justify-end border-t border-border pt-4">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      disabled={pending}
+                      onClick={() => setDeleting(open)}
+                    >
+                      <Trash2 />
+                      Delete booking
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          const res = await deleteBooking(deleting.id);
+          if (!res.ok) throw new Error(res.error);
+          if (openId === deleting.id) setOpenId(null);
+        }}
+        destructive
+        title="Delete this booking?"
+        confirmLabel="Delete booking"
+        successMessage="Booking deleted"
+        description={
+          deleting
+            ? `${deleting.reference} from ${deleting.organisation || deleting.contact_name} is removed for good, from the client's console too, and cannot be brought back.${
+                deleting.status === "converted" ? " The site it was deployed to keeps its client and guards." : ""
+              } The audit log keeps a note of who deleted it.`
+            : ""
+        }
+      />
     </>
   );
 }

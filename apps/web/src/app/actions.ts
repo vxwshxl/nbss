@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { educationOptions, vacancyById } from "@/content/gallery";
 import { site } from "@/content/site";
 import { sendMail } from "@/lib/mail";
-import { addSubmission, setStatus, type NewSubmission, type Status } from "@/lib/store";
+import { audit, requireRoleSession } from "@/lib/auth";
+import { addSubmission, deleteSubmission as removeSubmission, setStatus, type NewSubmission, type Status } from "@/lib/store";
 import { Validator, type FormState } from "@/lib/validate";
 
 /**
@@ -163,7 +164,36 @@ export async function submitApplication(_prev: FormState, data: FormData): Promi
 
 // ------------------------------------------------------------------ admin
 
+const STATUSES: Status[] = ["new", "contacted", "closed"];
+
+/**
+ * A server action is a public endpoint whatever page imports it, so the desk's
+ * triage checks who is calling rather than trusting that only the console can.
+ */
 export async function updateStatus(id: string, status: Status): Promise<void> {
+  await requireRoleSession("admin", "supervisor");
+  if (!STATUSES.includes(status)) throw new Error("Unknown status.");
   await setStatus(id, status);
   revalidatePath("/console/submissions");
+}
+
+/** Spam and test entries go for good. Administrators only, and logged. */
+export async function deleteSubmission(id: string): Promise<void> {
+  const session = await requireRoleSession("admin");
+  if (session.impersonating) throw new Error("Stop viewing as someone else to delete an enquiry.");
+  const removed = await removeSubmission(id);
+  if (!removed) throw new Error("That enquiry has already been deleted.");
+
+  const h = await headers();
+  await audit({
+    actor: session.realProfile,
+    action: "submission_deleted",
+    entity: "submissions",
+    entityId: id,
+    detail: { kind: removed.kind, name: removed.name, phone: removed.phone, email: removed.email ?? null },
+    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  });
+
+  revalidatePath("/console/submissions");
+  revalidatePath("/console");
 }

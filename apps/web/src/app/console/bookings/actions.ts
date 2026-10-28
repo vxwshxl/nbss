@@ -78,3 +78,38 @@ export async function updateBooking(
   revalidatePath("/console/bookings");
   return { ok: true };
 }
+
+/**
+ * Removes a booking request for good: spam, tests, duplicates. Administrators
+ * only. Nothing references a request, so a deployed one can go too: the site it
+ * handed to the client keeps its client and its guards.
+ */
+export async function deleteBooking(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireRoleSession("admin");
+  if (session.impersonating) return { ok: false, error: "Stop viewing as someone else to delete a booking." };
+
+  const supabase = await supabaseServer();
+  const { data: row } = await supabase
+    .from("service_requests")
+    .select("id, reference, status, contact_name, organisation, phone")
+    .eq("id", id)
+    .maybeSingle();
+  if (!row) return { ok: false, error: "That booking has already been deleted." };
+
+  const { error } = await supabase.from("service_requests").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+
+  const h = await headers();
+  await audit({
+    actor: session.realProfile,
+    action: "booking_deleted",
+    entity: "service_requests",
+    entityId: id,
+    detail: { reference: row.reference, status: row.status, contact: row.contact_name, organisation: row.organisation, phone: row.phone },
+    ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  });
+
+  revalidatePath("/console/bookings");
+  revalidatePath("/console");
+  return { ok: true };
+}
