@@ -43,6 +43,7 @@ import {
   STATE_COLOR,
   STATE_LABEL,
   ago,
+  appLabel,
   guardState,
   heardAt,
   istClock,
@@ -660,7 +661,7 @@ function GuardCard({
         <p className="flex items-center gap-2 text-muted-foreground">
           <Smartphone className="size-3.5 shrink-0" />
           <span className="truncate">
-            {g.device ? `${g.device.label}${g.device.appVersion ? ` · app ${g.device.appVersion}` : ""}` : "Phone not registered"}
+            {g.device ? `${g.device.label}${g.device.appVersion ? ` · ${appLabel(g.device.appVersion)}` : ""}` : "Phone not registered"}
           </span>
           {g.device && !g.device.approved && <span className="shrink-0 font-semibold text-amber-700">not approved</span>}
         </p>

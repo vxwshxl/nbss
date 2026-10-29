@@ -361,7 +361,7 @@ export function PersonPage({ id }: { id: string }) {
           )}
 
           {d.device && (
-            <Panel tone="slate" icon={Smartphone} title={d.device.model} subtitle={[d.device.os, d.device.app ? `app ${d.device.app}` : null].filter(Boolean).join(" · ")} bare>
+            <Panel tone="slate" icon={Smartphone} title={d.device.model} subtitle={[d.device.os, d.device.app ? appLabel(d.device.app) : null].filter(Boolean).join(" · ")} bare>
               <Row label="Approval" value={d.device.status === "approved" ? "Approved" : d.device.status === "pending" ? "Waiting for approval" : "Blocked"} first />
               {permissionRows(d.device).map((r) => (
                 <Row key={r.label} label={r.label} value={`${r.ok === false ? "✕ " : r.ok ? "✓ " : ""}${r.value}`} />
@@ -380,6 +380,12 @@ export function PersonPage({ id }: { id: string }) {
  * What the phone has allowed the app, as the website's guard card lists it. Read at
  * the app's last launch or return to the front; `ok` null is "not reported".
  */
+/** "1.0.0 (27)" → "app 1.0.0 · build 27"; builds before 24 sent only the version. */
+function appLabel(v: string): string {
+  const m = /^(.*?)\s*\((\d+)\)\s*$/.exec(v.trim());
+  return m ? `app ${m[1]} · build ${m[2]}` : `app ${v.trim()} · build 23 or older`;
+}
+
 function permissionRows(d: NonNullable<Detail["device"]>): { label: string; value: string; ok: boolean | null }[] {
   const older = "Update the app to see";
   const rows = [

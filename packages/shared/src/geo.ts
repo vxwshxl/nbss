@@ -139,7 +139,7 @@ export function toRing(value: unknown): Ring | null {
 }
 
 /** A fix on a route: where, when (epoch ms) and how sure the phone was (metres). */
-export type Fix = Point & { at: number; accuracy?: number | null };
+export type Fix = Point & { at: number; accuracy?: number | null; /** The phone's own speed reading, m/s. */ speed?: number | null };
 
 /**
  * A route with the phone's wild guesses taken out.
@@ -151,7 +151,10 @@ export type Fix = Point & { at: number; accuracy?: number | null };
  *   - the phone itself says it could be more than 500 m out;
  *   - reaching it from the last good fix would need more than 40 m/s (~145 km/h);
  *   - it is an out-and-back: more than 150 m from the last good fix at faster than a
- *     brisk walk (4 m/s), with the very next fix back near where it started.
+ *     brisk walk (4 m/s), with the very next fix back near where it started;
+ *   - it is a jump the phone did not feel: more than 150 m at faster than a run (6 m/s)
+ *     while the phone's own speed reading says it was all but still (under 1.5 m/s). A
+ *     guard on a bike or in a car reads their speed; a GPS that wandered off reads 0.
  * A real walk does neither. Order is kept; the first fix is always kept.
  */
 export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
@@ -164,6 +167,7 @@ export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
     const d = distanceMetres(a, b);
     const speed = d / Math.max(1, (b.at - a.at) / 1000);
     if (d > 100 && speed > 40) continue;
+    if (d > 150 && speed > 6 && b.speed != null && b.speed < 1.5) continue;
     const c = fixes[i + 1];
     if (c && d > 150 && speed > 4 && distanceMetres(a, c) < d * 0.35 && distanceMetres(b, c) > 150) continue;
     kept.push(b);

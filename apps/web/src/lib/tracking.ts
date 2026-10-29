@@ -85,3 +85,12 @@ export function istClock(ms: number): string {
 export function istClockSeconds(ms: number): string {
   return new Date(ms).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
 }
+
+/**
+ * "1.0.0 (27)" → "app 1.0.0 · build 27". Builds before 24 sent only "1.0.0", so those
+ * read "build 23 or older".
+ */
+export function appLabel(appVersion: string): string {
+  const m = /^(.*?)\s*\((\d+)\)\s*$/.exec(appVersion.trim());
+  return m ? `app ${m[1]} · build ${m[2]}` : `app ${appVersion.trim()} · build 23 or older`;
+}

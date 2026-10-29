@@ -17,6 +17,7 @@ import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from 
 import {
   STATE_CHIP,
   STATE_LABEL,
+  appLabel,
   duration,
   guardState,
   istClock,
@@ -250,7 +251,9 @@ export function RouteHistory({
   const at = points[head];
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_320px]">
+    // The list and the map until a shift is picked; then its details take a third column
+    // and the map gives up the room, as on Live tracking.
+    <div className={cn("grid gap-4", shift ? "xl:grid-cols-[320px_minmax(0,1fr)_320px]" : "xl:grid-cols-[320px_minmax(0,1fr)]")}>
       {/* Shifts */}
       {/* Below the map and summary on anything narrower than a wide desk, in its own
           scroll: with two hundred guards the list is long, and the map is what you came for. */}
@@ -412,7 +415,8 @@ export function RouteHistory({
 
       <PersonPreviewDialog personId={profileId} onClose={() => setProfileId(null)} />
 
-      {/* Summary and timeline */}
+      {/* Summary and timeline: only once a shift is picked. */}
+      {shift && (
       <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-210px)] xl:max-h-none">
         {shift ? (
           <>
@@ -457,7 +461,7 @@ export function RouteHistory({
               <p className="flex items-center gap-2 border-t border-app-line-soft px-4 py-2.5 text-xs text-muted-foreground">
                 <Smartphone className="size-3.5 shrink-0" />
                 <span className="truncate">
-                  {shift.device ? `${shift.device.label}${shift.device.appVersion ? ` · app ${shift.device.appVersion}` : ""}` : "Phone not registered"}
+                  {shift.device ? `${shift.device.label}${shift.device.appVersion ? ` · ${appLabel(shift.device.appVersion)}` : ""}` : "Phone not registered"}
                 </span>
               </p>
               <div className="space-y-2 border-t border-app-line-soft px-4 py-3">
@@ -512,6 +516,7 @@ export function RouteHistory({
           </div>
         )}
       </aside>
+      )}
     </div>
   );
 }

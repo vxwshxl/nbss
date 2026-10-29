@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
+import { appLabel } from "@/lib/tracking";
 
 export type DeviceRow = {
   id: string;
@@ -85,7 +86,7 @@ export function DevicesWorkspace({ devices, flagged }: { devices: DeviceRow[]; f
           </span>
           <span className="block text-xs text-muted-foreground">
             {r.system}
-            {r.appVersion ? ` · app ${r.appVersion}` : ""}
+            {r.appVersion ? ` · ${appLabel(r.appVersion)}` : ""}
           </span>
           {r.sharedWith.length > 0 && (
             <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-700">
