@@ -7,7 +7,7 @@ module.exports = {
       cwd: "/srv/nbss/apps/web",
       script: "node_modules/next/dist/bin/next",
       args: "start -p 3040 -H 127.0.0.1",
-      env: { NODE_ENV: "production", NBSS_DATA: "/var/lib/nbss/submissions.json" },
+      env: { NODE_ENV: "production", TZ: "Asia/Kolkata", NBSS_DATA: "/var/lib/nbss/submissions.json" },
       // The heap is capped below the restart limit, so Node collects garbage before PM2
       // has to kill it. At 700M a burst of console pages (750–935 MB) restarted the site
       // several times a day, and every restart dropped pages for a few seconds. The box
@@ -22,6 +22,7 @@ module.exports = {
       cwd: "/srv/nbss/apps/web",
       script: "scripts/push-worker.mjs",
       node_args: "--env-file=.env",
+      env: { TZ: "Asia/Kolkata" },
       max_memory_restart: "150M",
       time: true,
     },

@@ -75,7 +75,7 @@ function DayStrip({ days }: { days: DayMark[] }) {
       {days.map((d) => (
         <span
           key={d.date}
-          title={`${new Date(`${d.date}T12:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · ${d.state === "none" ? "No punch" : d.state}`}
+          title={`${new Date(`${d.date}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })} · ${d.state === "none" ? "No punch" : d.state}`}
           className={cn("h-7 flex-1 rounded-md", DAY_TONE[d.state])}
         />
       ))}

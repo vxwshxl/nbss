@@ -32,6 +32,8 @@ import { Panel } from "@/components/ui/panel";
 import { requireRoleSession } from "@/lib/auth";
 import { site } from "@/content/site";
 import { supabaseServer } from "@/lib/supabase/server";
+import { guardState } from "@/lib/tracking";
+import type { LivePosition } from "@nbss/shared/realtime";
 
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -101,7 +103,7 @@ export default async function ConsoleDashboard() {
       .gte("check_in_at", startOfToday.toISOString()),
     supabase
       .from("sos_alerts")
-      .select("id, status, kind, raised_at, guard:profiles!sos_alerts_raised_by_fkey(full_name, phone), sites(name)")
+      .select("id, status, kind, raised_at, raised_by, guard:profiles!sos_alerts_raised_by_fkey(full_name, phone), sites(name)")
       .in("status", ["active", "acknowledged"])
       .order("raised_at", { ascending: false }),
     // Rostered shifts that have started and are not yet over, still waiting for
@@ -130,6 +132,14 @@ export default async function ConsoleDashboard() {
 
   const live = onDuty.data ?? [];
   const punches = todayPunches.data ?? [];
+
+  // What each on-duty phone is saying right now, the same verdict Live tracking shows.
+  const { data: positionRows } = live.length
+    ? await supabase.from("guard_positions").select("*").in("guard_id", [...new Set(live.map((r) => r.guard_id))])
+    : { data: [] };
+  const positions = new Map(((positionRows ?? []) as unknown as LivePosition[]).map((p) => [p.guard_id, p]));
+  const sosBy = new Set((liveSos.data ?? []).map((a) => a.raised_by));
+  const renderedAt = Date.now();
 
   const overtimeToday = punches.reduce((sum, p) => sum + (p.overtime_minutes ?? 0), 0);
   // Guards who were late today, not late punches: a second check-in is not a second lateness.
@@ -184,6 +194,7 @@ export default async function ConsoleDashboard() {
       since: row.check_in_at ? time(row.check_in_at) : "-",
       forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "-",
       late: row.status === "late",
+      signal: guardState(positions.get(row.guard_id) ?? null, sosBy.has(row.guard_id), renderedAt),
     };
   });
   const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;

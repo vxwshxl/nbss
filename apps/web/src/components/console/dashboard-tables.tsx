@@ -12,7 +12,9 @@ import { SosPreviewDialog } from "@/components/console/sos-preview";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { STATE_CHIP, STATE_LABEL, type GuardState } from "@/lib/tracking";
 import { initials } from "@/lib/ui/initials";
+import { cn } from "@/lib/utils";
 
 export type OnDutyRow = {
   id: string;
@@ -24,6 +26,8 @@ export type OnDutyRow = {
   since: string;
   forHowLong: string;
   late: boolean;
+  /** What the phone is saying: inside or outside the fence, signal late, no signal. */
+  signal: GuardState;
 };
 
 /** The dashboard's "on duty now": a row opens that punch. */
@@ -39,6 +43,7 @@ export function OnDutyTable({ rows, canReview }: { rows: OnDutyRow[]; canReview:
               <TableHead>Site</TableHead>
               <TableHead>Checked in</TableHead>
               <TableHead className="text-right">On duty for</TableHead>
+              <TableHead>Signal</TableHead>
               <TableHead className="text-right">State</TableHead>
             </TableRow>
           </TableHeader>
@@ -62,6 +67,11 @@ export function OnDutyTable({ rows, canReview }: { rows: OnDutyRow[]; canReview:
                 </TableCell>
                 <TableCell className="tabular-nums">{r.since}</TableCell>
                 <TableCell className="text-right tabular-nums">{r.forHowLong}</TableCell>
+                <TableCell>
+                  <span className={cn("inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold", STATE_CHIP[r.signal])}>
+                    {STATE_LABEL[r.signal]}
+                  </span>
+                </TableCell>
                 <TableCell className="text-right">
                   <StatusPill status={r.late ? "late" : "on_duty"} />
                 </TableCell>

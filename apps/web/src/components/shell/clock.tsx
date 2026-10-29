@@ -27,12 +27,14 @@ const dateFmt = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
   day: "numeric",
   month: "short",
+  timeZone: "Asia/Kolkata",
 });
 const timeFmt = new Intl.DateTimeFormat(undefined, {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
   hour12: true,
+  timeZone: "Asia/Kolkata",
 });
 
 /**

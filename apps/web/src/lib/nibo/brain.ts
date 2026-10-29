@@ -45,7 +45,7 @@ const NUDGE_REPEAT_AFTER = 4 * 3_600_000;
 /** Help with a form error is asked-for help: only a short breath between them. */
 const HELP_GAP = 6_000;
 
-const day = (t = Date.now()) => new Date(t).toLocaleDateString("en-CA");
+const day = (t = Date.now()) => new Date(t).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function blank(): Memory {
   return { level: "normal", pace: 1, paceAt: Date.now(), snoozeUntil: 0, lastSpokeAt: 0, today: [day(), 0], tips: {} };

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CalendarCheck,
@@ -14,6 +15,7 @@ import {
   MapPin,
   Navigation,
   Phone,
+  Radar,
   SquareCheckBig,
   Timer,
   TimerOff,
@@ -41,11 +43,26 @@ import {
   istDateTime,
 } from "@/components/console/preview-kit";
 import { SiteMap, type MapPunch } from "@/components/console/site-map";
+import { TrailMap } from "@/components/tracking/trail-map";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { mapsUrl } from "@/lib/fence";
+import { supabaseBrowser } from "@/lib/supabase/browser";
+import {
+  STATE_LABEL,
+  guardState,
+  km,
+  toPoints,
+  trailStats,
+  duration as minutes,
+  type GuardState,
+  type TrailPoint,
+  type TrailTuple,
+} from "@/lib/tracking";
+import { focusLiveGuard } from "@/components/tracking/live-handoff";
+import type { LivePosition } from "@nbss/shared/realtime";
 
 const STATUS_LABEL: Record<string, string> = {
   present: "Present",
@@ -101,6 +118,9 @@ export function AttendancePreviewDialog({
   const [saving, save] = useTransition();
   const [verdict, setVerdict] = useState<Verdict>("present");
   const [note, setNote] = useState("");
+  const router = useRouter();
+  // The shift's path so far, and (while on duty) what the phone says right now.
+  const [trail, setTrail] = useState<{ id: string; points: TrailPoint[]; signal: GuardState | null } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -118,6 +138,43 @@ export function AttendancePreviewDialog({
   }
 
   const d = data && !("error" in data) && data.id === id ? data : null;
+
+  // Read once the punch is open, and again every half minute while the shift is.
+  const trailFor = d?.id ?? null;
+  const liveGuard = d && !d.check_out_at ? (d.guard?.id ?? null) : null;
+  useEffect(() => {
+    if (!trailFor) return;
+    const supabase = supabaseBrowser();
+    let cancelled = false;
+    const read = async () => {
+      const [{ data: t }, pos] = await Promise.all([
+        supabase.rpc("guard_trail", { p_attendance_id: trailFor }),
+        liveGuard
+          ? supabase.from("guard_positions").select("*").eq("guard_id", liveGuard).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (cancelled) return;
+      const points = toPoints((t as { points?: TrailTuple[] } | null)?.points);
+      const signal = liveGuard ? guardState((pos.data as LivePosition | null) ?? null, false, Date.now()) : null;
+      setTrail({ id: trailFor, points, signal });
+    };
+    void read();
+    const poll = liveGuard ? setInterval(() => void read(), 30_000) : null;
+    return () => {
+      cancelled = true;
+      if (poll) clearInterval(poll);
+    };
+  }, [trailFor, liveGuard]);
+  const points = useMemo(() => (trail && trail.id === trailFor ? trail.points : []), [trail, trailFor]);
+  const stats = useMemo(() => (points.length > 1 ? trailStats(points) : null), [points]);
+  const signal = trail && trail.id === trailFor ? trail.signal : null;
+
+  function trackLive() {
+    if (!d?.guard) return;
+    focusLiveGuard(d.guard.id);
+    close();
+    router.push("/console/live");
+  }
 
   function submitReview() {
     if (!d) return;
@@ -185,6 +242,7 @@ export function AttendancePreviewDialog({
                 <>
                   <HeroPill>{STATUS_LABEL[d.status] ?? d.status}</HeroPill>
                   {!d.check_out_at && <HeroPill>On duty now</HeroPill>}
+                  {signal && <HeroPill>{STATE_LABEL[signal]}</HeroPill>}
                   {d.off_roster && <HeroPill>Off roster</HeroPill>}
                 </>
               }
@@ -206,7 +264,35 @@ export function AttendancePreviewDialog({
                 </Stat>
               </StatGrid>
 
-              {d.site && punch.length > 0 && (
+              {d.site && points.length > 1 ? (
+                <Section title={d.check_out_at ? "The route they walked" : "The route so far"}>
+                  <TrailMap
+                    points={points}
+                    stats={stats}
+                    site={{ name: d.site.name, lat: d.site.lat, lng: d.site.lng, radiusM: d.site.geofence_radius_m, ring: d.site.ring }}
+                    head={points.length - 1}
+                    height={320}
+                  />
+                  <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>
+                      <span className="font-semibold text-foreground">{km(stats?.distanceM ?? 0)}</span> walked
+                    </span>
+                    <span>
+                      <span className="font-semibold text-foreground">{minutes(stats?.outsideMinutes ?? 0)}</span> outside the fence
+                    </span>
+                    <span>
+                      <span className="font-semibold text-foreground">{stats?.stops.length ?? 0}</span> stops
+                    </span>
+                    <span>
+                      <span className="font-semibold text-foreground">{stats?.gaps.length ?? 0}</span> signal gaps
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Blue is inside the site&apos;s fence, orange outside it. S is the check-in, the numbered dots are stops
+                    of five minutes or more, and the blue dot is {d.check_out_at ? "where they checked out" : "where the phone last reported"}.
+                  </p>
+                </Section>
+              ) : d.site && punch.length > 0 && (
                 <Section title="Where they stood">
                   <SiteMap sites={[d.site]} punches={punch} focus={d.site.id} height={220} />
                   <p className="mt-2 text-xs text-muted-foreground">
@@ -349,6 +435,12 @@ export function AttendancePreviewDialog({
                     <Navigation data-icon="inline-start" />
                     Directions
                   </a>
+                </Button>
+              )}
+              {staff && d.guard && !d.check_out_at && (
+                <Button size="sm" onClick={trackLive} className="bg-sky-600 text-white hover:bg-sky-700">
+                  <Radar data-icon="inline-start" />
+                  Track live
                 </Button>
               )}
               {canReview && !d.check_out_at && (

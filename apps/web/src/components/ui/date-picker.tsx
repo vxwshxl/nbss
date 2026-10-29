@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Dropdown } from "@/components/ui/dropdown";
+import { istToday } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -68,12 +69,13 @@ export function DatePicker({
   const current = isControlled ? value : internal;
   const [open, setOpen] = React.useState(false);
 
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  // "Today" is the IST calendar day, whatever zone the browser is in.
+  const todayStr = istToday();
+  const today = { year: Number(todayStr.slice(0, 4)), month: Number(todayStr.slice(5, 7)) };
   const outside = (d: string) => (min != null && d < min) || (max != null && d > max);
   const initial = current ? current.split("-").map(Number) : null;
-  const [viewYear, setViewYear] = React.useState(initial?.[0] ?? today.getFullYear());
-  const [viewMonth, setViewMonth] = React.useState(initial?.[1] ?? today.getMonth() + 1);
+  const [viewYear, setViewYear] = React.useState(initial?.[0] ?? today.year);
+  const [viewMonth, setViewMonth] = React.useState(initial?.[1] ?? today.month);
 
   function set(next: string) {
     if (!isControlled) setInternal(next);
@@ -102,7 +104,7 @@ export function DatePicker({
   ];
 
   // Jump straight to any month/year using the app dropdown for consistency.
-  const topYear = max ? Number(max.slice(0, 4)) : (maxYear ?? today.getFullYear() + 10);
+  const topYear = max ? Number(max.slice(0, 4)) : (maxYear ?? today.year + 10);
   const bottomYear = min ? Number(min.slice(0, 4)) : minYear;
   const years = Array.from(
     { length: Math.max(1, topYear - bottomYear + 1) },
@@ -210,8 +212,8 @@ export function DatePicker({
               type="button"
               disabled={outside(todayStr)}
               onClick={() => {
-                setViewYear(today.getFullYear());
-                setViewMonth(today.getMonth() + 1);
+                setViewYear(today.year);
+                setViewMonth(today.month);
                 set(todayStr);
                 setOpen(false);
               }}

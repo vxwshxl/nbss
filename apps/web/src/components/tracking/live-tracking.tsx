@@ -28,6 +28,7 @@ import {
 import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 
 import { PersonPreviewDialog } from "@/components/console/person-preview";
+import { takeLiveFocus } from "@/components/tracking/live-handoff";
 import { LiveMap, type LiveMarker, type LiveSite } from "@/components/tracking/live-map";
 import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty, type RouteEvent } from "@/components/tracking/route-panel";
 import { initials } from "@/lib/ui/initials";
@@ -298,6 +299,20 @@ export function LiveTracking({
     // Only full screen draws the panel over the map; otherwise it has its own column.
     if (at) setFocus({ ...at, key: `${id}:${Date.now()}`, offset: document.fullscreenElement ? clearOfCard() : undefined });
   }
+
+  // Sent here from another screen (the dashboard's punch, say) to look at one guard:
+  // picked once on arrival. The id is handed over in session storage, not the address.
+  const handoff = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    // Held in a ref: the id is gone from storage once read, and Strict Mode runs this twice.
+    if (handoff.current === undefined) handoff.current = takeLiveFocus();
+    const id = handoff.current;
+    if (!id || !guards.some((g) => g.guardId === id)) return;
+    const t = setTimeout(() => pick(id), 0);
+    return () => clearTimeout(t);
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Where the open card is not: the camera is moved half the card's size away from it,
   // so the guard lands in the middle of the map that can still be seen. The card sits on
@@ -599,13 +614,6 @@ function GuardCard({
         )}
       </div>
 
-      {events.length > 0 && (
-        <div className="border-t border-app-line-soft px-2 py-2">
-          <p className="px-2 pt-1 pb-1 text-xs font-semibold">Timeline</p>
-          <RouteTimeline events={events} onPick={onEvent} />
-        </div>
-      )}
-
       {g.device && <Permissions device={g.device} now={now} />}
 
       <div className="px-4 pb-2">
@@ -627,6 +635,13 @@ function GuardCard({
           <Crosshair className="size-4" />
         </button>
       </div>
+
+      {events.length > 0 && (
+        <div className="border-t border-app-line-soft px-2 py-2">
+          <p className="px-2 pt-1 pb-1 text-xs font-semibold">Timeline</p>
+          <RouteTimeline events={events} onPick={onEvent} />
+        </div>
+      )}
     </div>
   );
 }

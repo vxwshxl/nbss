@@ -57,6 +57,7 @@ export function TablePrintPreview<T>({
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 
   return createPortal(

@@ -7,17 +7,22 @@ import { MapPinOff, Pause, Phone, Play, Radar, Search, Smartphone, TriangleAlert
 
 import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty } from "@/components/tracking/route-panel";
+import { focusLiveGuard } from "@/components/tracking/live-handoff";
 import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
-import { EVENTS, LIVE_MAP_CHANNEL, type PositionBatch } from "@nbss/shared/realtime";
+import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 import {
+  STATE_CHIP,
+  STATE_LABEL,
   duration,
+  guardState,
   istClock,
   istClockSeconds,
   toPoints,
   trailStats,
+  type GuardState,
   type TrailPoint,
   type TrailTuple,
 } from "@/lib/tracking";
@@ -37,6 +42,8 @@ export type RouteShift = {
   checkInAt: string;
   checkOutAt: string | null;
   workedMinutes: number | null;
+  /** The phone's latest report while the shift is open: inside, outside, no signal. */
+  position: LivePosition | null;
   status: string;
   deviceFlag: string | null;
 };
@@ -90,6 +97,23 @@ export function RouteHistory({
 
   const shift = shifts.find((s) => s.attendanceId === selected) ?? null;
 
+  // What each open shift's phone has said since the page was drawn, over the server's.
+  const [heard, setHeard] = useState<Record<string, LivePosition>>({});
+  const position = (s: RouteShift) => {
+    const h = heard[s.guardId];
+    return h && (!s.position || h.recorded_at >= s.position.recorded_at) ? { ...s.position, ...h } : s.position;
+  };
+  const anyOpen = shifts.some((s) => !s.checkOutAt);
+  useEffect(() => {
+    if (!anyOpen) return;
+    const supabase = supabaseBrowser();
+    const reread = setInterval(async () => {
+      const { data } = await supabase.from("guard_positions").select("*");
+      if (data) setHeard(Object.fromEntries((data as unknown as LivePosition[]).map((p) => [p.guard_id, p])));
+    }, 60_000);
+    return () => clearInterval(reread);
+  }, [anyOpen]);
+
   useEffect(() => {
     if (!selected) return;
     let cancelled = false;
@@ -130,7 +154,13 @@ export function RouteHistory({
     const channel = supabase
       .channel(LIVE_MAP_CHANNEL, { config: { private: true } })
       .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
-        if (((payload as PositionBatch).positions ?? []).some((p) => p.guard_id === liveGuard)) void refetch();
+        const batch = (payload as PositionBatch).positions ?? [];
+        setHeard((cur) => {
+          const next = { ...cur };
+          for (const p of batch) next[p.guard_id] = { ...next[p.guard_id], ...p };
+          return next;
+        });
+        if (batch.some((p) => p.guard_id === liveGuard)) void refetch();
       });
     void supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
@@ -226,7 +256,8 @@ export function RouteHistory({
           </Select>
           <DatePicker
             value={initial.date ?? ""}
-            onChange={(v) => setFilter("date", v)}
+            // Cleared, the list is every day of the last two weeks rather than today again.
+            onChange={(v) => setFilter("date", v || "any")}
             placeholder="Any day"
             max={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })}
             className={FILTER}
@@ -256,7 +287,7 @@ export function RouteHistory({
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate font-medium">{s.guardName}</span>
                   {!s.checkOutAt ? (
-                    <span className="shrink-0 rounded-full bg-emerald-600/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">On duty</span>
+                    <SignalChip state={guardState(position(s), false, now)} />
                   ) : (
                     <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{duration(s.workedMinutes ?? 0)}</span>
                   )}
@@ -361,7 +392,10 @@ export function RouteHistory({
                   <span className="font-mono">{shift.guardCode}</span> · {shift.siteName}
                 </p>
                 {!shift.checkOutAt && (
-                  <span className="mt-1 inline-block rounded-full bg-emerald-600/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">On duty</span>
+                  <span className="mt-1 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-emerald-600/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">On duty</span>
+                    <SignalChip state={guardState(position(shift), false, now)} />
+                  </span>
                 )}
               </div>
               <div className="border-t border-app-line-soft">
@@ -389,7 +423,7 @@ export function RouteHistory({
                     </a>
                   )}
                   {!shift.checkOutAt && (
-                    <Link href="/console/live" className="press inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-border hover:bg-muted">
+                    <Link href="/console/live" onClick={() => focusLiveGuard(shift.guardId)} className="press inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium ring-1 ring-border hover:bg-muted">
                       <Radar className="size-4" /> Live map
                     </Link>
                   )}
@@ -414,4 +448,9 @@ export function RouteHistory({
       </aside>
     </div>
   );
+}
+
+/** An open shift's phone right now, in Live tracking's words and colours. */
+function SignalChip({ state }: { state: GuardState }) {
+  return <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", STATE_CHIP[state])}>{STATE_LABEL[state]}</span>;
 }

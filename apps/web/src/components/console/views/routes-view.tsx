@@ -4,7 +4,9 @@ import { toRing } from "@nbss/shared/geo";
 import { PageHeader } from "@/components/console/page-header";
 import { RouteHistory, type RouteShift } from "@/components/tracking/route-history";
 import { requireRole } from "@/lib/auth";
+import { istToday } from "@/lib/format";
 import { istInstant } from "@/lib/roster";
+import type { LivePosition } from "@nbss/shared/realtime";
 import { supabaseServer } from "@/lib/supabase/server";
 
 
@@ -19,7 +21,8 @@ function since(): string {
 
 /**
  * Every shift's path, from check-in to check-out. `?attendance=` opens one
- * (Live tracking links here), `?guard=` and `?date=` narrow the list.
+ * (Live tracking links here), `?guard=` and `?date=` narrow the list. With no
+ * date the list is today's (IST); `?date=any` is the last two weeks.
  */
 export async function RoutesView({
   searchParams,
@@ -30,7 +33,9 @@ export async function RoutesView({
   siteId?: string;
 }) {
   await requireRole("admin", "supervisor");
-  const { attendance, guard, date, site } = await searchParams;
+  const { attendance, guard, date: asked, site } = await searchParams;
+  // Today by default; "any" lifts the day. A shift opened by link is shown on any day.
+  const date = asked === "any" ? undefined : asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : attendance ? undefined : istToday();
   // A site's own workspace is fixed to it; otherwise the page's site picker.
   const onlySite = siteId ?? (site && /^[0-9a-f-]{36}$/i.test(site) ? site : undefined);
   const supabase = await supabaseServer();
@@ -68,11 +73,16 @@ export async function RoutesView({
   const list = [...(rows.data ?? [])];
   if (picked.data && !list.some((r) => r.id === picked.data!.id)) list.unshift(picked.data);
 
-  // The phone each punch came from, for the summary.
+  // The phone each punch came from, for the summary; and, for shifts still open, what it says now.
   const guardIds = [...new Set(list.map((a) => a.guard_id))];
-  const { data: phones } = guardIds.length
-    ? await supabase.from("guard_devices").select("profile_id, device_id, brand, model, app_version").in("profile_id", guardIds).order("last_seen_at", { ascending: false })
-    : { data: [] };
+  const openGuards = [...new Set(list.filter((a) => !a.check_out_at).map((a) => a.guard_id))];
+  const [{ data: phones }, { data: positionRows }] = await Promise.all([
+    guardIds.length
+      ? supabase.from("guard_devices").select("profile_id, device_id, brand, model, app_version").in("profile_id", guardIds).order("last_seen_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    openGuards.length ? supabase.from("guard_positions").select("*").in("guard_id", openGuards) : Promise.resolve({ data: [] }),
+  ]);
+  const positions = new Map(((positionRows ?? []) as unknown as LivePosition[]).map((p) => [p.guard_id, p]));
 
   const shifts: RouteShift[] = list
     // A date filter is applied in IST: the query above is a day either side.
@@ -110,6 +120,7 @@ export async function RoutesView({
         checkInAt: a.check_in_at!,
         checkOutAt: a.check_out_at,
         workedMinutes: a.worked_minutes,
+        position: a.check_out_at ? null : (positions.get(a.guard_id) ?? null),
         status: a.status,
         // Accepted by a supervisor: no longer flagged on the list.
         deviceFlag: a.reviewed_at ? null : a.device_flag,

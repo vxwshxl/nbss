@@ -10,6 +10,14 @@ import type { NextConfig } from "next";
  * script-src carries 'unsafe-inline' too; in dev it additionally needs
  * 'unsafe-eval' for React Refresh.
  */
+/**
+ * The whole app runs on Indian time. Pinning the server process to IST makes every
+ * `new Date()` day boundary (setHours(0,0,0,0), "today", "this month") an IST one,
+ * whatever zone the host or a developer's laptop is in. Formatters still pass
+ * timeZone explicitly so the browser renders IST too.
+ */
+process.env.TZ = "Asia/Kolkata";
+
 const isDev = process.env.NODE_ENV === "development";
 
 /**

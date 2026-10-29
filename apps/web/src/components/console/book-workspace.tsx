@@ -18,6 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { istToday } from "@/lib/format";
 
 import { SHIFT_TYPES } from "@nbss/shared/shifts";
 
@@ -175,7 +176,7 @@ export function BookWorkspace({
     if (state.ok) setFormKey((k) => k + 1);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = istToday();
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
