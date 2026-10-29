@@ -70,6 +70,12 @@ function elapsed(iso: string): string {
   return hours(mins);
 }
 
+/** Minutes worked by a punch: the recorded figure once closed, the time so far while open. */
+function workedSoFar(r: { check_in_at: string; check_out_at: string | null; worked_minutes: number | null }): number {
+  if (r.check_out_at) return r.worked_minutes ?? 0;
+  return Math.max(0, Math.round((Date.now() - new Date(r.check_in_at).getTime()) / 60_000));
+}
+
 /** What a phone is saying as the page is drawn, in Live tracking's terms. */
 function signalNow(p: LivePosition | null, sos: boolean) {
   return guardState(p, sos, Date.now());
@@ -123,7 +129,7 @@ export default async function ConsoleDashboard() {
     // The last 30 days of punches, for the charts.
     supabase
       .from("attendance")
-      .select("check_in_at, worked_minutes, overtime_minutes, status, sites(name)")
+      .select("check_in_at, check_out_at, worked_minutes, overtime_minutes, status, sites(name)")
       .gte("check_in_at", monthAgo.toISOString()),
     supabase
       .from("shifts")
@@ -215,12 +221,14 @@ export default async function ConsoleDashboard() {
   const extra = new Map<string, number>();
   for (const r of monthRows) {
     const k = dayKey(new Date(r.check_in_at));
-    worked.set(k, (worked.get(k) ?? 0) + (r.worked_minutes ?? 0));
+    // Shifts still open count the time so far, so today's bar is not empty until check-out.
+    worked.set(k, (worked.get(k) ?? 0) + workedSoFar(r));
     extra.set(k, (extra.get(k) ?? 0) + (r.overtime_minutes ?? 0));
   }
   const dayLabels = days.map((d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: site.timeZone }));
-  const workedSeries = days.map((d) => Math.round((worked.get(dayKey(d)) ?? 0) / 60));
-  const extraSeries = days.map((d) => Math.round((extra.get(dayKey(d)) ?? 0) / 60));
+  // Hours to one decimal: a morning's work is a few hours, not a round number yet.
+  const workedSeries = days.map((d) => Math.round((worked.get(dayKey(d)) ?? 0) / 6) / 10);
+  const extraSeries = days.map((d) => Math.round((extra.get(dayKey(d)) ?? 0) / 6) / 10);
   const punchesByDay = days.map((d) => monthRows.filter((r) => dayKey(new Date(r.check_in_at)) === dayKey(d)).length);
 
   const count = (st: string) => monthRows.filter((r) => r.status === st).length;
@@ -234,7 +242,7 @@ export default async function ConsoleDashboard() {
   const bySite = new Map<string, number>();
   for (const r of monthRows) {
     const name = (Array.isArray(r.sites) ? r.sites[0]?.name : (r.sites as { name?: string } | null)?.name) ?? "Unknown site";
-    bySite.set(name, (bySite.get(name) ?? 0) + (r.worked_minutes ?? 0));
+    bySite.set(name, (bySite.get(name) ?? 0) + workedSoFar(r));
   }
   const SITE_HUES = ["jade", "sky", "gold", "teal", "plum"] as const;
   const busiest = [...bySite.entries()]
@@ -335,7 +343,7 @@ export default async function ConsoleDashboard() {
 
       <div className="grid gap-4 @4xl/main:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <Card>
-          <CardTitle title="Man-hours" hint="Last 14 days, worked and overtime" icon={TrendingUp} hue="jade" right={<Link href="/console/attendance" className="text-sm font-medium text-primary-ink hover:underline">Ledger</Link>} />
+          <CardTitle title="Man-hours" hint="Last 14 days, worked and overtime; today so far" icon={TrendingUp} hue="jade" right={<Link href="/console/attendance" className="text-sm font-medium text-primary-ink hover:underline">Ledger</Link>} />
           <AreaTrend
             labels={dayLabels}
             money={false}

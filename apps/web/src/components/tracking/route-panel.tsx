@@ -160,13 +160,29 @@ export function routeEvents(points: TrailPoint[], stats: TrailStats | null, sos:
 }
 
 /** The timeline: each moment a button that takes the map (and the playback) there. */
-export function RouteTimeline({ events, onPick, className }: { events: RouteEvent[]; onPick: (e: RouteEvent, i: number) => void; className?: string }) {
+export function RouteTimeline({
+  events,
+  onPick,
+  active,
+  className,
+}: {
+  events: RouteEvent[];
+  onPick: (e: RouteEvent, i: number) => void;
+  /** The moment being shown on the map, marked in the list. */
+  active?: number | null;
+  className?: string;
+}) {
   if (events.length === 0) return null;
   return (
     <ol className={cn("space-y-0.5", className)}>
       {events.map((e, i) => (
         <li key={`${e.kind}-${e.at}-${i}`}>
-          <button type="button" onClick={() => onPick(e, i)} className="flex w-full items-start gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted/70">
+          <button
+            type="button"
+            onClick={() => onPick(e, i)}
+            aria-current={active === i || undefined}
+            className={cn("flex w-full items-start gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted/70", active === i && "bg-sky-50 ring-1 ring-sky-500/40 ring-inset dark:bg-sky-500/10")}
+          >
             <span className={cn("mt-0.5 grid size-6 shrink-0 place-items-center rounded-full", EVENT_TONE[e.kind])}>
               <EventIcon kind={e.kind} />
             </span>

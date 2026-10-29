@@ -28,6 +28,8 @@ export type LiveMarker = {
   live: boolean;
   /** Degrees from north: the compass with the app open, else the GPS course while moving. */
   heading?: number | null;
+  /** A faint stand-in: where the selected guard really is while an earlier moment is shown. */
+  ghost?: boolean;
 };
 
 /**
@@ -42,6 +44,7 @@ export function LiveMap({
   selected,
   onSelect,
   trail,
+  upTo,
   focus,
   frameKey,
   height = "100%",
@@ -53,6 +56,8 @@ export function LiveMap({
   onSelect: (id: string | null) => void;
   /** The selected guard's path since check-in. */
   trail?: { lat: number; lng: number; inside: boolean | null }[];
+  /** An earlier moment being looked at: the path after this point is drawn as a ghost. */
+  upTo?: number | null;
   /** Pan here when it changes (a guard picked from the list). */
   /** `offset` (pixels) moves the camera off the point, so it sits clear of a card drawn over the map. */
   focus?: { lat: number; lng: number; key: string; offset?: { x: number; y: number } } | null;
@@ -107,7 +112,7 @@ export function LiveMap({
     for (const g of guards) {
       seen.add(g.id);
       const html =
-        `<div class="gm-guard" style="--c:${g.color}" ${g.live ? "data-live" : ""} ${selected === g.id ? "data-selected" : selected ? "data-dim" : ""}>` +
+        `<div class="gm-guard" style="--c:${g.color}" ${g.live ? "data-live" : ""} ${g.ghost ? "data-ghost" : selected === g.id ? "data-selected" : selected ? "data-dim" : ""}>` +
         `<b>${g.heading != null ? `<i class="gm-dir" style="--r:${Math.round(g.heading)}deg"></i>` : ""}${esc(g.initials)}</b><span>${esc(g.label)}${g.sub ? ` <small>${esc(g.sub)}</small>` : ""}</span></div>`;
       const existing = markers.current.get(g.id);
       if (existing) {
@@ -168,10 +173,26 @@ export function LiveMap({
   // The selected guard's path, coloured by whether each stretch was inside the fence.
   useEffect(() => {
     if (!maps || !map || !trail || trail.length < 2) return;
+    const cut = upTo != null ? Math.max(0, Math.min(upTo, trail.length - 1)) : trail.length - 1;
+    const walked = trail.slice(0, cut + 1);
+    // What came after the moment being looked at: a faint dotted line, so the way ahead
+    // is still readable without being mistaken for where they had got to.
+    const ahead = cut < trail.length - 1 ? trail.slice(cut) : [];
     // A white casing under the line lifts it off the other guards' dots and the roads.
     const lines = [
-      new maps.Polyline({ map, path: trail, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 9, zIndex: 4, clickable: false }),
-      ...runsByFence(trail).map(
+      ...runsByFence(ahead).map(
+        (r) =>
+          new maps.Polyline({
+            map,
+            path: r.path,
+            strokeOpacity: 0,
+            zIndex: 4,
+            clickable: false,
+            icons: [{ icon: { path: "M 0,-1 0,1", strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside, strokeOpacity: 0.45, strokeWeight: 3, scale: 2 }, offset: "0", repeat: "10px" }],
+          }),
+      ),
+      new maps.Polyline({ map, path: walked, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 9, zIndex: 4, clickable: false }),
+      ...runsByFence(walked).map(
         (r) =>
           new maps.Polyline({
             map,
@@ -185,13 +206,19 @@ export function LiveMap({
       ),
     ];
     return () => lines.forEach((l) => l.setMap(null));
-  }, [maps, map, trail]);
+  }, [maps, map, trail, upTo]);
 
   // Framing: everything, once per frameKey.
   useEffect(() => {
     if (!maps || !map) return;
     const key = frameKey ?? "initial";
     if (framedFor.current === key) return;
+    // Opened on one guard (from the dashboard, say): their focus frames the map. Fitting
+    // everyone as well would land after it and leave the map zoomed out over the district.
+    if (focus && framedFor.current === null) {
+      framedFor.current = key;
+      return;
+    }
     const bounds = new maps.LatLngBounds();
     for (const g of guards) bounds.extend(g);
     if (guards.length === 0) for (const s of sites) bounds.extend(s);
@@ -201,6 +228,8 @@ export function LiveMap({
     maps.event.addListenerOnce(map, "idle", () => {
       if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
     });
+    // Read once, at the first frame only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maps, map, guards, sites, frameKey]);
 
   useEffect(() => {

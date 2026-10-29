@@ -875,6 +875,12 @@
 .gm-guard[data-dim] {
   opacity: 0.4;
 }
+.gm-guard[data-ghost] {
+  opacity: 0.45;
+}
+.gm-guard[data-ghost] b {
+  border-style: dashed;
+}
 .gm-guard[data-dim] span,
 .gm-guard[data-dim] b::before {
   display: none;

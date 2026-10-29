@@ -13,6 +13,7 @@ import {
   CircleMinus,
   CircleX,
   Crosshair,
+  History,
   Maximize,
   Minimize,
   LocateOff,
@@ -243,7 +244,7 @@ export function LiveTracking({
     })
     .sort((a, b) => order(a.state) - order(b.state) || a.g.name.localeCompare(b.g.name));
 
-  const markers: LiveMarker[] = rows
+  const baseMarkers: LiveMarker[] = rows
     .filter((r) => r.p)
     .map(({ g, p, state }) => ({
       id: g.guardId,
@@ -284,13 +285,35 @@ export function LiveTracking({
   // The same timeline as Route history: check-in, stops, out of and back into the fence, SOS, now.
   const selSos = useShiftSos(sel ? { attendanceId: sel.g.attendanceId, guardId: sel.g.guardId, from: sel.g.checkInAt, to: null } : null);
   const events = useMemo(() => routeEvents(trail, stats, selSos), [trail, stats, selSos]);
+  // A moment from the timeline being looked at: the guard's own marker is moved there,
+  // the path after it turns to a ghost, and a faint marker holds their real position.
+  // Only for the guard it was picked on; picking someone else drops it.
+  const [moment, setMoment] = useState<{ guard: string; event: RouteEvent; i: number } | null>(null);
+  const atMoment = moment && sel && moment.guard === sel.g.guardId && moment.event.index < trail.length ? moment : null;
   const goTo = (e: RouteEvent, i: number) => {
-    if (e.lat == null || e.lng == null) return;
+    if (e.lat == null || e.lng == null || !sel) return;
+    setMoment(e.kind === "now" ? null : { guard: sel.g.guardId, event: e, i });
     setFocus({ lat: e.lat, lng: e.lng, key: `${e.at}-${i}-${Date.now()}`, offset: document.fullscreenElement ? clearOfCard() : undefined });
   };
+  /** Back from an earlier moment to where the guard is now. */
+  const backToNow = () => {
+    setMoment(null);
+    if (sel?.p) setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:now:${Date.now()}`, offset: document.fullscreenElement ? clearOfCard() : undefined });
+  };
+
+  const markers: LiveMarker[] = baseMarkers.flatMap((m) => {
+    if (!atMoment || m.id !== atMoment.guard) return [m];
+    const then = trail[atMoment.event.index]!;
+    return [
+      { ...m, lat: then.lat, lng: then.lng, accuracy: null, sub: istClock(atMoment.event.at), live: false, heading: null },
+      { ...m, id: `${m.id}:now`, label: "Now", sub: undefined, live: false, heading: null, accuracy: null, ghost: true },
+    ];
+  });
 
   // A guard picked: the camera goes to them, or to their site while no fix has come in yet.
   function pick(id: string | null) {
+    // The faint "now" marker, or the shown guard clicked again: back to the present.
+    if (id && (id.endsWith(":now") || (atMoment && id === atMoment.guard))) return backToNow();
     setSelected(id);
     if (!id) return;
     const p = positions[id];
@@ -353,6 +376,8 @@ export function LiveTracking({
             stats={stats}
             events={events}
             onEvent={goTo}
+            moment={atMoment ? { i: atMoment.i, at: atMoment.event.at, text: atMoment.event.text } : null}
+            onNow={backToNow}
             onClose={() => setSelected(null)}
             onProfile={() => openProfile(sel.g.guardId)}
             onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}` })}
@@ -368,6 +393,7 @@ export function LiveTracking({
           selected={selected}
           onSelect={pick}
           trail={selected ? trail : undefined}
+          upTo={atMoment?.event.index ?? null}
           focus={focus}
           className="h-full"
         />
@@ -376,6 +402,15 @@ export function LiveTracking({
             <span className={cn("size-2 rounded-full", live ? "animate-pulse bg-emerald-500" : "bg-slate-400")} />
             {live ? `Live · ${rows.length} on duty` : "Connecting…"}
           </span>
+          {atMoment && sel && (
+            <span className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-slate-900/95 py-1 pr-1 pl-3 text-xs font-semibold text-white shadow-sm">
+              <History className="size-3.5" />
+              {sel.g.name.split(" ")[0]} at {istClock(atMoment.event.at)} · {atMoment.event.text}
+              <button type="button" onClick={backToNow} className="rounded-full bg-white px-2.5 py-1 text-slate-900 hover:bg-slate-100">
+                Back to now
+              </button>
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -395,6 +430,8 @@ export function LiveTracking({
             stats={stats}
             events={events}
             onEvent={goTo}
+            moment={atMoment ? { i: atMoment.i, at: atMoment.event.at, text: atMoment.event.text } : null}
+            onNow={backToNow}
             onClose={() => setSelected(null)}
             onProfile={() => openProfile(sel.g.guardId)}
             onCenter={() => sel.p && setFocus({ lat: sel.p.lat, lng: sel.p.lng, key: `${sel.g.guardId}:${Date.now()}`, offset: clearOfCard() })}
@@ -448,7 +485,7 @@ export function LiveTracking({
               const open = selected === g.guardId;
               return (
                 <li key={g.guardId} className={cn(open && "bg-sky-50 dark:bg-sky-500/10")}>
-                  <button type="button" onClick={() => pick(open ? null : g.guardId)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50">
+                  <button type="button" onClick={() => (open && atMoment ? backToNow() : pick(open ? null : g.guardId))} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50">
                     <span className="grid size-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-white" style={{ background: STATE_COLOR[state] }}>
                       {initials(g.name)}
                     </span>
@@ -515,6 +552,8 @@ function GuardCard({
   stats,
   events,
   onEvent,
+  moment,
+  onNow,
   onClose,
   onProfile,
   onCenter,
@@ -527,6 +566,10 @@ function GuardCard({
   stats: TrailStats | null;
   events: RouteEvent[];
   onEvent: (e: RouteEvent, i: number) => void;
+  /** The timeline moment shown on the map, if one is. */
+  moment: { i: number; at: number; text: string } | null;
+  /** Back to where the guard is now. */
+  onNow: () => void;
   onClose: () => void;
   onProfile: () => void;
   onCenter: () => void;
@@ -546,7 +589,8 @@ function GuardCard({
           {initials(g.name)}
         </button>
         <div className="min-w-0 flex-1">
-          <button type="button" onClick={onProfile} className="block max-w-full truncate text-left text-base font-semibold hover:underline">
+          {/* While an earlier moment is shown, the name brings the map back to now. */}
+          <button type="button" onClick={moment ? onNow : onProfile} className="block max-w-full truncate text-left text-base font-semibold hover:underline">
             {g.name}
           </button>
           <p className="truncate text-xs text-muted-foreground">
@@ -558,6 +602,20 @@ function GuardCard({
           <X className="size-4" />
         </button>
       </div>
+
+      {moment && (
+        <button
+          type="button"
+          onClick={onNow}
+          className="flex w-full items-center gap-2 border-t border-app-line-soft bg-sky-50 px-4 py-2 text-left text-xs text-sky-900 hover:bg-sky-100 dark:bg-sky-500/10 dark:text-sky-100"
+        >
+          <History className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">
+            Showing {istClock(moment.at)} · {moment.text}
+          </span>
+          <span className="shrink-0 font-semibold">Back to now</span>
+        </button>
+      )}
 
       <div className="border-t border-app-line-soft">
         <DutyLine duty={g.duty} now={now} />
@@ -639,7 +697,7 @@ function GuardCard({
       {events.length > 0 && (
         <div className="border-t border-app-line-soft px-2 py-2">
           <p className="px-2 pt-1 pb-1 text-xs font-semibold">Timeline</p>
-          <RouteTimeline events={events} onPick={onEvent} />
+          <RouteTimeline events={events} onPick={onEvent} active={moment?.i ?? null} />
         </div>
       )}
     </div>
