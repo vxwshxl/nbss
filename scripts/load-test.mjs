@@ -12,6 +12,8 @@
  * raises an SOS (unless --no-sos). Prints round-trip times for record_positions.
  *
  * Accounts: LOAD-G001…, PIN 5001…; sites "Load site 01"…. Re-running reuses them.
+ * Everything it creates is Test data (is_test), so it never shows on the live console
+ * or emails the office. It runs against the real database: never create live records.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -73,7 +75,7 @@ for (let i = 0; i < M; i++) {
   }
   const { data, error } = await admin
     .from("sites")
-    .insert({ name, client_name: "Load test", district: "Kokrajhar", lat: CENTRE.lat + d.dLat, lng: CENTRE.lng + d.dLng, geofence_radius_m: 150, max_accuracy_m: 100, grace_minutes: 30 })
+    .insert({ name, client_name: "Load test", district: "Kokrajhar", lat: CENTRE.lat + d.dLat, lng: CENTRE.lng + d.dLng, geofence_radius_m: 150, max_accuracy_m: 100, grace_minutes: 30, is_test: true })
     .select("id, name, lat, lng, geofence_radius_m")
     .single();
   if (error) throw new Error(`site: ${error.message}`);
@@ -94,7 +96,7 @@ for (let i = 0; i < N; i++) {
   if (!p) {
     const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     if (error) throw new Error(`${code}: ${error.message}`);
-    const { error: pe } = await admin.from("profiles").insert({ id: data.user.id, employee_code: code, role: "guard", full_name: name, phone: `90000${String(10000 + i)}` });
+    const { error: pe } = await admin.from("profiles").insert({ id: data.user.id, employee_code: code, role: "guard", full_name: name, phone: `90000${String(10000 + i)}`, is_test: true });
     if (pe) throw new Error(`${code}: ${pe.message}`);
     p = { id: data.user.id };
   }
