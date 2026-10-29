@@ -1,11 +1,21 @@
 "use client";
 
-import { useTransition } from "react";
-import { AlertTriangle, BatteryCharging, Check, MapPin, MapPinOff, Smartphone, Trash2, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { AlertTriangle, Battery, BatteryCharging, Check, Clock, MapPin, MapPinOff, ShieldCheck, Smartphone, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { removeDevice, reviewFlaggedPunch, setDeviceStatus } from "@/app/console/devices/actions";
-import { istDateTime } from "@/components/console/preview-kit";
+import {
+  HeroPill,
+  PreviewActions,
+  PreviewBody,
+  PreviewDialog,
+  PreviewHero,
+  Section,
+  Stat,
+  StatGrid,
+  istDateTime,
+} from "@/components/console/preview-kit";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -31,6 +41,10 @@ export type DeviceRow = {
   firstSeenAt: string;
   /** Other guards who have signed in on this same phone. */
   sharedWith: string[];
+  /** Everyone registered on this phone (same device id), this row's guard first. */
+  people: { name: string; code: string; status: string; firstSeenAt: string; lastSeenAt: string; self: boolean }[];
+  /** Who checked in from this phone in the last 30 days. */
+  checkIns: { name: string; code: string; count: number; lastAt: string }[];
 };
 
 export type FlaggedPunch = {
@@ -57,6 +71,8 @@ const FLAG_TEXT: Record<string, string> = {
  */
 export function DevicesWorkspace({ devices, flagged }: { devices: DeviceRow[]; flagged: FlaggedPunch[] }) {
   const [pending, start] = useTransition();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = devices.find((d) => d.id === openId) ?? null;
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done: string) =>
     start(async () => {
       const r = await fn();
@@ -234,7 +250,104 @@ export function DevicesWorkspace({ devices, flagged }: { devices: DeviceRow[]; f
         searchPlaceholder="Search by guard, code or phone…"
         emptyMessage="No phones yet. A guard's phone appears here the first time they sign in to the app."
         rowClassName={(r) => (r.status === "pending" ? "bg-amber-50/70 dark:bg-amber-500/10" : undefined)}
+        onRowClick={(r) => setOpenId(r.id)}
       />
+
+      <PreviewDialog open={!!open} onClose={() => setOpenId(null)} label="Phone" wide>
+        {open && (
+          <>
+            <PreviewHero
+              icon={Smartphone}
+              title={open.phone}
+              tone={open.status === "blocked" ? "rose" : open.status === "pending" || open.sharedWith.length ? "amber" : "brand"}
+              meta={
+                <span>
+                  {open.system}
+                  {open.appVersion ? ` · ${appLabel(open.appVersion)}` : ""}
+                </span>
+              }
+              badge={
+                <>
+                  <HeroPill>{open.status === "approved" ? "Approved" : open.status === "pending" ? "Waiting for approval" : "Blocked"}</HeroPill>
+                  {open.sharedWith.length > 0 && <HeroPill>Shared with {open.sharedWith.length}</HeroPill>}
+                </>
+              }
+            />
+            <PreviewBody>
+              <StatGrid>
+                <Stat icon={ShieldCheck} label="Registered to" tone="text-primary-ink">
+                  {open.guardName}
+                </Stat>
+                <Stat icon={MapPin} label="Location" tone={open.permission === "always" ? "text-emerald-700" : "text-amber-700"}>
+                  {open.permission === "always" ? "All the time" : open.permission === "foreground" ? "While open" : open.permission ? "Off" : "-"}
+                </Stat>
+                <Stat icon={open.charging ? BatteryCharging : Battery} label="Battery" tone={open.battery != null && open.battery <= 20 ? "text-rose-600" : "text-foreground"}>
+                  {open.battery != null ? `${open.battery}%` : "-"}
+                </Stat>
+                <Stat icon={Clock} label="Last seen">
+                  {istDateTime(open.lastSeenAt).split(", ").pop()}
+                </Stat>
+              </StatGrid>
+
+              <Section title={`People on this phone · ${open.people.length}`}>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Matched by the phone&apos;s own device ID, which stays the same when someone else signs in on it.
+                </p>
+                <ul className="divide-y divide-app-line-soft rounded-xl border border-app-line-soft">
+                  {open.people.map((p) => (
+                    <li key={`${p.code}-${p.firstSeenAt}`} className="flex flex-wrap items-center gap-3 px-3.5 py-2.5">
+                      <span className={cn("grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold", p.self ? "bg-primary/15 text-primary-ink" : "bg-amber-100 text-amber-800")}>
+                        {p.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">
+                          {p.name} {p.self && <span className="text-xs font-normal text-muted-foreground">(this row)</span>}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          <span className="font-mono">{p.code}</span> · first signed in {istDateTime(p.firstSeenAt)} · last {istDateTime(p.lastSeenAt)}
+                        </span>
+                      </span>
+                      <StatusPill status={p.status === "approved" ? "approved" : p.status === "pending" ? "pending" : "rejected"} label={p.status === "approved" ? "Approved" : p.status === "pending" ? "Pending" : "Blocked"} />
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+
+              <Section title="Checked in from this phone · last 30 days">
+                {open.checkIns.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No check-ins from this phone in the last 30 days.</p>
+                ) : (
+                  <ul className="divide-y divide-app-line-soft rounded-xl border border-app-line-soft">
+                    {open.checkIns.map((c) => (
+                      <li key={c.code} className="flex items-center gap-3 px-3.5 py-2.5 text-sm">
+                        <Users className="size-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="font-medium">{c.name}</span> <span className="font-mono text-xs text-muted-foreground">{c.code}</span>
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {c.count} check-in{c.count === 1 ? "" : "s"} · last {istDateTime(c.lastAt)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Section>
+            </PreviewBody>
+            <PreviewActions>
+              {open.status !== "approved" && (
+                <Button size="sm" disabled={pending} onClick={() => run(() => setDeviceStatus(open.id, "approved"), `${open.phone} approved for ${open.guardName}`)}>
+                  <Check data-icon="inline-start" /> Approve
+                </Button>
+              )}
+              {open.status !== "blocked" && (
+                <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => setDeviceStatus(open.id, "blocked"), `${open.phone} blocked`)}>
+                  <X data-icon="inline-start" /> Block
+                </Button>
+              )}
+            </PreviewActions>
+          </>
+        )}
+      </PreviewDialog>
     </div>
   );
 }

@@ -52,6 +52,17 @@ export async function DevicesView({ siteId }: { siteId?: string } = {}) {
     byDevice.set(d.device_id, [...(byDevice.get(d.device_id) ?? []), name]);
   }
 
+  // Who has checked in from each phone in the last 30 days, by its device id.
+  const deviceIds = [...new Set(all.map((d) => d.device_id))];
+  const { data: usedBy } = deviceIds.length
+    ? await supabase
+        .from("attendance")
+        .select("guard_id, device_id, check_in_at, profiles!attendance_guard_id_fkey(full_name, employee_code)")
+        .in("device_id", deviceIds)
+        .gte("check_in_at", new Date(nowMs() - 30 * 86_400_000).toISOString())
+        .order("check_in_at", { ascending: false })
+    : { data: [] };
+
   const rows: DeviceRow[] = all.map((d) => {
     const p = one(d.profiles as unknown as Person | null);
     return {
@@ -70,6 +81,25 @@ export async function DevicesView({ siteId }: { siteId?: string } = {}) {
       lastSeenAt: d.last_seen_at,
       firstSeenAt: d.first_seen_at,
       sharedWith: (byDevice.get(d.device_id) ?? []).filter((n) => n !== p?.full_name),
+      // Everyone who has signed in on this same phone, its owner first.
+      people: (devices.data ?? [])
+        .filter((x) => x.device_id === d.device_id)
+        .map((x) => {
+          const q = one(x.profiles as unknown as Person | null);
+          return { name: q?.full_name ?? "Someone", code: q?.employee_code ?? "", status: x.status, firstSeenAt: x.first_seen_at, lastSeenAt: x.last_seen_at, self: x.id === d.id };
+        })
+        .sort((a, b) => Number(b.self) - Number(a.self) || a.firstSeenAt.localeCompare(b.firstSeenAt)),
+      checkIns: Object.values(
+        (usedBy ?? [])
+          .filter((a) => a.device_id === d.device_id)
+          .reduce<Record<string, { name: string; code: string; count: number; lastAt: string }>>((acc, a) => {
+            const q = one(a.profiles as unknown as { full_name: string; employee_code: string } | null);
+            const cur = acc[a.guard_id] ?? { name: q?.full_name ?? "Someone", code: q?.employee_code ?? "", count: 0, lastAt: a.check_in_at ?? "" };
+            cur.count += 1;
+            acc[a.guard_id] = cur;
+            return acc;
+          }, {}),
+      ),
     };
   });
 

@@ -149,7 +149,10 @@ export type Fix = Point & { at: number; accuracy?: number | null; /** The phone'
  * one is a long straight spoke across the map, and it adds two false kilometres to
  * "walked". A fix is dropped when:
  *   - the phone itself says it could be more than 500 m out;
- *   - reaching it from the last good fix would need more than 40 m/s (~145 km/h);
+ *   - reaching it would need more speed than is believable right now: 40 m/s (~145 km/h)
+ *     when the phone reads itself still or walking, rising with what the phone itself
+ *     reads (half as fast again as its own reading, plus a margin), so a guard really
+ *     travelling by car or train keeps their route, up to a ceiling of 120 m/s;
  *   - it is an out-and-back: more than 150 m from the last good fix at faster than a
  *     brisk walk (4 m/s), with the very next fix back near where it started;
  *   - it is a jump the phone did not feel: more than 150 m at faster than a run (6 m/s)
@@ -157,6 +160,17 @@ export type Fix = Point & { at: number; accuracy?: number | null; /** The phone'
  *     guard on a bike or in a car reads their speed; a GPS that wandered off reads 0.
  * A real walk does neither. Order is kept; the first fix is always kept.
  */
+/**
+ * The fastest believable speed between two fixes, m/s: 40 (~145 km/h) for a phone that
+ * reads itself still or walking; with a phone that reads itself moving fast, half as fast
+ * again as its own reading plus 10, so GPS noise (which reads 0) is still caught while
+ * a real journey is kept. Never above 120 m/s.
+ */
+function plausibleSpeed(a: Fix, b: Fix): number {
+  const read = Math.max(a.speed ?? 0, b.speed ?? 0);
+  return Math.min(120, Math.max(40, read * 1.5 + 10));
+}
+
 export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
   if (fixes.length < 3) return fixes.filter((f) => (f.accuracy ?? 0) <= 500 || fixes.length === 1);
   const kept: T[] = [fixes[0]!];
@@ -166,7 +180,7 @@ export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
     if ((b.accuracy ?? 0) > 500) continue;
     const d = distanceMetres(a, b);
     const speed = d / Math.max(1, (b.at - a.at) / 1000);
-    if (d > 100 && speed > 40) continue;
+    if (d > 100 && speed > plausibleSpeed(a, b)) continue;
     if (d > 150 && speed > 6 && b.speed != null && b.speed < 1.5) continue;
     const c = fixes[i + 1];
     if (c && d > 150 && speed > 4 && distanceMetres(a, c) < d * 0.35 && distanceMetres(b, c) > 150) continue;
