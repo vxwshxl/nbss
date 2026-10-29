@@ -13,6 +13,7 @@ const ROUTES: [prefix: string, tables: RouteRealtime][] = [
   ["/console/profile", "off"],
   ["/console/sites/", ["attendance", "shifts", "site_postings", "sos_alerts", "sites"]], // one site's workspace
   ["/console/attendance", ["attendance", "shifts"]],
+  ["/console/check-ins", ["attendance"]],
   ["/console/live", ["attendance", "sos_alerts"]],
   ["/console/routes", ["attendance"]],
   ["/console/replacements", ["replacement_requests", "shifts"]],

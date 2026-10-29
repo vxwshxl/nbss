@@ -30,6 +30,13 @@ export const PAGES: Record<string, PageKnowledge> = {
     actions: ["Filter by date, site or guard", "Approve or reject a punch that needs review", "Print or export the register"],
     tools: ["attendance_summary", "punches_needing_review", "guard_attendance", "my_shifts"],
   },
+  "/console/check-ins": {
+    title: "Check-in log",
+    about:
+      "Every check-in and check-out in a day (the default), month or year, one row each: the guard, the site, when they came and went, how each happened (the guard in the app inside the fence, a supervisor, or the automatic close at the end of a shift), hours worked and the phone used.",
+    actions: ["Switch between Day, Month and Year", "Step to an earlier or later period", "Search, print or export to Excel", "Open a punch to review it"],
+    tools: ["attendance_summary", "punches_needing_review", "guard_attendance"],
+  },
   "/console/sites": {
     title: "Sites & geofences",
     about:

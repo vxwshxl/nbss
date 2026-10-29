@@ -26,6 +26,7 @@ import {
   UserRound,
   Users,
   type LucideIcon,
+  ListChecks,
 } from "lucide-react";
 
 import type { NavIndexItem } from "@/components/shell/nav-index";
@@ -138,6 +139,7 @@ export const groups: NavGroup[] = [
         icon: CalendarCheck,
         roles: ["admin", "supervisor", "guard"],
       },
+      { href: "/console/check-ins", label: "Check-in log", icon: ListChecks, roles: ["admin", "supervisor"] },
       { href: "/console/reports", label: "Reports", icon: FileSpreadsheet, roles: ["admin", "supervisor"] },
     ],
   },
