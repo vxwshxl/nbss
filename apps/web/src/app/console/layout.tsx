@@ -128,6 +128,14 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       }
       navIndex={navIndexFor(profile.role)}
       mark={<BrandLockup size="sm" priority />}
+      drawerFooter={
+        canImpersonate ? (
+          <div className="flex items-center justify-between gap-3 px-1">
+            <span className="text-[13px] font-medium text-secondary-fg">Data</span>
+            <ModeToggle mode={mode} labels />
+          </div>
+        ) : undefined
+      }
       sidebarFooter={<WebsiteTag label={`${roleLabel(profile.role, profile.trade)} console · nbss.co.in`} />}
       companion={{ person: realProfile.id }}
       nav={<ConsoleNav role={profile.role} sites={sites} badges={badges} />}
@@ -151,7 +159,12 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         // One element, not a fragment: a fragment crosses to the client shell as a
         // keyless list and React warns about the missing keys.
         <div className="flex items-center gap-2">
-        {canImpersonate && <ModeToggle key="mode" mode={mode} />}
+        {/* Below lg the switch lives in the menu drawer, so the header has room to breathe. */}
+        {canImpersonate && (
+          <div key="mode" className="hidden lg:block">
+            <ModeToggle mode={mode} />
+          </div>
+        )}
         <UserMenu
           key="user"
           name={profile.full_name}

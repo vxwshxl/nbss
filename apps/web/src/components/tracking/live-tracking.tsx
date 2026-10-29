@@ -104,6 +104,9 @@ const FILTERS: { key: "all" | GuardState; label: string }[] = [
 
 const NO_TRAIL: TrailPoint[] = [];
 
+/** Seconds between re-reads while the live channel cannot connect. */
+const FALLBACK_S = 15;
+
 function useNow(everyMs: number) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -200,15 +203,26 @@ export function LiveTracking({
       // Live once subscribed; back to Connecting only if the socket really drops
       // (supabase-js rejoins by itself and reports SUBSCRIBED again).
       channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") setLive(true);
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setLive(false);
+        if (status === "SUBSCRIBED") {
+          subscribed = true;
+          setLive(true);
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          subscribed = false;
+          setLive(false);
+        }
       });
     });
 
+    // The re-read behind the channel: every minute while it is live, and every few
+    // seconds while it cannot connect, so the map keeps moving either way.
+    let subscribed = false;
+    let lastRead = Date.now();
     const reread = setInterval(async () => {
+      if (Date.now() - lastRead < (subscribed ? 60_000 : FALLBACK_S * 1000) - 500) return;
+      lastRead = Date.now();
       const { data } = await supabase.from("guard_positions").select("*");
       if (data) merge(data as unknown as LivePosition[]);
-    }, 60_000);
+    }, FALLBACK_S * 1000);
 
     return () => {
       cancelled = true;
@@ -397,16 +411,19 @@ export function LiveTracking({
           focus={focus}
           className="h-full"
         />
-        <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap gap-2">
+        {/* Stacked down the left, clear of Map / Satellite and the full-screen button on the right. */}
+        <div className="pointer-events-none absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-2 sm:max-w-[calc(100%-15rem)]">
           <span className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-card/95 px-3 py-1.5 text-xs font-semibold shadow-sm ring-1 ring-border">
-            <span className={cn("size-2 rounded-full", live ? "animate-pulse bg-emerald-500" : "bg-slate-400")} />
-            {live ? `Live · ${rows.length} on duty` : "Connecting…"}
+            <span className={cn("size-2 rounded-full", live ? "animate-pulse bg-emerald-500" : "bg-amber-500")} />
+            {live ? `Live · ${rows.length} on duty` : `Every ${FALLBACK_S} s · ${rows.length} on duty`}
           </span>
           {atMoment && sel && (
-            <span className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-slate-900/95 py-1 pr-1 pl-3 text-xs font-semibold text-white shadow-sm">
-              <History className="size-3.5" />
-              {sel.g.name.split(" ")[0]} at {istClock(atMoment.event.at)} · {atMoment.event.text}
-              <button type="button" onClick={backToNow} className="rounded-full bg-white px-2.5 py-1 text-slate-900 hover:bg-slate-100">
+            <span className="pointer-events-auto flex max-w-full items-center gap-2 rounded-2xl bg-slate-900/95 py-1 pr-1 pl-3 text-xs text-white shadow-md">
+              <History className="size-3.5 shrink-0" />
+              <span className="min-w-0 truncate">
+                <span className="font-semibold">{sel.g.name.split(" ")[0]}</span> at {istClock(atMoment.event.at)} · {atMoment.event.text}
+              </span>
+              <button type="button" onClick={backToNow} className="shrink-0 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-900 hover:bg-slate-100">
                 Back to now
               </button>
             </span>

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * the real ones. The whole page reloads on a switch, so every list, map and live feed
  * starts again on the chosen side.
  */
-export function ModeToggle({ mode }: { mode: DataMode }) {
+export function ModeToggle({ mode, labels = false }: { mode: DataMode; /** Always show the words (the menu drawer has room). */ labels?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(mode);
 
@@ -54,7 +54,7 @@ export function ModeToggle({ mode }: { mode: DataMode }) {
             )}
           >
             <Icon className="size-3.5" />
-            <span className="max-sm:hidden">{m === "test" ? "Test" : "Live"}</span>
+            <span className={labels ? undefined : "max-sm:hidden"}>{m === "test" ? "Test" : "Live"}</span>
           </button>
         );
       })}

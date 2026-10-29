@@ -41,6 +41,7 @@ export function AppShell({
   nav,
   navIndex,
   sidebarFooter,
+  drawerFooter,
   topbarRight,
   topbarSecondary,
   banner,
@@ -62,6 +63,8 @@ export function AppShell({
   nav: React.ReactNode;
   navIndex: NavIndexItem[];
   sidebarFooter?: React.ReactNode;
+  /** Below lg, at the foot of the menu drawer: what the header has no room for (Test / Live). */
+  drawerFooter?: React.ReactNode;
   topbarLeft?: React.ReactNode;
   /** The account menu. */
   topbarRight?: React.ReactNode;
@@ -170,7 +173,12 @@ export function AppShell({
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto px-3 pb-4">{nav}</div>
-                {sidebarFooter && <div className="grid gap-2 border-t-2 border-border p-3">{sidebarFooter}</div>}
+                {(sidebarFooter || drawerFooter) && (
+                  <div className="grid gap-2 border-t-2 border-border p-3">
+                    {drawerFooter}
+                    {sidebarFooter}
+                  </div>
+                )}
               </motion.div>
             </>
           )}
