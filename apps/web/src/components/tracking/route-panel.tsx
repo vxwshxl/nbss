@@ -19,7 +19,6 @@ import {
   WifiOff,
 } from "lucide-react";
 
-import { SOS_KIND_LABEL, SOS_STATUS_LABEL } from "@nbss/shared/sos";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
