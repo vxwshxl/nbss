@@ -107,6 +107,8 @@ export type RosterGuard = {
   name: string;
   code: string;
   phone: string | null;
+  /** What they do on site: the roster posts all three. */
+  kind: PostKind;
   /** Their weekly post, if any. */
   posting: { siteId: string; starts: string; ends: string; days: number[] } | null;
   /** How many dated posts they hold. */
@@ -129,6 +131,17 @@ function time(iso: string): string {
     hour12: true,
     timeZone: "Asia/Kolkata",
   });
+}
+
+/** Milliseconds from now until a moment. */
+function msUntil(iso: string): number {
+  return new Date(iso).getTime() - Date.now();
+}
+
+/** "in 45 min", "in 3 h 10 min". */
+function startsIn(iso: string): string {
+  const m = Math.max(0, Math.round(msUntil(iso) / 60_000));
+  return m < 60 ? `in ${m} min` : `in ${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
 }
 
 /** Green when the day is covered, amber when short, grey when nothing is set. */
@@ -173,7 +186,12 @@ function Pick({
   );
 }
 
+export type PostKind = "guard" | "housekeeping" | "supervisor";
+const KIND_LABEL: Record<PostKind, string> = { guard: "Guard", housekeeping: "Housekeeper", supervisor: "Supervisor" };
+
 type PostingDraft = {
+  /** Whose list the person picker shows. */
+  kind?: PostKind;
   guardId: string;
   siteId: string;
   starts: string;
@@ -260,7 +278,13 @@ export function RosterWorkspace({
     });
   }
 
-  const unposted = guards.filter((g) => !g.posting && !g.dated);
+  // Shifts due in the next twelve hours, soonest first: who to expect, where and when.
+  const upNext = shifts
+    .filter((s) => s.upcoming && msUntil(s.startsAt) < 12 * 3_600_000)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .slice(0, 6);
+  // Supervisors are posted when needed, so they are not listed as waiting for a post.
+  const unposted = guards.filter((g) => g.kind !== "supervisor" && !g.posting && !g.dated);
 
   return (
     <>
@@ -279,7 +303,7 @@ export function RosterWorkspace({
         )}
       </div>
 
-      {(notArrived.length > 0 || offRoster.length > 0) && (
+      {(notArrived.length > 0 || offRoster.length > 0 || upNext.length > 0) && (
         <div className="grid gap-4 lg:grid-cols-2">
           {notArrived.length > 0 && (
             <Panel tone="rose" title={`Not arrived · ${notArrived.length}`} icon={UserRoundX} bodyClassName="p-0 sm:p-0">
@@ -324,6 +348,29 @@ export function RosterWorkspace({
                         Approve
                       </Button>
                     )}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+          {upNext.length > 0 && (
+            <Panel tone="sky" title={`Starting next · ${upNext.length}`} icon={Clock} bodyClassName="p-0 sm:p-0">
+              <ul className="divide-y divide-app-line-soft">
+                {upNext.map((s) => (
+                  <li key={s.id} className="flex items-center gap-3 px-6 py-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky-50 text-xs font-semibold text-sky-700">
+                      {initials(s.guardName)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{s.guardName}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {siteName(s.siteId)} · {time(s.startsAt)} – {time(s.endsAt)}
+                        {s.cover ? " · cover" : ""}
+                      </span>
+                    </span>
+                    <span suppressHydrationWarning className="shrink-0 text-xs font-medium tabular-nums text-sky-700">
+                      {startsIn(s.startsAt)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -673,8 +720,8 @@ export function RosterWorkspace({
                 posting.postingId
                   ? "Edit dated post"
                   : !posting.dates && guards.find((g) => g.id === posting.guardId)?.posting
-                    ? "Move a guard"
-                    : "Post a guard"
+                    ? `Move a ${KIND_LABEL[posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard"].toLowerCase()}`
+                    : `Post a ${KIND_LABEL[posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard"].toLowerCase()}`
               }
               meta={
                 <span>
@@ -685,10 +732,29 @@ export function RosterWorkspace({
               }
             />
             <PreviewBody>
+              {!posting.postingId && (
+                <div role="radiogroup" aria-label="Who is posted" className="mb-4 inline-flex rounded-full bg-muted/70 p-1 ring-1 ring-border/60">
+                  {(["guard", "housekeeping", "supervisor"] as const).map((k) => {
+                    const on = (posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard") === k;
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => setPosting({ ...posting, kind: k, guardId: guards.find((g) => g.id === posting.guardId)?.kind === k ? posting.guardId : "" })}
+                        className={cn("rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors", on ? "bg-background shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
+                      >
+                        {KIND_LABEL[k]}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Pick
                   id="posting-guard"
-                  label="Guard"
+                  label={KIND_LABEL[posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard"]}
                   value={posting.guardId}
                   onChange={(v) => {
                     const g = guards.find((x) => x.id === v);
@@ -698,12 +764,14 @@ export function RosterWorkspace({
                       ...(g?.posting && !posting.siteId ? { siteId: g.posting.siteId } : {}),
                     });
                   }}
-                  placeholder="Choose a guard…"
-                  options={guards.map((g) => ({
-                    value: g.id,
-                    label: g.name,
-                    note: g.posting ? `now at ${siteName(g.posting.siteId)}` : g.dated ? `${g.dated} dated` : "no post",
-                  }))}
+                  placeholder={`Choose a ${KIND_LABEL[posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard"].toLowerCase()}…`}
+                  options={guards
+                    .filter((g) => g.kind === (posting.kind ?? guards.find((x) => x.id === posting.guardId)?.kind ?? "guard"))
+                    .map((g) => ({
+                      value: g.id,
+                      label: g.name,
+                      note: g.posting ? `now at ${siteName(g.posting.siteId)}` : g.dated ? `${g.dated} dated` : "no post",
+                    }))}
                 />
                 <Pick
                   id="posting-site"

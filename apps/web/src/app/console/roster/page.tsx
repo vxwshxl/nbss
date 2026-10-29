@@ -47,7 +47,8 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       .from("site_postings")
       .select("id, site_id, guard_id, starts, ends, days, dates, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
       .eq("active", true),
-    supabase.from("profiles").select("id, full_name, employee_code, phone").eq("role", "guard").eq("active", true).order("full_name"),
+    // Guards, housekeepers (guards by trade) and supervisors: anyone who can be posted to a site.
+    supabase.from("profiles").select("id, full_name, employee_code, phone, role, trade").in("role", ["guard", "supervisor"]).eq("active", true).order("full_name"),
     supabase
       .from("shifts")
       .select("id, site_id, guard_id, starts_at, ends_at, status, notes, posting_id, shift_type, replaces_shift")
@@ -90,7 +91,8 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       date: istDate(new Date(s.starts_at)),
       status: s.status,
       cover: !s.posting_id,
-      notArrived: s.status === "scheduled" && started && running && onDutyAt.get(s.guard_id) !== s.site_id,
+      // Supervisors do not check in from the app, so their shifts are never "not arrived".
+      notArrived: g?.role !== "supervisor" && s.status === "scheduled" && started && running && onDutyAt.get(s.guard_id) !== s.site_id,
       upcoming: s.status === "scheduled" && new Date(s.starts_at).getTime() > now,
     };
   });
@@ -138,6 +140,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       name: g.full_name,
       code: g.employee_code,
       phone: g.phone,
+      kind: g.role === "supervisor" ? "supervisor" : g.trade === "housekeeping" ? "housekeeping" : "guard",
       posting: p ? { siteId: p.site_id, starts: p.starts, ends: p.ends, days: p.days } : null,
       dated,
     };
@@ -158,7 +161,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
   const needed = rows.reduce((n, r) => n + (r.required ?? 0), 0);
   const covered = rows.reduce((n, r) => n + Math.min(r.onDuty, r.required ?? r.onDuty), 0);
   const notArrived = allShifts.filter((s) => s.notArrived);
-  const unposted = guardList.filter((g) => !postedGuards.has(g.id)).length;
+  const unposted = guardList.filter((g) => g.kind !== "supervisor" && !postedGuards.has(g.id)).length;
 
   return (
     <div className="space-y-6">

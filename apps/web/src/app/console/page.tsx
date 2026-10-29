@@ -121,7 +121,7 @@ export default async function ConsoleDashboard() {
     // their guard — "not arrived" once the site's grace period has passed.
     supabase
       .from("shifts")
-      .select("id, guard_id, site_id, starts_at, guard:profiles!shifts_guard_id_fkey(full_name, phone), sites(name, grace_minutes)")
+      .select("id, guard_id, site_id, starts_at, guard:profiles!shifts_guard_id_fkey(full_name, phone, role), sites(name, grace_minutes)")
       .eq("status", "scheduled")
       .lte("starts_at", new Date().toISOString())
       .gt("ends_at", new Date().toISOString())
@@ -176,8 +176,9 @@ export default async function ConsoleDashboard() {
   const notArrived: NotArrivedRow[] = (dueShifts.data ?? []).flatMap((s) => {
     const place = one(s.sites as unknown as { name: string; grace_minutes: number } | null);
     const lateBy = since(s.starts_at);
-    if (lateBy < (place?.grace_minutes ?? 10) * 60_000 || checkedIn.has(`${s.guard_id}:${s.site_id}`)) return [];
-    const g = one(s.guard as unknown as { full_name: string; phone: string | null } | null);
+    const g = one(s.guard as unknown as { full_name: string; phone: string | null; role: string } | null);
+    // Supervisors do not check in from the app, so they are never "not arrived".
+    if (g?.role === "supervisor" || lateBy < (place?.grace_minutes ?? 10) * 60_000 || checkedIn.has(`${s.guard_id}:${s.site_id}`)) return [];
     return [
       {
         id: s.id,

@@ -109,7 +109,7 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
       .order("check_in_at", { ascending: false }),
     supabase
       .from("shifts")
-      .select("id, guard_id, starts_at, ends_at, status, posting_id, guard:profiles!shifts_guard_id_fkey(full_name, employee_code, phone)")
+      .select("id, guard_id, starts_at, ends_at, status, posting_id, guard:profiles!shifts_guard_id_fkey(full_name, employee_code, phone, role)")
       .eq("site_id", id)
       .neq("status", "cancelled")
       .gte("ends_at", today.toISOString())
@@ -137,7 +137,9 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
   const now = nowMs();
   const onDutyIds = new Set(live.map((r) => r.guard_id));
   const notArrived = upcoming.filter(
-    (x) => x.status === "scheduled" && new Date(x.starts_at).getTime() + s.grace_minutes * 60_000 < now && new Date(x.ends_at).getTime() > now && !onDutyIds.has(x.guard_id),
+    (x) => x.status === "scheduled" && new Date(x.starts_at).getTime() + s.grace_minutes * 60_000 < now && new Date(x.ends_at).getTime() > now && !onDutyIds.has(x.guard_id) &&
+      // Supervisors do not check in from the app.
+      (Array.isArray(x.guard) ? x.guard[0] : (x.guard as { role?: string } | null))?.role !== "supervisor",
   );
   const openSos = alerts.filter((a) => a.status === "active" || a.status === "acknowledged");
   const review = rows.filter((r) => r.status === "pending_review").length;

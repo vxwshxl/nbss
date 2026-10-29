@@ -65,7 +65,8 @@ export async function savePosting(input: {
     .select("id, full_name, role, active")
     .eq("id", input.guardId)
     .maybeSingle();
-  if (!guard || guard.role !== "guard" || !guard.active) return { ok: false, error: "Only an active guard can be posted." };
+  if (!guard || (guard.role !== "guard" && guard.role !== "supervisor") || !guard.active)
+    return { ok: false, error: "Only an active guard, housekeeper or supervisor can be posted." };
 
   let existing: { id: string } | null = null;
   if (dates) {
