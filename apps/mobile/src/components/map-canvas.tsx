@@ -3,6 +3,8 @@ import { Platform, StyleSheet, View, type ViewStyle } from "react-native";
 import MapView, { Circle, Marker, Polygon, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 
+import { runsByFence } from "@nbss/shared/trail";
+
 import { Text } from "@/components/text";
 import { font } from "@/theme/tokens";
 
@@ -50,6 +52,11 @@ export type MapCanvasProps = {
   route?: [MapPoint, MapPoint] | null;
   /** The path walked since check-in. */
   trail?: MapPoint[] | null;
+  /**
+   * A shift's route, coloured by the fence: blue inside, orange outside. With `upTo`,
+   * the part after that point is a faint dotted line (a moment from the timeline).
+   */
+  path?: { points: (MapPoint & { inside: boolean | null })[]; upTo?: number | null } | null;
   /** Changed to re-frame the view around everything drawn. */
   frameKey?: string;
   padding?: { top: number; right: number; bottom: number; left: number };
@@ -74,6 +81,7 @@ export function MapCanvas({
   me = null,
   route = null,
   trail = null,
+  path = null,
   frameKey = "",
   padding,
   onPersonPress,
@@ -88,9 +96,10 @@ export function MapCanvas({
     const pts: { latitude: number; longitude: number }[] = [];
     for (const f of fences) if (f.frame !== false) for (const [lng, lat] of f.ring) pts.push({ latitude: lat, longitude: lng });
     for (const p of people) if (p.frame !== false) pts.push({ latitude: p.lat, longitude: p.lng });
+    for (const p of path?.points ?? []) pts.push({ latitude: p.lat, longitude: p.lng });
     if (me && me.frame !== false) pts.push({ latitude: me.lat, longitude: me.lng });
     return pts;
-  }, [fences, people, me]);
+  }, [fences, people, me, path]);
 
   const drawn = points.length > 0;
   // Re-framed when the visible area changes too (the sheet snapping up or down),
@@ -182,6 +191,7 @@ export function MapCanvas({
             lineJoin="round"
           />
         )}
+        {path && path.points.length > 1 && <RoutePath points={path.points} upTo={path.upTo ?? null} />}
         {route && (
           <Polyline
             coordinates={route.map((p) => ({ latitude: p.lat, longitude: p.lng }))}
@@ -192,38 +202,57 @@ export function MapCanvas({
           />
         )}
 
-        {people.map((p) => (
-          <Marker
-            key={`${p.id}-${p.tone}-${p.label ?? ""}`}
-            coordinate={{ latitude: p.lat, longitude: p.lng }}
-            // The dot is the exact centre of the marker (a spacer above matches the label
-            // below), so it sits on the coordinate on both platforms: Apple Maps ignores
-            // `anchor` and centres the view, and a fraction of a view whose label comes and
-            // goes put the dot metres off the place an SOS was raised.
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-            zIndex={p.big ? 900 : 100}
-            onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
-          >
-            <View style={styles.who}>
-              {p.label ? <View style={styles.whoSpacer} /> : null}
-              {p.big ? (
-                <View style={[styles.bigRing, { borderColor: alpha(p.tone, 0.35) }]}>
-                  <View style={[styles.bigDot, { backgroundColor: p.tone }]} />
-                </View>
-              ) : (
-                <View style={[styles.whoDot, { backgroundColor: p.tone }]} />
-              )}
-              {p.label ? (
+        {/* Each guard is two markers of fixed size: the dot, centred exactly on the point,
+            and the name hung under it. One marker holding both put the dot wherever the
+            measured box happened to centre, which drifted off the point as the map zoomed out. */}
+        {people.map((p) => {
+          const d = p.big ? BIG_DOT : DOT;
+          return (
+            <Marker
+              key={`${p.id}-${p.tone}-${p.big ? 1 : 0}`}
+              coordinate={{ latitude: p.lat, longitude: p.lng }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              centerOffset={{ x: 0, y: 0 }}
+              tracksViewChanges={false}
+              zIndex={p.big ? 900 : 100}
+              onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
+            >
+              <View style={{ width: d, height: d }}>
+                {p.big ? (
+                  <View style={[styles.bigRing, { borderColor: alpha(p.tone, 0.35) }]}>
+                    <View style={[styles.bigDot, { backgroundColor: p.tone }]} />
+                  </View>
+                ) : (
+                  <View style={[styles.whoDot, { backgroundColor: p.tone }]} />
+                )}
+              </View>
+            </Marker>
+          );
+        })}
+        {people.map((p) =>
+          p.label ? (
+            <Marker
+              key={`label-${p.id}-${p.label}-${p.big ? 1 : 0}`}
+              coordinate={{ latitude: p.lat, longitude: p.lng }}
+              // The label's box starts at the point with a clear gap the size of half the dot,
+              // so it hangs under the dot: Android by the anchor, iPhone by the offset.
+              anchor={{ x: 0.5, y: 0 }}
+              centerOffset={{ x: 0, y: labelBox(p.big) / 2 }}
+              tracksViewChanges={false}
+              zIndex={p.big ? 899 : 99}
+              onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
+            >
+              <View style={[styles.who, { height: labelBox(p.big) }]}>
+                <View style={{ height: (p.big ? BIG_DOT : DOT) / 2 + 2 }} />
                 <View style={styles.whoLabel}>
                   <Text style={styles.whoText} numberOfLines={1}>
                     {p.label}
                   </Text>
                 </View>
-              ) : null}
-            </View>
-          </Marker>
-        ))}
+              </View>
+            </Marker>
+          ) : null,
+        )}
 
         {me && me.accuracyM && me.accuracyM < 500 ? (
           <Circle
@@ -279,6 +308,28 @@ function centre(ring: [number, number][]): { latitude: number; longitude: number
 }
 
 const WHO_LABEL_H = 17;
+const DOT = 18;
+const BIG_DOT = 40;
+/** The name marker's height: a gap of half the dot, then the label. */
+const labelBox = (big?: boolean) => (big ? BIG_DOT : DOT) / 2 + 2 + WHO_LABEL_H;
+
+/** A shift's route in the fence's colours, the part after `upTo` dotted and faint. */
+function RoutePath({ points, upTo }: { points: (MapPoint & { inside: boolean | null })[]; upTo: number | null }) {
+  const cut = upTo == null ? points.length - 1 : Math.max(0, Math.min(upTo, points.length - 1));
+  const walked = runsByFence(points.slice(0, cut + 1));
+  const ahead = cut < points.length - 1 ? runsByFence(points.slice(cut)) : [];
+  const coords = (path: MapPoint[]) => path.map((p) => ({ latitude: p.lat, longitude: p.lng }));
+  return (
+    <>
+      {ahead.map((r, i) => (
+        <Polyline key={`a${i}`} coordinates={coords(r.path)} strokeColor={alpha(r.inside ? MAP_COLOR.me : MAP_COLOR.outside, 0.45)} strokeWidth={3} lineDashPattern={[3, 6]} lineCap="round" />
+      ))}
+      {walked.map((r, i) => (
+        <Polyline key={`w${i}`} coordinates={coords(r.path)} strokeColor={r.inside ? MAP_COLOR.me : MAP_COLOR.outside} strokeWidth={4} lineCap="round" lineJoin="round" />
+      ))}
+    </>
+  );
+}
 /** A site's name pin: fixed heights, so iOS can be told where its stick ends. */
 const PIN_H = 24;
 const PIN_QUIET_H = 18;
@@ -297,8 +348,8 @@ const styles = StyleSheet.create({
   who: { alignItems: "center" },
   whoDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: "#fff" },
   // A fixed height, so the spacer above the dot can match it exactly.
-  whoLabel: { marginTop: 2, height: WHO_LABEL_H, justifyContent: "center", paddingHorizontal: 6, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },
-  whoSpacer: { height: WHO_LABEL_H + 2 },
+  whoLabel: { height: WHO_LABEL_H, justifyContent: "center", paddingHorizontal: 6, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },
+
   whoText: { fontFamily: font.semibold, fontSize: 11, lineHeight: 14, color: "#111" },
   meBox: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   meHalo: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: alpha(MAP_COLOR.me, 0.2) },

@@ -13,7 +13,8 @@
     "./sos": "./src/sos.ts",
     "./realtime": "./src/realtime.ts",
     "./company": "./src/company.ts",
-    "./shifts": "./src/shifts.ts"
+    "./shifts": "./src/shifts.ts",
+    "./trail": "./src/trail.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

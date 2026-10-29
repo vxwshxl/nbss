@@ -24,6 +24,7 @@ import { SOS_KIND_LABEL, SOS_STATUS_LABEL } from "@nbss/shared/sos";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { duration, istClock, km, type TrailPoint, type TrailStats } from "@/lib/tracking";
+import type { RouteEvent, SosRow } from "@nbss/shared/trail";
 import { cn } from "@/lib/utils";
 
 /**
@@ -72,7 +73,7 @@ export function SiteFilter({
 
 // ------------------------------------------------------------------ SOS
 
-export type SosRow = { id: string; kind: string; status: string; raised_at: string; closed_at: string | null; lat: number | null; lng: number | null };
+export { type SosRow } from "@nbss/shared/trail";
 
 /**
  * The SOS this guard raised during the shift, for the timeline. Live while the shift is
@@ -110,54 +111,7 @@ const NO_SOS: SosRow[] = [];
 
 // ------------------------------------------------------------------ timeline
 
-export type RouteEvent = {
-  at: number;
-  kind: "in" | "out" | "left" | "back" | "stop" | "gap" | "now" | "sos" | "sos_end";
-  text: string;
-  lat?: number;
-  lng?: number;
-  /** The route point it belongs to, for the playback head. */
-  index: number;
-};
-
-/** The moments of a shift that matter, in order: in, stops, out of and back into the fence, quiet spells, SOS, the latest point. */
-export function routeEvents(points: TrailPoint[], stats: TrailStats | null, sos: SosRow[]): RouteEvent[] {
-  if (points.length === 0) return [];
-  const out: RouteEvent[] = [];
-  const first = points[0]!;
-  out.push({ at: first.at, kind: "in", text: "Checked in", lat: first.lat, lng: first.lng, index: 0 });
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1]!;
-    const b = points[i]!;
-    if (a.inside !== false && b.inside === false) out.push({ at: b.at, kind: "left", text: "Left the fence", lat: b.lat, lng: b.lng, index: i });
-    if (a.inside === false && b.inside !== false) out.push({ at: b.at, kind: "back", text: "Back inside the fence", lat: b.lat, lng: b.lng, index: i });
-    if (b.at - a.at > 10 * 60_000) out.push({ at: a.at, kind: "gap", text: `No signal for ${duration((b.at - a.at) / 60_000)}`, lat: a.lat, lng: a.lng, index: i - 1 });
-  }
-  (stats?.stops ?? []).forEach((s, n) => {
-    const index = points.findIndex((p) => p.at >= s.from);
-    out.push({ at: s.from, kind: "stop", text: `Stop ${n + 1} · ${duration((s.to - s.from) / 60_000)}${s.inside === false ? ", outside" : ""}`, lat: s.lat, lng: s.lng, index: Math.max(0, index) });
-  });
-  const nearest = (t: number) => {
-    const i = points.findIndex((p) => p.at >= t);
-    return i < 0 ? points.length - 1 : i;
-  };
-  for (const a of sos) {
-    const at = new Date(a.raised_at).getTime();
-    const i = nearest(at);
-    const p = points[i]!;
-    out.push({ at, kind: "sos", text: `SOS · ${SOS_KIND_LABEL[a.kind as keyof typeof SOS_KIND_LABEL] ?? "Emergency"}`, lat: a.lat ?? p.lat, lng: a.lng ?? p.lng, index: i });
-    if (a.closed_at) {
-      const end = new Date(a.closed_at).getTime();
-      const j = nearest(end);
-      out.push({ at: end, kind: "sos_end", text: `SOS ${(SOS_STATUS_LABEL[a.status as keyof typeof SOS_STATUS_LABEL] ?? "closed").toLowerCase()}`, lat: points[j]!.lat, lng: points[j]!.lng, index: j });
-    }
-  }
-  const last = points.at(-1)!;
-  if (points.length > 1) {
-    out.push({ at: last.at, kind: last.reason === "check_out" ? "out" : "now", text: last.reason === "check_out" ? "Checked out" : "Latest position", lat: last.lat, lng: last.lng, index: points.length - 1 });
-  }
-  return out.sort((x, y) => x.at - y.at);
-}
+export { routeEvents, type RouteEvent } from "@nbss/shared/trail";
 
 /** The timeline: each moment a button that takes the map (and the playback) there. */
 export function RouteTimeline({

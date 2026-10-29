@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   CalendarCheck,
   Clock3,
-  KeyRound,
   Mail,
   MapPin,
   MessageCircle,
@@ -11,18 +10,21 @@ import {
   Phone,
   Smartphone,
 } from "lucide-react-native";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY, istTime, tel, clock12 } from "@nbss/shared/company";
 import { roleLabel, type Role } from "@nbss/shared/identity";
+import { toRing } from "@nbss/shared/geo";
 import { freshness } from "@nbss/shared/location";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
+import type { MapSite } from "@/components/live-map/shared";
 import { Panel, PanelRow } from "@/components/panel";
+import { RouteCard } from "@/components/route-card";
 import { Screen } from "@/components/screen";
 import { StatusPill } from "@/components/status-pill";
 import { Text } from "@/components/text";
@@ -57,6 +59,8 @@ type Session = {
   site: string;
   /** When they were meant to be on duty: the rostered shift, else the site's hours. */
   duty: string | null;
+  /** The site's boundary, for the route map. */
+  fence: MapSite | null;
 };
 type Detail = {
   id: string;
@@ -90,11 +94,13 @@ type Detail = {
   } | null;
 };
 
+type SiteRow = { name: string; lat: number; lng: number; geofence_radius_m: number; polygon: unknown };
+
 async function load(id: string): Promise<Detail | null> {
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const [p, att, post, pos, dev] = await Promise.all([
     supabase.from("profiles").select("id, full_name, employee_code, role, trade, email, phone, avatar_url, active, joined_at, created_at, last_seen_at").eq("id", id).maybeSingle(),
-    supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, sites(name, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
+    supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, site_id, sites(name, shift_start, shift_end, lat, lng, geofence_radius_m, polygon), shifts!attendance_shift_id_fkey(starts_at, ends_at)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
     supabase.from("site_postings").select("starts, ends, days, shift_type, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
     supabase.from("guard_positions").select("lat, lng, inside_fence, distance_m, battery, charging, recorded_at, received_at, mode").eq("guard_id", id).maybeSingle(),
     supabase.from("guard_devices").select("brand, model, os_version, app_version, status, platform, gps_enabled, location_permission, battery_optimized, notifications_enabled, precise_location, autostart, permissions_at, last_seen_at").eq("profile_id", id).order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
@@ -125,7 +131,11 @@ async function load(id: string): Promise<Detail | null> {
           : hours?.shift_start && hours.shift_end
             ? `${clock12(hours.shift_start)} – ${clock12(hours.shift_end)} (site hours)`
             : null;
-        return { id: a.id, in: a.check_in_at!, out: a.check_out_at, minutes: a.worked_minutes, status: a.status, site: site(a.sites), duty };
+        const place = one(a.sites as unknown as SiteRow | SiteRow[] | null);
+        const fence: MapSite | null = place
+          ? { id: a.site_id, name: place.name, lat: place.lat, lng: place.lng, radiusM: place.geofence_radius_m, ring: toRing(place.polygon) }
+          : null;
+        return { id: a.id, in: a.check_in_at!, out: a.check_out_at, minutes: a.worked_minutes, status: a.status, site: site(a.sites), duty, fence };
       }),
     position: pos.data
       ? {
@@ -160,7 +170,7 @@ async function load(id: string): Promise<Detail | null> {
 
 /**
  * Everything about one person, as the website's person popup shows it and a little
- * more: who they are and how they sign in, where they are posted, whether they are on
+ * more: who they are, where they are posted, whether they are on
  * duty now and where, the last 30 days, every recent check-in, and their phone.
  * Current while open: a check-in, a move or a change from the website reloads it.
  */
@@ -168,11 +178,14 @@ export function PersonPage({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const now = useNow(30_000);
   const loader = useCallback(() => load(id), [id]);
-  const { data: d, refreshing, reload, refresh } = useLoader(loader);
+  const { data: d, error, refreshing, reload, refresh } = useLoader(loader);
+  // The shift whose route is shown: the one picked from Recent check-ins, else the open one, else the latest.
+  const [picked, setPicked] = useState<string | null>(null);
   useLiveTables(["attendance", "profiles", "site_postings", "guard_devices"], reload);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
   const open = d?.sessions.find((s) => !s.out) ?? null;
+  const shown = d?.sessions.find((s) => s.id === picked) ?? open ?? d?.sessions[0] ?? null;
   const worked = d?.sessions.filter((s) => s.status === "present" || s.status === "late") ?? [];
   const days30 = new Set(worked.map((s) => dayOf(s.in))).size;
   // Days, not check-ins: two late punches on one day are one late day.
@@ -196,9 +209,12 @@ export function PersonPage({ id }: { id: string }) {
       </Pressable>
 
       {!d ? (
-        <Text variant="label" tone="muted">
-          {d === null ? "This person could not be found." : "Loading…"}
-        </Text>
+        <View style={styles.missing}>
+          <Text variant="label" tone="muted">
+            {d === null ? "This person could not be found." : error ? `Could not load this person: ${error}` : "Loading…"}
+          </Text>
+          {error && d === undefined ? <Button label="Try again" variant="outline" onPress={() => void refresh()} /> : null}
+        </View>
       ) : (
         <>
           <View style={styles.hero}>
@@ -237,7 +253,7 @@ export function PersonPage({ id }: { id: string }) {
 
           <View style={styles.tiles}>
             <Tile tone="emerald" label="Employee code" value={d.code} />
-            <Tile tone="violet" label="Signs in with" value={d.phone ? `Name + ${d.phone}` : "No mobile"} />
+            <Tile tone="violet" label="Role" value={roleLabel(d.role, d.trade)} />
           </View>
 
           <Panel tone="slate" bare>
@@ -269,6 +285,17 @@ export function PersonPage({ id }: { id: string }) {
                   <Row label="Last check-in" value={d.sessions[0] ? `${shortDay(d.sessions[0].in)} · ${d.sessions[0].site}` : "None in 30 days"} first />
                 )}
               </Panel>
+
+              {shown && (
+                <RouteCard
+                  key={shown.id}
+                  attendanceId={shown.id}
+                  open={!shown.out}
+                  name={d.name.split(" ")[0] ?? d.name}
+                  site={shown.fence}
+                  title={!shown.out ? "Route so far" : `Route · ${shortDay(shown.in)} · ${shown.site}`}
+                />
+              )}
 
               <Panel tone="violet" title="Posting" bare>
                 {d.posting ? (
@@ -306,12 +333,13 @@ export function PersonPage({ id }: { id: string }) {
                 </PanelRow>
               </Panel>
 
-              <Panel tone="slate" title="Recent check-ins" bare>
+              <Panel tone="slate" title="Recent check-ins" subtitle="Tap one to see its route" bare>
                 {d.sessions.length === 0 ? (
                   <Row label="None" value="No check-in in 30 days" first />
                 ) : (
                   d.sessions.slice(0, 12).map((s, i) => (
-                    <PanelRow key={s.id} first={i === 0}>
+                    <Pressable key={s.id} accessibilityRole="button" onPress={() => setPicked(s.id)}>
+                    <PanelRow first={i === 0} style={shown?.id === s.id ? styles.picked : undefined}>
                       <View style={styles.flex}>
                         <Text variant="label" weight="semibold" numberOfLines={1}>
                           {s.site}
@@ -323,6 +351,7 @@ export function PersonPage({ id }: { id: string }) {
                       </View>
                       <StatusPill tone={!s.out ? "live" : s.status === "late" ? "stale" : s.status === "present" ? "primary" : "neutral"} label={!s.out ? "On duty" : s.status} />
                     </PanelRow>
+                    </Pressable>
                   ))
                 )}
               </Panel>
@@ -339,7 +368,6 @@ export function PersonPage({ id }: { id: string }) {
             </Panel>
           )}
 
-          {!d.phone && <Note icon={KeyRound} text="No mobile number on file, so they cannot sign in. Add one from the website." />}
         </>
       )}
     </Screen>
@@ -420,18 +448,9 @@ function Stat({ value, label, tone }: { value: number; label: string; tone?: str
   );
 }
 
-function Note({ icon: Icon, text }: { icon: typeof Phone; text: string }) {
-  return (
-    <View style={styles.note}>
-      <Icon size={16} color={color.mutedForeground} strokeWidth={2} />
-      <Text variant="caption" tone="muted" style={styles.flex}>
-        {text}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  missing: { gap: space[3], alignItems: "flex-start" },
+  picked: { backgroundColor: "#e0f2fe" },
   body: { gap: space[4], paddingBottom: 48 },
   flex: { flex: 1, minWidth: 0, gap: 2 },
   back: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.card, alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, borderColor: color.border },
@@ -447,5 +466,4 @@ const styles = StyleSheet.create({
   stat: { flex: 1, alignItems: "center" },
   strip: { flex: 1, flexDirection: "row", gap: 4 },
   mark: { flex: 1, height: 18, borderRadius: 4 },
-  note: { flexDirection: "row", gap: space[2], alignItems: "center", paddingHorizontal: space[1] },
 });
