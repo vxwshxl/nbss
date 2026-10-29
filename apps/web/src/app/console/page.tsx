@@ -70,6 +70,11 @@ function elapsed(iso: string): string {
   return hours(mins);
 }
 
+/** What a phone is saying as the page is drawn, in Live tracking's terms. */
+function signalNow(p: LivePosition | null, sos: boolean) {
+  return guardState(p, sos, Date.now());
+}
+
 export default async function ConsoleDashboard() {
   const session = await requireRoleSession("admin", "supervisor");
   const profile = session.profile;
@@ -139,7 +144,6 @@ export default async function ConsoleDashboard() {
     : { data: [] };
   const positions = new Map(((positionRows ?? []) as unknown as LivePosition[]).map((p) => [p.guard_id, p]));
   const sosBy = new Set((liveSos.data ?? []).map((a) => a.raised_by));
-  const renderedAt = Date.now();
 
   const overtimeToday = punches.reduce((sum, p) => sum + (p.overtime_minutes ?? 0), 0);
   // Guards who were late today, not late punches: a second check-in is not a second lateness.
@@ -194,7 +198,7 @@ export default async function ConsoleDashboard() {
       since: row.check_in_at ? time(row.check_in_at) : "-",
       forHowLong: row.check_in_at ? elapsed(row.check_in_at) : "-",
       late: row.status === "late",
-      signal: guardState(positions.get(row.guard_id) ?? null, sosBy.has(row.guard_id), renderedAt),
+      signal: signalNow(positions.get(row.guard_id) ?? null, sosBy.has(row.guard_id)),
     };
   });
   const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;

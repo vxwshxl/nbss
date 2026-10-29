@@ -107,7 +107,7 @@ export function LiveMap({
     for (const g of guards) {
       seen.add(g.id);
       const html =
-        `<div class="gm-guard" style="--c:${g.color}" ${g.live ? "data-live" : ""} ${selected === g.id ? "data-selected" : ""}>` +
+        `<div class="gm-guard" style="--c:${g.color}" ${g.live ? "data-live" : ""} ${selected === g.id ? "data-selected" : selected ? "data-dim" : ""}>` +
         `<b>${g.heading != null ? `<i class="gm-dir" style="--r:${Math.round(g.heading)}deg"></i>` : ""}${esc(g.initials)}</b><span>${esc(g.label)}${g.sub ? ` <small>${esc(g.sub)}</small>` : ""}</span></div>`;
       const existing = markers.current.get(g.id);
       if (existing) {
@@ -131,11 +131,11 @@ export function LiveMap({
         if (circle) {
           circle.setCenter(g);
           circle.setRadius(g.accuracy);
-          circle.setOptions({ fillColor: g.color });
+          circle.setOptions({ fillColor: g.color, fillOpacity: selected && selected !== g.id ? 0.04 : 0.1 });
         } else {
           accuracy.current.set(
             g.id,
-            new maps.Circle({ map, center: g, radius: g.accuracy, strokeOpacity: 0, fillColor: g.color, fillOpacity: 0.1, clickable: false, zIndex: 3 }),
+            new maps.Circle({ map, center: g, radius: g.accuracy, strokeOpacity: 0, fillColor: g.color, fillOpacity: selected && selected !== g.id ? 0.04 : 0.1, clickable: false, zIndex: 3 }),
           );
         }
       } else if (circle) {
@@ -168,18 +168,22 @@ export function LiveMap({
   // The selected guard's path, coloured by whether each stretch was inside the fence.
   useEffect(() => {
     if (!maps || !map || !trail || trail.length < 2) return;
-    const lines = runsByFence(trail).map(
-      (r) =>
-        new maps.Polyline({
-          map,
-          path: r.path,
-          strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside,
-          strokeOpacity: 0.9,
-          strokeWeight: 4,
-          zIndex: 4,
-          clickable: false,
-        }),
-    );
+    // A white casing under the line lifts it off the other guards' dots and the roads.
+    const lines = [
+      new maps.Polyline({ map, path: trail, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 9, zIndex: 4, clickable: false }),
+      ...runsByFence(trail).map(
+        (r) =>
+          new maps.Polyline({
+            map,
+            path: r.path,
+            strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside,
+            strokeOpacity: 1,
+            strokeWeight: 5,
+            zIndex: 5,
+            clickable: false,
+          }),
+      ),
+    ];
     return () => lines.forEach((l) => l.setMap(null));
   }, [maps, map, trail]);
 

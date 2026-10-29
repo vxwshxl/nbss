@@ -848,9 +848,36 @@
   border: 2px solid var(--c);
   animation: gm-pulse 2s ease-out infinite;
 }
+/* The guard being looked at: larger, ringed and glowing, with a dark name chip, so
+ * it cannot be mistaken for the guards around it. The rest fade while one is picked. */
 .gm-guard[data-selected] b {
-  outline: 3px solid color-mix(in srgb, var(--c) 35%, transparent);
-  outline-offset: 2px;
+  width: 42px;
+  height: 42px;
+  font-size: 14px;
+  border-width: 3px;
+  box-shadow:
+    0 0 0 3px var(--c),
+    0 0 0 9px color-mix(in srgb, var(--c) 30%, transparent),
+    0 4px 14px oklch(0 0 0 / 0.45);
+}
+.gm-guard[data-selected] span {
+  margin-top: 8px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 12px;
+}
+.gm-guard[data-selected] small {
+  color: #cbd5e1;
+}
+.gm-guard[data-selected] .gm-dir::before {
+  top: -36px;
+}
+.gm-guard[data-dim] {
+  opacity: 0.4;
+}
+.gm-guard[data-dim] span,
+.gm-guard[data-dim] b::before {
+  display: none;
 }
 /* Out of the flow, hanging under the avatar: the marker is centred on its box,
  * so the box must be the avatar alone or the avatar sits above the real point. */

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
-import { MAP_COLOR, circlePath, createHtmlMarker, type HtmlMarker } from "@/lib/google-maps";
+import { MAP_COLOR, circlePath, createHtmlMarker, esc, type HtmlMarker } from "@/lib/google-maps";
 import { runsByFence, type TrailPoint, type TrailStats } from "@/lib/tracking";
 
 export type TrailSite = { lat: number; lng: number; radiusM: number; ring: [number, number][] | null; name: string };
@@ -23,6 +23,7 @@ export function TrailMap({
   clock,
   playing = false,
   pan,
+  who,
   height = "100%",
   className,
 }: {
@@ -39,6 +40,8 @@ export function TrailMap({
   playing?: boolean;
   /** Changes when the reader picks a moment from the timeline. */
   pan?: { lat: number; lng: number; key: string } | null;
+  /** The guard, drawn as their own avatar at the head instead of a plain dot. */
+  who?: { initials: string; label: string } | null;
   height?: number | string;
   className?: string;
 }) {
@@ -135,11 +138,15 @@ export function TrailMap({
         Math.sin((a.lat * Math.PI) / 180) * Math.cos((to.lat * Math.PI) / 180) * Math.cos(((to.lng - a.lng) * Math.PI) / 180),
     ) * 180) / Math.PI;
     const moved = a !== to && (a.lat !== to.lat || a.lng !== to.lng);
-    const headHtml = headIcon(moved ? bearing : null);
+    const headHtml = headIcon(moved ? bearing : null, who);
     done.current.forEach((l) => l.setMap(null));
-    done.current = runsByFence(points.slice(0, head + 1)).map(
-      (r) => new maps.Polyline({ map, path: r.path, strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false }),
-    );
+    const played = points.slice(0, head + 1);
+    done.current = [
+      new maps.Polyline({ map, path: played, strokeColor: "#ffffff", strokeOpacity: 0.95, strokeWeight: 9, zIndex: 3, clickable: false }),
+      ...runsByFence(played).map(
+        (r) => new maps.Polyline({ map, path: r.path, strokeColor: r.inside ? MAP_COLOR.route : MAP_COLOR.outside, strokeOpacity: 1, strokeWeight: 5, zIndex: 4, clickable: false }),
+      ),
+    ];
     if (!headMarker.current) {
       headMarker.current = createHtmlMarker(maps, { position: at, html: headHtml, zIndex: 30 });
       headMarker.current.setMap(map);
@@ -148,10 +155,10 @@ export function TrailMap({
       headMarker.current.setHtml(headHtml);
     }
     if (!tail.current) {
-      tail.current = new maps.Polyline({ map, strokeColor: MAP_COLOR.route, strokeOpacity: 0.95, strokeWeight: 4, zIndex: 3, clickable: false });
+      tail.current = new maps.Polyline({ map, strokeColor: MAP_COLOR.route, strokeOpacity: 1, strokeWeight: 5, zIndex: 4, clickable: false });
     }
     tail.current.setPath([]);
-  }, [maps, map, points, head]);
+  }, [maps, map, points, head, who]);
 
   /**
    * Playing: every frame the head is placed where the guard was at that instant, between
@@ -178,14 +185,14 @@ export function TrailMap({
         if (i !== seg) {
           seg = i;
           const moved = a.lat !== b.lat || a.lng !== b.lng;
-          headMarker.current.setHtml(headIcon(moved ? bearingDeg(a, b) : null));
+          headMarker.current.setHtml(headIcon(moved ? bearingDeg(a, b) : null, who));
         }
       }
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [playing, clock, points, head]);
+  }, [playing, clock, points, head, who]);
 
   useEffect(
     () => () => {
@@ -210,7 +217,11 @@ export function TrailMap({
 }
 
 /** The playback head, with its direction arrow when the guard is moving. */
-function headIcon(bearing: number | null): string {
+function headIcon(bearing: number | null, who?: { initials: string; label: string } | null): string {
+  if (who) {
+    const dir = bearing != null ? `<i class="gm-dir" style="--r:${Math.round((bearing + 360) % 360)}deg"></i>` : "";
+    return `<div class="gm-guard" style="--c:#2563eb" data-selected><b>${dir}${esc(who.initials)}</b><span>${esc(who.label)}</span></div>`;
+  }
   return `<span class="gm-head">${bearing != null ? `<i class="gm-dir" style="--r:${Math.round((bearing + 360) % 360)}deg;--c:#2563eb"></i>` : ""}</span>`;
 }
 

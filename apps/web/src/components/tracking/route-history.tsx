@@ -26,6 +26,7 @@ import {
   type TrailPoint,
   type TrailTuple,
 } from "@/lib/tracking";
+import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
 export type RouteShift = {
@@ -96,6 +97,11 @@ export function RouteHistory({
   const [pan, setPan] = useState<{ lat: number; lng: number; key: string } | null>(null);
 
   const shift = shifts.find((s) => s.attendanceId === selected) ?? null;
+  // Memoised: the map redraws its head whenever this changes.
+  const who = useMemo(
+    () => (shift ? { initials: initials(shift.guardName), label: shift.guardName.split(" ")[0] ?? shift.guardName } : null),
+    [shift],
+  );
 
   // What each open shift's phone has said since the page was drawn, over the server's.
   const [heard, setHeard] = useState<Record<string, LivePosition>>({});
@@ -312,7 +318,7 @@ export function RouteHistory({
       <div className="order-1 flex min-h-0 flex-col gap-3 xl:order-2">
         <div className="relative h-[55vh] min-h-[380px] xl:h-auto xl:flex-1">
           {shift ? (
-            <TrailMap points={points} stats={stats} site={shift.site} head={head} clock={clockRef} playing={playing} pan={pan} className="h-full" />
+            <TrailMap points={points} stats={stats} site={shift.site} head={head} clock={clockRef} playing={playing} pan={pan} who={who} className="h-full" />
           ) : (
             <div className="grid h-full place-items-center rounded-xl border border-app-line-soft bg-muted text-sm text-muted-foreground">Pick a shift to see its route.</div>
           )}
