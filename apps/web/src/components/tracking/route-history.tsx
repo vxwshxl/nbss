@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapPinOff, Pause, Phone, Play, Radar, Search, Smartphone, TriangleAlert } from "lucide-react";
+import { Map as MapIcon, MapPinOff, Pause, Phone, Play, Radar, Search, Smartphone, TriangleAlert, X } from "lucide-react";
 
 import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty } from "@/components/tracking/route-panel";
 import { focusLiveGuard } from "@/components/tracking/live-handoff";
+import { ROUTE_HUES, RoutesOverview } from "@/components/tracking/routes-overview";
 import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -76,7 +77,9 @@ export function RouteHistory({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [selected, setSelected] = useState<string | null>(initial.attendance ?? shifts[0]?.attendanceId ?? null);
+  // Nothing is open until a shift is picked (or one is sent here, from Live tracking or
+  // the dashboard): the page starts on every route of the day, on one map.
+  const [selected, setSelected] = useState<string | null>(initial.attendance ?? null);
   const [loaded, setLoaded] = useState<{ id: string; points: TrailPoint[] } | null>(null);
   const [head, setHead] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -97,6 +100,12 @@ export function RouteHistory({
   const [pan, setPan] = useState<{ lat: number; lng: number; key: string } | null>(null);
 
   const shift = shifts.find((s) => s.attendanceId === selected) ?? null;
+  // The overview's colours follow the list's order, so a row and its path match.
+  const hueOf = (id: string) => ROUTE_HUES[Math.max(0, shifts.findIndex((s) => s.attendanceId === id)) % ROUTE_HUES.length]!;
+  const overview = useMemo(
+    () => shifts.slice(0, 80).map((s) => ({ attendanceId: s.attendanceId, guardName: s.guardName, siteId: s.siteId, site: s.site, open: !s.checkOutAt })),
+    [shifts],
+  );
   // Memoised: the map redraws its head whenever this changes.
   const who = useMemo(
     () => (shift ? { initials: initials(shift.guardName), label: shift.guardName.split(" ")[0] ?? shift.guardName } : null),
@@ -284,14 +293,18 @@ export function RouteHistory({
                 type="button"
                 onClick={() => {
                   setPlaying(false);
-                  setSelected(s.attendanceId);
+                  // The open shift clicked again: back to every route.
+                  setSelected(selected === s.attendanceId ? null : s.attendanceId);
                   // The list sits under the map on narrow screens: bring the map back into view.
                   if (window.matchMedia("(max-width: 1279px)").matches) window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className={cn("w-full px-3 py-2.5 text-left hover:bg-muted/60", selected === s.attendanceId && "bg-sky-50 ring-1 ring-sky-500/30 ring-inset dark:bg-sky-500/10")}
               >
                 <span className="flex items-center justify-between gap-2">
-                  <span className="truncate font-medium">{s.guardName}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: hueOf(s.attendanceId) }} aria-hidden />
+                    <span className="truncate font-medium">{s.guardName}</span>
+                  </span>
                   {!s.checkOutAt ? (
                     <SignalChip state={guardState(position(s), false, now)} />
                   ) : (
@@ -319,8 +332,22 @@ export function RouteHistory({
         <div className="relative h-[55vh] min-h-[380px] xl:h-auto xl:flex-1">
           {shift ? (
             <TrailMap points={points} stats={stats} site={shift.site} head={head} clock={clockRef} playing={playing} pan={pan} who={who} className="h-full" />
+          ) : overview.length > 0 ? (
+            <RoutesOverview shifts={overview} onPick={setSelected} className="h-full" />
           ) : (
-            <div className="grid h-full place-items-center rounded-xl border border-app-line-soft bg-muted text-sm text-muted-foreground">Pick a shift to see its route.</div>
+            <div className="grid h-full place-items-center rounded-xl border border-app-line-soft bg-muted text-sm text-muted-foreground">No shifts on this day.</div>
+          )}
+          {shift && (
+            <button
+              type="button"
+              onClick={() => {
+                setPlaying(false);
+                setSelected(null);
+              }}
+              className="absolute bottom-6 left-3 inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-md ring-1 ring-border hover:bg-muted"
+            >
+              <MapIcon className="size-3.5" /> All routes
+            </button>
           )}
           {loading && <div className="absolute top-3 left-3 rounded-full bg-card px-3 py-1.5 text-xs font-medium shadow">Loading the route…</div>}
           {shift && !loading && points.length <= 1 && (
@@ -391,9 +418,22 @@ export function RouteHistory({
           <>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="p-4 pb-3">
-                <button type="button" onClick={() => setProfileId(shift.guardId)} className="block max-w-full truncate text-left font-semibold hover:underline">
-                  {shift.guardName}
-                </button>
+                <div className="flex items-start gap-2">
+                  <button type="button" onClick={() => setProfileId(shift.guardId)} className="block min-w-0 flex-1 truncate text-left font-semibold hover:underline">
+                    {shift.guardName}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPlaying(false);
+                      setSelected(null);
+                    }}
+                    aria-label="Back to every route"
+                    className="grid size-7 shrink-0 place-items-center rounded-full hover:bg-muted"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   <span className="font-mono">{shift.guardCode}</span> · {shift.siteName}
                 </p>
@@ -449,7 +489,27 @@ export function RouteHistory({
             </div>
           </>
         ) : (
-          <p className="p-6 text-sm text-muted-foreground">The route&apos;s summary and timeline appear here.</p>
+          <div className="space-y-3 p-4 text-sm">
+            <p className="font-semibold">
+              {shifts.length} shift{shifts.length === 1 ? "" : "s"}
+              {initial.date ? ` on ${new Date(`${initial.date}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}` : ", last two weeks"}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-emerald-500/10 p-3">
+                <p className="text-xs text-muted-foreground">On duty</p>
+                <p className="text-lg font-semibold tabular-nums">{shifts.filter((s) => !s.checkOutAt).length}</p>
+              </div>
+              <div className="rounded-xl bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Sites</p>
+                <p className="text-lg font-semibold tabular-nums">{new Set(shifts.map((s) => s.siteId)).size}</p>
+              </div>
+            </div>
+            <p className="text-muted-foreground">
+              Every route is on the map in its own colour, matching the dot beside each name in the list. Pick a path, a guard or a row to see that
+              shift&apos;s route, timeline and playback.
+            </p>
+            {shifts.length > overview.length && <p className="text-xs text-muted-foreground">The map shows the first {overview.length}; narrow by site or guard to see the rest.</p>}
+          </div>
         )}
       </aside>
     </div>

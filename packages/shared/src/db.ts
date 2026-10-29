@@ -310,6 +310,8 @@ export type Database = {
           precise_location: boolean | null;
           autostart: string | null;
           permissions_at: string | null;
+          autostart_checked_at: string | null;
+          autostart_checked_by: string | null;
         };
         Insert: {
           id?: string;
@@ -335,6 +337,8 @@ export type Database = {
           precise_location?: boolean | null;
           autostart?: string | null;
           permissions_at?: string | null;
+          autostart_checked_at?: string | null;
+          autostart_checked_by?: string | null;
         };
         Update: {
           id?: string;
@@ -360,6 +364,8 @@ export type Database = {
           precise_location?: boolean | null;
           autostart?: string | null;
           permissions_at?: string | null;
+          autostart_checked_at?: string | null;
+          autostart_checked_by?: string | null;
         };
         Relationships: [];
       };

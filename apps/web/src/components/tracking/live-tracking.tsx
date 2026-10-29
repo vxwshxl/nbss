@@ -10,6 +10,7 @@ import {
   BatteryLow,
   BatteryWarning,
   CircleCheck,
+  CircleHelp,
   CircleMinus,
   CircleX,
   Crosshair,
@@ -36,7 +37,7 @@ import { initials } from "@/lib/ui/initials";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { toast } from "sonner";
 
-import { reviewFlaggedPunch, setDeviceStatus } from "@/app/console/devices/actions";
+import { markAutostartChecked, reviewFlaggedPunch, setDeviceStatus } from "@/app/console/devices/actions";
 import {
   STATE_CHIP,
   STATE_COLOR,
@@ -86,6 +87,8 @@ export type DutyGuard = {
     notifications: boolean | null;
     precise: boolean | null;
     autostart: string | null;
+    /** When a supervisor saw Autostart on, on the phone itself. */
+    autostartCheckedAt: string | null;
     /** When the phone last reported its permissions (or was last seen, before 0060). */
     checkedAt: string | null;
     approved: boolean;
@@ -721,7 +724,7 @@ function GuardCard({
   );
 }
 
-type Verdict = "ok" | "bad" | "unknown";
+type Verdict = "ok" | "bad" | "ask" | "unknown";
 
 /**
  * What the phone has allowed the app, each a line with a tick or a cross, so a
@@ -762,8 +765,17 @@ function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device
       },
       {
         label: "Autostart",
-        value: d.autostart == null ? older : d.autostart === "confirmed" ? "Turned on (confirmed by guard)" : d.autostart === "needed" ? "Not confirmed" : "Not needed on this phone",
-        verdict: d.autostart == null ? "unknown" : d.autostart === "needed" ? "bad" : "ok",
+        // The app cannot read this switch: "needed" means nobody has said, not that it is off.
+        value: d.autostartCheckedAt
+          ? `Checked on the phone, ${new Date(d.autostartCheckedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`
+          : d.autostart === "not_applicable"
+            ? "Not needed on this phone"
+            : d.autostart === "confirmed"
+              ? "Turned on (said by the guard)"
+              : d.autostart === "needed"
+                ? "Ask the guard"
+                : older,
+        verdict: d.autostartCheckedAt || d.autostart === "not_applicable" || d.autostart === "confirmed" ? "ok" : d.autostart === "needed" ? "ask" : "unknown",
       },
     );
   }
@@ -778,22 +790,54 @@ function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device
       </p>
       <ul className="space-y-1.5">
         {rows.map((r) => {
-          const Icon = r.verdict === "ok" ? CircleCheck : r.verdict === "bad" ? CircleX : CircleMinus;
+          const Icon = r.verdict === "ok" ? CircleCheck : r.verdict === "bad" ? CircleX : r.verdict === "ask" ? CircleHelp : CircleMinus;
           return (
             <li key={r.label} className="flex items-start gap-2">
               <Icon
                 className={cn(
                   "mt-px size-3.5 shrink-0",
-                  r.verdict === "ok" ? "text-emerald-600" : r.verdict === "bad" ? "text-rose-600" : "text-muted-foreground",
+                  r.verdict === "ok" ? "text-emerald-600" : r.verdict === "bad" ? "text-rose-600" : r.verdict === "ask" ? "text-amber-600" : "text-muted-foreground",
                 )}
               />
               <span className="w-28 shrink-0 text-muted-foreground">{r.label}</span>
-              <span className={cn("min-w-0 flex-1", r.verdict === "bad" && "font-semibold text-rose-700 dark:text-rose-300", r.verdict === "unknown" && "text-muted-foreground")}>{r.value}</span>
+              <span className={cn("min-w-0 flex-1", r.verdict === "bad" && "font-semibold text-rose-700 dark:text-rose-300", r.verdict === "ask" && "font-medium text-amber-700 dark:text-amber-300", r.verdict === "unknown" && "text-muted-foreground")}>{r.value}</span>
             </li>
           );
         })}
       </ul>
       {d.checkedAt && <p className="mt-2 text-muted-foreground">Reported by the phone {ago(new Date(d.checkedAt).getTime(), now)}.</p>}
+      {android && d.autostart === "needed" && !d.autostartCheckedAt && <AutostartCheck deviceId={d.id} />}
+    </div>
+  );
+}
+
+/**
+ * Android will not tell the app whether Autostart is on, so a supervisor who has looked
+ * at the phone says so here, once. Kept on the server, so it holds whatever the app reports.
+ */
+function AutostartCheck({ deviceId }: { deviceId: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const mark = async () => {
+    setBusy(true);
+    const r = await markAutostartChecked(deviceId);
+    setBusy(false);
+    if (!r.ok) return void toast.error(r.error);
+    toast.success("Autostart marked as checked on the phone.");
+    router.refresh();
+  };
+  return (
+    <div className="mt-2.5 rounded-xl bg-amber-500/10 p-2.5 text-amber-900 dark:text-amber-100">
+      <p>The app cannot see the Autostart switch. Open the phone&apos;s app settings, check it is on, then mark it here.</p>
+      <button
+        type="button"
+        onClick={() => void mark()}
+        disabled={busy}
+        className="press mt-2 inline-flex h-8 items-center gap-1.5 rounded-full bg-amber-500 px-3 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
+      >
+        <CircleCheck className="size-3.5" />
+        {busy ? "Saving…" : "Checked on the phone"}
+      </button>
     </div>
   );
 }
