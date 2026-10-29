@@ -36,6 +36,13 @@ export function ConsoleNav({
   // arrived — the click is answered in the same frame, and the skeleton below
   // fills in behind it. Cleared the moment the path actually changes.
   const [pending, setPending] = useState<{ href: string; from: string } | null>(null);
+  // Really cleared: comparing paths alone revived an old click when a button elsewhere
+  // (Track live) led back to the page that click had left from.
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setPending(null);
+  }
   const target = pending && pending.from === pathname ? pending.href : null;
 
   const inSite = siteFromPath(pathname);
