@@ -2,6 +2,7 @@ import { ArrowUp, ArrowUpRight, CalendarPlus, Mail, MapPin, Phone } from "lucide
 import Link from "next/link";
 
 import { GateScene } from "@/components/auth/gate-scene";
+import { VisitorCount } from "@/components/site/visitor-count";
 import { BrandLockup } from "@/components/brand";
 import { BOOK_HREF, site, tel } from "@/content/site";
 import { serviceLinks, WHATSAPP_URL } from "@/content/site-nav";
@@ -163,8 +164,15 @@ export function SiteFooter() {
               >
                 Get directions <ArrowUpRight className="size-3.5" aria-hidden />
               </a>
+              {/* Phones and tablets: right below Get directions. */}
+              <VisitorCount className="mt-3 w-fit lg:hidden" />
             </address>
           </div>
+        </div>
+
+        {/* Desktop: centred on its own line under the directory. */}
+        <div className="hidden justify-center pb-12 lg:flex">
+          <VisitorCount />
         </div>
       </div>
 

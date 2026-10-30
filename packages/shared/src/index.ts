@@ -10,5 +10,7 @@ export * from "./identity";
 export * from "./geo";
 export * from "./location";
 export * from "./sos";
+// Both geo and location name a type Fix; the barrel takes geo's (deep imports pick their own).
+export type { Fix } from "./geo";
 export * from "./realtime";
 export type { Database, Enums, Json, Row, View } from "./db";

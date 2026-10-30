@@ -549,6 +549,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      page_visits: {
+        Row: {
+          page_name: string;
+          visit_date: string;
+          user_count: number;
+          bot_count: number;
+          last_updated: string;
+        };
+        Insert: {
+          page_name: string;
+          visit_date?: string;
+          user_count?: number;
+          bot_count?: number;
+          last_updated?: string;
+        };
+        Update: {
+          page_name?: string;
+          visit_date?: string;
+          user_count?: number;
+          bot_count?: number;
+          last_updated?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -912,6 +936,21 @@ export type Database = {
           reminded_at?: string | null;
           start_nudged_at?: string | null;
           checkout_reminded_at?: string | null;
+        };
+        Relationships: [];
+      };
+      site_counters: {
+        Row: {
+          key: string;
+          value: number;
+        };
+        Insert: {
+          key: string;
+          value?: number;
+        };
+        Update: {
+          key?: string;
+          value?: number;
         };
         Relationships: [];
       };
@@ -1893,6 +1932,14 @@ export type Database = {
       touch_presence: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      track_visit: {
+        Args: {
+          p_page: string;
+          p_is_bot: boolean;
+          p_new_visitor?: boolean;
+        };
+        Returns: number;
       };
       tracking_mode_for: {
         Args: {

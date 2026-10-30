@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { PageTracker } from "@/components/page-tracker";
 import { SuppressExtensionWarnings } from "@/components/suppress-extension-warnings";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -128,6 +129,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           subtree content. */}
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <SuppressExtensionWarnings />
+        <PageTracker />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:rounded-lg focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-background"

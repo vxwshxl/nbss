@@ -99,7 +99,9 @@ export function SiteJourney() {
   );
 
   return (
-    <section ref={root} aria-labelledby="journey-title" className="relative overflow-hidden bg-subtle text-foreground">
+    // The pinned section fills the tallest screen (lvh) so no white shows below it when a phone's
+    // toolbars hide; the stages keep laying out in the smaller height (svh) so nothing sits under them.
+    <section ref={root} aria-labelledby="journey-title" className="relative h-lvh overflow-hidden bg-subtle text-foreground motion-reduce:h-auto">
       <div className="blueprint pointer-events-none absolute inset-0" aria-hidden />
       <div className="relative flex h-svh flex-col motion-reduce:h-auto">
         {/* Heading + measuring tape */}
@@ -108,9 +110,9 @@ export function SiteJourney() {
             <h2 id="journey-title" className="display-section text-[clamp(2rem,4.6vw,4rem)] leading-[0.95]">
               How a deployment <span className="text-secondary-fg">comes together.</span>
             </h2>
-            <p className="max-w-sm text-[14px] text-secondary-fg sm:text-[15px]">From the first site visit to a guard at your gate. Keep scrolling.</p>
+            <p className="max-w-sm text-[14px] text-secondary-fg sm:text-[15px] [@media(max-height:600px)]:hidden">From the first site visit to a guard at your gate. Keep scrolling.</p>
           </div>
-          <div aria-hidden className="relative mt-6 h-7 overflow-hidden rounded-[3px] bg-muted">
+          <div aria-hidden className="relative mt-4 h-7 overflow-hidden rounded-[3px] bg-muted sm:mt-6">
             <div data-tape className="absolute inset-y-0 left-0 w-full origin-left bg-gold" />
             <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgb(6_17_13/0.45)_0_1px,transparent_1px_12px),repeating-linear-gradient(90deg,rgb(6_17_13/0.6)_0_2px,transparent_2px_60px)] [mask-image:linear-gradient(to_bottom,black_55%,transparent_55%)]" />
           </div>
@@ -118,18 +120,19 @@ export function SiteJourney() {
 
         {/* Stages */}
         <div className="relative flex-1 overflow-visible">
-          <ol data-track className="flex h-full w-max items-center gap-6 px-4 py-8 will-change-transform sm:gap-10 sm:px-8 motion-reduce:w-full motion-reduce:flex-col motion-reduce:items-stretch">
+          <ol data-track className="flex h-full w-max items-center gap-6 px-4 py-4 will-change-transform sm:py-8 sm:gap-10 sm:px-8 motion-reduce:w-full motion-reduce:flex-col motion-reduce:items-stretch">
             {stages.map((s) => (
               <li key={s.n} data-stage className="relative grid h-full max-h-[560px] w-[86vw] shrink-0 grid-rows-[1fr_auto] overflow-hidden rounded-[28px] bg-elevated shadow-e1 ring-1 ring-border sm:w-[min(78vw,980px)] md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1">
-                <div className="relative min-h-[180px] overflow-hidden">
+                <div className="relative min-h-[110px] overflow-hidden sm:min-h-[180px] [@media(max-height:600px)]:min-h-[72px]">
                   <div data-photo className="absolute inset-y-0 -right-[14%] -left-[14%]">
                     <Image src={s.img} alt={s.alt} fill sizes="(min-width: 768px) 520px, 86vw" className="object-cover" />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-ink/20" />
                   <span className="display-hero absolute bottom-3 left-4 text-[clamp(4rem,10vw,8rem)] leading-none text-ink-fg/90 [text-shadow:0_4px_30px_rgb(0_0_0/0.4)]">{s.n}</span>
                 </div>
-                <div className="flex flex-col justify-between gap-4 p-5 sm:p-8">
-                  <svg viewBox="0 0 420 250" className="h-auto w-full max-w-[380px]" aria-hidden>
+                <div className="flex flex-col justify-between gap-3 p-5 sm:gap-4 sm:p-8">
+                  {/* On phones the drawing is capped by the screen's height so the whole card, text included, fits. */}
+                  <svg viewBox="0 0 420 250" className="h-[clamp(48px,8svh,150px)] w-auto max-w-full self-start sm:h-auto sm:w-full sm:max-w-[380px]" aria-hidden>
                     {s.art.map((d, i) => (
                       <path key={i} data-line d={d} fill="none" stroke={i === 0 ? "var(--ds-gold)" : "var(--ds-ink)"} strokeOpacity={i === 0 ? 1 : 0.55} strokeWidth={i === 0 ? 3 : 2} strokeLinecap="round" strokeLinejoin="round" />
                     ))}
@@ -137,7 +140,7 @@ export function SiteJourney() {
                   <div>
                     <p data-rise className="eyebrow">Stage {s.n}</p>
                     <h3 data-rise className="display-section mt-2 text-[clamp(1.5rem,2.6vw,2.4rem)]">{s.title}</h3>
-                    <p data-rise className="mt-3 max-w-md text-[15px] leading-relaxed text-secondary-fg">{s.text}</p>
+                    <p data-rise className="mt-2 max-w-md text-[14px] leading-normal text-secondary-fg sm:mt-3 sm:text-[15px] sm:leading-relaxed">{s.text}</p>
                   </div>
                 </div>
               </li>

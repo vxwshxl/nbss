@@ -75,7 +75,9 @@ export function Hero() {
 
   return (
     <section ref={root} data-hero aria-label="Introduction" className="relative h-[240svh] motion-reduce:h-svh">
-      <div className="sticky top-0 h-svh overflow-hidden bg-muted text-ink">
+      {/* lvh, not svh: when a phone's toolbars slide away on scroll the screen grows, and the hero
+          must still reach the bottom (svh left a white strip there until scrolling back up). */}
+      <div className="sticky top-0 h-lvh overflow-hidden bg-muted text-ink">
         {/* The control room: a map grid, range rings and a radar sweep, all pale. */}
         <div data-sky aria-hidden className="absolute inset-0 will-change-transform">
           <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_35%,#f2fbf7,#e3efe9_70%)]" />

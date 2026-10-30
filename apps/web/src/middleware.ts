@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+
+import { isBot, pageName, trackVisit } from "@/lib/visits";
 
 /**
  * The gate in front of the console.
@@ -19,6 +21,7 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 
 const LOGIN_PATH = "/login";
+const GATED = /^\/(?:console(?:\/|$)|login$|register$)/;
 
 /** A year — the same as SESSION_MAX_AGE in lib/supabase/env.ts. */
 const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
@@ -36,8 +39,16 @@ function origin(request: NextRequest): string {
   return `${proto}://${host}`;
 }
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const { pathname, search } = request.nextUrl;
+
+  // Bots rarely run scripts, so their page views are counted here (browsers count from the
+  // page, components/page-tracker.tsx). In the background: the response never waits on it.
+  if (request.method === "GET" && !request.headers.has("rsc") && isBot(request.headers.get("user-agent"))) {
+    event.waitUntil(trackVisit(pageName(pathname), true));
+  }
+  // Every page passes through for that count; only the console and sign-in need the session.
+  if (!GATED.test(pathname)) return NextResponse.next();
 
   // Carries any cookies Supabase rotates during the refresh below.
   let response = NextResponse.next({ request });
@@ -95,5 +106,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/console/:path*", "/login", "/register"],
+  // Every page (for the bot count above), never API routes, Next's own files or static files.
+  matcher: ["/((?!api|_next/static|_next/image|og|android|favicon|.*\\.[a-z0-9]+$).*)"],
 };

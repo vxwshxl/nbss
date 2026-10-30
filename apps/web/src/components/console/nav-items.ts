@@ -21,6 +21,7 @@ import {
   Siren,
   Smartphone,
   Download,
+  Eye,
   Sparkles,
   Timer,
   UserRound,
@@ -148,6 +149,7 @@ export const groups: NavGroup[] = [
     items: [
       { href: "/console/software-fee", label: "Software fee", icon: ReceiptIndianRupee, roles: ["admin"] },
       { href: "/console/maps-usage", label: "Maps usage", icon: Gauge, roles: ["admin"] },
+      { href: "/console/impressions", label: "Impressions", icon: Eye, roles: ["admin"] },
     ],
   },
   {
