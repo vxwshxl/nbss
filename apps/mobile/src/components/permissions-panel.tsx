@@ -2,10 +2,11 @@ import * as Battery from "expo-battery";
 import * as Location from "expo-location";
 import { BatteryCharging, Bell, ChevronRight, LocateFixed, RefreshCw, ShieldCheck, type LucideIcon } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Notifications } from "@/lib/push";
-import { autostartHint, brandNeedsAutostart, confirmAutostart, openAppSettings, openBatterySettings } from "@/lib/readiness";
+import { registerHandset } from "@/lib/device";
+import { autostartConfirmed, autostartHint, brandNeedsAutostart, confirmAutostart, openAppSettings, openBatterySettings, unconfirmAutostart } from "@/lib/readiness";
 import { CAN_TRACK_IN_BACKGROUND, IS_WEB } from "@/lib/runtime";
 import { TONES } from "@/theme/tones";
 import { color, radius, space } from "@/theme/tokens";
@@ -17,6 +18,20 @@ type State = "ok" | "partial" | "missing" | "na";
 type Perm = { key: string; icon: LucideIcon; title: string; detail: string; state: State; label: string; fix?: () => Promise<void> };
 
 const settings = async () => void (await Linking.openSettings());
+
+/** Set when the guard went to Settings for Autostart: on their return they are asked whether it is on now. */
+let askAutostartOnReturn = false;
+
+/** Ask, keep the answer on the phone, and tell the console straight away. */
+function askAutostart(onDone: () => void) {
+  Alert.alert("Is Autostart on now?", "Android does not let the app check this switch, so the app asks you.", [
+    { text: "Not yet", style: "cancel" },
+    {
+      text: "Yes, it is on",
+      onPress: () => void confirmAutostart().then(() => registerHandset()).finally(onDone),
+    },
+  ]);
+}
 
 /** What each permission is for, what the phone says now, and the one thing that fixes it. */
 async function read(location: boolean): Promise<Perm[]> {
@@ -110,16 +125,28 @@ async function read(location: boolean): Promise<Perm[]> {
   }
 
   if (location && brandNeedsAutostart()) {
+    const on = await autostartConfirmed();
     out.push({
       key: "autostart",
       icon: RefreshCw,
       title: "Autostart",
-      detail: autostartHint(),
-      state: "partial",
-      label: "Check",
+      detail: on
+        ? "On. The phone can restart the app by itself, so tracking keeps going after a restart."
+        : `Lets the phone restart the app by itself, so tracking keeps going. ${autostartHint()}`,
+      state: on ? "ok" : "missing",
+      label: on ? "On" : "Turn on",
       fix: async () => {
+        if (on) {
+          await new Promise<void>((done) =>
+            Alert.alert("Autostart", "You said Autostart is on. Has it been turned off since?", [
+              { text: "It is still on", style: "cancel", onPress: () => done() },
+              { text: "It is off", style: "destructive", onPress: () => void unconfirmAutostart().then(() => registerHandset()).finally(done) },
+            ]),
+          );
+          return;
+        }
+        askAutostartOnReturn = true;
         await openAppSettings();
-        await confirmAutostart();
       },
     });
   }
@@ -154,7 +181,14 @@ export function PermissionsPanel({ location = true, onlyIfMissing = false }: { l
     if (IS_WEB) return;
     let live = true;
     void read(location).then((p) => live && setPerms(p));
-    const sub = AppState.addEventListener("change", (s) => s === "active" && refresh());
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s !== "active") return;
+      refresh();
+      if (askAutostartOnReturn) {
+        askAutostartOnReturn = false;
+        askAutostart(refresh);
+      }
+    });
     return () => {
       live = false;
       sub.remove();

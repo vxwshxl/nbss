@@ -89,6 +89,16 @@ export async function confirmAutostart(): Promise<void> {
   await AsyncStorage.setItem(AUTOSTART_KEY, new Date().toISOString()).catch(() => undefined);
 }
 
+/** The guard says Autostart is off after all (a reset, a new phone setting). */
+export async function unconfirmAutostart(): Promise<void> {
+  await AsyncStorage.removeItem(AUTOSTART_KEY).catch(() => undefined);
+}
+
+/** Whether the guard has said Autostart is on, on this phone. */
+export async function autostartConfirmed(): Promise<boolean> {
+  return !!(await AsyncStorage.getItem(AUTOSTART_KEY).catch(() => null));
+}
+
 /** Where Autostart lives, in the guard's words, for this phone's brand. */
 export function autostartHint(): string {
   const b = `${Device.brand ?? ""} ${Device.manufacturer ?? ""}`.toLowerCase();

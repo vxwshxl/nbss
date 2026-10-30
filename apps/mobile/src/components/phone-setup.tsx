@@ -89,7 +89,7 @@ export function PhoneSetup({ onDuty }: { onDuty: boolean }) {
       title: "Autostart ON",
       hint: autostartHint(),
       fixLabel: "Open settings",
-      fix: () => void openAppSettings().then(() => confirmAutostart()),
+      fix: () => void openAppSettings(),
     });
   }
 
@@ -125,7 +125,7 @@ export function PhoneSetup({ onDuty }: { onDuty: boolean }) {
         </View>
       ))}
       {state.autostart === "needed" && (
-        <Pressable onPress={() => void confirmAutostart().then(refresh)}>
+        <Pressable onPress={() => void confirmAutostart().then(() => registerHandset()).then(refresh)}>
           <Text variant="caption" weight="semibold" tone="primary">
             I have turned Autostart on
           </Text>
