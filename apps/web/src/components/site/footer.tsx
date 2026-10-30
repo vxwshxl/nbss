@@ -160,12 +160,12 @@ export function SiteFooter() {
                 href={site.address.mapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-flex w-fit items-center gap-1.5 text-[14px] font-medium text-gold-soft hover:underline"
+                className="mt-1 inline-flex w-fit items-center gap-1.5 justify-self-center text-[14px] font-medium text-gold-soft hover:underline lg:justify-self-start"
               >
                 Get directions <ArrowUpRight className="size-3.5" aria-hidden />
               </a>
-              {/* Phones and tablets: right below Get directions. */}
-              <VisitorCount className="mt-3 w-fit lg:hidden" />
+              {/* Phones and tablets: right below Get directions, both centred. */}
+              <VisitorCount className="mt-3 w-fit justify-self-center lg:hidden" />
             </address>
           </div>
         </div>
