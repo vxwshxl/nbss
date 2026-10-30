@@ -6,7 +6,7 @@ import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, View } from 
 
 import { Notifications } from "@/lib/push";
 import { registerHandset } from "@/lib/device";
-import { autostartConfirmed, autostartHint, brandNeedsAutostart, confirmAutostart, openAppSettings, openBatterySettings, unconfirmAutostart } from "@/lib/readiness";
+import { autostartHint, autostartReadable, autostartState, brandNeedsAutostart, confirmAutostart, openAutostartSettings, openBatterySettings, unconfirmAutostart } from "@/lib/readiness";
 import { CAN_TRACK_IN_BACKGROUND, IS_WEB } from "@/lib/runtime";
 import { TONES } from "@/theme/tones";
 import { color, radius, space } from "@/theme/tokens";
@@ -19,12 +19,16 @@ type Perm = { key: string; icon: LucideIcon; title: string; detail: string; stat
 
 const settings = async () => void (await Linking.openSettings());
 
-/** Set when the guard went to Settings for Autostart: on their return they are asked whether it is on now. */
-let askAutostartOnReturn = false;
+/** Set when the guard went to the Autostart screen: on their return it is read again, or asked where the phone cannot tell. */
+let autostartOnReturn = false;
 
-/** Ask, keep the answer on the phone, and tell the console straight away. */
-function askAutostart(onDone: () => void) {
-  Alert.alert("Is Autostart on now?", "Android does not let the app check this switch, so the app asks you.", [
+/** Read Autostart again after a visit to its screen; ask only where the phone cannot tell, and tell the console. */
+async function afterAutostartVisit(onDone: () => void) {
+  if (autostartReadable() || (await autostartState()) === "on") {
+    await registerHandset();
+    return onDone();
+  }
+  Alert.alert("Is Autostart on now?", "This phone does not show the switch to apps, so the app asks you. Its next restart checks it.", [
     { text: "Not yet", style: "cancel" },
     {
       text: "Yes, it is on",
@@ -125,29 +129,37 @@ async function read(location: boolean): Promise<Perm[]> {
   }
 
   if (location && brandNeedsAutostart()) {
-    const on = await autostartConfirmed();
+    const state = await autostartState();
+    const readable = autostartReadable();
     out.push({
       key: "autostart",
       icon: RefreshCw,
       title: "Autostart",
-      detail: on
-        ? "On. The phone can restart the app by itself, so tracking keeps going after a restart."
-        : `Lets the phone restart the app by itself, so tracking keeps going. ${autostartHint()}`,
-      state: on ? "ok" : "missing",
-      label: on ? "On" : "Turn on",
-      fix: async () => {
-        if (on) {
-          await new Promise<void>((done) =>
-            Alert.alert("Autostart", "You said Autostart is on. Has it been turned off since?", [
-              { text: "It is still on", style: "cancel", onPress: () => done() },
-              { text: "It is off", style: "destructive", onPress: () => void unconfirmAutostart().then(() => registerHandset()).finally(done) },
-            ]),
-          );
-          return;
-        }
-        askAutostartOnReturn = true;
-        await openAppSettings();
-      },
+      detail:
+        state === "on"
+          ? "On. The phone can restart the app by itself, so tracking keeps going after a restart."
+          : state === "off" && !readable
+            ? `The app did not start by itself when the phone last restarted. Tap and turn Autostart on. ${autostartHint()}`
+            : `Lets the phone restart the app by itself, so tracking keeps going. Tap and turn it on. ${autostartHint()}`,
+      state: state === "on" ? "ok" : "missing",
+      label: state === "on" ? "On" : "Turn on",
+      // A switch the app reads needs no taking back; one the guard vouched for can be.
+      fix:
+        state === "on" && readable
+          ? undefined
+          : state === "on"
+            ? async () => {
+                await new Promise<void>((done) =>
+                  Alert.alert("Autostart", "You said Autostart is on. Has it been turned off since?", [
+                    { text: "It is still on", style: "cancel", onPress: () => done() },
+                    { text: "It is off", style: "destructive", onPress: () => void unconfirmAutostart().then(() => registerHandset()).finally(done) },
+                  ]),
+                );
+              }
+            : async () => {
+                autostartOnReturn = true;
+                await openAutostartSettings();
+              },
     });
   }
   return out;
@@ -184,9 +196,9 @@ export function PermissionsPanel({ location = true, onlyIfMissing = false }: { l
     const sub = AppState.addEventListener("change", (s) => {
       if (s !== "active") return;
       refresh();
-      if (askAutostartOnReturn) {
-        askAutostartOnReturn = false;
-        askAutostart(refresh);
+      if (autostartOnReturn) {
+        autostartOnReturn = false;
+        void afterAutostartVisit(refresh);
       }
     });
     return () => {

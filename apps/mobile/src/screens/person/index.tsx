@@ -90,7 +90,6 @@ type Detail = {
     notifications: boolean | null;
     precise: boolean | null;
     autostart: string | null;
-    autostartChecked: string | null;
     seen: string;
   } | null;
 };
@@ -104,7 +103,7 @@ async function load(id: string): Promise<Detail | null> {
     supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, site_id, sites(name, shift_start, shift_end, lat, lng, geofence_radius_m, polygon), shifts!attendance_shift_id_fkey(starts_at, ends_at)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
     supabase.from("site_postings").select("starts, ends, days, shift_type, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
     supabase.from("guard_positions").select("lat, lng, inside_fence, distance_m, battery, charging, recorded_at, received_at, mode").eq("guard_id", id).maybeSingle(),
-    supabase.from("guard_devices").select("brand, model, os_version, app_version, status, platform, gps_enabled, location_permission, battery_optimized, notifications_enabled, precise_location, autostart, autostart_checked_at, permissions_at, last_seen_at").eq("profile_id", id).order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("guard_devices").select("brand, model, os_version, app_version, status, platform, gps_enabled, location_permission, battery_optimized, notifications_enabled, precise_location, autostart, permissions_at, last_seen_at").eq("profile_id", id).order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const r = p.data;
   if (!r) return null;
@@ -163,7 +162,6 @@ async function load(id: string): Promise<Detail | null> {
           notifications: dev.data.notifications_enabled,
           precise: dev.data.precise_location,
           autostart: dev.data.autostart,
-          autostartChecked: dev.data.autostart_checked_at,
           seen: dev.data.permissions_at ?? dev.data.last_seen_at,
         }
       : null,
@@ -407,17 +405,8 @@ function permissionRows(d: NonNullable<Detail["device"]>): { label: string; valu
       },
       {
         label: "Autostart",
-        // The app cannot read this switch: "needed" means nobody has said, not that it is off.
-        value: d.autostartChecked
-          ? "Checked on the phone"
-          : d.autostart === "confirmed"
-            ? "On (said by the guard)"
-            : d.autostart === "needed"
-              ? "Ask the guard"
-              : d.autostart == null
-                ? older
-                : "Not needed",
-        ok: d.autostartChecked || d.autostart === "confirmed" || d.autostart === "not_applicable" ? true : null,
+        value: d.autostart === "confirmed" ? "On" : d.autostart === "needed" ? "Not on yet" : d.autostart == null ? older : "Not needed",
+        ok: d.autostart === "confirmed" || d.autostart === "not_applicable" ? true : d.autostart === "needed" ? false : null,
       },
     );
   }

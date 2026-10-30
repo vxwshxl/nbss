@@ -5,6 +5,7 @@ import * as IntentLauncher from "expo-intent-launcher";
 import * as Location from "expo-location";
 import { Linking, Platform } from "react-native";
 
+import NbssAutostart from "../../modules/nbss-autostart";
 import { Notifications } from "./push";
 import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
 
@@ -20,6 +21,7 @@ import { CAN_TRACK_IN_BACKGROUND } from "./runtime";
 
 const PACKAGE = "com.nbss.okhrang";
 const AUTOSTART_KEY = "nbss.autostartConfirmed";
+const FIRST_SEEN_KEY = "nbss.autostartFirstSeen";
 
 const AUTOSTART_BRANDS = ["xiaomi", "redmi", "poco", "vivo", "iqoo", "oppo", "realme", "oneplus", "huawei", "honor", "asus", "tecno", "infinix", "itel", "lenovo", "letv", "meizu"];
 
@@ -46,10 +48,10 @@ export async function checkReadiness(): Promise<Readiness | null> {
     Location.getBackgroundPermissionsAsync().catch(() => null),
     Platform.OS === "android" ? Battery.isBatteryOptimizationEnabledAsync().catch(() => null) : Promise.resolve(false),
     Notifications ? Notifications.getPermissionsAsync().then((p) => p.granted).catch(() => null) : Promise.resolve(null),
-    AsyncStorage.getItem(AUTOSTART_KEY).catch(() => null),
+    autostartState(),
   ]);
   const location = !services ? "off" : bg?.granted ? "always" : fg?.granted ? "foreground" : "denied";
-  const autostart = !brandNeedsAutostart() ? "not_applicable" : ack ? "confirmed" : "needed";
+  const autostart = !brandNeedsAutostart() ? "not_applicable" : ack === "on" ? "confirmed" : "needed";
   return {
     location,
     batteryOptimized: optimized,
@@ -94,9 +96,45 @@ export async function unconfirmAutostart(): Promise<void> {
   await AsyncStorage.removeItem(AUTOSTART_KEY).catch(() => undefined);
 }
 
-/** Whether the guard has said Autostart is on, on this phone. */
-export async function autostartConfirmed(): Promise<boolean> {
-  return !!(await AsyncStorage.getItem(AUTOSTART_KEY).catch(() => null));
+/** Whether the phone itself can show the Autostart switch to the app (Xiaomi, Redmi, POCO). */
+export function autostartReadable(): boolean {
+  return !!NbssAutostart && NbssAutostart.miuiAutostart() !== "unknown";
+}
+
+/** Opens this brand's own Autostart screen, or the app's settings where it has none. */
+export async function openAutostartSettings(): Promise<void> {
+  if (NbssAutostart?.openAutostartSettings()) return;
+  if (!NbssAutostart) await openAppSettings();
+}
+
+/**
+ * Is Autostart on? Read rather than asked wherever the phone allows it:
+ *   1. Xiaomi, Redmi and POCO show the switch itself.
+ *   2. Every brand shows it in effect: Android tells an app the phone has started only
+ *      when the app may start by itself, so an app that heard the last restart is on,
+ *      and one that was installed before the last restart and did not hear it is off.
+ *   3. Until the phone has restarted once, the guard's own word, given after they
+ *      opened the screen; the next restart then confirms it or takes it back.
+ * "unknown" when there is nothing to go on yet.
+ */
+export async function autostartState(): Promise<"on" | "off" | "unknown"> {
+  if (!brandNeedsAutostart()) return "unknown";
+  // When the guard said it is on (epoch ms), or 0.
+  const said = Date.parse((await AsyncStorage.getItem(AUTOSTART_KEY).catch(() => null)) ?? "") || 0;
+  if (NbssAutostart) {
+    const miui = NbssAutostart.miuiAutostart();
+    if (miui !== "unknown") return miui;
+    const { bootAt, seenAt } = NbssAutostart.bootState();
+    if (seenAt && seenAt >= bootAt - 60_000) return "on";
+    if (said > bootAt) return "on";
+    let first = Number(await AsyncStorage.getItem(FIRST_SEEN_KEY).catch(() => null)) || 0;
+    if (!first) {
+      first = Date.now();
+      await AsyncStorage.setItem(FIRST_SEEN_KEY, String(first)).catch(() => undefined);
+    }
+    if (first < bootAt) return "off";
+  }
+  return said ? "on" : "unknown";
 }
 
 /** Where Autostart lives, in the guard's words, for this phone's brand. */

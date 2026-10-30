@@ -99,39 +99,3 @@ export async function reviewFlaggedPunch(attendanceId: string, accept: boolean):
   done();
   return { ok: true };
 }
-
-/**
- * A supervisor has looked at the phone and seen Autostart switched on. Android gives
- * the app no way to read that switch, so this is the only real confirmation there is.
- * `checked = false` takes the mark back (pressed by mistake, or the phone was reset).
- */
-export async function markAutostartChecked(id: string, checked = true): Promise<DeviceResult> {
-  let session;
-  try {
-    session = await staff();
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
-  const supabase = await supabaseServer();
-  const { data, error } = await supabase
-    .from("guard_devices")
-    .update(
-      checked
-        ? { autostart_checked_at: new Date().toISOString(), autostart_checked_by: session.realProfile.id }
-        : { autostart_checked_at: null, autostart_checked_by: null },
-    )
-    .eq("id", id)
-    .select("profile_id, brand, model")
-    .maybeSingle();
-  if (error) return { ok: false, error: error.message };
-  if (!data) return { ok: false, error: "That phone is no longer on the list." };
-  await audit({
-    actor: session.realProfile,
-    action: checked ? "device_autostart_checked" : "device_autostart_unchecked",
-    entity: "guard_devices",
-    entityId: id,
-    detail: { profile_id: data.profile_id, model: [data.brand, data.model].filter(Boolean).join(" ") },
-  });
-  done();
-  return { ok: true };
-}

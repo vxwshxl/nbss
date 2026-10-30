@@ -9,9 +9,10 @@ import { openSettings, requestTracking } from "@/lib/location";
 import { registerForPush } from "@/lib/push";
 import {
   autostartHint,
+  autostartReadable,
   checkReadiness,
   confirmAutostart,
-  openAppSettings,
+  openAutostartSettings,
   openBatterySettings,
   type Readiness,
 } from "@/lib/readiness";
@@ -89,7 +90,7 @@ export function PhoneSetup({ onDuty }: { onDuty: boolean }) {
       title: "Autostart ON",
       hint: autostartHint(),
       fixLabel: "Open settings",
-      fix: () => void openAppSettings(),
+      fix: () => void openAutostartSettings(),
     });
   }
 
@@ -124,7 +125,7 @@ export function PhoneSetup({ onDuty }: { onDuty: boolean }) {
           )}
         </View>
       ))}
-      {state.autostart === "needed" && (
+      {state.autostart === "needed" && !autostartReadable() && (
         <Pressable onPress={() => void confirmAutostart().then(() => registerHandset()).then(refresh)}>
           <Text variant="caption" weight="semibold" tone="primary">
             I have turned Autostart on

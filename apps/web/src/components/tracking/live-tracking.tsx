@@ -37,7 +37,7 @@ import { initials } from "@/lib/ui/initials";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { toast } from "sonner";
 
-import { markAutostartChecked, reviewFlaggedPunch, setDeviceStatus } from "@/app/console/devices/actions";
+import { reviewFlaggedPunch, setDeviceStatus } from "@/app/console/devices/actions";
 import {
   STATE_CHIP,
   STATE_COLOR,
@@ -89,7 +89,6 @@ export type DutyGuard = {
     precise: boolean | null;
     autostart: string | null;
     /** When a supervisor saw Autostart on, on the phone itself. */
-    autostartCheckedAt: string | null;
     /** When the phone last reported its permissions (or was last seen, before 0060). */
     checkedAt: string | null;
     approved: boolean;
@@ -766,17 +765,17 @@ function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device
       },
       {
         label: "Autostart",
-        // The app cannot read this switch: "needed" means nobody has said, not that it is off.
-        value: d.autostartCheckedAt
-          ? `Checked on the phone, ${new Date(d.autostartCheckedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`
-          : d.autostart === "not_applicable"
+        // The app reads it (the switch on Xiaomi, Redmi and POCO; whether the app came back by
+        // itself after the last restart elsewhere) and reports it with the other permissions.
+        value:
+          d.autostart === "not_applicable"
             ? "Not needed on this phone"
             : d.autostart === "confirmed"
-              ? "Turned on (said by the guard)"
+              ? "On"
               : d.autostart === "needed"
-                ? "Ask the guard"
+                ? "Not on yet · the guard turns it on in the app, Me → Permissions"
                 : older,
-        verdict: d.autostartCheckedAt || d.autostart === "not_applicable" || d.autostart === "confirmed" ? "ok" : d.autostart === "needed" ? "ask" : "unknown",
+        verdict: d.autostart === "not_applicable" || d.autostart === "confirmed" ? "ok" : d.autostart === "needed" ? "ask" : "unknown",
       },
     );
   }
@@ -807,51 +806,6 @@ function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device
         })}
       </ul>
       {d.checkedAt && <p className="mt-2 text-muted-foreground">Reported by the phone {ago(new Date(d.checkedAt).getTime(), now)}.</p>}
-      {android && d.autostart === "needed" && <AutostartCheck deviceId={d.id} checked={!!d.autostartCheckedAt} />}
-    </div>
-  );
-}
-
-/**
- * Android will not tell the app whether Autostart is on, so a supervisor who has looked
- * at the phone says so here, once. Kept on the server, so it holds whatever the app reports.
- * Once marked, Undo takes it back.
- */
-function AutostartCheck({ deviceId, checked }: { deviceId: string; checked: boolean }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const mark = async (on: boolean) => {
-    setBusy(true);
-    const r = await markAutostartChecked(deviceId, on);
-    setBusy(false);
-    if (!r.ok) return void toast.error(r.error);
-    toast.success(on ? "Autostart marked as checked on the phone." : "Autostart mark taken back. It shows as Ask the guard again.");
-    router.refresh();
-  };
-  if (checked)
-    return (
-      <p className="mt-2 text-muted-foreground">
-        Marked by mistake?{" "}
-        <button type="button" onClick={() => void mark(false)} disabled={busy} className="font-semibold text-foreground underline underline-offset-2 hover:text-rose-700 disabled:opacity-60">
-          {busy ? "Undoing…" : "Undo the Autostart check"}
-        </button>
-      </p>
-    );
-  return (
-    <div className="mt-2.5 rounded-xl bg-amber-500/10 p-2.5 text-amber-900 dark:text-amber-100">
-      <p>
-        Autostart lets the phone restart the app by itself after a reboot or when the battery saver closes it, so tracking carries on. The guard turns it on once, in the
-        phone&apos;s Settings → Apps → NBSS → Autostart. Android never lets an app read that switch, so look at the phone, then mark it here.
-      </p>
-      <button
-        type="button"
-        onClick={() => void mark(true)}
-        disabled={busy}
-        className="press mt-2 inline-flex h-8 items-center gap-1.5 rounded-full bg-amber-500 px-3 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
-      >
-        <CircleCheck className="size-3.5" />
-        {busy ? "Saving…" : "Checked on the phone"}
-      </button>
     </div>
   );
 }

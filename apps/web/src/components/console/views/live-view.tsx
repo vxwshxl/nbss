@@ -39,7 +39,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
     supabase.from("sites").select("id, name, lat, lng, geofence_radius_m, polygon").eq("active", true).match(siteId ? { id: siteId } : {}).order("name"),
     supabase
       .from("guard_devices")
-      .select("id, profile_id, device_id, brand, model, platform, os_version, app_version, status, location_permission, gps_enabled, battery_optimized, notifications_enabled, precise_location, autostart, autostart_checked_at, permissions_at, last_seen_at")
+      .select("id, profile_id, device_id, brand, model, platform, os_version, app_version, status, location_permission, gps_enabled, battery_optimized, notifications_enabled, precise_location, autostart, permissions_at, last_seen_at")
       .order("last_seen_at", { ascending: false }),
     supabase.from("sos_alerts").select("raised_by").in("status", ["active", "acknowledged"]),
     supabase
@@ -94,7 +94,6 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
             notifications: d.notifications_enabled,
             precise: d.precise_location,
             autostart: d.autostart,
-            autostartCheckedAt: d.autostart_checked_at,
             checkedAt: d.permissions_at ?? d.last_seen_at,
             approved: d.status === "approved",
           }
