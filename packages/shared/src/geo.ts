@@ -153,8 +153,11 @@ export type Fix = Point & { at: number; accuracy?: number | null; /** The phone'
  *     when the phone reads itself still or walking, rising with what the phone itself
  *     reads (half as fast again as its own reading, plus a margin), so a guard really
  *     travelling by car or train keeps their route, up to a ceiling of 120 m/s;
- *   - it is an out-and-back: more than 150 m from the last good fix at faster than a
- *     brisk walk (4 m/s), with the very next fix back near where it started;
+ *   - it is part of an out-and-back: one fix or a run of them more than 150 m from the
+ *     last good fix, back near it within five minutes, at a pace no guard walks (over
+ *     4 m/s there and back) or with the phone reading itself still all the while. A run
+ *     where the phone read real speed (3 m/s or more on a good fix) is a trip and stays,
+ *     and a car or bike that keeps going never comes back, so it is never matched;
  *   - it is a jump the phone did not feel: more than 150 m at faster than a run (6 m/s)
  *     while the phone's own speed reading says it was all but still (under 1.5 m/s). A
  *     guard on a bike or in a car reads their speed; a GPS that wandered off reads 0.
@@ -171,6 +174,40 @@ function plausibleSpeed(a: Fix, b: Fix): number {
   return Math.min(120, Math.max(40, read * 1.5 + 10));
 }
 
+/** The phone's own reading says it was really moving (and the fix is good enough to trust it). */
+function felt(f: Fix): boolean {
+  return f.speed != null && f.speed >= 3 && (f.accuracy ?? 0) <= 50;
+}
+
+/**
+ * Where an out-and-back run that starts at `fixes[i]` ends: the index of the first fix
+ * back near `a`, the last good fix. Null when the route does not come back within five
+ * minutes, or the phone felt itself moving on the way (a real trip, kept).
+ * The run is a wander, not a walk, when it went and came back faster than a guard
+ * walks (over 4 m/s) or the phone read itself still (under 0.5 m/s) the whole time a
+ * walk would have read 1 m/s or more.
+ */
+function excursionEnd(fixes: readonly Fix[], a: Fix, i: number): number | null {
+  let far = 0;
+  let still = true;
+  let read = true;
+  for (let j = i; j < fixes.length; j++) {
+    const f = fixes[j]!;
+    if (f.at - a.at > 5 * 60_000) return null;
+    const d = distanceMetres(a, f);
+    if (j > i && d < Math.min(100, far * 0.35)) {
+      const pace = (2 * far) / Math.max(1, (f.at - a.at) / 1000);
+      // Without speed readings a quick drive there and back looks the same, so it takes a pace no vehicle in town keeps.
+      return (read && pace > 4) || (read && still && pace > 1.5) || pace > 12 ? j : null;
+    }
+    if (felt(f)) return null;
+    if (f.speed == null) read = false;
+    if ((f.accuracy ?? 0) <= 50 && !(f.speed != null && f.speed < 0.5)) still = false;
+    far = Math.max(far, d);
+  }
+  return null;
+}
+
 export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
   if (fixes.length < 3) return fixes.filter((f) => (f.accuracy ?? 0) <= 500 || fixes.length === 1);
   const kept: T[] = [fixes[0]!];
@@ -182,8 +219,13 @@ export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
     const speed = d / Math.max(1, (b.at - a.at) / 1000);
     if (d > 100 && speed > plausibleSpeed(a, b)) continue;
     if (d > 150 && speed > 6 && b.speed != null && b.speed < 1.5) continue;
-    const c = fixes[i + 1];
-    if (c && d > 150 && speed > 4 && distanceMetres(a, c) < d * 0.35 && distanceMetres(b, c) > 150) continue;
+    if (d > 150) {
+      const back = excursionEnd(fixes, a, i);
+      if (back != null) {
+        i = back - 1;
+        continue;
+      }
+    }
     kept.push(b);
   }
   return kept;

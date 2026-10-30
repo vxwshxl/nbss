@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
-import { CheckInsLog, type CheckInRow, type LogView } from "@/components/console/check-ins-log";
+import { CheckInsLog, type CheckInRow } from "@/components/console/check-ins-log";
 import { PageHeader } from "@/components/console/page-header";
 import { requireRoleSession } from "@/lib/auth";
-import { istDay, istInstant } from "@/lib/roster";
+import { periodBounds, readPeriod } from "@/lib/period";
+import { istDay } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Check-in log" };
@@ -11,38 +12,16 @@ export const dynamic = "force-dynamic";
 
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
-/** The IST bounds of a day (YYYY-MM-DD), month (YYYY-MM) or year (YYYY). */
-function bounds(view: LogView, at: string): { from: Date; to: Date } {
-  if (view === "year") {
-    const y = Number(at.slice(0, 4));
-    return { from: istInstant(`${y}-01-01`, "00:00"), to: istInstant(`${y + 1}-01-01`, "00:00") };
-  }
-  if (view === "month") {
-    const [y, m] = at.split("-").map(Number) as [number, number];
-    const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
-    return { from: istInstant(`${y}-${String(m).padStart(2, "0")}-01`, "00:00"), to: istInstant(next, "00:00") };
-  }
-  const from = istInstant(at, "00:00");
-  return { from, to: new Date(from.getTime() + 86_400_000) };
-}
-
 /**
  * Every check-in and check-out, as rows: who, where, when they came and went, and how
  * each happened (the guard in the app inside the fence, a supervisor, or the automatic
  * close at the end of a shift). A day by default; a month or a year to look back.
  */
-export default async function CheckInsPage({ searchParams }: { searchParams: Promise<{ view?: string; at?: string }> }) {
+export default async function CheckInsPage({ searchParams }: { searchParams: Promise<{ period?: string; at?: string }> }) {
   const session = await requireRoleSession("admin", "supervisor");
-  const { view: v, at: a } = await searchParams;
-  const view: LogView = v === "month" || v === "year" ? v : "day";
   const today = istDay(0);
-  const at =
-    view === "year"
-      ? /^\d{4}$/.test(a ?? "") ? a! : today.slice(0, 4)
-      : view === "month"
-        ? /^\d{4}-\d{2}$/.test(a ?? "") ? a! : today.slice(0, 7)
-        : /^\d{4}-\d{2}-\d{2}$/.test(a ?? "") ? a! : today;
-  const { from, to } = bounds(view, at);
+  const { period: view, at } = readPeriod(await searchParams, today);
+  const { from, to } = periodBounds(view, at);
 
   const supabase = await supabaseServer();
   const { data } = await supabase

@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, LogIn, LogOut, Radio, Timer, TimerOff, UserCog } from "lucide-react";
+import { LogIn, LogOut, Radio, Timer, TimerOff, UserCog } from "lucide-react";
 
 import { AttendancePreviewDialog } from "@/components/console/attendance-preview";
+import { PeriodCount as Count, PeriodSwitch } from "@/components/console/period-switch";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusPill } from "@/components/ui/status-pill";
+import { periodPhrase, periodTitle, type Period } from "@/lib/period";
 import { cn } from "@/lib/utils";
-
-export type LogView = "day" | "month" | "year";
 
 export type CheckInRow = {
   id: string;
@@ -31,11 +30,6 @@ export type CheckInRow = {
 };
 
 const IST = "Asia/Kolkata";
-const VIEWS: { key: LogView; label: string }[] = [
-  { key: "day", label: "Day" },
-  { key: "month", label: "Month" },
-  { key: "year", label: "Year" },
-];
 
 /** How a check-in happened. */
 const IN_HOW: Record<string, string> = {
@@ -66,24 +60,6 @@ function hours(min: number | null): string {
   return h ? `${h}h ${String(min % 60).padStart(2, "0")}m` : `${min}m`;
 }
 
-/** The period before or after `at`, in the same view. */
-function step(view: LogView, at: string, by: number): string {
-  if (view === "year") return String(Number(at) + by);
-  if (view === "month") {
-    const [y, m] = at.split("-").map(Number) as [number, number];
-    const d = new Date(Date.UTC(y, m - 1 + by, 1));
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-  }
-  return new Date(Date.parse(`${at}T12:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10);
-}
-
-function title(view: LogView, at: string, today: string): string {
-  if (view === "year") return at;
-  if (view === "month") return new Date(`${at}-15T12:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: IST });
-  const label = new Date(`${at}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: IST });
-  return at === today ? `Today · ${label}` : label;
-}
-
 /**
  * Every check-in and check-out in a day, month or year, one row each: who, where, when
  * they came and went, how each happened, the hours, and the phone. A row opens the punch.
@@ -96,7 +72,7 @@ export function CheckInsLog({
   canReview,
   capped,
 }: {
-  view: LogView;
+  view: Period;
   at: string;
   today: string;
   rows: CheckInRow[];
@@ -104,12 +80,7 @@ export function CheckInsLog({
   /** The period held more rows than one page loads. */
   capped: boolean;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const [openId, setOpenId] = useState<string | null>(null);
-  const go = (v: LogView, a: string) => router.push(`${pathname}?view=${v}&at=${a}`);
-  const current = view === "year" ? today.slice(0, 4) : view === "month" ? today.slice(0, 7) : today;
-  const next = step(view, at, 1);
 
   const onDuty = rows.filter((r) => !r.checkOutAt).length;
   const byGuard = rows.filter((r) => r.checkOutAt && r.outMethod === "geofence").length;
@@ -190,42 +161,7 @@ export function CheckInsLog({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-app-line bg-card p-3 shadow-e1 sm:flex-row sm:items-center sm:justify-between">
-        <div role="radiogroup" aria-label="Period" className="inline-flex self-start rounded-full bg-muted/70 p-1 ring-1 ring-border/60">
-          {VIEWS.map((v) => (
-            <button
-              key={v.key}
-              type="button"
-              role="radio"
-              aria-checked={view === v.key}
-              onClick={() => go(v.key, v.key === "year" ? at.slice(0, 4) : v.key === "month" ? (at.length >= 7 ? at.slice(0, 7) : `${at}-${today.slice(5, 7)}`) : at.length === 10 ? at : today)}
-              className={cn("rounded-full px-4 py-1.5 text-sm font-semibold transition-colors", view === v.key ? "bg-background shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => go(view, step(view, at, -1))} aria-label="Earlier" className="grid size-9 place-items-center rounded-full ring-1 ring-border hover:bg-muted">
-            <ChevronLeft className="size-4" />
-          </button>
-          <p className="min-w-0 text-center text-sm font-semibold sm:min-w-64">{title(view, at, today)}</p>
-          <button
-            type="button"
-            onClick={() => go(view, next)}
-            disabled={next > current}
-            aria-label="Later"
-            className="grid size-9 place-items-center rounded-full ring-1 ring-border hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronRight className="size-4" />
-          </button>
-          {at !== current && (
-            <button type="button" onClick={() => go(view, current)} className="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-border hover:bg-muted">
-              {view === "day" ? "Today" : view === "month" ? "This month" : "This year"}
-            </button>
-          )}
-        </div>
-      </div>
+      <PeriodSwitch period={view} at={at} today={today} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Count icon={LogIn} label="Check-ins" value={rows.length} tone="text-foreground" />
@@ -243,25 +179,14 @@ export function CheckInsLog({
         columns={columns}
         data={rows}
         getRowKey={(r) => r.id}
-        printTitle={`Check-in log · ${title(view, at, today)}`}
+        printTitle={`Check-in log · ${periodTitle(view, at, today)}`}
         searchPlaceholder="Search by guard, code, site or phone…"
-        emptyMessage="Nobody checked in during this period."
+        emptyMessage={`Nobody checked in ${periodPhrase(view, at, today)}.`}
         onRowClick={(r) => setOpenId(r.id)}
         initialPageSize={25}
       />
 
       <AttendancePreviewDialog id={openId} onClose={() => setOpenId(null)} canReview={canReview} staff />
-    </div>
-  );
-}
-
-function Count({ icon: Icon, label, value, tone }: { icon: typeof LogIn; label: string; value: number; tone: string }) {
-  return (
-    <div className="rounded-2xl border border-app-line bg-card p-3.5 shadow-e1">
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5" /> {label}
-      </p>
-      <p className={cn("mt-1 text-2xl font-semibold tabular-nums", tone)}>{value}</p>
     </div>
   );
 }

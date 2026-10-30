@@ -807,7 +807,7 @@ function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device
         })}
       </ul>
       {d.checkedAt && <p className="mt-2 text-muted-foreground">Reported by the phone {ago(new Date(d.checkedAt).getTime(), now)}.</p>}
-      {android && d.autostart === "needed" && !d.autostartCheckedAt && <AutostartCheck deviceId={d.id} />}
+      {android && d.autostart === "needed" && <AutostartCheck deviceId={d.id} checked={!!d.autostartCheckedAt} />}
     </div>
   );
 }
@@ -815,24 +815,37 @@ function Permissions({ device: d, now }: { device: NonNullable<DutyGuard["device
 /**
  * Android will not tell the app whether Autostart is on, so a supervisor who has looked
  * at the phone says so here, once. Kept on the server, so it holds whatever the app reports.
+ * Once marked, Undo takes it back.
  */
-function AutostartCheck({ deviceId }: { deviceId: string }) {
+function AutostartCheck({ deviceId, checked }: { deviceId: string; checked: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const mark = async () => {
+  const mark = async (on: boolean) => {
     setBusy(true);
-    const r = await markAutostartChecked(deviceId);
+    const r = await markAutostartChecked(deviceId, on);
     setBusy(false);
     if (!r.ok) return void toast.error(r.error);
-    toast.success("Autostart marked as checked on the phone.");
+    toast.success(on ? "Autostart marked as checked on the phone." : "Autostart mark taken back. It shows as Ask the guard again.");
     router.refresh();
   };
+  if (checked)
+    return (
+      <p className="mt-2 text-muted-foreground">
+        Marked by mistake?{" "}
+        <button type="button" onClick={() => void mark(false)} disabled={busy} className="font-semibold text-foreground underline underline-offset-2 hover:text-rose-700 disabled:opacity-60">
+          {busy ? "Undoing…" : "Undo the Autostart check"}
+        </button>
+      </p>
+    );
   return (
     <div className="mt-2.5 rounded-xl bg-amber-500/10 p-2.5 text-amber-900 dark:text-amber-100">
-      <p>The app cannot see the Autostart switch. Open the phone&apos;s app settings, check it is on, then mark it here.</p>
+      <p>
+        Autostart lets the phone restart the app by itself after a reboot or when the battery saver closes it, so tracking carries on. The guard turns it on once, in the
+        phone&apos;s Settings → Apps → NBSS → Autostart. Android never lets an app read that switch, so look at the phone, then mark it here.
+      </p>
       <button
         type="button"
-        onClick={() => void mark()}
+        onClick={() => void mark(true)}
         disabled={busy}
         className="press mt-2 inline-flex h-8 items-center gap-1.5 rounded-full bg-amber-500 px-3 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
       >

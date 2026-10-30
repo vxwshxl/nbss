@@ -20,3 +20,16 @@ export async function addHandoverNote(siteId: string, body: string): Promise<{ o
   revalidatePath("/console/handover");
   return { ok: true };
 }
+
+/** Takes a note down: it leaves the log and the next guard's app. */
+export async function deleteHandoverNote(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireRoleSession("admin", "supervisor");
+  if (session.impersonating) return { ok: false, error: "Stop viewing as someone else to delete a note." };
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.from("handover_notes").delete().eq("id", id).select("site_id, body").maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "That note is already gone." };
+  await audit({ actor: session.realProfile, action: "handover_note_deleted", entity: "sites", entityId: data.site_id, detail: { body: data.body.slice(0, 200) } });
+  revalidatePath("/console/handover");
+  return { ok: true };
+}
