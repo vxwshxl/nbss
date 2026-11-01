@@ -10,8 +10,9 @@ import { site } from "@/content/site";
  *
  * Wide screens: a night gate on the left (the picture of what the console is
  * for) and the form on the right under the full lockup. Below lg the picture
- * becomes a band at the foot that takes whatever height the form leaves, so a
- * phone opens onto the whole page in one screen, without scrolling.
+ * becomes a band at the foot, under Privacy and Terms, that takes whatever
+ * height the form leaves, so a phone opens onto the whole page in one screen,
+ * without scrolling.
  */
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
@@ -47,10 +48,6 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <div className="animate-rise mt-8 [@media(max-height:740px)]:mt-5">{children}</div>
         </div>
 
-        <div aria-hidden className="relative -mx-5 mt-4 min-h-[120px] flex-1 overflow-hidden [@media(max-height:740px)]:min-h-[80px] rounded-t-[28px] bg-[#06110d] sm:-mx-10 lg:hidden">
-          <GateScene className="absolute inset-0 h-full" />
-        </div>
-
         <p className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
           <Link href="/privacy-policy" className="underline-offset-4 hover:text-foreground hover:underline">
             Privacy
@@ -60,6 +57,10 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             Terms
           </Link>
         </p>
+
+        <div aria-hidden className="relative -mx-5 min-h-[120px] flex-1 overflow-hidden [@media(max-height:740px)]:min-h-[80px] rounded-t-[28px] bg-[#06110d] sm:-mx-10 lg:hidden">
+          <GateScene className="absolute inset-0 h-full" />
+        </div>
       </section>
     </main>
   );
