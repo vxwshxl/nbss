@@ -4,7 +4,6 @@ import { ChevronRight } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   AppState,
   Pressable,
   StyleSheet,
@@ -22,6 +21,7 @@ import Animated, {
 
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
+import { showDialog } from "@/components/dialog";
 import { Text } from "@/components/text";
 import { useNow } from "@/hooks/use-now";
 import { closeSos, prefetchFix, raiseSos, type MapAlert } from "@/lib/duty";
@@ -99,7 +99,7 @@ export function FloatingSos({
     // Either way the SOS tab: it shows the live SOS (map, who is coming), or why it failed.
     if (staff) {
       if (r.ok && r.alertId) router.push(`/sos/${r.alertId}`);
-      else if (!r.ok) Alert.alert("SOS not sent", `Not sent: ${r.error}.`);
+      else if (!r.ok) showDialog("SOS not sent", `Not sent: ${r.error}.`);
       return;
     }
     if (r.ok) router.navigate("/(guard)/alerts");

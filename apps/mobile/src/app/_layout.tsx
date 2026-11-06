@@ -28,6 +28,7 @@ import { usePresence } from "@/lib/presence";
 import { ensureChannels } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
 import type { ErrorBoundaryProps } from "expo-router";
+import { DialogHost } from "@/components/dialog";
 import { ErrorScreen } from "@/components/error-screen";
 import { UpdateGate } from "@/components/update-screen";
 import { NotificationRouter } from "@/lib/notification-router";
@@ -139,6 +140,8 @@ export default function RootLayout() {
           <NotificationRouter />
           {/* Over every screen, signed in or not, when the office has published a newer build. */}
           <UpdateGate />
+          {/* The app's own popups (showDialog), over everything. */}
+          <DialogHost />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

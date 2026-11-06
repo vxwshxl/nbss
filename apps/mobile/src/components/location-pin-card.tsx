@@ -2,13 +2,14 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { Check, Crosshair, LocateFixed, MapPinPlus, Send, Trash2, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { color, radius, space } from "@/theme/tokens";
 
 import { Button } from "./button";
+import { showDialog } from "./dialog";
 import { MapCanvas } from "./map-canvas";
 import { Field } from "./field";
 import { Panel } from "./panel";
@@ -84,7 +85,7 @@ export function LocationPinCard() {
   async function start() {
     const services = await Location.hasServicesEnabledAsync().catch(() => true);
     if (!services) {
-      Alert.alert("Location is off", "Turn on location for this phone, then try again.", [
+      showDialog("Location is off", "Turn on location for this phone, then try again.", [
         { text: "Cancel", style: "cancel" },
         { text: "Open Settings", onPress: () => void Linking.openSettings() },
       ]);
@@ -92,7 +93,7 @@ export function LocationPinCard() {
     }
     const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
     if (!perm?.granted) {
-      Alert.alert("Location not allowed", "Allow location for NBSS Kokrajhar to send where you are.", [
+      showDialog("Location not allowed", "Allow location for NBSS Kokrajhar to send where you are.", [
         { text: "Cancel", style: "cancel" },
         { text: "Open Settings", onPress: () => void Linking.openSettings() },
       ]);
@@ -150,26 +151,26 @@ export function LocationPinCard() {
       setPhase("locating");
       // A fix that went stale while the note was typed: look again.
       if (/out of date/i.test(error.message)) void start();
-      Alert.alert("Not sent", error.message);
+      showDialog("Not sent", error.message);
       return;
     }
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setPhase("idle");
     setFix(null);
     setNote("");
-    Alert.alert("Location sent", "The office can now see this place on the map and register a site here.");
+    showDialog("Location sent", "The office can now see this place on the map and register a site here.");
     void load();
   }
 
   function remove(pin: Sent) {
-    Alert.alert("Delete this pin?", pin.note ?? "The location you sent is removed.", [
+    showDialog("Delete this pin?", pin.note ?? "The location you sent is removed.", [
       { text: "Keep", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
           const { error } = await supabase.from("location_pins").delete().eq("id", pin.id);
-          if (error) Alert.alert("Not deleted", error.message);
+          if (error) showDialog("Not deleted", error.message);
           void load();
         },
       },

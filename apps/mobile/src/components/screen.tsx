@@ -95,8 +95,12 @@ export function Screen({
   );
 }
 
-/** Space left between the focused field and the top of the keyboard. */
-const KEYBOARD_GAP = space[6];
+/**
+ * Space kept between the focused field and the top of the keyboard: room for the
+ * button row that usually follows a field (Cancel / Send under the note on Me), so it
+ * can be pressed without closing the keyboard first.
+ */
+const KEYBOARD_GAP = 96;
 
 /**
  * Keeps the field being typed in above the keyboard, on every scrolling screen.

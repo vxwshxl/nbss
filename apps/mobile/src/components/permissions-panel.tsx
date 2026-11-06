@@ -2,7 +2,7 @@ import * as Battery from "expo-battery";
 import * as Location from "expo-location";
 import { BatteryCharging, Bell, ChevronRight, LocateFixed, RefreshCw, ShieldCheck, type LucideIcon } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Notifications } from "@/lib/push";
 import { registerHandset } from "@/lib/device";
@@ -11,6 +11,7 @@ import { CAN_TRACK_IN_BACKGROUND, IS_WEB } from "@/lib/runtime";
 import { TONES } from "@/theme/tones";
 import { color, radius, space } from "@/theme/tokens";
 
+import { showDialog } from "./dialog";
 import { Panel, PanelRow } from "./panel";
 import { Text } from "./text";
 
@@ -28,7 +29,7 @@ async function afterAutostartVisit(onDone: () => void) {
     await registerHandset();
     return onDone();
   }
-  Alert.alert("Is Autostart on now?", "This phone does not show the switch to apps, so the app asks you. Its next restart checks it.", [
+  showDialog("Is Autostart on now?", "This phone does not show the switch to apps, so the app asks you. Its next restart checks it.", [
     { text: "Not yet", style: "cancel" },
     {
       text: "Yes, it is on",
@@ -150,7 +151,7 @@ async function read(location: boolean): Promise<Perm[]> {
           : state === "on"
             ? async () => {
                 await new Promise<void>((done) =>
-                  Alert.alert("Autostart", "You said Autostart is on. Has it been turned off since?", [
+                  showDialog("Autostart", "You said Autostart is on. Has it been turned off since?", [
                     { text: "It is still on", style: "cancel", onPress: () => done() },
                     { text: "It is off", style: "destructive", onPress: () => void unconfirmAutostart().then(() => registerHandset()).finally(done) },
                   ]),
