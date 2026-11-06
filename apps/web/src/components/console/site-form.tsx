@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, MapPinPlus, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -72,7 +72,11 @@ function stateOf(site: EditableSite): SiteFormState {
   };
 }
 
-function fenceOf(site: EditableSite | undefined): Fence {
+/** A location sent from the field, to register a site at. */
+export type PinStart = { id: string; lat: number; lng: number; note: string | null };
+
+function fenceOf(site: EditableSite | undefined, pin?: PinStart): Fence {
+  if (!site && pin) return { mode: "radius", lat: pin.lat, lng: pin.lng, radius: 150 };
   if (!site) return { mode: "radius", lat: 0, lng: 0, radius: 150 };
   return site.ring && site.ring.length >= 3
     ? { mode: "polygon", lat: site.lat, lng: site.lng, ring: site.ring }
@@ -120,15 +124,31 @@ function Field({
  * Given a `site`, the same form edits it: opened by the caller (the site's
  * popup), starting from what is saved, and closing through `onClose`.
  */
-export function SiteForm({ site, onClose }: { site?: EditableSite; onClose?: () => void } = {}) {
+export function SiteForm({ site, fromPin, onClose }: { site?: EditableSite; fromPin?: PinStart; onClose?: () => void } = {}) {
   const editing = !!site;
-  const [state, action] = useActionState(editing ? updateSite : createSite, site ? stateOf(site) : emptySiteForm);
-  const [open, setOpenState] = useState(editing);
+  // Opened by its caller (a site's popup, a pin's card) rather than by its own button.
+  const opened = editing || !!fromPin;
+  const [state, action] = useActionState(
+    editing ? updateSite : createSite,
+    site ? stateOf(site) : fromPin?.note ? { ...emptySiteForm, values: { ...emptySiteForm.values!, name: fromPin.note } } : emptySiteForm,
+  );
+  const [open, setOpenState] = useState(opened);
   const setOpen = (v: boolean) => {
     setOpenState(v);
     if (!v) onClose?.();
   };
-  const [fence, setFence] = useState<Fence>(() => fenceOf(site));
+  const [fence, setFence] = useState<Fence>(() => fenceOf(site, fromPin));
+  const form = useRef<HTMLFormElement>(null);
+
+  // A place picked in the map's search fills the name and address, where they are still empty.
+  const fillFrom = (p: { name: string; address: string }) => {
+    const set = (field: string, value: string) => {
+      const input = form.current?.elements.namedItem(field);
+      if (input instanceof HTMLInputElement && !input.value.trim() && value) input.value = value;
+    };
+    set("name", p.name);
+    set("address", p.address);
+  };
 
   // A save closes the dialog and says so. Before, the form emptied itself and
   // stayed open, which read as "nothing happened" and invited a duplicate.
@@ -143,15 +163,15 @@ export function SiteForm({ site, onClose }: { site?: EditableSite; onClose?: () 
   useEffect(() => {
     if (!state.ok || !state.created) return;
     toast.success(editing ? "Site saved" : "Site registered", { description: state.created });
-    if (editing) onClose?.();
-  }, [state, editing, onClose]);
+    if (opened) onClose?.();
+  }, [state, editing, opened, onClose]);
 
   const placed =
     fence.mode === "radius" ? !!(fence.lat || fence.lng) : fence.ring.length >= 3;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {!editing && (
+      {!opened && (
         <DialogTrigger asChild>
           <Button>
             <Plus data-icon="inline-start" />
@@ -162,16 +182,19 @@ export function SiteForm({ site, onClose }: { site?: EditableSite; onClose?: () 
 
       <DialogContent className="max-h-[94dvh] overflow-y-auto p-6 sm:max-w-[min(72rem,calc(100%-3rem))] sm:p-7">
         <DialogHeader>
-          <DialogTitle>{editing ? `Edit ${site.name}` : "Register a site"}</DialogTitle>
+          <DialogTitle>{editing ? `Edit ${site.name}` : fromPin ? "Register a site at this pin" : "Register a site"}</DialogTitle>
           <DialogDescription>
             {editing
               ? "Move or redraw the boundary, or change the details and shift rules. Punches already recorded keep their verdict; the new fence judges the next ones."
-              : "Place the boundary on the map, then describe the site and how attendance inside it is judged."}
+              : fromPin
+                ? "The circle starts on the location sent from the field. Move or redraw it around the site, then describe it."
+                : "Search for the place or click the map to put the boundary on it, then describe the site and how attendance inside it is judged."}
           </DialogDescription>
         </DialogHeader>
 
-        <form action={action} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <form ref={form} action={action} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
           {site && <input type="hidden" name="id" value={site.id} />}
+          {fromPin && <input type="hidden" name="pin_id" value={fromPin.id} />}
           {state.error && (
             <div
               role="alert"
@@ -298,11 +321,11 @@ export function SiteForm({ site, onClose }: { site?: EditableSite; onClose?: () 
             <Label className="mb-2">
               Boundary <span className="text-destructive">*</span>
             </Label>
-            <FenceMap value={fence} onChange={setFence} />
+            <FenceMap value={fence} onChange={setFence} onPlace={fillFrom} />
             {!placed && (
               <p className="mt-1.5 text-xs text-muted-foreground">
                 {fence.mode === "radius"
-                  ? "Click the map to place this site."
+                  ? "Search for the place, or click the map to put the site on it."
                   : "Drop at least three points to close the area."}
               </p>
             )}

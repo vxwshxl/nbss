@@ -525,6 +525,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      location_pins: {
+        Row: {
+          id: string;
+          sent_by: string;
+          lat: number;
+          lng: number;
+          accuracy_m: number;
+          note: string | null;
+          captured_at: string;
+          created_at: string;
+          site_id: string | null;
+          is_test: boolean;
+        };
+        Insert: {
+          id?: string;
+          sent_by: string;
+          lat: number;
+          lng: number;
+          accuracy_m: number;
+          note?: string | null;
+          captured_at: string;
+          created_at?: string;
+          site_id?: string | null;
+          is_test?: boolean;
+        };
+        Update: {
+          id?: string;
+          sent_by?: string;
+          lat?: number;
+          lng?: number;
+          accuracy_m?: number;
+          note?: string | null;
+          captured_at?: string;
+          created_at?: string;
+          site_id?: string | null;
+          is_test?: boolean;
+        };
+        Relationships: [];
+      };
       map_usage: {
         Row: {
           id: number;
@@ -1840,6 +1879,17 @@ export type Database = {
       roster_mark_missed: {
         Args: Record<PropertyKey, never>;
         Returns: number;
+      };
+      send_location_pin: {
+        Args: {
+          p_lat: number;
+          p_lng: number;
+          p_accuracy_m: number;
+          p_age_s: number;
+          p_note?: string;
+          p_mocked?: boolean;
+        };
+        Returns: string;
       };
       set_secret: {
         Args: {

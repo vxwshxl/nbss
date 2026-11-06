@@ -136,7 +136,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
 
   return (
     <div className="space-y-4">
-      <PageHeader eyebrow="Location tracking" title="Live tracking" />
+      <PageHeader title="Live tracking" />
       <LiveTracking
         guards={guards}
         initialPositions={(positions.data ?? []) as unknown as LivePosition[]}

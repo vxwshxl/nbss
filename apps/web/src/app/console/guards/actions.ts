@@ -69,6 +69,8 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
+  revalidatePath("/console/housekeepers");
+  revalidatePath("/console/supervisors");
 
   return {
     ok: true,
@@ -152,6 +154,8 @@ export async function updateContact(
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
+  revalidatePath("/console/housekeepers");
+  revalidatePath("/console/supervisors");
   return { ok: true };
 }
 
@@ -181,6 +185,8 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
+  revalidatePath("/console/housekeepers");
+  revalidatePath("/console/supervisors");
 }
 
 /** Switches someone's SOS button on or off (0052). */
@@ -199,6 +205,8 @@ export async function setPersonSos(profileId: string, enabled: boolean): Promise
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
+  revalidatePath("/console/housekeepers");
+  revalidatePath("/console/supervisors");
 }
 
 export async function changeRole(profileId: string, choice: RoleChoice): Promise<void> {
@@ -238,6 +246,8 @@ export async function changeRole(profileId: string, choice: RoleChoice): Promise
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
+  revalidatePath("/console/housekeepers");
+  revalidatePath("/console/supervisors");
 }
 
 /**
@@ -370,4 +380,6 @@ export async function deleteAccount(profileId: string): Promise<void> {
 
   revalidatePath("/console/guards");
   revalidatePath("/console/users");
+  revalidatePath("/console/housekeepers");
+  revalidatePath("/console/supervisors");
 }

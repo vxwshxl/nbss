@@ -77,7 +77,7 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId }: 
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Operations" title="Attendance" />
+      <PageHeader title="Attendance" />
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
         <ViewTabs view={view} keep={site} />
         {stepper}

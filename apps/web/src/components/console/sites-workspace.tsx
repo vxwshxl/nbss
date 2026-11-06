@@ -2,18 +2,17 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { BellOff, MapPinned, Pencil, PowerOff, Power, Radio, Shapes, Siren, Trash2, Volume2, VolumeX } from "lucide-react";
+import { BellOff, Eye, MapPinPlus, MapPinned, Pencil, PowerOff, Power, Radio, Search, Shapes, Siren, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteSite, setSiteActive, setSiteSiren, setSiteSos } from "@/app/console/sites/actions";
-import { SiteForm } from "@/components/console/site-form";
-import { SiteMap, type MapSite } from "@/components/console/site-map";
+import { deleteLocationPin, deleteSite, setSiteActive, setSiteSiren, setSiteSos } from "@/app/console/sites/actions";
+import { SiteForm, type PinStart } from "@/components/console/site-form";
+import { SiteMap, type MapFieldPin, type MapSite } from "@/components/console/site-map";
 import { SitePreviewDialog } from "@/components/console/site-preview";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { DataTable, type Column } from "@/components/ui/data-table";
-import { Panel } from "@/components/ui/panel";
 import { StatusPill } from "@/components/ui/status-pill";
+import { cn } from "@/lib/utils";
 
 export type SiteRow = {
   id: string;
@@ -43,6 +42,14 @@ export type SiteRow = {
   assigned: number;
 };
 
+type Filter = "all" | "staffed" | "empty" | "out";
+const FILTERS: { key: Filter; label: string; test: (r: SiteRow) => boolean }[] = [
+  { key: "all", label: "All", test: () => true },
+  { key: "staffed", label: "Staffed", test: (r) => r.active && r.onDuty > 0 },
+  { key: "empty", label: "Empty", test: (r) => r.active && r.onDuty === 0 },
+  { key: "out", label: "Out of service", test: (r) => !r.active },
+];
+
 function clock(value: string | null): string {
   if (!value) return "-";
   const [h, m] = value.split(":");
@@ -54,24 +61,23 @@ function clock(value: string | null): string {
 }
 
 /**
- * Sites, as a map first and a table second.
+ * Sites, laid out as Route history is: every site on the left (search, and
+ * staffed / empty / out of service), the map in the middle, and the picked site's
+ * details and controls on the right. Picking a site, from the list or from the
+ * map's own "All sites" list, flies the map to its fence. Locations sent from the
+ * field sit under the list and on the map, to register sites at.
  *
- * The order is the argument. A list of nine site names sorted alphabetically
- * tells a supervisor nothing they could act on; the same nine drawn across the
- * BTR, with the staffed ones lit and the empty ones grey, answers "where is
- * nobody standing right now" in one look. The table is underneath for the
- * things a map genuinely cannot show — grace windows, required accuracy, the
- * shift clock.
- *
- * Selecting a row focuses the map on that fence as well as opening its popup
- * (`SitePreviewDialog`); `?site=<id>` in the address opens one directly.
+ * `?site=<id>` opens a site's full popup (`SitePreviewDialog`) directly.
  */
 export function SitesWorkspace({
   rows,
+  pins = [],
   canManage,
   canReview = false,
 }: {
   rows: SiteRow[];
+  /** Locations sent from the field, to register sites at. */
+  pins?: MapFieldPin[];
   canManage: boolean;
   canReview?: boolean;
 }) {
@@ -81,10 +87,19 @@ export function SitesWorkspace({
   // Looked up by id so the open popup follows live updates to its row.
   const detail = rows.find((r) => r.id === detailId) ?? null;
   const setDetail = (r: SiteRow | null) => setDetailId(r?.id ?? null);
-  const [confirming, setConfirming] = useState(false);
+  // The site asked about taking out of service.
+  const [confirming, setConfirming] = useState<SiteRow | null>(null);
   // The site being edited in the register form, and the one asked about deleting.
   const [editing, setEditing] = useState<SiteRow | null>(null);
   const [deleting, setDeleting] = useState<SiteRow | null>(null);
+  // The site picked from the map's own list ("All sites" is null), and the field pin being looked at.
+  const [mapPick, setMapPick] = useState<string | null>(params.get("site"));
+  const picked = rows.find((r) => r.id === mapPick) ?? null;
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [pinPick, setPinPick] = useState<string | null>(null);
+  const [registering, setRegistering] = useState<PinStart | null>(null);
+  const [pinDeleting, setPinDeleting] = useState<MapFieldPin | null>(null);
 
   // Only live sites are drawn. A decommissioned fence on the map is a fence
   // somebody will try to send a guard to.
@@ -111,7 +126,7 @@ export function SitesWorkspace({
     start(async () => {
       try {
         await setSiteActive(site.id, active);
-        setConfirming(false);
+        setConfirming(null);
         setDetail(null);
         toast.success(
           active ? "Site back in service" : "Site taken out of service",
@@ -147,224 +162,306 @@ export function SitesWorkspace({
     });
   }
 
+  function removePin(pin: MapFieldPin) {
+    start(async () => {
+      const r = await deleteLocationPin(pin.id);
+      setPinDeleting(null);
+      if (!r.ok) return void toast.error("Pin not deleted", { description: r.error });
+      if (pinPick === pin.id) setPinPick(null);
+      toast.success("Pin deleted", { description: pin.note ?? `Sent by ${pin.senderName}` });
+    });
+  }
+
   function remove(site: SiteRow) {
     start(async () => {
       const r = await deleteSite(site.id);
       setDeleting(null);
       if (!r.ok) return void toast.error("Site not deleted", { description: r.error });
       setDetail(null);
+      if (mapPick === site.id) setMapPick(null);
       toast.success("Site deleted", { description: site.name });
     });
   }
 
-  const columns: Column<SiteRow>[] = [
-    {
-      header: "Site",
-      cell: (r) => (
-        <span className="block">
-          <span className="block font-medium">{r.name}</span>
-          {r.client_name && (
-            <span className="block text-xs text-muted-foreground">{r.client_name}</span>
-          )}
-        </span>
-      ),
-      sortValue: (r) => r.name,
-      searchValue: (r) => `${r.name} ${r.client_name ?? ""} ${r.address ?? ""}`,
-      printCell: (r) => r.name,
-    },
-    {
-      header: "District",
-      cell: (r) => r.district ?? "-",
-      sortValue: (r) => r.district ?? "",
-      searchValue: (r) => r.district ?? "",
-    },
-    {
-      header: "Boundary",
-      cell: (r) => (
-        <span className="inline-flex items-center gap-1.5 text-sm">
-          {r.ring ? (
-            <>
-              <Shapes className="size-3.5 text-muted-foreground" strokeWidth={1.9} />
-              Area · {r.ring.length} points
-            </>
-          ) : (
-            <>
-              <MapPinned className="size-3.5 text-muted-foreground" strokeWidth={1.9} />
-              {r.geofence_radius_m} m radius
-            </>
-          )}
-        </span>
-      ),
-      sortValue: (r) => (r.ring ? 1 : 0),
-      printCell: (r) =>
-        r.ring ? `Area · ${r.ring.length} points` : `${r.geofence_radius_m} m radius`,
-    },
-    {
-      header: "Shift",
-      cell: (r) => (
-        <span className="tabular-nums">
-          {r.shift_start ? `${clock(r.shift_start)}–${clock(r.shift_end)}` : "-"}
-        </span>
-      ),
-      printCell: (r) =>
-        r.shift_start ? `${clock(r.shift_start)}–${clock(r.shift_end)}` : "-",
-    },
-    {
-      header: "On duty",
-      className: "text-right",
-      headClassName: "text-right",
-      cell: (r) =>
-        r.onDuty > 0 ? (
-          <span className="inline-flex items-center gap-1.5 font-medium text-primary tabular-nums">
-            <Radio className="size-3.5" strokeWidth={2.2} />
-            {r.onDuty}
-          </span>
-        ) : (
-          <span className="tabular-nums text-muted-foreground">0</span>
-        ),
-      sortValue: (r) => r.onDuty,
-      printCell: (r) => String(r.onDuty),
-    },
-    {
-      header: "State",
-      className: "text-right",
-      headClassName: "text-right",
-      cell: (r) => <StatusPill status={r.active ? "active" : "inactive"} />,
-      sortValue: (r) => (r.active ? 1 : 0),
-      printCell: (r) => (r.active ? "Active" : "Inactive"),
-    },
-  ];
+  const q = query.trim().toLowerCase();
+  const matches = (r: SiteRow) => !q || `${r.name} ${r.client_name ?? ""} ${r.district ?? ""} ${r.address ?? ""}`.toLowerCase().includes(q);
+  const counts: Record<Filter, number> = {
+    all: rows.length,
+    staffed: rows.filter((r) => r.active && r.onDuty > 0).length,
+    empty: rows.filter((r) => r.active && r.onDuty === 0).length,
+    out: rows.filter((r) => !r.active).length,
+  };
+  const listed = rows.filter((r) => matches(r) && FILTERS.find((f) => f.key === filter)!.test(r));
+  const pinsListed = pins.filter((p) => !q || `${p.note ?? ""} ${p.senderName} ${p.siteName ?? ""}`.toLowerCase().includes(q));
+
+  /** The buttons for a site, in the details column and in its full popup. */
+  const actionsFor = (site: SiteRow, fromDialog: boolean) => (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={pending}
+        onClick={() => {
+          setEditing(site);
+          if (fromDialog) setDetail(null);
+        }}
+      >
+        <Pencil data-icon="inline-start" />
+        Edit site
+      </Button>
+      <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSos(site, !site.sos_enabled)}>
+        {site.sos_enabled ? <BellOff data-icon="inline-start" /> : <Siren data-icon="inline-start" />}
+        {site.sos_enabled ? "Switch SOS off" : "Switch SOS on"}
+      </Button>
+      {site.sos_enabled && (
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSiren(site, !site.sos_siren)}>
+          {site.sos_siren ? <VolumeX data-icon="inline-start" /> : <Volume2 data-icon="inline-start" />}
+          {site.sos_siren ? "Siren off (vibrate only)" : "Siren on"}
+        </Button>
+      )}
+      <Button size="sm" variant={site.active ? "destructive" : "default"} disabled={pending} onClick={() => (site.active ? setConfirming(site) : toggle(site, true))}>
+        {site.active ? <PowerOff data-icon="inline-start" /> : <Power data-icon="inline-start" />}
+        {site.active ? "Take out of service" : "Put back in service"}
+      </Button>
+      {/* Only an empty site can go for good; the action refuses one with history. */}
+      {site.onDuty === 0 && (
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => setDeleting(site)} className="text-destructive hover:text-destructive">
+          <Trash2 data-icon="inline-start" />
+          Delete
+        </Button>
+      )}
+    </>
+  );
 
   return (
-    <div className="space-y-6">
-      <Panel
-        tone="sky"
-        title="Deployment map"
-        icon={MapPinned}
-        bodyClassName="p-0 sm:p-0"
-        action={
-          <span className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-primary" /> staffed
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-muted-foreground" /> empty
-            </span>
-          </span>
-        }
-      >
-        {mapSites.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
-            <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <MapPinned className="size-5" strokeWidth={1.75} />
-            </span>
-            <p className="text-sm font-medium">No sites in service.</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              A site needs a boundary drawn around it before anyone can check in there.
-            </p>
+    // Route history's shape: every site on the left, the map in the middle, the picked
+    // site on the right. On a phone the map comes first, then the site, then the list.
+    <div className={cn("grid gap-4", picked ? "xl:grid-cols-[320px_minmax(0,1fr)_340px]" : "xl:grid-cols-[320px_minmax(0,1fr)]")}>
+      {/* Sites, and the locations sent from the field */}
+      <aside className="order-3 flex max-h-[75vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-1 xl:h-[calc(100dvh-190px)] xl:max-h-none">
+        <div className="space-y-3 border-b border-app-line-soft p-3">
+          <label className="flex h-10 items-center gap-2 rounded-full bg-muted/70 px-3.5 ring-1 ring-border/60 focus-within:ring-2 focus-within:ring-ring/50">
+            <Search className="size-4 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search ${rows.length} sites by name, client or district`}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
+                aria-pressed={filter === f.key}
+                className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold ring-1",
+                  filter === f.key ? "bg-foreground text-background ring-foreground" : "ring-border hover:bg-muted",
+                )}
+              >
+                {f.label} <span className="tabular-nums opacity-70">{counts[f.key]}</span>
+              </button>
+            ))}
           </div>
-        ) : (
-          <SiteMap
-            sites={mapSites}
-            focus={detail?.active ? detail.id : undefined}
-            height={400}
-            className="rounded-none border-0"
-          />
-        )}
-      </Panel>
+        </div>
 
-        <DataTable
-          title={`${rows.length} ${rows.length === 1 ? "site" : "sites"}`}
-          columns={columns}
-          data={rows}
-          getRowKey={(r) => r.id}
-          interactiveRows
-          rowPreview={false}
-          onRowClick={setDetail}
-          printTitle="Sites"
-          searchPlaceholder="Search by site, client or district…"
-          emptyMessage="No sites registered. A site needs a boundary before anyone can check in there."
-          rowClassName={(r) => (r.active ? undefined : "opacity-60")}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {rows.length === 0 && (
+            <p className="p-6 text-center text-sm text-muted-foreground">No sites registered. A site needs a boundary before anyone can check in there.</p>
+          )}
+          {rows.length > 0 && listed.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">No site matches.</p>}
+          <ul className="divide-y divide-app-line-soft">
+            {listed.map((r) => (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinPick(null);
+                    setMapPick(mapPick === r.id ? null : r.id);
+                    // The list sits under the map on narrow screens: bring the map back into view.
+                    if (mapPick !== r.id && window.matchMedia("(max-width: 1279px)").matches) window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className={cn("flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-muted/60", mapPick === r.id && "bg-sky-50 ring-1 ring-sky-500/30 ring-inset dark:bg-sky-500/10", !r.active && "opacity-60")}
+                >
+                  <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", !r.active ? "bg-muted-foreground/40" : r.onDuty > 0 ? "bg-primary" : "bg-muted-foreground")} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate font-medium">{r.name}</span>
+                      {r.onDuty > 0 ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-primary tabular-nums">
+                          <Radio className="size-3.5" strokeWidth={2.2} />
+                          {r.onDuty}
+                        </span>
+                      ) : !r.active ? (
+                        <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">Out of service</span>
+                      ) : null}
+                    </span>
+                    <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                      {r.ring ? <Shapes className="size-3 shrink-0" /> : <MapPinned className="size-3 shrink-0" />}
+                      <span className="truncate">
+                        {[r.client_name, r.district, r.ring ? `Area · ${r.ring.length} points` : `${r.geofence_radius_m} m`].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {pinsListed.length > 0 && (
+            <div className="border-t border-app-line p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+                <MapPinPlus className="size-4" /> Sent from the field · {pinsListed.length}
+              </p>
+              <ul className="space-y-1.5">
+                {pinsListed.map((p) => (
+                  <li key={p.id} className={cn("flex items-center gap-2 rounded-xl bg-amber-500/5 px-2.5 py-2 text-sm", pinPick === p.id && "ring-1 ring-amber-500/40")}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMapPick(null);
+                        setPinPick(p.id);
+                        if (window.matchMedia("(max-width: 1279px)").matches) window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="block truncate font-medium">{p.note || "No note"}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {p.senderName} ·{" "}
+                        {new Date(p.capturedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })} · ±
+                        {Math.round(p.accuracy)} m{p.siteName ? ` · ${p.siteName}` : ""}
+                      </span>
+                    </button>
+                    {canManage && !p.siteName && (
+                      <button
+                        type="button"
+                        onClick={() => setRegistering({ id: p.id, lat: p.lat, lng: p.lng, note: p.note })}
+                        aria-label="Register a site here"
+                        title="Register a site here"
+                        className="grid size-8 shrink-0 place-items-center rounded-full text-primary ring-1 ring-border hover:bg-muted"
+                      >
+                        <MapPinPlus className="size-3.5" />
+                      </button>
+                    )}
+                    {canReview && (
+                      <button
+                        type="button"
+                        onClick={() => setPinDeleting(p)}
+                        aria-label="Delete pin"
+                        title="Delete pin"
+                        className="grid size-8 shrink-0 place-items-center rounded-full text-destructive ring-1 ring-border hover:bg-muted"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* The map */}
+      <div className="order-1 h-[62vh] min-h-[420px] xl:order-2 xl:h-[calc(100dvh-190px)]">
+        <SiteMap
+          sites={mapSites}
+          height="100%"
+          className="h-full"
+          search
+          selected={mapPick}
+          onSelect={(id) => {
+            setPinPick(null);
+            setMapPick(id);
+          }}
+          pins={pins}
+          selectedPin={pinPick}
+          onRegisterPin={canManage ? (p) => setRegistering({ id: p.id, lat: p.lat, lng: p.lng, note: p.note }) : undefined}
+          onDeletePin={canReview ? setPinDeleting : undefined}
         />
+      </div>
+
+      {/* The picked site */}
+      {picked && (
+        <aside className="order-2 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-190px)]">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="p-4 pb-3">
+              <div className="flex items-start gap-2">
+                <button type="button" onClick={() => setDetail(picked)} className="block min-w-0 flex-1 text-left text-base font-semibold hover:underline">
+                  {picked.name}
+                </button>
+                <button type="button" onClick={() => setMapPick(null)} aria-label="Back to every site" className="grid size-7 shrink-0 place-items-center rounded-full hover:bg-muted">
+                  <X className="size-4" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">{[picked.client_name ?? "No client recorded", picked.district].filter(Boolean).join(" · ")}</p>
+              <span className="mt-1.5 flex flex-wrap gap-1.5">
+                <StatusPill status={picked.active ? "active" : "inactive"} label={picked.active ? "In service" : "Out of service"} />
+                {picked.sos_enabled && <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-700">SOS {picked.sos_siren ? "· siren" : "· vibrate"}</span>}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 border-t border-app-line-soft px-4 py-3">
+              <div className="rounded-xl bg-emerald-500/10 p-3">
+                <p className="text-xs text-muted-foreground">On duty now</p>
+                <p className="text-lg font-semibold tabular-nums">{picked.onDuty}</p>
+              </div>
+              <div className="rounded-xl bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Assigned</p>
+                <p className="text-lg font-semibold tabular-nums">{picked.assigned}</p>
+              </div>
+            </div>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 border-t border-app-line-soft px-4 py-3 text-sm">
+              <dt className="text-muted-foreground">Address</dt>
+              <dd className="truncate">{picked.address ?? "-"}</dd>
+              <dt className="text-muted-foreground">Boundary</dt>
+              <dd>{picked.ring ? `Area · ${picked.ring.length} points` : `${picked.geofence_radius_m} m radius`}</dd>
+              <dt className="text-muted-foreground">Shift</dt>
+              <dd className="tabular-nums">{picked.shift_start ? `${clock(picked.shift_start)}–${clock(picked.shift_end)}` : "Not fixed"}</dd>
+              <dt className="text-muted-foreground">Grace</dt>
+              <dd className="tabular-nums">{picked.grace_minutes} min</dd>
+              <dt className="text-muted-foreground">Standard shift</dt>
+              <dd className="tabular-nums">{picked.standard_shift_minutes} min</dd>
+              <dt className="text-muted-foreground">GPS needed</dt>
+              <dd className="tabular-nums">±{picked.max_accuracy_m} m</dd>
+            </dl>
+            <div className="space-y-2 border-t border-app-line-soft px-4 py-3">
+              <Button size="sm" className="w-full" onClick={() => setDetail(picked)}>
+                <Eye data-icon="inline-start" />
+                Roster, guards on duty and SOS
+              </Button>
+              {canManage && <div className="flex flex-wrap gap-2">{actionsFor(picked, false)}</div>}
+            </div>
+          </div>
+        </aside>
+      )}
 
       <SitePreviewDialog
         site={detail}
         onClose={() => setDetail(null)}
         canReview={canReview}
-        actions={
-          canManage && detail ? (
-            <>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pending}
-              onClick={() => {
-                setEditing(detail);
-                setDetail(null);
-              }}
-            >
-              <Pencil data-icon="inline-start" />
-              Edit site
-            </Button>
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSos(detail, !detail.sos_enabled)}>
-              {detail.sos_enabled ? (
-                <>
-                  <BellOff data-icon="inline-start" />
-                  Switch SOS off
-                </>
-              ) : (
-                <>
-                  <Siren data-icon="inline-start" />
-                  Switch SOS on
-                </>
-              )}
-            </Button>
-            {detail.sos_enabled && (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => toggleSiren(detail, !detail.sos_siren)}>
-                {detail.sos_siren ? (
-                  <>
-                    <VolumeX data-icon="inline-start" />
-                    Siren off (vibrate only)
-                  </>
-                ) : (
-                  <>
-                    <Volume2 data-icon="inline-start" />
-                    Siren on
-                  </>
-                )}
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant={detail.active ? "destructive" : "default"}
-              disabled={pending}
-              onClick={() => (detail.active ? setConfirming(true) : toggle(detail, true))}
-            >
-              {detail.active ? (
-                <>
-                  <PowerOff data-icon="inline-start" />
-                  Take out of service
-                </>
-              ) : (
-                <>
-                  <Power data-icon="inline-start" />
-                  Put back in service
-                </>
-              )}
-            </Button>
-            {/* Only an empty site can go for good; the action refuses one with history. */}
-            {detail.onDuty === 0 && (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => setDeleting(detail)} className="text-destructive hover:text-destructive">
-                <Trash2 data-icon="inline-start" />
-                Delete
-              </Button>
-            )}
-            </>
-          ) : null
-        }
+        actions={canManage && detail ? actionsFor(detail, true) : null}
       />
 
       {editing && <SiteForm key={editing.id} site={editing} onClose={() => setEditing(null)} />}
+      {registering && <SiteForm key={registering.id} fromPin={registering} onClose={() => setRegistering(null)} />}
+
+      <ConfirmDialog
+        open={!!pinDeleting}
+        onOpenChange={(v) => !v && setPinDeleting(null)}
+        onConfirm={() => {
+          if (pinDeleting) removePin(pinDeleting);
+        }}
+        destructive
+        title="Delete this pin?"
+        confirmLabel="Delete pin"
+        description={
+          pinDeleting
+            ? `The location ${pinDeleting.senderName} sent${pinDeleting.note ? ` (“${pinDeleting.note}”)` : ""} is removed.${pinDeleting.siteName ? ` ${pinDeleting.siteName}, registered from it, stays.` : ""}`
+            : ""
+        }
+      />
 
       <ConfirmDialog
         open={!!deleting}
@@ -383,17 +480,17 @@ export function SitesWorkspace({
       />
 
       <ConfirmDialog
-        open={confirming}
-        onOpenChange={setConfirming}
+        open={!!confirming}
+        onOpenChange={(v) => !v && setConfirming(null)}
         onConfirm={() => {
-          if (detail) toggle(detail, false);
+          if (confirming) toggle(confirming, false);
         }}
         destructive
         title="Take this site out of service?"
         confirmLabel="Take out of service"
         description={
-          detail
-            ? `Nobody will be able to check in at ${detail.name}. Every punch already recorded there is kept, and it can be put back in service at any time.`
+          confirming
+            ? `Nobody will be able to check in at ${confirming.name}. Every punch already recorded there is kept, and it can be put back in service at any time.`
             : ""
         }
       />

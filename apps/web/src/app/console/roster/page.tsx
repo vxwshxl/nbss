@@ -165,7 +165,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Operations" title="Roster" />
+      <PageHeader title="Roster" />
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Posts filled now"

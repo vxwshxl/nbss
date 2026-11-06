@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
+import { MapSearch } from "@/components/maps/map-search";
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
 import { MAP_COLOR, circlePath, createHtmlMarker, esc, type HtmlMarker } from "@/lib/google-maps";
 import { runsByFence } from "@/lib/tracking";
@@ -49,6 +50,7 @@ export function LiveMap({
   frameKey,
   height = "100%",
   className,
+  search = false,
 }: {
   sites: LiveSite[];
   guards: LiveMarker[];
@@ -64,9 +66,12 @@ export function LiveMap({
   frameKey?: string;
   height?: number | string;
   className?: string;
+  /** A place search at the top centre of the map. */
+  search?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const { maps, map, error } = useGoogleMap(host, { zoom: 12, gestureHandling: "greedy", fullscreenControl: false });
+  const local = useMemo(() => sites.map((s) => ({ id: s.id, label: s.name, lat: s.lat, lng: s.lng })), [sites]);
   const markers = useRef(new Map<string, HtmlMarker>());
   const accuracy = useRef(new Map<string, google.maps.Circle>());
   const framedFor = useRef<string | null>(null);
@@ -257,5 +262,20 @@ export function LiveMap({
     return () => l.remove();
   }, [map]);
 
-  return <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className} />;
+  return (
+    <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className}>
+      {search && (
+        <div className={SEARCH_SPOT}>
+          <MapSearch maps={maps} map={map} local={local} placeholder="Search a place or site" />
+        </div>
+      )}
+    </MapFrame>
+  );
 }
+
+/**
+ * Where a map's search box sits: top centre from md, as Google Maps has it; on a
+ * phone, under whatever chip the page puts at the top left, clear of the buttons
+ * down the right.
+ */
+export const SEARCH_SPOT = "pointer-events-none absolute top-14 right-16 left-3 z-10 md:top-2.5 md:right-auto md:left-1/2 md:w-[min(24rem,calc(100%-30rem))] md:min-w-64 md:-translate-x-1/2";

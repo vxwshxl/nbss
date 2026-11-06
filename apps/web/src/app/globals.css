@@ -1007,6 +1007,97 @@
 .gm-info strong {
   font-weight: 600;
 }
+.gm-info .gm-info-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.gm-info button {
+  font: 600 12px/1 var(--font-sans);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #d4d4d4;
+  background: #fff;
+  cursor: pointer;
+}
+.gm-info button[data-primary] {
+  background: #009164;
+  border-color: #009164;
+  color: #fff;
+}
+.gm-info button[data-danger] {
+  color: #dc2626;
+}
+
+/* The site picked from the map's site list: lifted, ringed and always named. */
+.gm-pin[data-selected] span {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c), 0 6px 16px oklch(0 0 0 / 0.3);
+  transform: scale(1.08);
+}
+[data-far] .gm-pin[data-selected] span,
+[data-far] .gm-pin[data-selected] i {
+  display: block;
+}
+
+/* A place found with the map's search box: a red teardrop, as Google draws one. */
+.gm-place {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #dc2626;
+  border: 2.5px solid #fff;
+  box-shadow: 0 3px 8px oklch(0 0 0 / 0.35);
+}
+.gm-place::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 999px;
+  background: #fff;
+}
+
+/* A location sent from the field (location_pins): amber, with the sender's initials. */
+.gm-fieldpin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font: 600 11px/14px var(--font-sans);
+  pointer-events: auto;
+}
+.gm-fieldpin b {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--c, #d97706);
+  border: 2.5px solid #fff;
+  box-shadow: 0 3px 8px oklch(0 0 0 / 0.35);
+  color: #fff;
+}
+.gm-fieldpin b > em {
+  font-style: normal;
+  transform: rotate(45deg);
+}
+.gm-fieldpin span {
+  margin-top: 4px;
+  max-width: 160px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #171717;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 4px oklch(0 0 0 / 0.25);
+}
+.gm-fieldpin[data-selected] b {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c, #d97706), 0 6px 16px oklch(0 0 0 / 0.3);
+}
 
 
 /* ---------------------------------------------------------------------------

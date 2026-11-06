@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { MapSearch } from "@/components/maps/map-search";
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
+import { SEARCH_SPOT } from "@/components/tracking/live-map";
 import { MAP_COLOR, circlePath, createHtmlMarker, esc } from "@/lib/google-maps";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { toPoints, type TrailPoint, type TrailTuple } from "@/lib/tracking";
@@ -21,7 +23,13 @@ export type OverviewShift = { attendanceId: string; guardName: string; siteId: s
  */
 export function RoutesOverview({ shifts, onPick, className }: { shifts: OverviewShift[]; onPick: (attendanceId: string) => void; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
-  const { maps, map, error } = useGoogleMap(host, { zoom: 14, gestureHandling: "greedy" });
+  const { maps, map, error } = useGoogleMap(host, { zoom: 14, gestureHandling: "greedy", fullscreenControl: false });
+  // Each site on the map once, for the search box to offer first.
+  const local = useMemo(() => {
+    const seen = new Map<string, { id: string; label: string; lat: number; lng: number }>();
+    for (const s of shifts) if (!seen.has(s.siteId)) seen.set(s.siteId, { id: s.siteId, label: s.site.name, lat: s.site.lat, lng: s.site.lng });
+    return [...seen.values()];
+  }, [shifts]);
   const [trails, setTrails] = useState<Record<string, TrailPoint[]>>({});
   const pick = useRef(onPick);
   useEffect(() => {
@@ -113,5 +121,11 @@ export function RoutesOverview({ shifts, onPick, className }: { shifts: Overview
     return () => drawn.forEach((d) => d.setMap(null));
   }, [maps, map, shifts, trails]);
 
-  return <MapFrame hostRef={host} ready={!!map} error={error} height="100%" className={className} />;
+  return (
+    <MapFrame hostRef={host} ready={!!map} error={error} height="100%" className={className} fullscreen>
+      <div className={SEARCH_SPOT}>
+        <MapSearch maps={maps} map={map} local={local} placeholder="Search a place or site" />
+      </div>
+    </MapFrame>
+  );
 }

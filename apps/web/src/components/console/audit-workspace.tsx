@@ -66,6 +66,7 @@ const ACTION_LABEL: Record<string, string> = {
   device_autostart_unchecked: "Took back an Autostart check",
   site_updated: "Edited a site",
   site_deleted: "Deleted a site",
+  location_pin_deleted: "Deleted a location sent from the field",
   site_deactivated: "Took a site out of service",
   site_reactivated: "Put a site back in service",
   check_in: "Checked in",

@@ -8,6 +8,7 @@ import { roleLabel } from "@nbss/shared/identity";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { InfoButton } from "@/components/info";
+import { LocationPinCard } from "@/components/location-pin-card";
 import { PermissionsPanel } from "@/components/permissions-panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
@@ -73,6 +74,9 @@ export function Account() {
         )}
         <Row icon={BellRing} label="SOS alerts" value={CAN_RECEIVE_PUSH ? "On, even when closed" : "Install the app build"} last />
       </View>
+
+      {/* Guards, housekeepers and supervisors at a site that is hard to find send where they stand. */}
+      {profile && profile.role !== "client" && <LocationPinCard />}
 
       {/* Anyone who carries the SOS button needs location, as a guard does. */}
       <PermissionsPanel location={profile?.role !== "client"} />

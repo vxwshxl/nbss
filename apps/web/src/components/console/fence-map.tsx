@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { LocateFixed } from "lucide-react";
 
+import { MapSearch, type FoundPlace } from "@/components/maps/map-search";
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
 import { Button } from "@/components/ui/button";
 import { KOKRAJHAR, MAP_COLOR } from "@/lib/google-maps";
@@ -56,9 +57,12 @@ function polygonFence(ring: [number, number][]): Fence {
 export function FenceMap({
   value,
   onChange,
+  onPlace,
 }: {
   value: Fence;
   onChange: (fence: Fence) => void;
+  /** A place picked in the map's search box. */
+  onPlace?: (place: FoundPlace) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const { maps, map, error } = useGoogleMap(host, {
@@ -66,6 +70,7 @@ export function FenceMap({
     zoom: value.lat ? 17 : 14,
     gestureHandling: "greedy",
     draggableCursor: "crosshair",
+    fullscreenControl: false,
   });
 
   // The newest value and handler, reachable from the map's own listeners,
@@ -270,7 +275,21 @@ export function FenceMap({
         </Button>
       </div>
 
-      <MapFrame hostRef={host} ready={!!map} error={error} className="h-[340px] w-full rounded-none border-0 lg:h-[480px]" />
+      <MapFrame hostRef={host} ready={!!map} error={error} fullscreen className="h-[380px] w-full rounded-none border-0 lg:h-[min(62dvh,600px)]">
+        {/* Find the place first, as on Google Maps: the map flies there, and an empty circle is put on it. */}
+        <div className="pointer-events-none absolute top-2.5 left-2.5 z-10 w-[calc(100%-5.5rem)] sm:w-80 sm:max-w-[calc(100%-15rem)]">
+          <MapSearch
+            maps={maps}
+            map={map}
+            placeholder="Search Google Maps"
+            onPlace={(p) => {
+              const v = latest.current.value;
+              if (v.mode === "radius" && !v.lat && !v.lng) latest.current.onChange({ mode: "radius", lat: p.lat, lng: p.lng, radius: v.radius });
+              onPlace?.(p);
+            }}
+          />
+        </div>
+      </MapFrame>
 
       <p className="border-t border-app-line-soft px-3 py-2.5 text-xs text-muted-foreground">
         {value.mode === "radius"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Loader2, MapPinOff } from "lucide-react";
+import { Loader2, MapPinOff, Maximize, Minimize } from "lucide-react";
 
 import { baseOptions, loadGoogleMaps } from "@/lib/google-maps";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -40,13 +40,20 @@ export function useGoogleMap(host: RefObject<HTMLDivElement | null>, options?: g
   return { maps: state?.maps ?? null, map: state?.map ?? null, error };
 }
 
-/** The frame every console map sits in: rounded, with a loading and an error state. */
+/**
+ * The frame every console map sits in: rounded, with a loading and an error state.
+ *
+ * `fullscreen` draws the frame's own full-screen button in place of Google's (pass
+ * `fullscreenControl: false` to the map), so what is laid over the map (a search
+ * box, a site list) goes full screen with it.
+ */
 export function MapFrame({
   hostRef,
   ready,
   error,
   height,
   className,
+  fullscreen = false,
   children,
 }: {
   hostRef: RefObject<HTMLDivElement | null>;
@@ -54,12 +61,23 @@ export function MapFrame({
   error: string | null;
   height?: number | string;
   className?: string;
+  fullscreen?: boolean;
   children?: React.ReactNode;
 }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const on = () => setFull(document.fullscreenElement === frame.current);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, [fullscreen]);
+
   return (
     <div
+      ref={frame}
       className={cn("relative overflow-hidden rounded-xl border border-app-line-soft bg-muted", className)}
-      style={height !== undefined ? { height } : undefined}
+      style={height !== undefined && !full ? { height } : undefined}
     >
       <div ref={hostRef} className="size-full" />
       {!ready && (
@@ -78,6 +96,16 @@ export function MapFrame({
         </div>
       )}
       {children}
+      {fullscreen && ready && (
+        <button
+          type="button"
+          onClick={() => (document.fullscreenElement ? void document.exitFullscreen() : void frame.current?.requestFullscreen?.())}
+          aria-label={full ? "Leave full screen" : "Full screen"}
+          className="absolute top-[60px] right-[10px] z-10 grid size-10 place-items-center rounded-sm bg-card text-[#666] shadow-[0_1px_4px_-1px_rgba(0,0,0,0.3)] hover:text-foreground"
+        >
+          {full ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
+        </button>
+      )}
     </div>
   );
 }

@@ -167,12 +167,18 @@ export async function createSite(
 
   if (error) return fail(error.message);
 
+  // Registered from a location sent from the field: the pin now points at its site.
+  const pinId = String(data.get("pin_id") ?? "");
+  if (/^[0-9a-f-]{36}$/i.test(pinId)) {
+    await supabase.from("location_pins").update({ site_id: created.id }).eq("id", pinId);
+  }
+
   await audit({
     actor: profile,
     action: "site_created",
     entity: "sites",
     entityId: created.id,
-    detail: { name: f.name, lat: f.lat, lng: f.lng, radius: f.geofence_radius_m, shape: f.polygon ? `polygon:${f.polygon.length}` : "circle" },
+    detail: { name: f.name, lat: f.lat, lng: f.lng, radius: f.geofence_radius_m, shape: f.polygon ? `polygon:${f.polygon.length}` : "circle", ...(/^[0-9a-f-]{36}$/i.test(pinId) ? { from_pin: pinId } : {}) },
     ip: await clientIp(),
   });
 
@@ -180,6 +186,27 @@ export async function createSite(
   revalidatePath("/console");
 
   return { ok: true, values: null, created: f.name };
+}
+
+/** Deletes a location sent from the field (location_pins, 0073). A site registered from it stays. */
+export async function deleteLocationPin(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const profile = await requireRole("admin", "supervisor");
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.from("location_pins").delete().eq("id", id).select("id, lat, lng, note, sent_by");
+  if (error) return { ok: false, error: error.message };
+  if (!data?.length) return { ok: false, error: "That pin was already deleted." };
+
+  await audit({
+    actor: profile,
+    action: "location_pin_deleted",
+    entity: "location_pins",
+    entityId: id,
+    detail: { lat: data[0]!.lat, lng: data[0]!.lng, note: data[0]!.note, sent_by: data[0]!.sent_by },
+    ip: await clientIp(),
+  });
+
+  revalidatePath("/console/sites");
+  return { ok: true };
 }
 
 /**

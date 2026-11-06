@@ -89,10 +89,7 @@ export default async function AttendancePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Operations"
-        title={mine ? "My attendance" : "Attendance"}
-      />
+      <PageHeader title={mine ? "My attendance" : "Attendance"} />
       {!mine && <ViewTabs view="punches" />}
 
       <Panel

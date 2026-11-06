@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
+import { MapListPicker, MapSearch } from "@/components/maps/map-search";
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
 import { MAP_COLOR, circlePath, createHtmlMarker, esc, type HtmlMarker } from "@/lib/google-maps";
+import { initials } from "@/lib/ui/initials";
 
 /** A site, with whatever fence it was given and who is standing in it. */
 export type MapSite = {
@@ -34,6 +36,20 @@ export type MapPunch = {
   label: string;
 };
 
+/** A location sent from the field by a guard, housekeeper or supervisor (location_pins, 0073). */
+export type MapFieldPin = {
+  id: string;
+  lat: number;
+  lng: number;
+  accuracy: number;
+  note: string | null;
+  senderName: string;
+  senderRole: string;
+  capturedAt: string;
+  /** The site registered from it, once there is one. */
+  siteName: string | null;
+};
+
 /**
  * The deployment map, on Google Maps.
  *
@@ -52,16 +68,44 @@ export function SiteMap({
   focus,
   className,
   height = 420,
+  search = false,
+  selected = null,
+  onSelect,
+  pins = [],
+  selectedPin = null,
+  onRegisterPin,
+  onDeletePin,
 }: {
   sites: MapSite[];
   punches?: MapPunch[];
   focus?: string;
   className?: string;
-  height?: number;
+  height?: number | string;
+  /** A place search over the map (and, with `onSelect`, the site list beside it), and the frame's own full screen. */
+  search?: boolean;
+  /** The site picked from the map's list: the camera flies to it and it is drawn lifted. */
+  selected?: string | null;
+  onSelect?: (id: string | null) => void;
+  pins?: MapFieldPin[];
+  /** Fly to this pin and open its card. */
+  selectedPin?: string | null;
+  onRegisterPin?: (pin: MapFieldPin) => void;
+  onDeletePin?: (pin: MapFieldPin) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const { maps, map, error } = useGoogleMap(host, { zoom: 11 });
+  const { maps, map, error } = useGoogleMap(host, { zoom: 11, ...(search ? { fullscreenControl: false } : {}) });
   const framed = useRef(false);
+  const info = useRef<google.maps.InfoWindow | null>(null);
+  const pinActions = useRef({ onRegisterPin, onDeletePin });
+  useEffect(() => {
+    pinActions.current = { onRegisterPin, onDeletePin };
+  }, [onRegisterPin, onDeletePin]);
+  const pinMarkers = useRef(new Map<string, { marker: HtmlMarker; open: () => void }>());
+
+  const local = useMemo(
+    () => sites.map((s) => ({ id: s.id, label: s.name, sub: [s.client_name, s.district].filter(Boolean).join(" · ") || undefined, lat: s.lat, lng: s.lng })),
+    [sites],
+  );
 
   useEffect(() => {
     if (!maps || !map) return;
@@ -72,14 +116,16 @@ export function SiteMap({
 
     for (const s of sites) {
       const colour = s.onDuty > 0 ? MAP_COLOR.primary : MAP_COLOR.muted;
+      const lifted = s.id === selected;
       const path = s.ring?.length ? s.ring.map(([lng, lat]) => ({ lat, lng })) : circlePath(s, s.geofence_radius_m);
       const shape = new maps.Polygon({
         map,
         paths: path,
-        strokeColor: colour,
-        strokeWeight: 2,
-        fillColor: colour,
-        fillOpacity: 0.12,
+        strokeColor: lifted ? MAP_COLOR.route : colour,
+        strokeWeight: lifted ? 3.5 : 2,
+        fillColor: lifted ? MAP_COLOR.route : colour,
+        fillOpacity: lifted ? 0.2 : 0.12,
+        zIndex: lifted ? 3 : 1,
         clickable: false,
       });
       drawn.push(shape);
@@ -88,7 +134,8 @@ export function SiteMap({
       const marker = createHtmlMarker(maps, {
         position: { lat: s.lat, lng: s.lng },
         anchor: "bottom",
-        html: `<div class="gm-pin" style="--c:${colour}"><span>${esc(s.name)}</span><i></i></div>`,
+        html: `<div class="gm-pin" style="--c:${lifted ? MAP_COLOR.route : colour}" ${lifted ? "data-selected" : ""}><span>${esc(s.name)}</span><i></i></div>`,
+        zIndex: lifted ? 40 : 2,
         onClick: () => {
           info.setContent(
             `<div class="gm-info"><strong>${esc(s.name)}</strong>` +
@@ -160,7 +207,143 @@ export function SiteMap({
       for (const d of drawn) d.setMap(null);
       for (const m of markers) m.setMap(null);
     };
-  }, [maps, map, sites, punches, focus]);
+  }, [maps, map, sites, punches, focus, selected]);
 
-  return <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className} />;
+  // A site picked from the list: fly to its whole fence.
+  useEffect(() => {
+    if (!maps || !map || !selected) return;
+    const s = sites.find((x) => x.id === selected);
+    if (!s) return;
+    const bounds = new maps.LatLngBounds();
+    for (const p of s.ring?.length ? s.ring.map(([lng, lat]) => ({ lat, lng })) : circlePath(s, s.geofence_radius_m)) bounds.extend(p);
+    map.fitBounds(bounds, 80);
+    maps.event.addListenerOnce(map, "idle", () => {
+      if ((map.getZoom() ?? 0) > 18) map.setZoom(18);
+    });
+    framed.current = true;
+    // Only when the pick changes, not on every live refresh of the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maps, map, selected]);
+
+  // Back to "All sites": everything in view again.
+  const wasSelected = useRef(selected);
+  useEffect(() => {
+    const before = wasSelected.current;
+    wasSelected.current = selected;
+    if (!maps || !map || selected || !before) return;
+    const bounds = new maps.LatLngBounds();
+    for (const s of sites) bounds.extend({ lat: s.lat, lng: s.lng });
+    if (bounds.isEmpty()) return;
+    map.fitBounds(bounds, 60);
+    maps.event.addListenerOnce(map, "idle", () => {
+      if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maps, map, selected]);
+
+  // Locations sent from the field: amber pins, each with a card to register a site there or delete it.
+  useEffect(() => {
+    if (!maps || !map) return;
+    info.current ??= new maps.InfoWindow();
+    const card = info.current;
+    const drawn: { setMap: (m: google.maps.Map | null) => void }[] = [];
+    const markers = pinMarkers.current;
+    for (const p of pins) {
+      const colour = p.siteName ? MAP_COLOR.muted : MAP_COLOR.outside;
+      const ring = new maps.Circle({ map, center: p, radius: p.accuracy, strokeColor: colour, strokeOpacity: 0.5, strokeWeight: 1, fillColor: colour, fillOpacity: 0.1, clickable: false });
+      drawn.push(ring);
+      const open = () => {
+        const el = document.createElement("div");
+        el.className = "gm-info";
+        const when = new Date(p.capturedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
+        el.innerHTML =
+          `<strong>${esc(p.note || "Location sent from the field")}</strong>` +
+          `<br>${esc(p.senderName)} · ${esc(p.senderRole)}` +
+          `<br>${esc(when)} · GPS ±${Math.round(p.accuracy)} m` +
+          (p.siteName ? `<br><em>Registered as ${esc(p.siteName)}</em>` : "");
+        const actions = document.createElement("div");
+        actions.className = "gm-info-actions";
+        if (pinActions.current.onRegisterPin && !p.siteName) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.dataset.primary = "";
+          b.textContent = "Register a site here";
+          b.onclick = () => {
+            card.close();
+            pinActions.current.onRegisterPin?.(p);
+          };
+          actions.append(b);
+        }
+        if (pinActions.current.onDeletePin) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.dataset.danger = "";
+          b.textContent = "Delete";
+          b.onclick = () => {
+            card.close();
+            pinActions.current.onDeletePin?.(p);
+          };
+          actions.append(b);
+        }
+        if (actions.childElementCount) el.append(actions);
+        card.setContent(el);
+        card.setPosition(p);
+        card.open({ map });
+      };
+      const marker = createHtmlMarker(maps, {
+        position: { lat: p.lat, lng: p.lng },
+        anchor: "bottom",
+        html: `<div class="gm-fieldpin" style="--c:${colour}" ${p.id === selectedPin ? "data-selected" : ""}><b><em>${esc(initials(p.senderName))}</em></b><span>${esc(p.note || p.senderName.split(" ")[0] || "Pin")}</span></div>`,
+        zIndex: p.id === selectedPin ? 45 : 30,
+        title: `Sent by ${p.senderName}`,
+        onClick: open,
+      });
+      marker.setMap(map);
+      drawn.push(marker);
+      markers.set(p.id, { marker, open });
+    }
+    return () => {
+      for (const d of drawn) d.setMap(null);
+      markers.clear();
+    };
+  }, [maps, map, pins, selectedPin]);
+
+  // A pin picked from the list below the map: fly there and open its card.
+  useEffect(() => {
+    if (!map || !selectedPin) return;
+    const p = pins.find((x) => x.id === selectedPin);
+    if (!p) return;
+    map.panTo({ lat: p.lat, lng: p.lng });
+    if ((map.getZoom() ?? 0) < 17) map.setZoom(18);
+    framed.current = true;
+    pinMarkers.current.get(p.id)?.open();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, selectedPin]);
+
+  return (
+    <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className} fullscreen={search}>
+      {search && (
+        // Top left, clear of Map / Satellite and full screen on the right.
+        <div className="pointer-events-none absolute top-2.5 left-2.5 z-10 flex w-[calc(100%-5.5rem)] flex-col gap-2 sm:w-auto sm:max-w-[calc(100%-15rem)] sm:flex-row sm:items-start">
+          {onSelect && sites.length > 1 && (
+            <MapListPicker
+              items={local.map((l) => ({ id: l.id, label: l.label, sub: l.sub }))}
+              value={selected}
+              onChange={onSelect}
+              allLabel="All sites"
+              className="sm:w-56"
+            />
+          )}
+          <MapSearch
+            maps={maps}
+            map={map}
+            local={local}
+            onLocal={onSelect ? (l) => onSelect(l.id) : undefined}
+            placeholder="Search a place or site"
+            className="sm:w-80"
+          />
+        </div>
+      )}
+    </MapFrame>
+  );
 }

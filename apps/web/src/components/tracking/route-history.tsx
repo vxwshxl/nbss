@@ -5,12 +5,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, MapPinOff, Pause, Phone, Play, Radar, Search, Smartphone, TriangleAlert, X } from "lucide-react";
 
+import { PeriodSwitch } from "@/components/console/period-switch";
 import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty } from "@/components/tracking/route-panel";
 import { focusLiveGuard } from "@/components/tracking/live-handoff";
 import { ROUTE_HUES, RoutesOverview } from "@/components/tracking/routes-overview";
 import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
@@ -28,6 +28,7 @@ import {
   type TrailPoint,
   type TrailTuple,
 } from "@/lib/tracking";
+import { periodPhrase, type Period } from "@/lib/period";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -67,13 +68,16 @@ export function RouteHistory({
   shifts,
   guards,
   sites,
+  period,
   initial,
 }: {
   shifts: RouteShift[];
   guards: { id: string; name: string }[];
   /** For the site picker; empty inside one site's own workspace. */
   sites: { id: string; name: string }[];
-  initial: { attendance: string | null; guard: string | null; date: string | null; site: string | null };
+  /** The day, month or year shown (Daily / Monthly / Yearly above the map). */
+  period: { period: Period; at: string; today: string };
+  initial: { attendance: string | null; guard: string | null; site: string | null };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -238,7 +242,7 @@ export function RouteHistory({
     return () => clearInterval(t);
   }, []);
 
-  function setFilter(key: "guard" | "date" | "site", value: string) {
+  function setFilter(key: "guard" | "site", value: string) {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value);
     else next.delete(key);
@@ -253,11 +257,13 @@ export function RouteHistory({
   return (
     // The list and the map until a shift is picked; then its details take a third column
     // and the map gives up the room, as on Live tracking.
+    <div className="space-y-4">
+    <PeriodSwitch period={period.period} at={period.at} today={period.today} />
     <div className={cn("grid gap-4", shift ? "xl:grid-cols-[320px_minmax(0,1fr)_320px]" : "xl:grid-cols-[320px_minmax(0,1fr)]")}>
       {/* Shifts */}
       {/* Below the map and summary on anything narrower than a wide desk, in its own
           scroll: with two hundred guards the list is long, and the map is what you came for. */}
-      <aside className="order-3 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-1 xl:h-[calc(100dvh-210px)] xl:max-h-none">
+      <aside className="order-3 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-1 xl:h-[calc(100dvh-265px)] xl:max-h-none">
         <div className="grid grid-cols-2 gap-2 border-b border-app-line-soft p-3">
           <Select value={initial.guard ?? ALL} onValueChange={(v) => setFilter("guard", v === ALL ? "" : v)}>
             <SelectTrigger aria-label="Guard" className={FILTER}>
@@ -272,16 +278,12 @@ export function RouteHistory({
               ))}
             </SelectContent>
           </Select>
-          <DatePicker
-            value={initial.date ?? ""}
-            // Cleared, the list is every day of the last two weeks rather than today again.
-            onChange={(v) => setFilter("date", v || "any")}
-            placeholder="Any day"
-            max={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })}
-            className={FILTER}
-          />
-          {sites.length > 1 && (
-            <SiteFilter sites={sites} value={initial.site ?? ALL_SITES} onChange={(v) => setFilter("site", v === ALL_SITES ? "" : v)} className="col-span-2" />
+          {sites.length > 1 ? (
+            <SiteFilter sites={sites} value={initial.site ?? ALL_SITES} onChange={(v) => setFilter("site", v === ALL_SITES ? "" : v)} />
+          ) : (
+            <span className="flex h-9 items-center justify-center rounded-full bg-muted/40 px-3 text-xs font-medium text-muted-foreground tabular-nums">
+              {shifts.length} shift{shifts.length === 1 ? "" : "s"}
+            </span>
           )}
           <label className="col-span-2 flex h-9 items-center gap-2 rounded-full bg-muted/70 px-3 ring-1 ring-border/60 focus-within:ring-2 focus-within:ring-ring/50">
             <Search className="size-4 text-muted-foreground" />
@@ -289,7 +291,11 @@ export function RouteHistory({
           </label>
         </div>
         <ul className="min-h-0 flex-1 divide-y divide-app-line-soft overflow-y-auto">
-          {listed.length === 0 && <li className="p-6 text-center text-sm text-muted-foreground">No shifts match. Routes appear here once a guard checks in from the app.</li>}
+          {listed.length === 0 && (
+            <li className="p-6 text-center text-sm text-muted-foreground">
+              No shifts {periodPhrase(period.period, period.at, period.today)}. Routes appear here once a guard checks in from the app.
+            </li>
+          )}
           {listed.map((s) => (
             <li key={s.attendanceId}>
               <button
@@ -334,11 +340,11 @@ export function RouteHistory({
       <div className="order-1 flex min-h-0 flex-col gap-3 xl:order-2">
         <div className="relative h-[55vh] min-h-[380px] xl:h-auto xl:flex-1">
           {shift ? (
-            <TrailMap points={points} stats={stats} site={shift.site} head={head} clock={clockRef} playing={playing} pan={pan} who={who} className="h-full" />
+            <TrailMap points={points} stats={stats} site={shift.site} head={head} clock={clockRef} playing={playing} pan={pan} who={who} className="h-full" search />
           ) : overview.length > 0 ? (
             <RoutesOverview shifts={overview} onPick={setSelected} className="h-full" />
           ) : (
-            <div className="grid h-full place-items-center rounded-xl border border-app-line-soft bg-muted text-sm text-muted-foreground">No shifts on this day.</div>
+            <div className="grid h-full place-items-center rounded-xl border border-app-line-soft bg-muted text-sm text-muted-foreground">No shifts {periodPhrase(period.period, period.at, period.today)}.</div>
           )}
           {shift && (
             <button
@@ -354,7 +360,7 @@ export function RouteHistory({
           )}
           {loading && <div className="absolute top-3 left-3 rounded-full bg-card px-3 py-1.5 text-xs font-medium shadow">Loading the route…</div>}
           {shift && !loading && points.length <= 1 && (
-            <div className="absolute inset-x-3 top-3 flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 shadow ring-1 ring-amber-200">
+            <div className="absolute inset-x-3 top-28 flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 shadow ring-1 ring-amber-200 md:top-16 md:right-16">
               <MapPinOff className="mt-0.5 size-4 shrink-0" />
               <p>Only the check-in point was recorded. Either the shift has just started or the phone was not sending its location (background location off, or the app closed in Expo Go).</p>
             </div>
@@ -417,7 +423,7 @@ export function RouteHistory({
 
       {/* Summary and timeline: only once a shift is picked. */}
       {shift && (
-      <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-210px)] xl:max-h-none">
+      <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-265px)] xl:max-h-none">
         {shift ? (
           <>
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -496,7 +502,7 @@ export function RouteHistory({
           <div className="space-y-3 p-4 text-sm">
             <p className="font-semibold">
               {shifts.length} shift{shifts.length === 1 ? "" : "s"}
-              {initial.date ? ` on ${new Date(`${initial.date}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}` : ", last two weeks"}
+              {` ${periodPhrase(period.period, period.at, period.today)}`}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-emerald-500/10 p-3">
@@ -517,6 +523,7 @@ export function RouteHistory({
         )}
       </aside>
       )}
+    </div>
     </div>
   );
 }

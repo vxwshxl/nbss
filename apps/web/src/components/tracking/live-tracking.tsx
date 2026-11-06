@@ -379,12 +379,12 @@ export function LiveTracking({
   };
 
   return (
-    // Route history's shape: the guard on the left, the map in the middle, everyone on
-    // the right. Below xl the map comes first and the guard's panel follows it.
-    // With nobody picked, the map takes the left column too.
-    <div className={cn("grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]", sel && "xl:grid-cols-[340px_minmax(0,1fr)_340px]")}>
+    // Route history's shape: everyone on the left, the map in the middle, the picked
+    // guard on the right. On a phone the map comes first, then the guard, then the list.
+    // With nobody picked, the map takes the right column too.
+    <div className={cn("grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]", sel && "xl:grid-cols-[340px_minmax(0,1fr)_340px]")}>
       {sel && (
-        <aside className="order-2 min-h-0 overflow-hidden rounded-2xl border border-app-line bg-card lg:col-span-2 xl:order-1 xl:col-span-1 xl:h-[calc(100dvh-210px)]">
+        <aside className="order-2 min-h-0 overflow-hidden rounded-2xl border border-app-line bg-card lg:order-3 lg:col-span-2 xl:col-span-1 xl:h-[calc(100dvh-190px)]">
           <GuardCard
             docked
             row={sel}
@@ -402,7 +402,7 @@ export function LiveTracking({
         </aside>
       )}
 
-      <div ref={stage} className={cn("relative order-1 h-[62vh] min-h-[420px] bg-card lg:h-[calc(100dvh-210px)] xl:order-2", full && "h-screen lg:h-screen")}>
+      <div ref={stage} className={cn("relative order-1 h-[62vh] min-h-[420px] bg-card lg:order-2 lg:h-[calc(100dvh-190px)]", full && "h-screen lg:h-screen")}>
         <LiveMap
           sites={site === ALL_SITES ? sites : sites.filter((x) => x.id === site)}
           frameKey={site}
@@ -413,6 +413,7 @@ export function LiveTracking({
           upTo={atMoment?.event.index ?? null}
           focus={focus}
           className="h-full"
+          search
         />
         {/* Stacked down the left, clear of Map / Satellite and the full-screen button on the right. */}
         <div className="pointer-events-none absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-2 sm:max-w-[calc(100%-15rem)]">
@@ -463,7 +464,7 @@ export function LiveTracking({
 
       {/* Below the map on a phone, beside it on a desk: always its own scroll, so a
           list of two hundred guards never pushes the map off the screen. */}
-      <aside className="order-3 flex max-h-[75vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card lg:order-2 lg:h-[calc(100dvh-210px)] lg:max-h-none xl:order-3">
+      <aside className="order-3 flex max-h-[75vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card lg:order-1 lg:h-[calc(100dvh-190px)] lg:max-h-none">
         <div className="space-y-3 border-b border-app-line-soft p-3">
           {sites.length > 1 && <SiteFilter sites={sites} value={site} onChange={setSite} className="h-10" />}
           <label className="flex h-10 items-center gap-2 rounded-full bg-muted/70 px-3.5 ring-1 ring-border/60 focus-within:ring-2 focus-within:ring-ring/50">

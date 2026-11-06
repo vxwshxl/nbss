@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
+import { MapSearch } from "@/components/maps/map-search";
 import { MapFrame, useGoogleMap } from "@/components/maps/use-google-map";
+import { SEARCH_SPOT } from "@/components/tracking/live-map";
 import { MAP_COLOR, circlePath, createHtmlMarker, esc, type HtmlMarker } from "@/lib/google-maps";
 import { runsByFence, type TrailPoint, type TrailStats } from "@/lib/tracking";
 
@@ -26,6 +28,7 @@ export function TrailMap({
   who,
   height = "100%",
   className,
+  search = false,
 }: {
   points: TrailPoint[];
   stats: TrailStats | null;
@@ -44,9 +47,11 @@ export function TrailMap({
   who?: { initials: string; label: string } | null;
   height?: number | string;
   className?: string;
+  /** A place search at the top centre, and the frame's own full screen so it stays there. */
+  search?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const { maps, map, error } = useGoogleMap(host, { zoom: 16, gestureHandling: "greedy" });
+  const { maps, map, error } = useGoogleMap(host, { zoom: 16, gestureHandling: "greedy", ...(search ? { fullscreenControl: false } : {}) });
   const headMarker = useRef<HtmlMarker | null>(null);
   // The part already played, one line per stretch inside or outside the fence.
   const done = useRef<google.maps.Polyline[]>([]);
@@ -213,7 +218,15 @@ export function TrailMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, pan?.key]);
 
-  return <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className} />;
+  return (
+    <MapFrame hostRef={host} ready={!!map} error={error} height={height} className={className} fullscreen={search}>
+      {search && (
+        <div className={SEARCH_SPOT}>
+          <MapSearch maps={maps} map={map} local={site ? [{ id: "site", label: site.name, lat: site.lat, lng: site.lng }] : []} placeholder="Search a place" />
+        </div>
+      )}
+    </MapFrame>
+  );
 }
 
 /** The playback head, with its direction arrow when the guard is moving. */

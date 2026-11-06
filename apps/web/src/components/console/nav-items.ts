@@ -24,7 +24,9 @@ import {
   Eye,
   Sparkles,
   Timer,
+  BrushCleaning,
   UserRound,
+  UserRoundCog,
   Users,
   type LucideIcon,
   ListChecks,
@@ -127,6 +129,8 @@ export const groups: NavGroup[] = [
     label: "Security management",
     items: [
       { href: "/console/guards", label: "Guards", icon: UserRound, roles: ["admin", "supervisor"] },
+      { href: "/console/housekeepers", label: "Housekeepers", icon: BrushCleaning, roles: ["admin", "supervisor"] },
+      { href: "/console/supervisors", label: "Supervisors", icon: UserRoundCog, roles: ["admin", "supervisor"] },
       { href: "/console/devices", label: "Devices", icon: Smartphone, roles: ["admin", "supervisor"] },
       { href: "/console/sos", label: "SOS alerts", icon: Siren, roles: ["admin", "supervisor"] },
     ],

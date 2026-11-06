@@ -1,8 +1,9 @@
-import { isAdmin } from "@nbss/shared/identity";
+import { isAdmin, roleLabel } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/console/page-header";
 import { SiteForm } from "@/components/console/site-form";
+import type { MapFieldPin } from "@/components/console/site-map";
 import { SitesWorkspace, type SiteRow } from "@/components/console/sites-workspace";
 import { requireRoleSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -15,7 +16,7 @@ export default async function SitesPage() {
   const session = await requireRoleSession("admin", "supervisor");
   const supabase = await supabaseServer();
 
-  const [sites, live, shifts] = await Promise.all([
+  const [sites, live, shifts, pinRows] = await Promise.all([
     supabase
       .from("sites")
       .select(
@@ -31,7 +32,31 @@ export default async function SitesPage() {
       .from("shifts")
       .select("site_id, guard_id")
       .in("status", ["scheduled", "in_progress"]),
+    // Locations sent from the field (0073), newest first.
+    supabase
+      .from("location_pins")
+      .select("id, lat, lng, accuracy_m, note, captured_at, site_id, sender:profiles!location_pins_sent_by_fkey(full_name, role, trade), site:sites(name)")
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
+
+  type Sender = { full_name: string; role: string; trade: string | null };
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+  const pins: MapFieldPin[] = (pinRows.data ?? []).map((p) => {
+    const sender = one(p.sender as unknown as Sender | null);
+    const site = one(p.site as unknown as { name: string } | null);
+    return {
+      id: p.id,
+      lat: p.lat,
+      lng: p.lng,
+      accuracy: p.accuracy_m,
+      note: p.note,
+      senderName: sender?.full_name ?? "Someone",
+      senderRole: sender ? roleLabel(sender.role as never, sender.trade) : "Staff",
+      capturedAt: p.captured_at,
+      siteName: site?.name ?? null,
+    };
+  });
 
   const onDutyBySite = new Map<string, number>();
   for (const row of live.data ?? []) {
@@ -75,20 +100,11 @@ export default async function SitesPage() {
   const canManage = isAdmin(session.profile.role) && !session.impersonating;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Operations"
-        title="Sites & geofences"
-        action={canManage ? <SiteForm /> : undefined}
-      />
+    <div className="space-y-4">
+      <PageHeader title="Sites &amp; geofences" action={canManage ? <SiteForm /> : undefined} />
 
-      <SitesWorkspace rows={rows} canManage={canManage} canReview={!session.impersonating} />
+      <SitesWorkspace rows={rows} pins={pins} canManage={canManage} canReview={!session.impersonating} />
 
-      <p className="text-xs text-muted-foreground">
-        Boundaries are drawn on a map rather than typed. Tiles are served from
-        this site&apos;s own origin and cached in the NBSS bucket, so the content
-        policy needs no exception for a map CDN.
-      </p>
     </div>
   );
 }

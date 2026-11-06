@@ -46,9 +46,21 @@ export const PAGES: Record<string, PageKnowledge> = {
   },
   "/console/guards": {
     title: "Guards",
-    about: "Every guard account: code, email, phone and whether it is active. Clicking a row opens their profile with 30-day attendance.",
+    about: "Every security guard account (housekeepers and supervisors have their own pages): code, email, phone and whether it is active. Clicking a row opens their profile with 30-day attendance.",
     actions: ["Add a guard", "Edit contact details", "Deactivate or reactivate", "View the console as them"],
     tools: ["roster_overview", "guard_attendance"],
+  },
+  "/console/housekeepers": {
+    title: "Housekeepers",
+    about: "Every housekeeper account. Housekeepers work a site as guards do (shifts, attendance, SOS). Clicking a row opens their profile.",
+    actions: ["Add a housekeeper", "Edit contact details", "Deactivate or reactivate"],
+    tools: ["roster_overview", "guard_attendance"],
+  },
+  "/console/supervisors": {
+    title: "Supervisors",
+    about: "Every supervisor account: the people responsible for sites. Clicking a row opens their profile.",
+    actions: ["Add a supervisor", "Edit contact details", "Deactivate or reactivate"],
+    tools: [],
   },
   "/console/users": {
     title: "Users",
