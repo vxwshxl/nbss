@@ -95,14 +95,14 @@ async function read(location: boolean): Promise<Perm[]> {
 
   // Notifications: SOS alarms and the tracking wake-up.
   if (!Notifications) {
-    out.push({ key: "push", icon: Bell, title: "Notifications", detail: "This test app cannot receive alerts. The installed app can.", state: "na", label: "N/A" });
+    out.push({ key: "push", icon: Bell, title: "SOS alerts", detail: "This test app cannot receive SOS alerts. Install the app build.", state: "na", label: "N/A" });
   } else {
     const p = await Notifications.getPermissionsAsync().catch(() => null);
     out.push({
       key: "push",
       icon: Bell,
-      title: "Notifications",
-      detail: p?.granted ? "SOS alarms from colleagues reach you, even on silent." : "Needed so an SOS from a colleague rings this phone.",
+      title: "SOS alerts",
+      detail: p?.granted ? "On, even when the app is closed. An SOS from a colleague rings this phone, even on silent." : "Allow notifications so an SOS from a colleague rings this phone.",
       state: p?.granted ? "ok" : "missing",
       label: p?.granted ? "Allowed" : "Not allowed",
       fix: p?.granted
