@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CheckInsLog, type CheckInRow } from "@/components/console/check-ins-log";
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
+import { PeriodSwitch } from "@/components/console/period-switch";
 import { peopleIds, readPeople, workerLabel } from "@/lib/people";
 import { requireRoleSession } from "@/lib/auth";
 import { periodBounds, readPeriod } from "@/lib/period";
@@ -76,7 +77,15 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Check-in log" action={<PeopleTabs value={people} />} />
+      <PageHeader
+        title="Check-in log"
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <PeriodSwitch period={view} at={at} today={today} inHeader />
+            <PeopleTabs value={people} />
+          </div>
+        }
+      />
       <CheckInsLog view={view} at={at} today={today} rows={rows} canReview={!session.impersonating} capped={list.length >= 5000} />
     </div>
   );

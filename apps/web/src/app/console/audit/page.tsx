@@ -79,8 +79,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Administration" title="Audit log" />
-      <PeriodSwitch period={period} at={at} today={today} />
+      <PageHeader title="Audit log" action={<PeriodSwitch period={period} at={at} today={today} inHeader />} />
 
       <Panel
         tone="slate"

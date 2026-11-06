@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LogIn, LogOut, Radio, Timer, TimerOff, UserCog } from "lucide-react";
 
 import { AttendancePreviewDialog } from "@/components/console/attendance-preview";
-import { PeriodCount as Count, PeriodSwitch } from "@/components/console/period-switch";
+import { PeriodCount as Count } from "@/components/console/period-switch";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusPill } from "@/components/ui/status-pill";
 import { periodPhrase, periodTitle, type Period } from "@/lib/period";
@@ -167,8 +167,6 @@ export function CheckInsLog({
 
   return (
     <div className="space-y-4">
-      <PeriodSwitch period={view} at={at} today={today} />
-
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Count icon={LogIn} label="Check-ins" value={rows.length} tone="text-foreground" />
         <Count icon={Radio} label="Still on duty" value={onDuty} tone="text-emerald-700" />

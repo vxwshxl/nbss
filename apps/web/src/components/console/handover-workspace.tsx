@@ -6,7 +6,7 @@ import { Building2, Clock, Eye, LogOut, MapPin, MonitorSmartphone, NotebookPen, 
 import { toast } from "sonner";
 
 import { addHandoverNote, deleteHandoverNote } from "@/app/console/handover/actions";
-import { PeriodCount as Count, PeriodSwitch } from "@/components/console/period-switch";
+import { PeriodCount as Count } from "@/components/console/period-switch";
 import { PhoneLink } from "@/components/console/preview-kit";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -110,8 +110,9 @@ export function HandoverWorkspace({
 
   return (
     <div className="space-y-4">
-      <PeriodSwitch period={period} at={at} today={today}>
-        <label className="flex h-9 w-full items-center gap-2 rounded-full bg-muted/60 px-3 ring-1 ring-border/60 focus-within:ring-emerald-600 md:w-56">
+      {/* The period sits on the page title's line; the search and site filter here. */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-end">
+        <label className="flex h-9 w-full items-center gap-2 rounded-full bg-card px-3 ring-1 ring-border/60 focus-within:ring-emerald-600 md:w-64">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search notes…" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
         </label>
@@ -124,7 +125,7 @@ export function HandoverWorkspace({
             className="h-9 w-full rounded-full md:w-48"
           />
         )}
-      </PeriodSwitch>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Count icon={NotebookPen} label="Notes" value={shown.length} tone="text-foreground" />

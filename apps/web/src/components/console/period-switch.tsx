@@ -15,7 +15,7 @@ const PERIODS: { key: Period; label: string }[] = [
 
 /**
  * Daily, Monthly or Yearly, then earlier and later: the one period control every log in
- * the console uses. It writes `?period=…&at=…` and keeps the page's other parameters.
+ * the console uses, on the page title's line (`inHeader`). It writes `?period=…&at=…` and keeps the page's other parameters.
  * `children` sits at the end of the bar (a site filter, say).
  */
 export function PeriodSwitch({
@@ -24,12 +24,15 @@ export function PeriodSwitch({
   today,
   children,
   className,
+  inHeader = false,
 }: {
   period: Period;
   at: string;
   today: string;
   children?: React.ReactNode;
   className?: string;
+  /** Drawn on the page title's line (PageHeader's action): no card of its own. */
+  inHeader?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -45,7 +48,13 @@ export function PeriodSwitch({
   const next = stepPeriod(period, at, 1);
 
   return (
-    <div className={cn("flex flex-col gap-3 rounded-2xl border border-app-line bg-card p-2.5 shadow-e1 md:flex-row md:items-center", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-3 md:flex-row md:items-center",
+        inHeader ? "" : "rounded-2xl border border-app-line bg-card p-2.5 shadow-e1",
+        className,
+      )}
+    >
       <div role="radiogroup" aria-label="Period" className="grid grid-cols-3 rounded-full bg-muted/70 p-1 ring-1 ring-border/60 md:inline-grid">
         {PERIODS.map((p) => (
           <button

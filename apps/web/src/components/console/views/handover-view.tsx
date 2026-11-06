@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/console/page-header";
+import { PeriodSwitch } from "@/components/console/period-switch";
 import { HandoverWorkspace, type AppNote, type HandoverNote } from "@/components/console/handover-workspace";
 import { requireRoleSession } from "@/lib/auth";
 import { periodBounds, readPeriod } from "@/lib/period";
@@ -84,7 +85,7 @@ export async function HandoverView({ siteId, searchParams }: { siteId?: string; 
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Shift management" title="Handover notes" />
+      <PageHeader title="Handover notes" action={<PeriodSwitch period={period} at={at} today={today} inHeader />} />
       <HandoverWorkspace
         notes={rows}
         appNotes={appNotes}

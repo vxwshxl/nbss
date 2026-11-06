@@ -127,7 +127,7 @@ export async function RoutesView({
       {/* Daily / Monthly / Yearly on the title's line, so the list and the map get the height. */}
       <PageHeader
         title="Route history"
-        action={<PeriodSwitch period={period} at={at} today={today} className="border-0 bg-transparent p-0 shadow-none md:p-0" />}
+        action={<PeriodSwitch period={period} at={at} today={today} inHeader />}
       />
       <RouteHistory
         shifts={shifts}
