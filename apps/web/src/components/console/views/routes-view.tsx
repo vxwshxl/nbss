@@ -2,6 +2,7 @@
 import { toRing } from "@nbss/shared/geo";
 
 import { PageHeader } from "@/components/console/page-header";
+import { PeriodSwitch } from "@/components/console/period-switch";
 import { RouteHistory, type RouteShift } from "@/components/tracking/route-history";
 import { requireRole } from "@/lib/auth";
 import { istToday, periodBounds, readPeriod } from "@/lib/period";
@@ -123,7 +124,11 @@ export async function RoutesView({
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Route history" />
+      {/* Daily / Monthly / Yearly on the title's line, so the list and the map get the height. */}
+      <PageHeader
+        title="Route history"
+        action={<PeriodSwitch period={period} at={at} today={today} className="border-0 bg-transparent p-0 shadow-none md:p-0" />}
+      />
       <RouteHistory
         shifts={shifts}
         guards={(guards.data ?? []).map((g) => ({ id: g.id, name: g.full_name }))}

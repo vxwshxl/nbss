@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map as MapIcon, MapPinOff, Pause, Phone, Play, Radar, Search, Smartphone, TriangleAlert, X } from "lucide-react";
 
-import { PeriodSwitch } from "@/components/console/period-switch";
 import { PersonPreviewDialog } from "@/components/console/person-preview";
 import { ALL_SITES, DutyLine, RouteStats, RouteTimeline, SiteFilter, WakeButton, routeEvents, useShiftSos, type Duty } from "@/components/tracking/route-panel";
 import { focusLiveGuard } from "@/components/tracking/live-handoff";
@@ -75,7 +74,7 @@ export function RouteHistory({
   guards: { id: string; name: string }[];
   /** For the site picker; empty inside one site's own workspace. */
   sites: { id: string; name: string }[];
-  /** The day, month or year shown (Daily / Monthly / Yearly above the map). */
+  /** The day, month or year shown (Daily / Monthly / Yearly, beside the page title). */
   period: { period: Period; at: string; today: string };
   initial: { attendance: string | null; guard: string | null; site: string | null };
 }) {
@@ -257,13 +256,11 @@ export function RouteHistory({
   return (
     // The list and the map until a shift is picked; then its details take a third column
     // and the map gives up the room, as on Live tracking.
-    <div className="space-y-4">
-    <PeriodSwitch period={period.period} at={period.at} today={period.today} />
     <div className={cn("grid gap-4", shift ? "xl:grid-cols-[320px_minmax(0,1fr)_320px]" : "xl:grid-cols-[320px_minmax(0,1fr)]")}>
       {/* Shifts */}
       {/* Below the map and summary on anything narrower than a wide desk, in its own
           scroll: with two hundred guards the list is long, and the map is what you came for. */}
-      <aside className="order-3 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-1 xl:h-[calc(100dvh-265px)] xl:max-h-none">
+      <aside className="order-3 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-1 xl:h-[calc(100dvh-190px)] xl:max-h-none">
         <div className="grid grid-cols-2 gap-2 border-b border-app-line-soft p-3">
           <Select value={initial.guard ?? ALL} onValueChange={(v) => setFilter("guard", v === ALL ? "" : v)}>
             <SelectTrigger aria-label="Guard" className={FILTER}>
@@ -423,7 +420,7 @@ export function RouteHistory({
 
       {/* Summary and timeline: only once a shift is picked. */}
       {shift && (
-      <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-265px)] xl:max-h-none">
+      <aside className="order-2 flex max-h-[65vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-app-line bg-card xl:order-3 xl:h-[calc(100dvh-190px)] xl:max-h-none">
         {shift ? (
           <>
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -523,7 +520,6 @@ export function RouteHistory({
         )}
       </aside>
       )}
-    </div>
     </div>
   );
 }
