@@ -137,14 +137,18 @@ export function SiteMap({
         html: `<div class="gm-pin" style="--c:${lifted ? MAP_COLOR.route : colour}" ${lifted ? "data-selected" : ""}><span>${esc(s.name)}</span><i></i></div>`,
         zIndex: lifted ? 40 : 2,
         onClick: () => {
-          info.setContent(
-            `<div class="gm-info"><strong>${esc(s.name)}</strong>` +
-              (s.client_name ? `<br>${esc(s.client_name)}` : "") +
-              (s.district ? `<br><em>${esc(s.district)}</em>` : "") +
-              `<br>${s.onDuty} on duty · ${s.assigned} assigned</div>`,
+          openCard(
+            maps,
+            map,
+            info,
+            { lat: s.lat, lng: s.lng },
+            ABOVE.pin,
+            s.name,
+            cardBody(
+              (s.client_name || s.district ? `<p>${esc([s.client_name, s.district].filter(Boolean).join(" · "))}</p>` : "") +
+                `<p class="gm-info-meta">${s.onDuty} on duty · ${s.assigned} assigned</p>`,
+            ),
           );
-          info.setPosition({ lat: s.lat, lng: s.lng });
-          info.open({ map });
         },
       });
       marker.setMap(map);
@@ -171,14 +175,19 @@ export function SiteMap({
         html: `<span class="gm-dot" style="--c:${colour}"></span>`,
         zIndex: 5,
         onClick: () => {
-          info.setContent(
-            `<div class="gm-info"><strong>${esc(p.label)}</strong>` +
-              (p.distance !== null ? `<br>${Math.round(p.distance)} m from the centre` : "") +
-              (p.accuracy ? `<br>GPS ±${Math.round(p.accuracy)} m` : "") +
-              `</div>`,
+          openCard(
+            maps,
+            map,
+            info,
+            p,
+            ABOVE.dot,
+            p.label,
+            cardBody(
+              `<p class="gm-info-meta">` +
+                [p.distance !== null ? `${Math.round(p.distance)} m from the centre` : "", p.accuracy ? `GPS ±${Math.round(p.accuracy)} m` : ""].filter(Boolean).join(" · ") +
+                `</p>`,
+            ),
           );
-          info.setPosition(p);
-          info.open({ map });
         },
       });
       dot.setMap(map);
@@ -253,14 +262,13 @@ export function SiteMap({
       const ring = new maps.Circle({ map, center: p, radius: p.accuracy, strokeColor: colour, strokeOpacity: 0.5, strokeWeight: 1, fillColor: colour, fillOpacity: 0.1, clickable: false });
       drawn.push(ring);
       const open = () => {
-        const el = document.createElement("div");
-        el.className = "gm-info";
         const when = new Date(p.capturedAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
-        el.innerHTML =
-          `<strong>${esc(p.note || "Location sent from the field")}</strong>` +
-          `<br>${esc(p.senderName)} · ${esc(p.senderRole)}` +
-          `<br>${esc(when)} · GPS ±${Math.round(p.accuracy)} m` +
-          (p.siteName ? `<br><em>Registered as ${esc(p.siteName)}</em>` : "");
+        const el = cardBody(
+          `<div class="gm-info-who" style="--c:${colour}"><i>${esc(initials(p.senderName))}</i><span><b>${esc(p.senderName)}</b><small>${esc(p.senderRole)}</small></span></div>` +
+            `<p class="gm-info-meta">${esc(when)} · GPS ±${Math.round(p.accuracy)} m</p>` +
+            `<p class="gm-info-meta"><a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noreferrer">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</a></p>` +
+            (p.siteName ? `<p class="gm-info-done">Registered as ${esc(p.siteName)}</p>` : ""),
+        );
         const actions = document.createElement("div");
         actions.className = "gm-info-actions";
         if (pinActions.current.onRegisterPin && !p.siteName) {
@@ -286,9 +294,7 @@ export function SiteMap({
           actions.append(b);
         }
         if (actions.childElementCount) el.append(actions);
-        card.setContent(el);
-        card.setPosition(p);
-        card.open({ map });
+        openCard(maps, map, card, p, ABOVE.fieldPin, p.note || "Location sent from the field", el);
       };
       const marker = createHtmlMarker(maps, {
         position: { lat: p.lat, lng: p.lng },
@@ -346,4 +352,37 @@ export function SiteMap({
       )}
     </MapFrame>
   );
+}
+
+/** Pixels from a marker's point up to its top, so a card opens above the marker, not over it. */
+const ABOVE = { pin: 38, fieldPin: 44, dot: 10 };
+
+/**
+ * One map card for every marker here: the title in Google's header row beside its
+ * close button (no empty strip above the text), lines under it, then the actions.
+ */
+function openCard(
+  maps: typeof google.maps,
+  map: google.maps.Map,
+  win: google.maps.InfoWindow,
+  at: google.maps.LatLngLiteral,
+  above: number,
+  title: string,
+  body: Element,
+) {
+  const head = document.createElement("div");
+  head.className = "gm-info-title";
+  head.textContent = title;
+  win.setOptions({ headerContent: head, pixelOffset: new maps.Size(0, -above), maxWidth: 300 });
+  win.setContent(body);
+  win.setPosition(at);
+  win.open({ map });
+}
+
+/** The card's body from trusted, already-escaped HTML. */
+function cardBody(html: string): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "gm-info";
+  el.innerHTML = html;
+  return el;
 }

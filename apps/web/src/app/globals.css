@@ -999,34 +999,118 @@
   cursor: grab;
 }
 
+/* The card a marker opens (site-map.tsx openCard): the title sits in Google's own
+ * header row beside its close button, the body under it, the actions last. */
+.gm-style .gm-style-iw-c {
+  border-radius: 14px;
+  padding-inline-start: 14px !important;
+  box-shadow: 0 8px 28px oklch(0 0 0 / 0.18), 0 1px 3px oklch(0 0 0 / 0.12);
+}
+.gm-style .gm-style-iw-ch {
+  padding-top: 14px;
+}
+.gm-info-title {
+  font: 600 14px/1.3 var(--font-sans);
+  color: #171717;
+  max-width: 230px;
+}
 .gm-info {
   font: 400 13px/1.45 var(--font-sans);
-  color: #171717;
-  padding: 2px 4px;
+  color: #404040;
+  min-width: 220px;
+  max-width: 260px;
+  padding: 2px 2px 12px 0;
 }
-.gm-info strong {
+.gm-info p {
+  margin: 0;
+}
+.gm-info p + p,
+.gm-info-who + p {
+  margin-top: 4px;
+}
+.gm-info .gm-info-meta {
+  font-size: 12px;
+  color: #737373;
+}
+.gm-info .gm-info-meta a {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.gm-info .gm-info-meta a:hover {
+  color: #009164;
+}
+.gm-info .gm-info-done {
+  margin-top: 8px;
   font-weight: 600;
+  color: #009164;
+}
+.gm-info-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.gm-info-who i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--c, #d97706);
+  color: #fff;
+  font: 700 10px/1 var(--font-sans);
+  font-style: normal;
+}
+.gm-info-who span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.gm-info-who b {
+  font-weight: 600;
+  color: #171717;
+}
+.gm-info-who small {
+  font-size: 12px;
+  color: #737373;
 }
 .gm-info .gm-info-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .gm-info button {
+  height: 32px;
   font: 600 12px/1 var(--font-sans);
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid #d4d4d4;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e5e5;
   background: #fff;
+  color: #171717;
   cursor: pointer;
+  transition: background-color 120ms, border-color 120ms;
+}
+.gm-info button:hover {
+  background: #f5f5f5;
 }
 .gm-info button[data-primary] {
+  flex: 1;
   background: #009164;
   border-color: #009164;
   color: #fff;
 }
+.gm-info button[data-primary]:hover {
+  background: #007a54;
+}
 .gm-info button[data-danger] {
   color: #dc2626;
+  border-color: #fecaca;
+}
+.gm-info button[data-danger]:hover {
+  background: #fef2f2;
 }
 
 /* The site picked from the map's site list: lifted, ringed and always named. */
@@ -1060,10 +1144,14 @@
 }
 
 /* A location sent from the field (location_pins): amber, with the sender's initials. */
+/* The head's tip is the point (anchor "bottom"); the name hangs to its right, as
+ * Google Maps names a place, so it never covers the spot or the card above it. */
 .gm-fieldpin {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-bottom: 6px;
   font: 600 11px/14px var(--font-sans);
   pointer-events: auto;
 }
@@ -1084,7 +1172,9 @@
   transform: rotate(45deg);
 }
 .gm-fieldpin span {
-  margin-top: 4px;
+  position: absolute;
+  left: calc(50% + 20px);
+  top: 6px;
   max-width: 160px;
   padding: 2px 8px;
   border-radius: 999px;
