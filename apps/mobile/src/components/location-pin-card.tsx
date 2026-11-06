@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import { Check, LocateFixed, MapPinPlus, Send, Trash2, X } from "lucide-react-native";
+import { Check, Crosshair, LocateFixed, MapPinPlus, Send, Trash2, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from "react-native";
 
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { color, radius, space } from "@/theme/tokens";
 
 import { Button } from "./button";
+import { MapCanvas, type MapPerson } from "./map-canvas";
 import { Field } from "./field";
 import { Panel } from "./panel";
 import { Text } from "./text";
@@ -21,13 +22,13 @@ const GOOD_ACCURACY_M = 15;
 const LOOK_FOR_MS = 45_000;
 
 type Fix = { lat: number; lng: number; accuracy: number; at: number; mocked: boolean };
-type Sent = { id: string; note: string | null; accuracy_m: number; created_at: string; site: { name: string } | null };
+type Sent = { id: string; note: string | null; lat: number; lng: number; accuracy_m: number; created_at: string; site: { name: string } | null };
 
 /** The last few pins this person sent, newest first. */
 async function fetchSent(me: string): Promise<Sent[]> {
   const { data } = await supabase
     .from("location_pins")
-    .select("id, note, accuracy_m, created_at, site:sites(name)")
+    .select("id, note, lat, lng, accuracy_m, created_at, site:sites(name)")
     .eq("sent_by", me)
     .order("created_at", { ascending: false })
     .limit(5);
@@ -54,6 +55,8 @@ export function LocationPinCard() {
   const watch = useRef<Location.LocationSubscription | null>(null);
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [settled, setSettled] = useState(false);
+  // Pressing "centre" bumps this, which re-frames the map on the fix.
+  const [recentre, setRecentre] = useState(0);
 
   const me = profile?.id ?? null;
   const load = useCallback(async () => {
@@ -176,7 +179,7 @@ export function LocationPinCard() {
   const usable = !!fix && !fix.mocked && fix.accuracy <= MAX_ACCURACY_M;
 
   return (
-    <Panel tone="amber" title="Pin a site location" icon={MapPinPlus}>
+    <Panel tone="amber" title="Pin my location" icon={MapPinPlus}>
       {phase === "idle" ? (
         <View style={styles.gap}>
           <Text variant="label" tone="muted">
@@ -213,6 +216,28 @@ export function LocationPinCard() {
               </Text>
             </View>
           </View>
+          {fix && !fix.mocked && (
+            <View style={styles.map}>
+              {/* Drag and pinch to look around; the map moves itself only when the fix
+                  first arrives, when it settles, and on "centre". */}
+              <MapCanvas
+                me={{ lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracy }}
+                people={sent.map(
+                  (p): MapPerson => ({ id: p.id, lat: p.lat, lng: p.lng, tone: p.site ? color.primary : "#d97706", label: p.note ?? undefined, frame: false }),
+                )}
+                frameKey={`${settled ? 1 : 0}-${recentre}`}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Centre the map on me"
+                hitSlop={6}
+                onPress={() => setRecentre((n) => n + 1)}
+                style={styles.centre}
+              >
+                <Crosshair size={18} color={color.primaryInk} strokeWidth={2.2} />
+              </Pressable>
+            </View>
+          )}
           <Field label="What is here? (optional)" value={note} onChangeText={setNote} placeholder="Main gate, AieAfa Hospital" maxLength={200} />
           <View style={styles.row}>
             <Button label="Cancel" variant="outline" icon={X} onPress={cancel} style={styles.flex} disabled={phase === "sending"} />
@@ -255,6 +280,20 @@ const styles = StyleSheet.create({
   gap: { gap: space[3] },
   row: { flexDirection: "row", gap: space[2] },
   flex: { flex: 1, minWidth: 0 },
+  map: { height: 220, borderRadius: radius.xl, overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: color.border },
+  centre: {
+    position: "absolute",
+    right: space[2],
+    bottom: space[2],
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: color.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+  },
   fixRow: { flexDirection: "row", alignItems: "center", gap: space[3], padding: space[3], borderRadius: radius.xl, backgroundColor: color.muted },
   sent: { marginTop: space[4], gap: space[1], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.lineSoft, paddingTop: space[3] },
   sentRow: { flexDirection: "row", alignItems: "center", gap: space[3], paddingVertical: space[2] },

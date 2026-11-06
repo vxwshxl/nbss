@@ -1459,6 +1459,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      acting_as_test: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       assign_replacement: {
         Args: {
           p_shift_ids: string[];
