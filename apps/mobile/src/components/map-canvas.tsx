@@ -57,6 +57,15 @@ export type MapCanvasProps = {
    * the part after that point is a faint dotted line (a moment from the timeline).
    */
   path?: { points: (MapPoint & { inside: boolean | null })[]; upTo?: number | null } | null;
+  /**
+   * Places drawn as the platform's own pins (Apple's balloon, Google's teardrop), with
+   * an optional accuracy circle. The map itself puts their tip exactly on the point at
+   * every zoom; a custom marker view on iPhone sits a few points off, which at a low
+   * zoom is many metres.
+   */
+  pins?: { id: string; lat: number; lng: number; color: string; title?: string; accuracyM?: number; frame?: boolean }[];
+  /** The phone's own blue dot, drawn by the map (exact at every zoom, on both platforms). */
+  showsUserLocation?: boolean;
   /** Changed to re-frame the view around everything drawn. */
   frameKey?: string;
   padding?: { top: number; right: number; bottom: number; left: number };
@@ -82,6 +91,8 @@ export function MapCanvas({
   route = null,
   trail = null,
   path = null,
+  pins = [],
+  showsUserLocation = false,
   frameKey = "",
   padding,
   onPersonPress,
@@ -98,8 +109,9 @@ export function MapCanvas({
     for (const p of people) if (p.frame !== false) pts.push({ latitude: p.lat, longitude: p.lng });
     for (const p of path?.points ?? []) pts.push({ latitude: p.lat, longitude: p.lng });
     if (me && me.frame !== false) pts.push({ latitude: me.lat, longitude: me.lng });
+    for (const p of pins) if (p.frame !== false) pts.push({ latitude: p.lat, longitude: p.lng });
     return pts;
-  }, [fences, people, me, path]);
+  }, [fences, people, me, path, pins]);
 
   const drawn = points.length > 0;
   // Re-framed when the visible area changes too (the sheet snapping up or down),
@@ -136,7 +148,7 @@ export function MapCanvas({
         provider={Platform.OS === "android" ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
         initialRegion={KOKRAJHAR}
         mapPadding={padding}
-        showsUserLocation={false}
+        showsUserLocation={showsUserLocation}
         showsMyLocationButton={false}
         showsCompass={false}
         toolbarEnabled={false}
@@ -258,10 +270,27 @@ export function MapCanvas({
           <Circle
             center={{ latitude: me.lat, longitude: me.lng }}
             radius={me.accuracyM}
-            strokeWidth={0}
+            // A colour as well as the width: Apple Maps draws an unset stroke thick and black.
+            strokeColor={alpha(MAP_COLOR.me, 0.3)}
+            strokeWidth={1}
             fillColor={alpha(MAP_COLOR.me, 0.1)}
           />
         ) : null}
+        {pins.map((p) =>
+          p.accuracyM && p.accuracyM < 500 ? (
+            <Circle
+              key={`acc-${p.id}`}
+              center={{ latitude: p.lat, longitude: p.lng }}
+              radius={p.accuracyM}
+              strokeColor={alpha(p.color, 0.5)}
+              strokeWidth={1}
+              fillColor={alpha(p.color, 0.12)}
+            />
+          ) : null,
+        )}
+        {pins.map((p) => (
+          <Marker key={`pin-${p.id}-${p.color}`} coordinate={{ latitude: p.lat, longitude: p.lng }} pinColor={p.color} title={p.title} tracksViewChanges={false} />
+        ))}
         {me && (
           <Marker
             coordinate={{ latitude: me.lat, longitude: me.lng }}

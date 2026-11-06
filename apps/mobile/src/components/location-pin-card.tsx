@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { color, radius, space } from "@/theme/tokens";
 
 import { Button } from "./button";
-import { MapCanvas, type MapPerson } from "./map-canvas";
+import { MapCanvas } from "./map-canvas";
 import { Field } from "./field";
 import { Panel } from "./panel";
 import { Text } from "./text";
@@ -221,10 +221,12 @@ export function LocationPinCard() {
               {/* Drag and pinch to look around; the map moves itself only when the fix
                   first arrives, when it settles, and on "centre". */}
               <MapCanvas
-                me={{ lat: fix.lat, lng: fix.lng, accuracyM: fix.accuracy }}
-                people={sent.map(
-                  (p): MapPerson => ({ id: p.id, lat: p.lat, lng: p.lng, tone: p.site ? color.primary : "#d97706", label: p.note ?? undefined, frame: false }),
-                )}
+                showsUserLocation
+                pins={[
+                  // What Send sends, red; the ones already sent, amber until a site is registered on them.
+                  { id: "fix", lat: fix.lat, lng: fix.lng, color: "#dc2626", title: "This location", accuracyM: fix.accuracy },
+                  ...sent.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng, color: p.site ? color.primary : "#d97706", title: p.note ?? "Sent earlier", frame: false })),
+                ]}
                 frameKey={`${settled ? 1 : 0}-${recentre}`}
               />
               <Pressable
