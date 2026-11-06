@@ -275,7 +275,7 @@ export function SiteMap({
           const b = document.createElement("button");
           b.type = "button";
           b.dataset.primary = "";
-          b.textContent = "Register a site here";
+          b.textContent = "Register a site";
           b.onclick = () => {
             card.close();
             pinActions.current.onRegisterPin?.(p);

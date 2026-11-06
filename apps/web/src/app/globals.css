@@ -1017,9 +1017,10 @@
 .gm-info {
   font: 400 13px/1.45 var(--font-sans);
   color: #404040;
-  min-width: 220px;
-  max-width: 260px;
-  padding: 2px 2px 12px 0;
+  min-width: 250px;
+  max-width: 270px;
+  /* Google pads the card's start only; the end gets the same, so nothing meets the edge. */
+  padding: 2px 14px 14px 0;
 }
 .gm-info p {
   margin: 0;
@@ -1077,15 +1078,21 @@
   font-size: 12px;
   color: #737373;
 }
+/* Two equal buttons side by side; one alone fills the row. */
 .gm-info .gm-info-actions {
-  display: flex;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   gap: 8px;
   margin-top: 12px;
 }
 .gm-info button {
-  height: 32px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
   font: 600 12px/1 var(--font-sans);
-  padding: 0 12px;
+  padding: 0 8px;
+  white-space: nowrap;
   border-radius: 10px;
   border: 1px solid #e5e5e5;
   background: #fff;
@@ -1097,7 +1104,6 @@
   background: #f5f5f5;
 }
 .gm-info button[data-primary] {
-  flex: 1;
   background: #009164;
   border-color: #009164;
   color: #fff;
