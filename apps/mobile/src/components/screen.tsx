@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, View, type ViewProps } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Keyboard, Platform, ScrollView, StyleSheet, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollViewInstance, type ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useLayout } from "@/hooks/use-breakpoint";
@@ -49,6 +50,7 @@ export function Screen({
 }) {
   const insets = useSafeAreaInsets();
   const { gutter, contentMaxWidth } = useLayout();
+  const { ref: scrollRef, room: keyboardRoom, onScroll: trackScroll } = useKeyboardLift(scroll);
 
   const frame = {
     width: "100%" as const,
@@ -74,10 +76,15 @@ export function Screen({
   return (
     <AppBackground>
       <ScrollView
+        ref={scrollRef}
         style={styles.fill}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, keyboardRoom ? { paddingBottom: keyboardRoom } : null]}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        // iOS insets the scroll view by the keyboard natively; Android gets the same room from `keyboardRoom`.
+        automaticallyAdjustKeyboardInsets
+        onScroll={trackScroll}
+        scrollEventThrottle={32}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
         {...rest}
@@ -86,6 +93,54 @@ export function Screen({
       </ScrollView>
     </AppBackground>
   );
+}
+
+/** Space left between the focused field and the top of the keyboard. */
+const KEYBOARD_GAP = space[6];
+
+/**
+ * Keeps the field being typed in above the keyboard, on every scrolling screen.
+ *
+ * Nothing did before: the app draws edge to edge, so Android no longer shrinks the
+ * window when the keyboard opens, and a ScrollView on iOS ignores the keyboard unless
+ * told. A field low on a page (the note under "Pin my location" on Me) opened under the
+ * keyboard. When the keyboard is up this measures the focused field and, if the
+ * keyboard covers it, scrolls it up into view; on Android it also adds the keyboard's
+ * height under the content so there is room to scroll that far.
+ */
+function useKeyboardLift(enabled: boolean) {
+  const ref = useRef<ScrollViewInstance>(null);
+  const offset = useRef(0);
+  const [room, setRoom] = useState(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let frame: ReturnType<typeof setTimeout> | null = null;
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      if (Platform.OS === "android") setRoom(e.endCoordinates.height);
+      // After the room above is laid out (and iOS has set its inset).
+      frame = setTimeout(() => {
+        const input = TextInput.State.currentlyFocusedInput();
+        if (!input) return;
+        input.measureInWindow((_x, y, _w, h) => {
+          const over = y + h + KEYBOARD_GAP - e.endCoordinates.screenY;
+          if (over > 0) ref.current?.scrollTo({ y: offset.current + over, animated: true });
+        });
+      }, 60);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => setRoom(0));
+    return () => {
+      if (frame) clearTimeout(frame);
+      show.remove();
+      hide.remove();
+    };
+  }, [enabled]);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    offset.current = e.nativeEvent.contentOffset.y;
+  };
+
+  return { ref, room, onScroll };
 }
 
 /**
