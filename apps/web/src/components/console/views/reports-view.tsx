@@ -1,6 +1,8 @@
 import { CalendarCheck, Clock, TriangleAlert, UserRoundX } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
+import { PeopleTabs } from "@/components/console/people-tabs";
+import { readPeople, workerLabel } from "@/lib/people";
 import { ReportsWorkspace, type GuardReport, type SiteReport } from "@/components/console/reports-workspace";
 import { StatCard } from "@/components/console/stat-card";
 import { requireRole } from "@/lib/auth";
@@ -17,9 +19,10 @@ const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 /** Attendance for payroll and billing: days, hours, lateness and exceptions per guard and per site. */
 /** `siteId`: one site's workspace reports on that site alone. */
-export async function ReportsView({ searchParams, siteId }: { searchParams: Promise<{ from?: string; to?: string }>; siteId?: string }) {
+export async function ReportsView({ searchParams, siteId }: { searchParams: Promise<{ from?: string; to?: string; people?: string }>; siteId?: string }) {
   await requireRole("admin", "supervisor");
   const q = await searchParams;
+  const people = readPeople(q.people);
   const d = defaults();
   const from = isDate(q.from) ? q.from! : d.from;
   const to = isDate(q.to) ? q.to! : d.to;
@@ -28,7 +31,7 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
 
   const supabase = await supabaseServer();
   const [guards, sites, att, shifts, sos] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, employee_code").eq("role", "guard").order("full_name"),
+    supabase.from("profiles").select("id, full_name, employee_code, trade").eq("role", "guard").order("full_name"),
     supabase.from("sites").select("id, name, district, guards_required").match(siteId ? { id: siteId } : {}).order("name"),
     supabase
       .from("attendance")
@@ -41,11 +44,14 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
     supabase.from("sos_alerts").select("site_id").gte("raised_at", start).lt("raised_at", end).match(siteId ? { site_id: siteId } : {}),
   ]);
 
-  const A = att.data ?? [];
-  const S = shifts.data ?? [];
+  // Everyone who checks in, or only Guards or Housekeepers (?people=).
+  const kept = (guards.data ?? []).filter((g) => people === "all" || (people === "housekeeping") === (g.trade === "housekeeping"));
+  const keptIds = new Set(kept.map((g) => g.id));
+  const A = (att.data ?? []).filter((a) => people === "all" || keptIds.has(a.guard_id));
+  const S = (shifts.data ?? []).filter((s) => people === "all" || (s.guard_id != null && keptIds.has(s.guard_id)));
   const dayOf = (iso: string | null) => (iso ? istDate(new Date(iso)) : "");
 
-  const guardRows: GuardReport[] = (guards.data ?? [])
+  const guardRows: GuardReport[] = kept
     .map((g) => {
       const mine = A.filter((a) => a.guard_id === g.id && a.status !== "rejected");
       const sh = S.filter((s) => s.guard_id === g.id);
@@ -53,6 +59,7 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
         id: g.id,
         name: g.full_name,
         code: g.employee_code,
+        role: workerLabel(g.trade),
         days: new Set(mine.map((a) => dayOf(a.check_in_at))).size,
         shifts: mine.length,
         workedMinutes: mine.reduce((n, a) => n + (a.worked_minutes ?? 0), 0),
@@ -86,10 +93,10 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
   const total = guardRows.reduce((n, r) => n + r.workedMinutes, 0);
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Attendance" title="Reports" />
+      <PageHeader title="Reports" action={<PeopleTabs value={people} />} />
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Guard-hours" value={(total / 60).toFixed(0)} hint={`${from} to ${to}`} icon={Clock} tone="emerald" />
-        <StatCard label="Shifts worked" value={String(guardRows.reduce((n, r) => n + r.shifts, 0))} hint={`${guardRows.length} guards`} icon={CalendarCheck} tone="sky" />
+        <StatCard label="Hours worked" value={(total / 60).toFixed(0)} hint={`${from} to ${to}`} icon={Clock} tone="emerald" />
+        <StatCard label="Shifts worked" value={String(guardRows.reduce((n, r) => n + r.shifts, 0))} hint={`${guardRows.length} ${people === "housekeeping" ? "housekeepers" : people === "guard" ? "guards" : "people"}`} icon={CalendarCheck} tone="sky" />
         <StatCard label="Missed shifts" value={String(guardRows.reduce((n, r) => n + r.missed, 0))} hint="Rostered, nobody came" icon={UserRoundX} tone="rose" />
         <StatCard label="Flagged check-ins" value={String(guardRows.reduce((n, r) => n + r.flagged + r.offRoster, 0))} hint="Other phone or off the roster" icon={TriangleAlert} tone="amber" />
       </div>

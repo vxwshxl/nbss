@@ -36,8 +36,10 @@ export async function registerBetween(
   supabase: Awaited<ReturnType<typeof supabaseServer>>,
   from: string,
   to: string,
-  opts: { siteId?: string; now: number },
+  /** `guardIds`: only these people (Guards or Housekeepers); omitted, everyone. */
+  opts: { siteId?: string; now: number; guardIds?: string[] | null },
 ): Promise<RegisterEntry[]> {
+  if (opts.guardIds && opts.guardIds.length === 0) return [];
   const start = istInstant(from, "00:00").toISOString();
   const end = new Date(istInstant(to, "00:00").getTime() + 86_400_000).toISOString();
   let sq = supabase
@@ -57,6 +59,10 @@ export async function registerBetween(
   if (opts.siteId) {
     sq = sq.eq("site_id", opts.siteId);
     aq = aq.eq("site_id", opts.siteId);
+  }
+  if (opts.guardIds) {
+    sq = sq.in("guard_id", opts.guardIds);
+    aq = aq.in("guard_id", opts.guardIds);
   }
   const [shifts, att] = await Promise.all([sq, aq]);
 

@@ -1,14 +1,12 @@
 export function PageHeader({
   title,
-  eyebrow,
   action,
 }: {
   title: string;
   /**
-   * Small capitalised line above the title — the section this screen belongs
-   * to, where the title alone is ambiguous ("Invoices" under FEE COLLECTIONS,
-   * "Invoices" under BILLING). Optional: the shell's breadcrumb already carries
-   * this, so only reach for it where the page genuinely reads better with it.
+   * The section line that used to sit above the title ("Operations",
+   * "Attendance"). No longer drawn: the breadcrumb already names the section,
+   * and the line cost every page a row. Kept optional so call sites still compile.
    */
   eyebrow?: string;
   /**
@@ -20,13 +18,8 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-0">
-        {eyebrow && (
-          <p className="eyebrow mb-1">
-            {eyebrow}
-          </p>
-        )}
         <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
       </div>
       {action}

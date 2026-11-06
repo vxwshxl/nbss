@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { PeriodBar } from "@/components/console/period-bar";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -11,6 +11,8 @@ export type GuardReport = {
   id: string;
   name: string;
   code: string;
+  /** "Guard" or "Housekeeper". */
+  role: string;
   days: number;
   shifts: number;
   workedMinutes: number;
@@ -41,22 +43,31 @@ const hours = (m: number) => (m / 60).toFixed(1);
 export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to: string; guards: GuardReport[]; sites: SiteReport[] }) {
   const router = useRouter();
   const pathname = usePathname();
-  const go = (f: string, t: string) => router.replace(`${pathname}?from=${f}&to=${t}`);
+  const params = useSearchParams();
+  // The new period, keeping the page's other filters (Guards / Housekeepers).
+  const go = (f: string, t: string) => {
+    const q = new URLSearchParams(params.toString());
+    q.set("from", f);
+    q.set("to", t);
+    router.replace(`${pathname}?${q}`);
+  };
 
   const g: Column<GuardReport>[] = [
     {
-      header: "Guard",
+      header: "Person",
       cell: (r) => (
         <span className="block">
           <Link href={`/console/reports/guard/${r.id}?from=${from}&to=${to}`} className="block font-medium text-primary-ink hover:underline">
             {r.name}
           </Link>
-          <span className="block font-mono text-xs text-muted-foreground">{r.code}</span>
+          <span className="block text-xs text-muted-foreground">
+            <span className="font-mono">{r.code}</span> · {r.role}
+          </span>
         </span>
       ),
       sortValue: (r) => r.name,
-      searchValue: (r) => `${r.name} ${r.code}`,
-      printCell: (r) => `${r.name} (${r.code})`,
+      searchValue: (r) => `${r.name} ${r.code} ${r.role}`,
+      printCell: (r) => `${r.name} (${r.code}, ${r.role})`,
     },
     { header: "Days worked", className: "tabular-nums", cell: (r) => r.days, sortValue: (r) => r.days, total: (rs) => rs.reduce((n, r) => n + r.days, 0) },
     { header: "Shifts", className: "tabular-nums", cell: (r) => r.shifts, sortValue: (r) => r.shifts },
@@ -89,8 +100,8 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
     },
     { header: "Guards needed", className: "tabular-nums", cell: (r) => r.required ?? "-", sortValue: (r) => r.required ?? 0 },
     { header: "Days staffed", className: "tabular-nums", cell: (r) => r.daysStaffed, sortValue: (r) => r.daysStaffed },
-    { header: "Different guards", className: "tabular-nums", cell: (r) => r.guards, sortValue: (r) => r.guards },
-    { header: "Guard-hours", className: "tabular-nums", cell: (r) => hours(r.workedMinutes), sortValue: (r) => r.workedMinutes, total: (rs) => hours(rs.reduce((n, r) => n + r.workedMinutes, 0)) },
+    { header: "Different people", className: "tabular-nums", cell: (r) => r.guards, sortValue: (r) => r.guards },
+    { header: "Hours worked", className: "tabular-nums", cell: (r) => hours(r.workedMinutes), sortValue: (r) => r.workedMinutes, total: (rs) => hours(rs.reduce((n, r) => n + r.workedMinutes, 0)) },
     { header: "Missed shifts", className: "tabular-nums", cell: (r) => r.missed || "-", sortValue: (r) => r.missed },
     { header: "SOS", className: "tabular-nums", cell: (r) => r.sos || "-", sortValue: (r) => r.sos },
   ];
@@ -98,7 +109,7 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
   return (
     <div className="space-y-6">
       <PeriodBar from={from} to={to} onChange={go} />
-      <DataTable title="By guard" columns={g} data={guards} getRowKey={(r) => r.id} printTitle={`Guards ${from} to ${to}`} searchPlaceholder="Search guards…" emptyMessage="No attendance in this period." />
+      <DataTable title="By person" columns={g} data={guards} getRowKey={(r) => r.id} printTitle={`People ${from} to ${to}`} searchPlaceholder="Search by name, code or role…" emptyMessage="No attendance in this period." />
       <DataTable title="By site" columns={s} data={sites} getRowKey={(r) => r.id} printTitle={`Sites ${from} to ${to}`} searchPlaceholder="Search sites…" emptyMessage="No sites." />
     </div>
   );

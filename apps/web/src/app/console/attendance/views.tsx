@@ -3,6 +3,8 @@ import { CalendarCheck, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Clo
 
 import { DayList, GuardCards, Legend, MonthGrid } from "@/components/console/attendance-views";
 import { PageHeader } from "@/components/console/page-header";
+import { PeopleTabs } from "@/components/console/people-tabs";
+import { peopleIds, readPeople } from "@/lib/people";
 import { StatCard } from "@/components/console/stat-card";
 import { registerBetween, tallyRegister } from "@/lib/attendance-register";
 import { istDate } from "@/lib/roster";
@@ -12,7 +14,7 @@ import { cn } from "@/lib/utils";
 type View = "month" | "guards" | "day" | "punches";
 const VIEWS: { key: View; label: string; icon: typeof Grid3x3 }[] = [
   { key: "month", label: "Month", icon: Grid3x3 },
-  { key: "guards", label: "By guard", icon: Users },
+  { key: "guards", label: "By person", icon: Users },
   { key: "day", label: "By day", icon: CalendarDays },
   { key: "punches", label: "Punches", icon: List },
 ];
@@ -46,7 +48,8 @@ export function ViewTabs({ view, keep = "" }: { view: View; keep?: string }) {
  * a coloured letter per duty), each guard's month as a card, one day's duties, or every
  * punch. Built from the roster, so a duty nobody came to is Absent, not just missing.
  */
-export async function AttendanceViews({ view: raw, month: m, date: d, siteId }: { view?: string; month?: string; date?: string; siteId?: string }) {
+export async function AttendanceViews({ view: raw, month: m, date: d, siteId, people: rawPeople }: { view?: string; month?: string; date?: string; siteId?: string; people?: string }) {
+  const people = readPeople(rawPeople);
   const view: View = (["month", "guards", "day"] as const).find((v) => v === raw) ?? "month";
   const today = istDate(new Date());
   const month = /^\d{4}-\d{2}$/.test(m ?? "") ? m! : today.slice(0, 7);
@@ -59,11 +62,11 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId }: 
     return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}`;
   };
   const dayShift = (n: number) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-  const site = siteId ? `&site=${siteId}` : "";
+  const site = `${siteId ? `&site=${siteId}` : ""}${people !== "all" ? `&people=${people}` : ""}`;
 
   const supabase = await supabaseServer();
   const [from, to] = view === "day" ? [date, date] : [`${month}-01`, days.at(-1)!];
-  const rows = await registerBetween(supabase, from, to, { siteId, now: nowMs() });
+  const rows = await registerBetween(supabase, from, to, { siteId, now: nowMs(), guardIds: await peopleIds(supabase, people) });
   const t = tallyRegister(rows);
   const monthName = new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
   const dayName = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -77,7 +80,7 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId }: 
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Attendance" />
+      <PageHeader title="Attendance" action={<PeopleTabs value={people} />} />
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
         <ViewTabs view={view} keep={site} />
         {stepper}

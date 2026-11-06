@@ -29,6 +29,8 @@ export type AttendanceRow = {
   reviewed_at: string | null;
   guard_name: string | null;
   guard_code: string | null;
+  /** "Guard" or "Housekeeper"; null on a guard's own list. */
+  guard_role?: string | null;
   site_name: string | null;
   /** The fence this punch was judged against. The popup loads its own. */
   site?: MapSite | null;
@@ -92,18 +94,19 @@ export function AttendanceWorkspace({
     ...(showGuard
       ? [
           {
-            header: "Guard",
+            header: "Person",
             cell: (r: AttendanceRow) => (
               <span className="block">
                 <span className="block font-medium">{r.guard_name ?? "-"}</span>
-                <span className="block font-mono text-xs text-muted-foreground">
-                  {r.guard_code ?? ""}
+                <span className="block text-xs text-muted-foreground">
+                  <span className="font-mono">{r.guard_code ?? ""}</span>
+                  {r.guard_role ? ` · ${r.guard_role}` : ""}
                 </span>
               </span>
             ),
             sortValue: (r: AttendanceRow) => r.guard_name ?? "",
-            searchValue: (r: AttendanceRow) => `${r.guard_name ?? ""} ${r.guard_code ?? ""}`,
-            printCell: (r: AttendanceRow) => r.guard_name ?? "-",
+            searchValue: (r: AttendanceRow) => `${r.guard_name ?? ""} ${r.guard_code ?? ""} ${r.guard_role ?? ""}`,
+            printCell: (r: AttendanceRow) => `${r.guard_name ?? "-"}${r.guard_role ? ` (${r.guard_role})` : ""}`,
           },
         ]
       : []),
@@ -189,9 +192,9 @@ export function AttendanceWorkspace({
         onRowClick={(r) => setOpenId(r.id)}
         printTitle={showGuard ? "Attendance" : "My attendance"}
         searchPlaceholder={
-          showGuard ? "Search by guard, code or site…" : "Search by site or state…"
+          showGuard ? "Search by name, code, role or site…" : "Search by site or state…"
         }
-        emptyMessage="No attendance recorded yet. Punches appear here as soon as a guard checks in."
+        emptyMessage="No attendance recorded yet. Punches appear here as soon as someone checks in."
         rowClassName={(r) =>
           r.status === "pending_review" ? "bg-amber-50/60 dark:bg-amber-500/8" : undefined
         }

@@ -14,6 +14,8 @@ export type CheckInRow = {
   id: string;
   guardName: string;
   guardCode: string;
+  /** "Guard" or "Housekeeper". */
+  guardRole?: string;
   siteName: string;
   checkInAt: string;
   checkOutAt: string | null;
@@ -90,15 +92,19 @@ export function CheckInsLog({
 
   const columns: Column<CheckInRow>[] = [
     {
-      header: "Guard",
+      header: "Person",
       cell: (r) => (
         <span className="block">
           <span className="block font-medium">{r.guardName}</span>
-          <span className="block font-mono text-xs text-muted-foreground">{r.guardCode}</span>
+          <span className="block text-xs text-muted-foreground">
+            <span className="font-mono">{r.guardCode}</span>
+            {r.guardRole ? ` · ${r.guardRole}` : ""}
+          </span>
         </span>
       ),
       sortValue: (r) => r.guardName,
-      searchValue: (r) => `${r.guardName} ${r.guardCode} ${r.siteName} ${r.phone ?? ""}`,
+      searchValue: (r) => `${r.guardName} ${r.guardCode} ${r.guardRole ?? ""} ${r.siteName} ${r.phone ?? ""}`,
+      printCell: (r) => `${r.guardName} (${r.guardCode}${r.guardRole ? `, ${r.guardRole}` : ""})`,
     },
     { header: "Site", cell: (r) => r.siteName, sortValue: (r) => r.siteName },
     ...(view === "day" ? [] : [{ header: "Date", cell: (r: CheckInRow) => <span className="tabular-nums">{day(r.checkInAt)}</span>, sortValue: (r: CheckInRow) => r.checkInAt }]),
@@ -180,7 +186,7 @@ export function CheckInsLog({
         data={rows}
         getRowKey={(r) => r.id}
         printTitle={`Check-in log · ${periodTitle(view, at, today)}`}
-        searchPlaceholder="Search by guard, code, site or phone…"
+        searchPlaceholder="Search by name, code, role, site or phone…"
         emptyMessage={`Nobody checked in ${periodPhrase(view, at, today)}.`}
         onRowClick={(r) => setOpenId(r.id)}
         initialPageSize={25}

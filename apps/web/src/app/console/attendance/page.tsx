@@ -13,6 +13,8 @@ import { Panel } from "@/components/ui/panel";
 import { requireSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 import { AttendanceViews, ViewTabs } from "@/app/console/attendance/views";
+import { PeopleTabs } from "@/components/console/people-tabs";
+import { peopleIds, readPeople, workerLabel } from "@/lib/people";
 
 export const metadata: Metadata = { title: "Attendance" };
 export const dynamic = "force-dynamic";
@@ -28,7 +30,7 @@ export const dynamic = "force-dynamic";
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; record?: string; view?: string; month?: string; date?: string }>;
+  searchParams: Promise<{ site?: string; record?: string; view?: string; month?: string; date?: string; people?: string }>;
 }) {
   const session = await requireSession();
   const supabase = await supabaseServer();
@@ -37,20 +39,22 @@ export default async function AttendancePage({
   const siteId = q.site;
   // Staff read attendance four ways; a guard has their own list only.
   if (isStaff(session.profile.role) && q.view !== "punches") {
-    return <AttendanceViews view={q.view} month={q.month} date={q.date} siteId={siteId} />;
+    return <AttendanceViews view={q.view} month={q.month} date={q.date} siteId={siteId} people={q.people} />;
   }
 
   let query = supabase
     .from("attendance")
     .select(
-      "id, site_id, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, status, device_reported_at, ip, review_note, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)",
+      "id, site_id, check_in_at, check_out_at, check_in_lat, check_in_lng, check_in_accuracy_m, check_in_distance_m, check_in_method, check_out_distance_m, check_out_method, worked_minutes, overtime_minutes, status, device_reported_at, ip, review_note, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code, trade), sites(name)",
     )
     .order("check_in_at", { ascending: false })
     .limit(1000);
   if (siteId) query = query.eq("site_id", siteId);
-  const attendance = await query;
-
   const mine = session.profile.role === "guard";
+  const people = readPeople(q.people);
+  const ids = mine ? null : await peopleIds(supabase, people);
+  if (ids) query = query.in("guard_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+  const attendance = await query;
 
   const rows: AttendanceRow[] = (attendance.data ?? []).map((r) => {
     const guard = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
@@ -76,6 +80,7 @@ export default async function AttendancePage({
       // A guard sees only their own rows, so repeating their name on each is noise.
       guard_name: mine ? null : (guard?.full_name ?? null),
       guard_code: guard?.employee_code ?? null,
+      guard_role: mine ? null : workerLabel((guard as { trade?: string | null } | null)?.trade),
       site_name: place?.name ?? null,
     };
   });
@@ -89,8 +94,8 @@ export default async function AttendancePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={mine ? "My attendance" : "Attendance"} />
-      {!mine && <ViewTabs view="punches" />}
+      <PageHeader title={mine ? "My attendance" : "Attendance"} action={mine ? undefined : <PeopleTabs value={people} />} />
+      {!mine && <ViewTabs view="punches" keep={`${siteId ? `&site=${siteId}` : ""}${people !== "all" ? `&people=${people}` : ""}`} />}
 
       <Panel
         tone="sky"
@@ -118,7 +123,7 @@ export default async function AttendancePage({
       </Panel>
 
       <p className="text-xs text-muted-foreground">
-        Distance is how far from the site centre the guard stood when they punched.
+        Distance is how far from the site centre the person stood when they punched.
         It is stored on every punch, so a dispute months later has evidence rather
         than an argument.
       </p>
