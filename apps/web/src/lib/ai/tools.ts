@@ -3,11 +3,12 @@ import "server-only";
 import { expandEmployeeCode, isStaff, roleAllowed } from "@nbss/shared/identity";
 import { z } from "zod";
 
+import { istDay, istInstant } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { AiContext } from "./context";
 
 /** The IST calendar day of an instant, for counting days rather than check-ins. */
-const istDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 import type { Role } from "@/lib/auth";
 
 /**
@@ -71,11 +72,27 @@ function office(ctx: AiContext) {
   }
 }
 
-/** Start of today, in the zone the agency actually works in. */
+/**
+ * Start of today, in the zone the agency actually works in. Not `setHours(0)`:
+ * the server runs on UTC, where that is 5:30 am IST and drops the night shift.
+ */
 function startOfToday(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
+  return istInstant(istDay(0), "00:00").toISOString();
+}
+
+/** "7:00 am", IST. */
+function clockAt(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: IST });
+}
+
+/** "Sat 7 Nov", IST, for a calendar date "2026-11-07". */
+function dayName(date: string): string {
+  return new Date(`${date}T12:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: IST });
+}
+
+/** An embedded to-one row comes back as an object or a one-item array. */
+function one<T>(v: unknown): T | null {
+  return (Array.isArray(v) ? (v[0] ?? null) : (v ?? null)) as T | null;
 }
 
 function daysAgo(n: number): string {
@@ -154,7 +171,7 @@ const attendanceSummary: AiTool = {
 
     const rows = data ?? [];
     // Guard-days, as the register counts them: two check-ins on one day are one day present.
-    const guardDay = (r: (typeof rows)[number]) => `${r.guard_id}|${r.check_in_at ? istDay(r.check_in_at) : ""}`;
+    const guardDay = (r: (typeof rows)[number]) => `${r.guard_id}|${r.check_in_at ? dayOf(r.check_in_at) : ""}`;
     return {
       window: days && days > 1 ? `last ${days} days` : "today",
       checkIns: rows.length,
@@ -213,10 +230,10 @@ const listSites: AiTool = {
   },
 };
 
-const rosterOverview: AiTool = {
-  name: "roster_overview",
+const accountOverview: AiTool = {
+  name: "account_overview",
   description:
-    "How many people hold each kind of login, how many accounts are active, and who has no mobile number on file (and so cannot sign in).",
+    "How many people hold each kind of login, how many accounts are active, and who has no mobile number on file (and so cannot sign in). This counts accounts; it is not the duty roster. For who is scheduled to work, use shift_roster.",
   parameters: z.object({}),
   jsonSchema: empty,
   roles: ["admin", "supervisor"],
@@ -247,7 +264,7 @@ const rosterOverview: AiTool = {
 const punchesNeedingReview: AiTool = {
   name: "punches_needing_review",
   description:
-    "Attendance records the geofence could not confirm, or that were closed by hand, and are waiting for a supervisor's decision. This is the work queue.",
+    "Attendance records the geofence could not confirm, made at a site the guard was not rostered to, or closed by hand, waiting for a supervisor's decision, each with the reason it was held. This is the work queue.",
   parameters: z.object({}),
   jsonSchema: empty,
   roles: ["admin", "supervisor"],
@@ -257,7 +274,7 @@ const punchesNeedingReview: AiTool = {
     const { data } = await supabase
       .from("attendance")
       .select(
-        "id, check_in_at, check_in_distance_m, check_in_accuracy_m, check_in_method, status, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)",
+        "id, check_in_at, check_in_distance_m, check_in_accuracy_m, check_in_method, status, off_roster, review_note, device_flag, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)",
       )
       .eq("status", "pending_review")
       .order("check_in_at", { ascending: false })
@@ -276,6 +293,11 @@ const punchesNeedingReview: AiTool = {
         gpsAccuracy:
           r.check_in_accuracy_m === null ? null : `±${Math.round(r.check_in_accuracy_m)} m`,
         allowedBy: r.check_in_method,
+        // Why it is held, in the record's own words: the review note says it
+        // (off roster, outside the fence, closed by hand), the flags back it up.
+        reason: r.review_note ?? (r.off_roster ? "Checked in at a site this guard was not rostered to." : null),
+        offRoster: r.off_roster,
+        deviceFlag: r.device_flag,
       };
     });
 
@@ -346,10 +368,10 @@ const guardAttendance: AiTool = {
       guard: { name: person.full_name, code: person.employee_code, active: person.active },
       window: `last ${days} days`,
       checkIns: rows.length,
-      daysPresent: new Set(rows.filter((r) => r.check_in_at && r.status !== "rejected").map((r) => istDay(r.check_in_at!))).size,
+      daysPresent: new Set(rows.filter((r) => r.check_in_at && r.status !== "rejected").map((r) => dayOf(r.check_in_at!))).size,
       hoursWorked: hours(rows.reduce((s, r) => s + (r.worked_minutes ?? 0), 0)),
       overtime: hours(rows.reduce((s, r) => s + (r.overtime_minutes ?? 0), 0)),
-      lateDays: new Set(rows.filter((r) => r.status === "late" && r.check_in_at).map((r) => istDay(r.check_in_at!))).size,
+      lateDays: new Set(rows.filter((r) => r.status === "late" && r.check_in_at).map((r) => dayOf(r.check_in_at!))).size,
       recent: rows.slice(0, 15).map((r) => {
         const place = Array.isArray(r.sites) ? r.sites[0] : r.sites;
         return {
@@ -494,11 +516,306 @@ const myShifts: AiTool = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// The duty roster: `shifts`, written a week ahead from each guard's posting
+// plus the cover shifts added by hand. Who *should* be where, as opposed to
+// `attendance`, which is who actually is.
+
+type Supabase = Awaited<ReturnType<typeof supabaseServer>>;
+
+type RosterState =
+  | "on duty"
+  | "not arrived"
+  | "due now, inside the grace minutes"
+  | "due later"
+  | "checked in at another site"
+  | "checked out"
+  | "missed"
+  | "supervisor, does not check in";
+
+type RosterRow = {
+  guard: string;
+  code: string | null;
+  site: string;
+  hours: string;
+  state: RosterState;
+  /** Where they did check in, when it is not the rostered site. */
+  checkedInAt?: string;
+  /** How far past the start, for a shift nobody has arrived for. */
+  lateBy?: string;
+  cover: boolean;
+};
+
+/**
+ * Every shift that touches one IST day, and where each stands now. The same
+ * reading the dashboard and the Roster page give: a shift is "not arrived" once
+ * it has started, its site's grace minutes have passed, and its guard is not
+ * checked in there. Supervisors are never "not arrived": they do not check in.
+ */
+async function readRosterDay(supabase: Supabase, offset: number) {
+  const date = istDay(offset);
+  const from = istInstant(date, "00:00").toISOString();
+  const to = istInstant(istDay(offset + 1), "00:00").toISOString();
+
+  const [shifts, open] = await Promise.all([
+    supabase
+      .from("shifts")
+      .select(
+        "id, guard_id, site_id, starts_at, ends_at, status, posting_id, guard:profiles!shifts_guard_id_fkey(full_name, employee_code, role), sites(name, grace_minutes)",
+      )
+      .neq("status", "cancelled")
+      // Overlapping the day, so last night's shift that runs into this morning counts.
+      .lt("starts_at", to)
+      .gt("ends_at", from)
+      .order("starts_at")
+      .limit(500),
+    supabase.from("attendance").select("guard_id, site_id, sites(name)").is("check_out_at", null),
+  ]);
+
+  const openBy = new Map<string, { siteId: string; site: string }>();
+  for (const a of open.data ?? []) {
+    openBy.set(a.guard_id, { siteId: a.site_id, site: one<{ name: string }>(a.sites)?.name ?? "another site" });
+  }
+
+  const now = Date.now();
+  const rows: RosterRow[] = (shifts.data ?? []).map((s) => {
+    const g = one<{ full_name: string; employee_code: string; role: string }>(s.guard);
+    const place = one<{ name: string; grace_minutes: number | null }>(s.sites);
+    const start = new Date(s.starts_at).getTime();
+    const end = new Date(s.ends_at).getTime();
+    const here = openBy.get(s.guard_id);
+    const graceMs = (place?.grace_minutes ?? 10) * 60_000;
+
+    let state: RosterState;
+    if (here?.siteId === s.site_id) state = "on duty";
+    else if (s.status === "missed") state = "missed";
+    else if (s.status === "completed" || s.status === "in_progress") state = "checked out";
+    else if (g?.role === "supervisor") state = "supervisor, does not check in";
+    else if (start > now) state = "due later";
+    else if (end <= now) state = "missed";
+    else if (here) state = "checked in at another site";
+    else if (now - start > graceMs) state = "not arrived";
+    else state = "due now, inside the grace minutes";
+
+    return {
+      guard: g?.full_name ?? "A guard",
+      code: g?.employee_code ?? null,
+      site: place?.name ?? "a site",
+      hours: `${clockAt(s.starts_at)} – ${clockAt(s.ends_at)}`,
+      state,
+      ...(state === "checked in at another site" ? { checkedInAt: here?.site } : {}),
+      ...(state === "not arrived" ? { lateBy: hours(Math.round((now - start) / 60_000)) } : {}),
+      cover: !s.posting_id,
+    };
+  });
+
+  return { date, rows };
+}
+
+const DAYS = ["yesterday", "today", "tomorrow"] as const;
+const shiftRosterArgs = z.object({
+  day: z.enum(DAYS).optional(),
+  site: z.string().min(2).max(80).optional(),
+});
+
+const shiftRoster: AiTool = {
+  name: "shift_roster",
+  description:
+    "The duty roster for one day (today unless asked): every rostered shift with its guard, site and hours, and where each stands now: on duty, not arrived (started, grace passed, no check-in), due now (inside the grace minutes), due later, checked in at another site, checked out or missed. Also the check-ins made today at a site the guard was not rostered to. Use this for who is rostered or scheduled, who has not turned up or checked in, who is late or absent, and who works where today or tomorrow.",
+  parameters: shiftRosterArgs,
+  jsonSchema: {
+    type: "object",
+    properties: {
+      day: { type: "string", enum: [...DAYS], description: "Which day. Defaults to today." },
+      site: { type: "string", description: "Only this site: part of its name." },
+    },
+    required: [],
+  },
+  roles: ["admin", "supervisor"],
+  run: async (args, ctx) => {
+    office(ctx);
+    const { day = "today", site } = shiftRosterArgs.parse(args);
+    const offset = day === "yesterday" ? -1 : day === "tomorrow" ? 1 : 0;
+    const supabase = await supabaseServer();
+
+    const [{ date, rows: all }, offRoster] = await Promise.all([
+      readRosterDay(supabase, offset),
+      offset === 0
+        ? supabase
+            .from("attendance")
+            .select("check_in_at, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)")
+            .eq("off_roster", true)
+            .gte("check_in_at", startOfToday())
+            .order("check_in_at", { ascending: false })
+            .limit(30)
+        : Promise.resolve({ data: [] as never[] }),
+    ]);
+
+    const term = site?.trim().toLowerCase();
+    const rows = term ? all.filter((r) => r.site.toLowerCase().includes(term)) : all;
+    const count = (state: RosterState) => rows.filter((r) => r.state === state).length;
+    const pick = (state: RosterState) => rows.filter((r) => r.state === state);
+
+    return {
+      day: `${day}, ${dayName(date)}`,
+      ...(term ? { site: site, matchedNothing: rows.length === 0 && all.length > 0 } : {}),
+      rostered: rows.length,
+      counts: {
+        onDuty: count("on duty"),
+        notArrived: count("not arrived"),
+        dueNowInsideGrace: count("due now, inside the grace minutes"),
+        checkedInAtAnotherSite: count("checked in at another site"),
+        dueLater: count("due later"),
+        checkedOut: count("checked out"),
+        missed: count("missed"),
+      },
+      // The question this tool is asked most, answered first.
+      notCheckedIn: [
+        ...pick("not arrived"),
+        ...pick("due now, inside the grace minutes"),
+        ...pick("checked in at another site"),
+      ],
+      shifts: rows.slice(0, 120),
+      ...(offset === 0
+        ? {
+            checkedInOffRoster: (offRoster.data ?? []).map((a) => ({
+              guard: one<{ full_name: string }>(a.profiles)?.full_name ?? "A guard",
+              code: one<{ employee_code: string }>(a.profiles)?.employee_code ?? null,
+              site: one<{ name: string }>(a.sites)?.name ?? "a site",
+              since: stamp(a.check_in_at),
+            })),
+          }
+        : {}),
+      ...(all.length === 0
+        ? { note: "Nothing is rostered for this day. Guards without a posting check in first come, first served." }
+        : {}),
+    };
+  },
+};
+
+const rosterCoverArgs = z.object({ days: z.number().int().min(1).max(14).optional() });
+
+const rosterCover: AiTool = {
+  name: "roster_cover",
+  description:
+    "Each active site's rostered shifts per day, from today, against the number of guards it needs (as the Roster page counts them), and which site-days are short. Use this for gaps in the roster, sites short of guards, or cover over the coming week.",
+  parameters: rosterCoverArgs,
+  jsonSchema: {
+    type: "object",
+    properties: { days: { type: "integer", minimum: 1, maximum: 14, description: "How many days from today. Defaults to 7." } },
+    required: [],
+  },
+  roles: ["admin", "supervisor"],
+  run: async (args, ctx) => {
+    office(ctx);
+    const { days = 7 } = rosterCoverArgs.parse(args);
+    const supabase = await supabaseServer();
+    const dates = Array.from({ length: days }, (_, i) => istDay(i));
+
+    const [sites, shifts] = await Promise.all([
+      supabase.from("sites").select("id, name, guards_required").eq("active", true).order("name"),
+      supabase
+        .from("shifts")
+        .select("site_id, guard_id, starts_at")
+        .neq("status", "cancelled")
+        .gte("starts_at", istInstant(dates[0]!, "00:00").toISOString())
+        .lt("starts_at", istInstant(istDay(days), "00:00").toISOString())
+        .limit(5000),
+    ]);
+
+    // Shifts per site per IST start date: the figure in each Roster page cell.
+    const cell = new Map<string, number>();
+    const posted = new Map<string, Set<string>>();
+    for (const s of shifts.data ?? []) {
+      const date = new Date(s.starts_at).toLocaleDateString("en-CA", { timeZone: IST });
+      cell.set(`${s.site_id}|${date}`, (cell.get(`${s.site_id}|${date}`) ?? 0) + 1);
+      posted.set(s.site_id, (posted.get(s.site_id) ?? new Set()).add(s.guard_id));
+    }
+
+    const perSite = (sites.data ?? []).map((s) => {
+      const week = dates.map((d) => ({ day: dayName(d), rostered: cell.get(`${s.id}|${d}`) ?? 0 }));
+      const short = s.guards_required ? week.filter((w) => w.rostered < s.guards_required!) : [];
+      return {
+        site: s.name,
+        needs: s.guards_required,
+        guardsRostered: posted.get(s.id)?.size ?? 0,
+        shortOn: short.map((w) => `${w.day}: ${w.rostered} of ${s.guards_required}`),
+        nothingRostered: week.every((w) => w.rostered === 0),
+      };
+    });
+
+    return {
+      window: `${dayName(dates[0]!)} to ${dayName(dates.at(-1)!)}`,
+      sitesShort: perSite.filter((s) => s.shortOn.length > 0),
+      sitesFullyCovered: perSite.filter((s) => s.needs && s.shortOn.length === 0).map((s) => s.site),
+      // Without a headcount there is nothing to be short of; say so rather than call it covered.
+      sitesWithNoHeadcountSet: perSite
+        .filter((s) => !s.needs)
+        .map((s) => ({ site: s.site, guardsRostered: s.guardsRostered, nothingRostered: s.nothingRostered })),
+    };
+  },
+};
+
+const needsAttention: AiTool = {
+  name: "needs_attention",
+  description:
+    "Everything waiting on the operations desk right now, in one read: open SOS alerts, rostered guards who have not arrived, punches awaiting review today, and new booking requests. Use this for 'what needs my attention', 'anything urgent', or a quick status of the day.",
+  parameters: z.object({}),
+  jsonSchema: empty,
+  roles: ["admin", "supervisor"],
+  run: async (_args, ctx) => {
+    office(ctx);
+    const supabase = await supabaseServer();
+    const [sos, roster, review, bookings] = await Promise.all([
+      supabase
+        .from("sos_alerts")
+        .select("kind, status, raised_at, guard:profiles!sos_alerts_raised_by_fkey(full_name), sites(name)")
+        .in("status", ["active", "acknowledged"])
+        .order("raised_at", { ascending: false }),
+      readRosterDay(supabase, 0),
+      supabase
+        .from("attendance")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending_review")
+        .gte("check_in_at", startOfToday()),
+      supabase
+        .from("service_requests")
+        .select("reference, service_type, district, created_at")
+        .eq("status", "new")
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    const late = roster.rows.filter((r) => r.state === "not arrived");
+    return {
+      openSos: (sos.data ?? []).map((a) => ({
+        kind: a.kind,
+        status: a.status === "active" ? "nobody has responded yet" : "acknowledged, still open",
+        guard: one<{ full_name: string }>(a.guard)?.full_name ?? "A guard",
+        site: one<{ name: string }>(a.sites)?.name ?? "a site",
+        raised: stamp(a.raised_at),
+      })),
+      notArrived: late.map(({ guard, code, site, hours: window, lateBy }) => ({ guard, code, site, hours: window, lateBy })),
+      punchesAwaitingReviewToday: review.count ?? 0,
+      // References only: a booking is somebody's name and phone number.
+      newBookingRequests: (bookings.data ?? []).map((b) => ({
+        reference: b.reference,
+        service: b.service_type,
+        district: b.district,
+        received: stamp(b.created_at),
+      })),
+    };
+  },
+};
+
 const ALL_TOOLS: AiTool[] = [
   whoIsOnDuty,
   attendanceSummary,
   listSites,
-  rosterOverview,
+  accountOverview,
+  shiftRoster,
+  rosterCover,
+  needsAttention,
   punchesNeedingReview,
   guardAttendance,
   enquiryInbox,
@@ -523,7 +840,10 @@ const LABELS: Record<string, string> = {
   who_is_on_duty: "Checked who is on duty right now",
   attendance_summary: "Totalled the attendance records",
   list_sites: "Read the site register",
-  roster_overview: "Counted the accounts on the roster",
+  account_overview: "Counted the accounts in the console",
+  shift_roster: "Read the duty roster",
+  roster_cover: "Checked the roster against each site's headcount",
+  needs_attention: "Checked what is waiting on the desk",
   punches_needing_review: "Looked at the punches awaiting review",
   guard_attendance: "Read that guard's shifts",
   enquiry_inbox: "Checked the enquiry inbox",

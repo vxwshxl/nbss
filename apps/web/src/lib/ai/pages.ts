@@ -21,7 +21,46 @@ export const PAGES: Record<string, PageKnowledge> = {
     title: "Dashboard",
     about:
       "The operations desk's front page: how many guards are on duty right now, sites covered and uncovered, punches waiting for review and the latest enquiries.",
-    tools: ["who_is_on_duty", "attendance_summary", "punches_needing_review", "list_sites"],
+    tools: ["needs_attention", "who_is_on_duty", "shift_roster", "attendance_summary", "punches_needing_review", "list_sites"],
+  },
+  "/console/roster": {
+    title: "Roster",
+    about:
+      "Who is posted where: each guard's standing posting (a site, a daily window, the days of the week), the shifts written from it a week ahead, cover shifts added by hand, each site's headcount against what is rostered per day, who has not arrived, and who checked in at a site they were not rostered to.",
+    actions: ["Post a guard to a site", "Add a cover shift", "Set how many guards a site needs", "Approve an off-roster check-in"],
+    tools: ["shift_roster", "roster_cover", "who_is_on_duty"],
+  },
+  "/console/live": {
+    title: "Live tracking",
+    about:
+      "Where every guard on duty is right now and the path they have walked since checking in. A guard appears when they check in from the app and disappears when they check out.",
+    tools: ["who_is_on_duty", "shift_roster"],
+  },
+  "/console/routes": {
+    title: "Route history",
+    about: "Every shift's path from check-in to check-out, for a day, month or year, narrowed by guard or site.",
+    tools: ["guard_attendance", "attendance_summary"],
+  },
+  "/console/replacements": {
+    title: "Replacements",
+    about: "Requests to replace a rostered guard on a shift, and the cover guards sent in their place.",
+    tools: ["shift_roster", "roster_cover"],
+  },
+  "/console/sos": {
+    title: "SOS alerts",
+    about:
+      "SOS alerts raised in a day, month or year (one still open is always listed), who answered and how long help took to arrive.",
+    tools: ["needs_attention"],
+  },
+  "/console/bookings": {
+    title: "Bookings",
+    about: "Every request for guards from a signed-in client, newest first, with its status and quotation.",
+    tools: ["needs_attention"],
+  },
+  "/console/reports": {
+    title: "Reports",
+    about: "Attendance for payroll and billing: days, hours, lateness and exceptions per guard and per site, over a chosen range.",
+    tools: ["attendance_summary", "guard_attendance"],
   },
   "/console/attendance": {
     title: "Attendance",
@@ -42,19 +81,19 @@ export const PAGES: Record<string, PageKnowledge> = {
     about:
       "The client sites guards are deployed to, each with a geofence (centre and radius) a guard must be inside to check in, shift times and grace minutes.",
     actions: ["Add a site", "Draw or move a geofence on the map", "Change shift times and grace", "Link a site to a client account"],
-    tools: ["list_sites", "who_is_on_duty"],
+    tools: ["list_sites", "who_is_on_duty", "shift_roster", "roster_cover"],
   },
   "/console/guards": {
     title: "Guards",
     about: "Every security guard account (housekeepers and supervisors have their own pages): code, email, phone and whether it is active. Clicking a row opens their profile with 30-day attendance.",
     actions: ["Add a guard", "Edit contact details", "Deactivate or reactivate", "View the console as them"],
-    tools: ["roster_overview", "guard_attendance"],
+    tools: ["account_overview", "guard_attendance", "shift_roster"],
   },
   "/console/housekeepers": {
     title: "Housekeepers",
     about: "Every housekeeper account. Housekeepers work a site as guards do (shifts, attendance, SOS). Clicking a row opens their profile.",
     actions: ["Add a housekeeper", "Edit contact details", "Deactivate or reactivate"],
-    tools: ["roster_overview", "guard_attendance"],
+    tools: ["account_overview", "guard_attendance", "shift_roster"],
   },
   "/console/supervisors": {
     title: "Supervisors",
@@ -67,7 +106,7 @@ export const PAGES: Record<string, PageKnowledge> = {
     about:
       "Every account in the console (administrators, supervisors, guards and clients), split into role tabs. Clicking a row opens that person's profile.",
     actions: ["Filter by role", "Add a person", "Change someone's role", "Edit contact details", "Deactivate or delete an account"],
-    tools: ["roster_overview"],
+    tools: ["account_overview"],
   },
   "/console/submissions": {
     title: "Enquiries",

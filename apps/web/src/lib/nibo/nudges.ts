@@ -4,6 +4,7 @@ import { isStaff } from "@nbss/shared/identity";
 
 import type { Session } from "@/lib/impersonation";
 import type { NiboLine } from "@/lib/nibo/types";
+import { istDay, istInstant } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -19,8 +20,8 @@ export async function getNiboNudges(session: Session): Promise<NiboLine[]> {
   const p = session.profile;
   const out: NiboLine[] = [];
   const tasks: PromiseLike<void>[] = [];
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  // IST midnight, not the server's: the VPS runs on UTC.
+  const startOfToday = istInstant(istDay(0), "00:00");
   const now = new Date().toISOString();
 
   if (isStaff(p.role)) {
@@ -31,7 +32,9 @@ export async function getNiboNudges(session: Session): Promise<NiboLine[]> {
       s.from("attendance").select("id", { count: "exact", head: true }).eq("status", "pending_review").gte("check_in_at", startOfToday.toISOString()).then(({ count }) => {
         if (count) out.push({ id: `review:${count}`, kind: "nudge", priority: 7, mood: "think", text: `${plural(count, "punch", "punches")} waiting for review today.`, actions: [{ label: "Review", href: "/console/attendance" }, { label: "Why?", ask: "Which attendance entries are waiting for review today and why?" }] });
       }),
-      s.from("shifts").select("id", { count: "exact", head: true }).eq("status", "scheduled").lte("starts_at", now).gt("ends_at", now).then(({ count }) => {
+      // Supervisors are rostered but never check in, so they are left out, as the
+      // assistant's shift_roster leaves them out when "Who?" is asked.
+      s.from("shifts").select("id, guard:profiles!shifts_guard_id_fkey!inner(role)", { count: "exact", head: true }).eq("status", "scheduled").neq("guard.role", "supervisor").lte("starts_at", now).gt("ends_at", now).then(({ count }) => {
         if (count) out.push({ id: `late:${count}`, kind: "nudge", priority: 8, mood: "think", text: `${plural(count, "rostered guard")} not checked in yet.`, actions: [{ label: "Who?", ask: "Which rostered guards have not checked in yet?" }, { label: "Roster", href: "/console/roster" }] });
       }),
       s.from("service_requests").select("id", { count: "exact", head: true }).eq("status", "new").then(({ count }) => {
