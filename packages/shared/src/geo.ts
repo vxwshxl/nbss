@@ -245,11 +245,15 @@ export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
  * shift drew a scribble the size of the compound and "walked" kilometres. Nothing about
  * one fix gives the wander away, but the run does: it never goes anywhere.
  *
- * The first and last fix of the stay are kept (so its start and end times, and a
- * check-out at the end, survive), and so is each fix where the fence verdict flips, all
- * moved to the median, so time inside and outside the fence adds up as before while the
- * lines between them have no length. One stray fix that is back in the next is part of
- * the stay. Movement between stays, and a stay too short to call one, are kept as is.
+ * A stay is not one point, though, when the guard stepped across the fence during it:
+ * a guard at a gate on the fence line who walks 20 m out to the road and back is
+ * moving, and the timeline says "Left the fence". So the stay is cut where the fence
+ * verdict flips, and each spell, inside or outside, is drawn at its own median: the
+ * jitter within a spell goes, the step out and back stays as a short line in the
+ * spell's colour. The first and last fix of each spell are kept, so start and end
+ * times, time outside the fence and a check-out at the end all add up as before. One
+ * stray fix that is back in the next is part of the stay. Movement between stays, and
+ * a stay too short to call one, are kept as is.
  */
 export function settled<T extends Fix & { inside?: boolean | null }>(fixes: readonly T[], radius = 30, minMs = 2 * 60_000): T[] {
   const out: T[] = [];
@@ -282,11 +286,16 @@ export function settled<T extends Fix & { inside?: boolean | null }>(fixes: read
         const s = [...xs].sort((x, y) => x - y);
         return s.length % 2 ? s[(s.length - 1) / 2]! : (s[s.length / 2 - 1]! + s[s.length / 2]!) / 2;
       };
-      const at = { lat: mid(run.map((f) => f.lat)), lng: mid(run.map((f) => f.lng)) };
-      run.forEach((f, k) => {
-        const edge = k === 0 || k === run.length - 1 || f.inside !== run[k - 1]!.inside || f.inside !== run[k + 1]!.inside;
-        if (edge) out.push({ ...f, ...at });
-      });
+      // Spells inside and outside the fence, each drawn at its own median.
+      let from = 0;
+      for (let k = 1; k <= run.length; k++) {
+        if (k < run.length && (run[k]!.inside === false) === (run[from]!.inside === false)) continue;
+        const spell = run.slice(from, k);
+        const at = { lat: mid(spell.map((f) => f.lat)), lng: mid(spell.map((f) => f.lng)) };
+        out.push({ ...spell[0]!, ...at });
+        if (spell.length > 1) out.push({ ...spell.at(-1)!, ...at });
+        from = k;
+      }
       i = j;
     } else {
       out.push(fixes[i]!);
