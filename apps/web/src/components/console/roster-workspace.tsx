@@ -465,6 +465,7 @@ export function RosterWorkspace({
                           "inline-flex h-9 w-12 items-center justify-center rounded-lg border text-sm font-semibold tabular-nums transition hover:scale-105",
                           cellTone(w.count, s.required),
                         )}
+                        title={`${w.count} ${w.count === 1 ? "guard" : "guards"} rostered${s.required ? `, ${s.required} needed on duty at once` : ""}`}
                       >
                         {w.count}
                         {s.required ? <span className="text-[10px] font-normal opacity-70">/{s.required}</span> : null}
@@ -579,7 +580,7 @@ export function RosterWorkspace({
                 )}
               </Section>
 
-              <Section title="The next seven days">
+              <Section title="The next seven days · guards rostered each day">
                 <div className="grid grid-cols-7 gap-2">
                   {site.week.map((w, i) => {
                     const h = dayHeading(w.date);
@@ -591,9 +592,9 @@ export function RosterWorkspace({
                         className={cn("rounded-xl border px-2 py-2.5 text-center transition hover:scale-[1.03]", cellTone(w.count, site.required))}
                       >
                         <span className="block text-[11px] font-medium">{i === 0 ? "Today" : h.weekday}</span>
-                        <span className="block text-lg font-bold tabular-nums">
-                          {w.count}
-                          {site.required ? <span className="text-xs font-normal opacity-70">/{site.required}</span> : null}
+                        <span className="block text-lg font-bold tabular-nums">{w.count}</span>
+                        <span className="block text-[10px] font-medium opacity-75">
+                          {site.required ? `rostered · ${site.required} needed` : "rostered"}
                         </span>
                       </button>
                     );
