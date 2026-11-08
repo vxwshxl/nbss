@@ -37,7 +37,7 @@ NEXT_DIST_DIR=\$NEXT NODE_OPTIONS="--max-old-space-size=3072" pnpm build > /tmp/
 
 # Tabs still open on the previous version keep their scripts: its static files are
 # carried over (hashed names never clash), and dropped after a week.
-if [ -d "\$WEB/\$LIVE/static" ]; then cp -Rnp "\$WEB/\$LIVE/static/." "\$WEB/\$NEXT/static/"; fi
+if [ -d "\$WEB/\$LIVE/static" ]; then cp -Rp --update=none "\$WEB/\$LIVE/static/." "\$WEB/\$NEXT/static/"; fi
 find "\$WEB/\$NEXT/static" -type f -mtime +7 -delete 2>/dev/null || true
 
 echo "\$NEXT" > \$WEB/.next-active
