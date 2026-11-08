@@ -25,10 +25,34 @@ cd $DIR
 git fetch -q origin $BRANCH
 git reset -q --hard origin/$BRANCH
 pnpm install --frozen-lockfile --reporter=silent
-NODE_OPTIONS="--max-old-space-size=3072" pnpm build > /tmp/nbss-build.log 2>&1 || { tail -40 /tmp/nbss-build.log; exit 1; }
+
+# Build beside the live site, never over it. Building into the .next the server was
+# reading replaced its files underneath it, and every page anyone opened during the
+# build failed with "This page did not load". Two build folders take turns: the new
+# build goes into the one not serving, and the site switches to it on reload.
+WEB=$DIR/apps/web
+LIVE=\$(cat \$WEB/.next-active 2>/dev/null || echo .next)
+if [ "\$LIVE" = ".next-a" ]; then NEXT=.next-b; else NEXT=.next-a; fi
+NEXT_DIST_DIR=\$NEXT NODE_OPTIONS="--max-old-space-size=3072" pnpm build > /tmp/nbss-build.log 2>&1 || { tail -40 /tmp/nbss-build.log; exit 1; }
+
+# Tabs still open on the previous version keep their scripts: its static files are
+# carried over (hashed names never clash), and dropped after a week.
+if [ -d "\$WEB/\$LIVE/static" ]; then cp -Rnp "\$WEB/\$LIVE/static/." "\$WEB/\$NEXT/static/"; fi
+find "\$WEB/\$NEXT/static" -type f -mtime +7 -delete 2>/dev/null || true
+
+echo "\$NEXT" > \$WEB/.next-active
 pm2 startOrReload ecosystem.config.cjs --update-env >/dev/null
 pm2 save >/dev/null
 sleep 3
-curl -fsS -o /dev/null -w "• Health: %{http_code}\n" http://127.0.0.1:3040/api/health
-echo "• Live: \$(git rev-parse --short HEAD)"
+# A build that does not come up is never left live: back to the one that was serving.
+if ! curl -fsS -o /dev/null -w "• Health: %{http_code}\n" http://127.0.0.1:3040/api/health; then
+  sleep 5
+  if ! curl -fsS -o /dev/null -w "• Health: %{http_code}\n" http://127.0.0.1:3040/api/health; then
+    echo "✗ The new build did not answer; switching back to \$LIVE." >&2
+    echo "\$LIVE" > \$WEB/.next-active
+    pm2 startOrReload ecosystem.config.cjs --update-env >/dev/null
+    exit 1
+  fi
+fi
+echo "• Live: \$(git rev-parse --short HEAD) from \$NEXT"
 REMOTE

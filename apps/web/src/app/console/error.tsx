@@ -2,11 +2,21 @@
 
 import { RotateCw, TriangleAlert } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
+import { useSelfHeal } from "@/components/errors/use-self-heal";
 
-// Errors inside the console keep the shell (sidebar, top bar) and show a card where the page was.
+// Errors inside the console keep the shell (sidebar, top bar) and show a card where the page was,
+// but only after quietly retrying: most are a deploy or a restart passing (use-self-heal).
 export default function ConsoleError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => console.error(error), [error]);
+  const trying = useSelfHeal(error, reset);
+  if (trying) {
+    return (
+      <div className="grid min-h-[60svh] place-items-center" role="status" aria-live="polite">
+        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <RotateCw className="size-4 animate-spin" /> Loading…
+        </span>
+      </div>
+    );
+  }
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid min-h-[60svh] place-items-center">
       <div className="max-w-md rounded-3xl border-2 border-border bg-elevated p-8 text-center shadow-e1">

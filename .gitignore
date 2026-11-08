@@ -5,6 +5,10 @@ node_modules/
 # next (apps/web)
 .next/
 .next-build/
+# the server's two alternating builds and which one is live (deploy/deploy.sh)
+.next-a/
+.next-b/
+.next-active
 # the production build the demo film is captured from (apps/video)
 .next-video/
 out/
