@@ -1,4 +1,4 @@
-import { withoutSpikes } from "@nbss/shared/geo";
+import { cleanRoute } from "@nbss/shared/geo";
 import type { Row } from "@nbss/shared/db";
 import { checkFence, toRing, type Fence } from "@nbss/shared/geo";
 import type { SosKind, SosResponse } from "@nbss/shared/sos";
@@ -654,8 +654,8 @@ export type RoutePoint = { lat: number; lng: number; at: number; inside: boolean
 export async function myRoute(attendanceId: string): Promise<RoutePoint[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
   const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number, boolean | null][];
-  // The phone's wild guesses out, as on the website (withoutSpikes).
-  return withoutSpikes(
+  // The phone's wild guesses out and its stays settled, as on the website (cleanRoute).
+  return cleanRoute(
     points.map(([lat, lng, t, accuracy, inside]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy), inside: inside ?? null })),
   ).map(({ accuracy: _accuracy, ...p }) => p);
 }
@@ -664,7 +664,7 @@ export async function myRoute(attendanceId: string): Promise<RoutePoint[]> {
 export async function myTrail(attendanceId: string): Promise<{ lat: number; lng: number }[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
   const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number][];
-  return withoutSpikes(points.map(([lat, lng, t, accuracy]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy) }))).map(
+  return cleanRoute(points.map(([lat, lng, t, accuracy]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy) }))).map(
     ({ lat, lng }) => ({ lat, lng }),
   );
 }

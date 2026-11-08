@@ -1,4 +1,4 @@
-import { withoutSpikes } from "./geo";
+import { cleanRoute } from "./geo";
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL } from "./sos";
 
 /**
@@ -46,9 +46,9 @@ export type TrailPoint = {
   reason: string | null;
 };
 
-/** A route as the map draws it, with the phone's wild guesses taken out (withoutSpikes). */
+/** A route as the map draws it: the phone's wild guesses out and its stays settled (cleanRoute). */
 export function toPoints(tuples: TrailTuple[] | null | undefined): TrailPoint[] {
-  return withoutSpikes(rawPoints(tuples));
+  return cleanRoute(rawPoints(tuples));
 }
 
 function rawPoints(tuples: TrailTuple[] | null | undefined): TrailPoint[] {

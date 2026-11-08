@@ -153,11 +153,15 @@ export type Fix = Point & { at: number; accuracy?: number | null; /** The phone'
  *     when the phone reads itself still or walking, rising with what the phone itself
  *     reads (half as fast again as its own reading, plus a margin), so a guard really
  *     travelling by car or train keeps their route, up to a ceiling of 120 m/s;
- *   - it is part of an out-and-back: one fix or a run of them more than 150 m from the
- *     last good fix, back near it within five minutes, at a pace no guard walks (over
- *     4 m/s there and back) or with the phone reading itself still all the while. A run
- *     where the phone read real speed (3 m/s or more on a good fix) is a trip and stays,
- *     and a car or bike that keeps going never comes back, so it is never matched;
+ *   - it is part of an out-and-back: one fix or a run of them more than 35 m from the last
+ *     good fix (however sure of itself the phone says it was), back near it within five
+ *     minutes, at a pace no guard on patrol walks (over 2.5 m/s there and back) or with
+ *     the phone reading itself still all the while. A guard standing at a gate is the
+ *     common case: the phone, sure of itself to ±6 m, puts one fix 60 m to 1 km away and
+ *     the next one back at the gate 13 s later, again and again, which drew a starburst
+ *     of spokes and added kilometres to "walked". A run where the phone read real speed
+ *     (3 m/s or more on two good fixes; one alone is often the jump's own echo) is a trip
+ *     and stays, and a car or bike that keeps going never comes back, so it is never matched;
  *   - it is a jump the phone did not feel: more than 150 m at faster than a run (6 m/s)
  *     while the phone's own speed reading says it was all but still (under 1.5 m/s). A
  *     guard on a bike or in a car reads their speed; a GPS that wandered off reads 0.
@@ -183,14 +187,15 @@ function felt(f: Fix): boolean {
  * Where an out-and-back run that starts at `fixes[i]` ends: the index of the first fix
  * back near `a`, the last good fix. Null when the route does not come back within five
  * minutes, or the phone felt itself moving on the way (a real trip, kept).
- * The run is a wander, not a walk, when it went and came back faster than a guard
- * walks (over 4 m/s) or the phone read itself still (under 0.5 m/s) the whole time a
- * walk would have read 1 m/s or more.
+ * The run is a wander, not a walk, when it went and came back faster than a guard on
+ * patrol walks (over 2.5 m/s) or the phone read itself still (under 0.5 m/s) the whole
+ * time a walk would have read 1 m/s or more.
  */
 function excursionEnd(fixes: readonly Fix[], a: Fix, i: number): number | null {
   let far = 0;
   let still = true;
   let read = true;
+  let moving = 0;
   for (let j = i; j < fixes.length; j++) {
     const f = fixes[j]!;
     if (f.at - a.at > 5 * 60_000) return null;
@@ -198,9 +203,9 @@ function excursionEnd(fixes: readonly Fix[], a: Fix, i: number): number | null {
     if (j > i && d < Math.min(100, far * 0.35)) {
       const pace = (2 * far) / Math.max(1, (f.at - a.at) / 1000);
       // Without speed readings a quick drive there and back looks the same, so it takes a pace no vehicle in town keeps.
-      return (read && pace > 4) || (read && still && pace > 1.5) || pace > 12 ? j : null;
+      return (read && pace > 2.5) || (read && still && pace > 1.2) || pace > 12 ? j : null;
     }
-    if (felt(f)) return null;
+    if (felt(f) && ++moving >= 2) return null;
     if (f.speed == null) read = false;
     if ((f.accuracy ?? 0) <= 50 && !(f.speed != null && f.speed < 0.5)) still = false;
     far = Math.max(far, d);
@@ -219,7 +224,7 @@ export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
     const speed = d / Math.max(1, (b.at - a.at) / 1000);
     if (d > 100 && speed > plausibleSpeed(a, b)) continue;
     if (d > 150 && speed > 6 && b.speed != null && b.speed < 1.5) continue;
-    if (d > 150) {
+    if (d > 35) {
       const back = excursionEnd(fixes, a, i);
       if (back != null) {
         i = back - 1;
@@ -229,4 +234,69 @@ export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
     kept.push(b);
   }
   return kept;
+}
+
+/**
+ * A route with its stays settled: a run of fixes that keeps landing within `radius` of
+ * the same spot for `minMs` or longer is one place, drawn at the run's median position.
+ *
+ * A phone standing at a gate is never still on the map. Even sure of itself to ±6 m it
+ * wanders 10 to 40 m around the guard, fix after fix, so a guard who did not move all
+ * shift drew a scribble the size of the compound and "walked" kilometres. Nothing about
+ * one fix gives the wander away, but the run does: it never goes anywhere.
+ *
+ * The first and last fix of the stay are kept (so its start and end times, and a
+ * check-out at the end, survive), and so is each fix where the fence verdict flips, all
+ * moved to the median, so time inside and outside the fence adds up as before while the
+ * lines between them have no length. One stray fix that is back in the next is part of
+ * the stay. Movement between stays, and a stay too short to call one, are kept as is.
+ */
+export function settled<T extends Fix & { inside?: boolean | null }>(fixes: readonly T[], radius = 30, minMs = 2 * 60_000): T[] {
+  const out: T[] = [];
+  let i = 0;
+  while (i < fixes.length) {
+    const run: T[] = [fixes[i]!];
+    let lat = fixes[i]!.lat;
+    let lng = fixes[i]!.lng;
+    let j = i + 1;
+    while (j < fixes.length) {
+      const centre = { lat, lng };
+      const f = fixes[j]!;
+      if (distanceMetres(centre, f) > radius) {
+        const next = fixes[j + 1];
+        if (next && distanceMetres(centre, next) <= radius) {
+          j += 1; // one stray, back in the next fix
+          continue;
+        }
+        break;
+      }
+      run.push(f);
+      // A running mean to grow by; the median, once, to draw at.
+      lat += (f.lat - lat) / run.length;
+      lng += (f.lng - lng) / run.length;
+      j += 1;
+    }
+
+    if (run.length >= 3 && run.at(-1)!.at - run[0]!.at >= minMs) {
+      const mid = (xs: number[]) => {
+        const s = [...xs].sort((x, y) => x - y);
+        return s.length % 2 ? s[(s.length - 1) / 2]! : (s[s.length / 2 - 1]! + s[s.length / 2]!) / 2;
+      };
+      const at = { lat: mid(run.map((f) => f.lat)), lng: mid(run.map((f) => f.lng)) };
+      run.forEach((f, k) => {
+        const edge = k === 0 || k === run.length - 1 || f.inside !== run[k - 1]!.inside || f.inside !== run[k + 1]!.inside;
+        if (edge) out.push({ ...f, ...at });
+      });
+      i = j;
+    } else {
+      out.push(fixes[i]!);
+      i += 1;
+    }
+  }
+  return out;
+}
+
+/** A route as every map draws it and every total counts it: wild guesses out, then stays settled. */
+export function cleanRoute<T extends Fix & { inside?: boolean | null }>(fixes: readonly T[]): T[] {
+  return settled(withoutSpikes(fixes));
 }
