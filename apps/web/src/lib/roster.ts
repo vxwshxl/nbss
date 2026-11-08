@@ -30,6 +30,9 @@ export function windowLabel(starts: string, ends: string): string {
   return `${clock(starts)} – ${clock(ends)}`;
 }
 
+// Breaks: one set of rules for the website and the app.
+export { checkBreaks, hoursLabel, parts, readBreaks, type Break } from "@nbss/shared/shifts";
+
 /** "Every day", "Mon–Fri", or "Mon, Wed, Sat". */
 export function daysLabel(days: number[]): string {
   const sorted = [...days].sort((a, b) => a - b);

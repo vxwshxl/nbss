@@ -57,7 +57,8 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { TimePicker } from "@/components/ui/time-picker";
 import { BOOKING_STATUS_LABEL, type BookingStatus } from "@/lib/bookings";
 import { mapsUrl } from "@/lib/fence";
-import { datesLabel, daysLabel, windowLabel } from "@/lib/roster";
+import { BreaksEditor, breaksFit } from "@/components/console/breaks-editor";
+import { datesLabel, daysLabel, hoursLabel, type Break } from "@/lib/roster";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -263,21 +264,12 @@ export function SitePreviewDialog({
                   ) : (
                     <ul className="divide-y divide-app-line-soft overflow-hidden rounded-xl border border-app-line-soft">
                       {d.posted.map((p, i) => (
-                        <PersonRow
-                          key={`${p.id}-${i}`}
-                          name={p.name}
-                          code={p.code}
-                          phone={p.phone}
-                          detail={`${windowLabel(p.starts, p.ends)} · ${p.dates ? datesLabel(p.dates) : daysLabel(p.days)}`}
-                          right={
-                            <span className="flex items-center gap-2">
-                              <StatusPill
-                                status={d.onDuty.some((x) => x.id === p.id) ? "on_duty" : "checked_out"}
-                                label={d.onDuty.some((x) => x.id === p.id) ? "On duty" : "Off duty"}
-                              />
-                              <RemovePost postingId={p.postingId} name={p.name} onDone={reload} />
-                            </span>
-                          }
+                        <PostedGuard
+                          key={`${p.postingId}-${i}`}
+                          siteId={site.id}
+                          p={p}
+                          onDuty={d.onDuty.some((x) => x.id === p.id)}
+                          onDone={reload}
                         />
                       ))}
                     </ul>
@@ -482,6 +474,159 @@ const WEEK = [
   { n: 7, l: "Sun" },
 ];
 
+/** One posted guard: their hours, and editing them (times, days, breaks) in place. */
+function PostedGuard({
+  siteId,
+  p,
+  onDuty,
+  onDone,
+}: {
+  siteId: string;
+  p: SiteDetail["posted"][number];
+  onDuty: boolean;
+  onDone: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [starts, setStarts] = useState(p.starts.slice(0, 5));
+  const [ends, setEnds] = useState(p.ends.slice(0, 5));
+  const [days, setDays] = useState<number[]>(p.days);
+  const [breaks, setBreaks] = useState<Break[]>(p.breaks);
+  const [busy, start] = useTransition();
+
+  function open() {
+    setStarts(p.starts.slice(0, 5));
+    setEnds(p.ends.slice(0, 5));
+    setDays(p.days);
+    setBreaks(p.breaks);
+    setEditing(true);
+  }
+
+  return (
+    <>
+      <PersonRow
+        name={p.name}
+        code={p.code}
+        phone={p.phone}
+        detail={`${hoursLabel(p.starts, p.ends, p.breaks)} · ${p.dates ? datesLabel(p.dates) : daysLabel(p.days)}`}
+        right={
+          <span className="flex items-center gap-2">
+            <StatusPill status={onDuty ? "on_duty" : "checked_out"} label={onDuty ? "On duty" : "Off duty"} />
+            <button
+              type="button"
+              onClick={() => (editing ? setEditing(false) : open())}
+              aria-expanded={editing}
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-primary-ink ring-1 ring-primary/30 hover:bg-primary/5"
+            >
+              <Clock className="size-3.5" /> Edit hours
+            </button>
+            <RemovePost postingId={p.postingId} name={p.name} onDone={onDone} />
+          </span>
+        }
+      />
+      {editing && (
+        <li className="bg-primary/5 px-3.5 py-3">
+          <HoursFields
+            starts={starts}
+            ends={ends}
+            days={p.dates ? null : days}
+            breaks={breaks}
+            onStarts={setStarts}
+            onEnds={setEnds}
+            onDays={setDays}
+            onBreaks={setBreaks}
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            New hours apply from now, to today&rsquo;s duty too: it ends at the new time and is checked out automatically then.
+          </p>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={busy || !starts || !ends || (!p.dates && days.length === 0) || !breaksFit(starts, ends, breaks)}
+              onClick={() =>
+                start(async () => {
+                  const r = await savePosting({
+                    guardId: p.id,
+                    siteId,
+                    starts,
+                    ends,
+                    days,
+                    breaks,
+                    ...(p.dates ? { dates: p.dates, postingId: p.postingId } : {}),
+                  });
+                  if (r.ok) {
+                    toast.success(r.note ?? "Hours saved");
+                    setEditing(false);
+                    onDone();
+                  } else toast.error(r.error);
+                })
+              }
+            >
+              {busy && <Loader2 className="animate-spin" />}
+              Save hours
+            </Button>
+          </div>
+        </li>
+      )}
+    </>
+  );
+}
+
+/** From, to, the weekdays (a weekly post) and the breaks. */
+function HoursFields({
+  starts,
+  ends,
+  days,
+  breaks,
+  onStarts,
+  onEnds,
+  onDays,
+  onBreaks,
+}: {
+  starts: string;
+  ends: string;
+  /** Null for a dated post, whose dates are not edited here. */
+  days: number[] | null;
+  breaks: Break[];
+  onStarts: (v: string) => void;
+  onEnds: (v: string) => void;
+  onDays: (v: number[]) => void;
+  onBreaks: (v: Break[]) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="w-12 shrink-0 text-xs font-medium text-muted-foreground">Hours</span>
+        <TimePicker value={starts} onChange={onStarts} placeholder="Starts" className="h-9 min-w-0 flex-1 bg-card" />
+        <span className="text-xs text-muted-foreground">to</span>
+        <TimePicker value={ends} onChange={onEnds} placeholder="Ends" className="h-9 min-w-0 flex-1 bg-card" />
+        <span className="size-8 shrink-0" aria-hidden />
+      </div>
+      {days && (
+        <div className="flex flex-wrap gap-1.5">
+          {WEEK.map((w) => {
+            const on = days.includes(w.n);
+            return (
+              <button
+                key={w.n}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onDays(on ? days.filter((x) => x !== w.n) : [...days, w.n].sort())}
+                className={cn("rounded-full px-3 py-1 text-xs font-semibold ring-1", on ? "bg-primary text-white ring-primary" : "bg-card ring-border")}
+              >
+                {w.l}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <BreaksEditor starts={starts} ends={ends} breaks={breaks} onChange={onBreaks} />
+    </div>
+  );
+}
+
 /** Ends a guard's standing post here (their future shifts at this site are withdrawn). */
 function RemovePost({ postingId, name, onDone }: { postingId: string; name: string; onDone: () => void }) {
   const [busy, start] = useTransition();
@@ -523,6 +668,7 @@ function PostGuard({
   const [starts, setStarts] = useState("08:00");
   const [ends, setEnds] = useState("20:00");
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [breaks, setBreaks] = useState<Break[]>([]);
   const [busy, start] = useTransition();
   const choices = guards.filter((g) => !postedHere.includes(g.id));
 
@@ -539,7 +685,7 @@ function PostGuard({
   }
   return (
     <div className="mt-3 space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+      <div>
         <Dropdown
           value={guardId}
           onValueChange={setGuardId}
@@ -548,38 +694,32 @@ function PostGuard({
           options={choices.map((g) => ({ value: g.id, label: `${g.name} · ${g.code}${g.posted ? " (posted elsewhere)" : ""}` }))}
           className="h-9 bg-card"
         />
-        <TimePicker value={starts} onChange={setStarts} placeholder="Starts" className="h-9 bg-card" />
-        <TimePicker value={ends} onChange={setEnds} placeholder="Ends" className="h-9 bg-card" />
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {WEEK.map((w) => {
-          const on = days.includes(w.n);
-          return (
-            <button
-              key={w.n}
-              type="button"
-              onClick={() => setDays(on ? days.filter((x) => x !== w.n) : [...days, w.n].sort())}
-              className={cn("rounded-full px-3 py-1 text-xs font-semibold ring-1", on ? "bg-primary text-white ring-primary" : "bg-card ring-border")}
-            >
-              {w.l}
-            </button>
-          );
-        })}
-      </div>
+      <HoursFields
+        starts={starts}
+        ends={ends}
+        days={days}
+        breaks={breaks}
+        onStarts={setStarts}
+        onEnds={setEnds}
+        onDays={setDays}
+        onBreaks={setBreaks}
+      />
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
           Cancel
         </Button>
         <Button
           size="sm"
-          disabled={!guardId || busy}
+          disabled={!guardId || busy || days.length === 0 || !breaksFit(starts, ends, breaks)}
           onClick={() =>
             start(async () => {
-              const r = await savePosting({ guardId, siteId, starts, ends, days });
+              const r = await savePosting({ guardId, siteId, starts, ends, days, breaks });
               if (r.ok) {
                 toast.success("Guard posted here");
                 setOpen(false);
                 setGuardId("");
+                setBreaks([]);
                 onDone();
               } else toast.error(r.error);
             })

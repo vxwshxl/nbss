@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { site as company } from "@/content/site";
 import { requireRoleSession } from "@/lib/auth";
 import { toRing } from "@/lib/fence";
-import { clock, datesLabel, daysLabel, windowLabel } from "@/lib/roster";
+import { clock, datesLabel, daysLabel, hoursLabel, readBreaks } from "@/lib/roster";
 import { SITE_SECTION_KEYS, siteHref } from "@/lib/site-workspace";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -117,7 +117,7 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
       .order("starts_at"),
     supabase
       .from("site_postings")
-      .select("id, guard_id, starts, ends, days, dates, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
+      .select("id, guard_id, starts, ends, days, dates, breaks, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
       .eq("site_id", id)
       .eq("active", true),
     supabase
@@ -231,7 +231,7 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{g?.full_name ?? "A guard"}</span>
                         <span className="block text-[12.5px] text-secondary-fg">
-                          {windowLabel(p.starts, p.ends)} · {p.dates ? datesLabel(p.dates) : daysLabel(p.days)}
+                          {hoursLabel(p.starts, p.ends, readBreaks(p.breaks))} · {p.dates ? datesLabel(p.dates) : daysLabel(p.days)}
                         </span>
                       </span>
                       <Pill tone={p.dates ? "gold" : "green"}>{p.dates ? "Dated" : "Weekly"}</Pill>

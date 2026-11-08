@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import {
   ArrowLeft,
   CalendarCheck,
@@ -18,7 +18,7 @@ import { COMPANY, istTime, tel, clock12 } from "@nbss/shared/company";
 import { roleLabel, type Role } from "@nbss/shared/identity";
 import { toRing } from "@nbss/shared/geo";
 import { freshness } from "@nbss/shared/location";
-import { shiftTypeLabel } from "@nbss/shared/shifts";
+import { hoursLabel, readBreaks, shiftTypeLabel, type Break } from "@nbss/shared/shifts";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
@@ -31,6 +31,7 @@ import { Text } from "@/components/text";
 import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
+import { useAuth } from "@/lib/auth";
 import { directionsUrl } from "@/lib/duty";
 import { supabase } from "@/lib/supabase";
 import { color, radius, space } from "@/theme/tokens";
@@ -48,7 +49,8 @@ const ago = (iso: string | null, now: number) => {
   if (m < 1440) return `${Math.floor(m / 60)} h ago`;
   return dateLabel(iso);
 };
-const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** ISO weekdays as `site_postings.days` stores them: Monday is 1, Sunday 7. */
+const WEEK = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type Session = {
   id: string;
@@ -74,7 +76,7 @@ type Detail = {
   active: boolean;
   joined: string | null;
   lastSeen: string | null;
-  posting: { site: string; starts: string; ends: string; days: number[]; shift: string | null } | null;
+  posting: { site: string; starts: string; ends: string; days: number[]; shift: string | null; breaks: Break[] } | null;
   sessions: Session[];
   position: { lat: number; lng: number; inside: boolean | null; distance: number | null; battery: number | null; charging: boolean | null; at: string; mode: string } | null;
   device: {
@@ -101,7 +103,7 @@ async function load(id: string): Promise<Detail | null> {
   const [p, att, post, pos, dev] = await Promise.all([
     supabase.from("profiles").select("id, full_name, employee_code, role, trade, email, phone, avatar_url, active, joined_at, created_at, last_seen_at").eq("id", id).maybeSingle(),
     supabase.from("attendance").select("id, check_in_at, check_out_at, worked_minutes, status, site_id, sites(name, shift_start, shift_end, lat, lng, geofence_radius_m, polygon), shifts!attendance_shift_id_fkey(starts_at, ends_at)").eq("guard_id", id).gte("check_in_at", since).order("check_in_at", { ascending: false }).limit(120),
-    supabase.from("site_postings").select("starts, ends, days, shift_type, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
+    supabase.from("site_postings").select("starts, ends, days, shift_type, breaks, sites(name)").eq("guard_id", id).eq("active", true).is("dates", null).maybeSingle(),
     supabase.from("guard_positions").select("lat, lng, inside_fence, distance_m, battery, charging, recorded_at, received_at, mode").eq("guard_id", id).maybeSingle(),
     supabase.from("guard_devices").select("brand, model, os_version, app_version, status, platform, gps_enabled, location_permission, battery_optimized, notifications_enabled, precise_location, autostart, permissions_at, last_seen_at").eq("profile_id", id).order("last_seen_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -120,7 +122,7 @@ async function load(id: string): Promise<Detail | null> {
     active: r.active,
     joined: r.joined_at ?? r.created_at,
     lastSeen: r.last_seen_at,
-    posting: post.data ? { site: site(post.data.sites), starts: post.data.starts, ends: post.data.ends, days: post.data.days ?? [], shift: post.data.shift_type } : null,
+    posting: post.data ? { site: site(post.data.sites), starts: post.data.starts, ends: post.data.ends, days: post.data.days ?? [], shift: post.data.shift_type, breaks: readBreaks(post.data.breaks) } : null,
     sessions: (att.data ?? [])
       .filter((a) => a.check_in_at)
       .map((a) => {
@@ -177,6 +179,9 @@ async function load(id: string): Promise<Detail | null> {
 export function PersonPage({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const now = useNow(30_000);
+  const { role: myRole } = useAuth();
+  // Who may post people, as on the website's Roster: administrators and supervisors.
+  const canPost = myRole === "admin" || myRole === "developer" || myRole === "supervisor";
   const loader = useCallback(() => load(id), [id]);
   const { data: d, error, refreshing, reload, refresh } = useLoader(loader);
   // The shift whose route is shown: the one picked from Recent check-ins, else the open one, else the latest.
@@ -301,12 +306,25 @@ export function PersonPage({ id }: { id: string }) {
                 {d.posting ? (
                   <>
                     <Row label="Site" value={d.posting.site} first />
-                    <Row label="Hours" value={`${clock12(d.posting.starts)} – ${clock12(d.posting.ends)}${d.posting.shift ? ` · ${shiftTypeLabel(d.posting.shift)}` : ""}`} />
+                    <Row label="Hours" value={`${d.posting.breaks.length ? hoursLabel(d.posting.starts, d.posting.ends, d.posting.breaks) : `${clock12(d.posting.starts)} – ${clock12(d.posting.ends)}`}${d.posting.shift && !d.posting.breaks.length ? ` · ${shiftTypeLabel(d.posting.shift)}` : ""}`} />
                     <Row label="Days" value={d.posting.days.length === 7 || d.posting.days.length === 0 ? "Every day" : d.posting.days.map((n) => WEEK[n]).join(", ")} />
                   </>
                 ) : (
-                  <Row label="Site" value="Not posted. Post them from the website." first />
+                  <Row label="Site" value={canPost ? "Not posted yet." : "Not posted."} first />
                 )}
+                {canPost && d.active && (d.role === "guard" || d.role === "supervisor") ? (
+                  <PanelRow>
+                    <View style={styles.flex}>
+                      <Button
+                        label={d.posting ? "Edit post · hours, days, breaks" : "Post to a site"}
+                        icon={CalendarCheck}
+                        variant="outline"
+                        fullWidth
+                        onPress={() => router.push(`/posting/${d.id}` as Href)}
+                      />
+                    </View>
+                  </PanelRow>
+                ) : null}
               </Panel>
 
               <Panel tone="sky" title="Last 30 days" bare>

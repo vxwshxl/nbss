@@ -11,7 +11,7 @@ import {
 } from "@/components/console/roster-workspace";
 import { StatCard } from "@/components/console/stat-card";
 import { requireRoleSession } from "@/lib/auth";
-import { istDay, istDate, istInstant } from "@/lib/roster";
+import { istDay, istDate, istInstant, readBreaks } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Roster" };
@@ -45,7 +45,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
     supabase.from("sites").select("id, name, client_name, district, guards_required, grace_minutes").eq("active", true).order("name"),
     supabase
       .from("site_postings")
-      .select("id, site_id, guard_id, starts, ends, days, dates, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
+      .select("id, site_id, guard_id, starts, ends, days, dates, breaks, profiles!site_postings_guard_id_fkey(full_name, employee_code, phone)")
       .eq("active", true),
     // Guards, housekeepers (guards by trade) and supervisors: anyone who can be posted to a site.
     supabase.from("profiles").select("id, full_name, employee_code, phone, role, trade").in("role", ["guard", "supervisor"]).eq("active", true).order("full_name"),
@@ -114,6 +114,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
           ends: p.ends,
           days: p.days,
           dates: p.dates,
+          breaks: readBreaks(p.breaks),
           onDuty: onDutyAt.get(p.guard_id) === s.id,
         };
       });
@@ -127,7 +128,8 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       posted,
       onDuty: [...onDutyAt.values()].filter((site) => site === s.id).length,
       notArrived: mine.filter((x) => x.notArrived).length,
-      week: days.map((date) => ({ date, count: mine.filter((x) => x.date === date).length })),
+      // Guards rostered that day, not shifts: a post with a break is two shifts, one guard.
+      week: days.map((date) => ({ date, count: new Set(mine.filter((x) => x.date === date).map((x) => x.guardId)).size })),
     };
   });
 
@@ -141,7 +143,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       code: g.employee_code,
       phone: g.phone,
       kind: g.role === "supervisor" ? "supervisor" : g.trade === "housekeeping" ? "housekeeping" : "guard",
-      posting: p ? { siteId: p.site_id, starts: p.starts, ends: p.ends, days: p.days } : null,
+      posting: p ? { siteId: p.site_id, starts: p.starts, ends: p.ends, days: p.days, breaks: readBreaks(p.breaks) } : null,
       dated,
     };
   });

@@ -54,7 +54,8 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SHIFT_TYPES, shiftTypeFor, shiftTypeLabel } from "@nbss/shared/shifts";
 
-import { WEEKDAYS, clock, datesLabel, dayHeading, daysLabel, istDay, windowLabel } from "@/lib/roster";
+import { BreaksEditor, breaksFit } from "@/components/console/breaks-editor";
+import { WEEKDAYS, clock, datesLabel, dayHeading, daysLabel, hoursLabel, istDay, type Break } from "@/lib/roster";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +76,8 @@ export type RosterSite = {
     days: number[];
     /** Set for a dated posting: exactly these IST dates. */
     dates: string[] | null;
+    /** Times off inside the hours: each part of the day is its own duty. */
+    breaks: Break[];
     onDuty: boolean;
   }[];
   onDuty: number;
@@ -110,7 +113,7 @@ export type RosterGuard = {
   /** What they do on site: the roster posts all three. */
   kind: PostKind;
   /** Their weekly post, if any. */
-  posting: { siteId: string; starts: string; ends: string; days: number[] } | null;
+  posting: { siteId: string; starts: string; ends: string; days: number[]; breaks: Break[] } | null;
   /** How many dated posts they hold. */
   dated: number;
 };
@@ -201,6 +204,10 @@ type PostingDraft = {
   dates: string[] | null;
   /** The dated post being edited. */
   postingId?: string;
+  /** Times off inside the hours. */
+  breaks: Break[];
+  /** Opened from "Edit hours": the same guard at the same site, new times. */
+  hoursOnly?: boolean;
 };
 type CoverDraft = { guardId: string; siteId: string; date: string; starts: string; ends: string };
 
@@ -236,6 +243,9 @@ export function RosterWorkspace({
           ends: found.posting?.ends.slice(0, 5) ?? "08:00",
           days: found.posting?.days ?? [1, 2, 3, 4, 5, 6, 7],
           dates: null,
+          breaks: found.posting?.breaks ?? [],
+          // From a person's "Edit hours": the same post, new times.
+          hoursOnly: params.get("hours") === "1" && !!found.posting,
         }
       : null;
   });
@@ -274,6 +284,7 @@ export function RosterWorkspace({
       ends: g?.posting?.ends.slice(0, 5) ?? "08:00",
       days: g?.posting?.days ?? [1, 2, 3, 4, 5, 6, 7],
       dates: null,
+      breaks: g?.posting?.breaks ?? [],
       ...preset,
     });
   }
@@ -520,7 +531,7 @@ export function RosterWorkspace({
                             {p.name} <span className="font-mono text-xs font-normal text-muted-foreground">{p.code}</span>
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            {windowLabel(p.starts, p.ends)} · {p.dates ? datesLabel(p.dates) : daysLabel(p.days)}
+                            {hoursLabel(p.starts, p.ends, p.breaks)} · {p.dates ? datesLabel(p.dates) : daysLabel(p.days)}
                           </span>
                         </span>
                         <PhoneLink phone={p.phone} className="text-xs" />
@@ -529,17 +540,28 @@ export function RosterWorkspace({
                           <span className="flex gap-1">
                             <Button
                               size="sm"
-                              variant="ghost"
+                              variant="outline"
                               onClick={() =>
-                                newPosting(
-                                  p.dates
-                                    ? { guardId: p.guardId, siteId: site.id, starts: p.starts.slice(0, 5), ends: p.ends.slice(0, 5), dates: p.dates, postingId: p.postingId }
-                                    : { guardId: p.guardId },
-                                )
+                                newPosting({
+                                  guardId: p.guardId,
+                                  siteId: site.id,
+                                  starts: p.starts.slice(0, 5),
+                                  ends: p.ends.slice(0, 5),
+                                  days: p.days,
+                                  breaks: p.breaks,
+                                  hoursOnly: true,
+                                  ...(p.dates ? { dates: p.dates, postingId: p.postingId } : {}),
+                                })
                               }
                             >
-                              {p.dates ? "Edit" : "Move"}
+                              <Clock data-icon="inline-start" />
+                              Edit hours
                             </Button>
+                            {!p.dates && (
+                              <Button size="sm" variant="ghost" onClick={() => newPosting({ guardId: p.guardId })}>
+                                Move
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -717,7 +739,9 @@ export function RosterWorkspace({
             <PreviewHero
               icon={UserRoundPlus}
               title={
-                posting.postingId
+                posting.hoursOnly
+                  ? `Hours · ${guards.find((g) => g.id === posting.guardId)?.name ?? "guard"}`
+                  : posting.postingId
                   ? "Edit dated post"
                   : !posting.dates && guards.find((g) => g.id === posting.guardId)?.posting
                     ? `Move a ${KIND_LABEL[posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard"].toLowerCase()}`
@@ -725,14 +749,16 @@ export function RosterWorkspace({
               }
               meta={
                 <span>
-                  {posting.dates
+                  {posting.hoursOnly
+                    ? `At ${siteName(posting.siteId)}. New hours apply from now, to today's duty too: it ends at the new time and is checked out automatically then.`
+                    : posting.dates
                     ? "A shift is written for each date you pick. The guard keeps any other posts."
                     : "Their shifts for the week are written from this, every week."}
                 </span>
               }
             />
             <PreviewBody>
-              {!posting.postingId && (
+              {!posting.postingId && !posting.hoursOnly && (
                 <div role="radiogroup" aria-label="Who is posted" className="mb-4 inline-flex rounded-full bg-muted/70 p-1 ring-1 ring-border/60">
                   {(["guard", "housekeeping", "supervisor"] as const).map((k) => {
                     const on = (posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard") === k;
@@ -752,6 +778,7 @@ export function RosterWorkspace({
                 </div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
+                {!posting.hoursOnly && (<>
                 <Pick
                   id="posting-guard"
                   label={KIND_LABEL[posting.kind ?? guards.find((g) => g.id === posting.guardId)?.kind ?? "guard"]}
@@ -781,6 +808,7 @@ export function RosterWorkspace({
                   placeholder="Choose a site…"
                   options={sites.map((s) => ({ value: s.id, label: s.name }))}
                 />
+                </>)}
                 <ShiftTypePicker starts={posting.starts} ends={posting.ends} onPick={(a, b) => setPosting({ ...posting, starts: a, ends: b })} />
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="posting-starts">From</Label>
@@ -800,7 +828,16 @@ export function RosterWorkspace({
                     className="h-10"
                   />
                 </div>
-                {!posting.postingId && (
+                <div className="flex flex-col gap-2 sm:col-span-2">
+                  <Label>Breaks</Label>
+                  <BreaksEditor
+                    starts={posting.starts}
+                    ends={posting.ends}
+                    breaks={posting.breaks}
+                    onChange={(breaks) => setPosting({ ...posting, breaks })}
+                  />
+                </div>
+                {!posting.postingId && !posting.hoursOnly && (
                   <div className="sm:col-span-2">
                     <Segmented
                       label="Repeat"
@@ -865,11 +902,11 @@ export function RosterWorkspace({
               </Button>
               <Button
                 size="sm"
-                disabled={pending || !posting.guardId || !posting.siteId || posting.dates?.length === 0}
+                disabled={pending || !posting.guardId || !posting.siteId || posting.dates?.length === 0 || !breaksFit(posting.starts, posting.ends, posting.breaks)}
                 onClick={() => run(() => savePosting(posting), "Posted", () => setPosting(null))}
               >
                 <CheckCircle2 data-icon="inline-start" />
-                Save post
+                {posting.hoursOnly ? "Save hours" : "Save post"}
               </Button>
             </PreviewActions>
           </>

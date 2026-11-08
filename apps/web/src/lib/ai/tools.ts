@@ -698,7 +698,7 @@ const rosterCoverArgs = z.object({ days: z.number().int().min(1).max(14).optiona
 const rosterCover: AiTool = {
   name: "roster_cover",
   description:
-    "Each active site's rostered shifts per day, from today, against the number of guards it needs (as the Roster page counts them), and which site-days are short. Use this for gaps in the roster, sites short of guards, or cover over the coming week.",
+    "Each active site's rostered guards per day, from today, against the number of guards it needs (as the Roster page counts them), and which site-days are short. Use this for gaps in the roster, sites short of guards, or cover over the coming week.",
   parameters: rosterCoverArgs,
   jsonSchema: {
     type: "object",
@@ -723,14 +723,16 @@ const rosterCover: AiTool = {
         .limit(5000),
     ]);
 
-    // Shifts per site per IST start date: the figure in each Roster page cell.
-    const cell = new Map<string, number>();
+    // Guards rostered per site per IST start date: the figure in each Roster page cell.
+    // Guards, not shifts: a post with a break is two shifts on one day for one guard.
+    const day = new Map<string, Set<string>>();
     const posted = new Map<string, Set<string>>();
     for (const s of shifts.data ?? []) {
       const date = new Date(s.starts_at).toLocaleDateString("en-CA", { timeZone: IST });
-      cell.set(`${s.site_id}|${date}`, (cell.get(`${s.site_id}|${date}`) ?? 0) + 1);
+      day.set(`${s.site_id}|${date}`, (day.get(`${s.site_id}|${date}`) ?? new Set()).add(s.guard_id));
       posted.set(s.site_id, (posted.get(s.site_id) ?? new Set()).add(s.guard_id));
     }
+    const cell = new Map([...day].map(([k, v]) => [k, v.size]));
 
     const perSite = (sites.data ?? []).map((s) => {
       const week = dates.map((d) => ({ day: dayName(d), rostered: cell.get(`${s.id}|${d}`) ?? 0 }));

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { shiftTypeFor } from "@nbss/shared/shifts";
 
 import { audit, requireRoleSession } from "@/lib/auth";
-import { istDay, istInstant, parseTime } from "@/lib/roster";
+import { checkBreaks, istDay, istInstant, parseTime, readBreaks, type Break } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 
 /**
@@ -39,6 +39,8 @@ export async function savePosting(input: {
   days: number[];
   dates?: string[] | null;
   postingId?: string | null;
+  /** Times off inside the window; each part of the day between them is its own duty. */
+  breaks?: Break[];
 }): Promise<RosterResult> {
   let session;
   try {
@@ -58,6 +60,9 @@ export async function savePosting(input: {
   if (!dated && days.length === 0) return { ok: false, error: "Pick at least one day of the week." };
   if (dates && dates.length === 0) return { ok: false, error: "Pick at least one date from today on." };
   if (dates && dates.length > 366) return { ok: false, error: "A dated post can cover up to a year of dates." };
+  const checked = checkBreaks(starts, ends, readBreaks(input.breaks ?? []));
+  if (!checked.ok) return { ok: false, error: checked.error };
+  const breaks = checked.breaks;
 
   const supabase = await supabaseServer();
   const { data: guard } = await supabase
@@ -68,12 +73,12 @@ export async function savePosting(input: {
   if (!guard || (guard.role !== "guard" && guard.role !== "supervisor") || !guard.active)
     return { ok: false, error: "Only an active guard, housekeeper or supervisor can be posted." };
 
-  let existing: { id: string } | null = null;
+  let existing: { id: string; site_id: string } | null = null;
   if (dates) {
     if (input.postingId) {
       const { data } = await supabase
         .from("site_postings")
-        .select("id")
+        .select("id, site_id")
         .eq("id", input.postingId)
         .eq("active", true)
         .not("dates", "is", null)
@@ -83,7 +88,7 @@ export async function savePosting(input: {
   } else {
     const { data } = await supabase
       .from("site_postings")
-      .select("id")
+      .select("id, site_id")
       .eq("guard_id", input.guardId)
       .eq("active", true)
       .is("dates", null)
@@ -116,6 +121,7 @@ export async function savePosting(input: {
     ends,
     days: dates ? [1, 2, 3, 4, 5, 6, 7] : days,
     dates,
+    breaks,
     shift_type: shiftTypeFor(starts, ends),
   };
   const { error } = existing
@@ -125,12 +131,16 @@ export async function savePosting(input: {
 
   await audit({
     actor: session.realProfile,
-    action: existing ? "posting_moved" : "posting_created",
+    action: !existing ? "posting_created" : existing.site_id === input.siteId ? "posting_hours_changed" : "posting_moved",
     entity: "profiles",
     entityId: input.guardId,
-    detail: { site_id: input.siteId, starts, ends, ...(dates ? { dates } : { days }) },
+    detail: { site_id: input.siteId, starts, ends, ...(breaks.length ? { breaks } : {}), ...(dates ? { dates } : { days }) },
   });
   done();
+  if (existing && existing.site_id === input.siteId) {
+    // The database moves the duty running now to the new hours too (0074).
+    return { ok: true, note: `${guard.full_name}'s hours saved. Today's duty follows them.` };
+  }
   const what = dates ? `for ${dates.length} ${dates.length === 1 ? "date" : "dates"}` : existing ? "moved" : "posted";
   return { ok: true, note: `${guard.full_name} ${dates ? "posted " : ""}${what}` };
 }

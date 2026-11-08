@@ -4,7 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { isAdmin, roleAllowed, type Trade } from "@nbss/shared/identity";
-import { expandEmployeeCode, normaliseName } from "@nbss/shared/identity";
+import { expandEmployeeCode } from "@nbss/shared/identity";
 
 import { impersonatedId, type Session } from "@/lib/impersonation";
 import { bearerToken, supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
@@ -169,19 +169,9 @@ export async function createStaffAccount(input: {
   const fullName = input.fullName.trim().replace(/\s+/g, " ");
   const phone = input.phone.trim();
 
-  // Name and mobile are the sign-in, so no two workers may share both. A shared
-  // number on its own is fine — the name tells them apart.
-  if (input.role !== "client") {
-    const { data: sameNumber } = await admin
-      .from("profiles")
-      .select("full_name")
-      .eq("active", true)
-      .neq("role", "client")
-      .like("phone", `%${phone.replace(/\D/g, "").slice(-10)}`);
-    if ((sameNumber ?? []).some((p) => normaliseName(p.full_name) === normaliseName(fullName))) {
-      return { error: `Someone named ${fullName} already has this mobile number, so they could not be told apart at sign-in.` };
-    }
-  }
+  // One mobile, one active account (0075). Names may repeat.
+  const holder = await mobileHolder(phone);
+  if (holder) return { error: mobileTakenMessage(holder) };
 
   const email = input.email?.trim().toLowerCase() || null;
   if (email) {
@@ -240,6 +230,31 @@ export async function createStaffAccount(input: {
     return { id: created.user.id, employeeCode: code };
   }
   return { error: "Could not find a free employee code. Try again." };
+}
+
+/**
+ * The active account that already holds a mobile number, compared on its last ten
+ * digits as the database compares it (0075), or null when it is free. `exceptId` is
+ * the account being edited, which may keep its own number.
+ */
+export async function mobileHolder(
+  phone: string | null | undefined,
+  exceptId?: string,
+): Promise<{ id: string; full_name: string; employee_code: string } | null> {
+  const key = String(phone ?? "").replace(/\D/g, "").slice(-10);
+  if (!key) return null;
+  let query = supabaseAdmin()
+    .from("profiles")
+    .select("id, full_name, employee_code, phone")
+    .eq("active", true)
+    .like("phone", `%${key.slice(-4)}`);
+  if (exceptId) query = query.neq("id", exceptId);
+  const { data } = await query;
+  return (data ?? []).find((p) => String(p.phone ?? "").replace(/\D/g, "").slice(-10) === key) ?? null;
+}
+
+export function mobileTakenMessage(holder: { full_name: string; employee_code: string }): string {
+  return `This mobile number already belongs to ${holder.full_name} (${holder.employee_code}). Each person needs their own number.`;
 }
 
 /**

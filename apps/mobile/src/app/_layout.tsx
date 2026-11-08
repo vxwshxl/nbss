@@ -123,6 +123,7 @@ export default function RootLayout() {
                 <Stack.Screen name="assistant" options={{ headerShown: false, presentation: "modal" }} />
                 <Stack.Screen name="shift/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
                 <Stack.Screen name="person/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+                <Stack.Screen name="posting/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
                 <Stack.Screen
                   name="sos/[id]"
                   options={{

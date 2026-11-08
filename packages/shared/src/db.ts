@@ -1008,6 +1008,7 @@ export type Database = {
           dates: string[] | null;
           shift_type: string | null;
           held_for_inactive: boolean;
+          breaks: Json;
         };
         Insert: {
           id?: string;
@@ -1023,6 +1024,7 @@ export type Database = {
           dates?: string[] | null;
           shift_type?: string | null;
           held_for_inactive?: boolean;
+          breaks?: Json;
         };
         Update: {
           id?: string;
@@ -1038,6 +1040,7 @@ export type Database = {
           dates?: string[] | null;
           shift_type?: string | null;
           held_for_inactive?: boolean;
+          breaks?: Json;
         };
         Relationships: [];
       };

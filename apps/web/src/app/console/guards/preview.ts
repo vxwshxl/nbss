@@ -1,6 +1,7 @@
 "use server";
 
 import { requireRoleSession, type Role } from "@/lib/auth";
+import { readBreaks, type Break } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 import { site as company } from "@/content/site";
 
@@ -25,7 +26,7 @@ export type PersonPreview = {
   joined: string | null;
   lastSeen: string | null;
   guard?: {
-    posting: { site: string; starts: string; ends: string; days: number[] } | null;
+    posting: { site: string; starts: string; ends: string; days: number[]; breaks: Break[] } | null;
     onDuty: { site: string; since: string } | null;
     days30: number;
     late30: number;
@@ -79,7 +80,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
 
     const { data: post } = await supabase
       .from("site_postings")
-      .select("starts, ends, days, sites(name)")
+      .select("starts, ends, days, breaks, sites(name)")
       .eq("guard_id", id)
       .eq("active", true)
       .is("dates", null)
@@ -110,6 +111,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
             starts: post.starts,
             ends: post.ends,
             days: post.days,
+            breaks: readBreaks(post.breaks),
           }
         : null,
       onDuty: open

@@ -1,7 +1,7 @@
 "use server";
 
 import { requireRoleSession } from "@/lib/auth";
-import { istDate } from "@/lib/roster";
+import { istDate, readBreaks, type Break } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
 
@@ -27,7 +27,7 @@ export type SiteDetail = {
   bookings: { id: string; reference: string; status: string; quoted: number | null }[];
   /** The roster: how many the site needs, and who is posted here. */
   required: number | null;
-  posted: (SitePerson & { postingId: string; starts: string; ends: string; days: number[]; dates: string[] | null })[];
+  posted: (SitePerson & { postingId: string; starts: string; ends: string; days: number[]; dates: string[] | null; breaks: Break[] })[];
   /** Active guards who could be posted here (the picker in the popup). */
   guards: { id: string; name: string; code: string; posted: boolean }[];
 };
@@ -68,7 +68,7 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
       .order("created_at", { ascending: false }),
     supabase
       .from("site_postings")
-      .select("id, guard_id, starts, ends, days, dates, profiles!site_postings_guard_id_fkey(id, full_name, employee_code, phone)")
+      .select("id, guard_id, starts, ends, days, dates, breaks, profiles!site_postings_guard_id_fkey(id, full_name, employee_code, phone)")
       .eq("site_id", siteId)
       .eq("active", true),
   ]);
@@ -143,7 +143,7 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
     posted: (postings ?? []).flatMap((p) => {
       const g = one(p.profiles as unknown as Person | null);
       return g
-        ? [{ id: g.id, postingId: p.id, name: g.full_name, code: g.employee_code, phone: g.phone, starts: p.starts, ends: p.ends, days: p.days, dates: p.dates }]
+        ? [{ id: g.id, postingId: p.id, name: g.full_name, code: g.employee_code, phone: g.phone, starts: p.starts, ends: p.ends, days: p.days, dates: p.dates, breaks: readBreaks(p.breaks) }]
         : [];
     }),
     guards: await (async () => {

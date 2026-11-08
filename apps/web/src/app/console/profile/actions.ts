@@ -1,10 +1,10 @@
 "use server";
 
-import { isValidPhone, normaliseName } from "@nbss/shared/identity";
+import { isValidPhone } from "@nbss/shared/identity";
 
 import { revalidatePath } from "next/cache";
 
-import { audit, requireSession } from "@/lib/auth";
+import { audit, mobileHolder, mobileTakenMessage, requireSession } from "@/lib/auth";
 import { assertCanWrite } from "@/lib/impersonation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -25,17 +25,10 @@ export async function updateOwnProfile(_prev: ProfileState, data: FormData): Pro
   if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
 
   const admin = supabaseAdmin();
-  if (worker) {
-    const { data: sameNumber } = await admin
-      .from("profiles")
-      .select("full_name")
-      .eq("active", true)
-      .neq("role", "client")
-      .neq("id", session.profile.id)
-      .like("phone", `%${phone.replace(/\D/g, "").slice(-10)}`);
-    if ((sameNumber ?? []).some((p) => normaliseName(p.full_name) === normaliseName(fullName))) {
-      return { ok: false, error: "Someone else with this name has this mobile number, so you could not be told apart at sign-in." };
-    }
+  // One mobile, one active account (0075). Names may repeat.
+  if (phone && phone !== (session.profile.phone ?? "")) {
+    const holder = await mobileHolder(phone, session.profile.id);
+    if (holder) return { ok: false, error: mobileTakenMessage(holder) };
   }
 
   const { error } = await admin

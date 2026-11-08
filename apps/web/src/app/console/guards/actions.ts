@@ -5,12 +5,14 @@ import { cookies, headers } from "next/headers";
 import { DATA_MODE_COOKIE, parseMode } from "@/lib/mode/shared";
 import { revalidatePath } from "next/cache";
 
-import { fromRoleChoice, isAdmin, isValidEmail, isValidPhone, normaliseName, ROLE_CHOICES, type RoleChoice } from "@nbss/shared/identity";
+import { fromRoleChoice, isAdmin, isValidEmail, isValidPhone, ROLE_CHOICES, type RoleChoice } from "@nbss/shared/identity";
 
 import {
   audit,
   codeToEmail,
   createStaffAccount,
+  mobileHolder,
+  mobileTakenMessage,
   requireRoleSession,
 } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -80,14 +82,16 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
 }
 
 /**
- * Changes how someone is reached, and — for the email — how they sign in.
+ * Changes someone's name and how they are reached, and so how they sign in (name and
+ * mobile for a worker, the email for a client). Names may repeat; a mobile may not:
+ * no two active accounts share one (0075).
  *
  * The address is changed on the auth user, confirmed on the spot (the office
  * is vouching for it), and the trigger from 0009 copies it onto the profile.
  */
 export async function updateContact(
   profileId: string,
-  input: { email: string; phone: string },
+  input: { email: string; phone: string; fullName?: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireRoleSession("admin");
   const admin = supabaseAdmin();
@@ -101,6 +105,9 @@ export async function updateContact(
 
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
+  const fullName = (input.fullName ?? target.full_name).trim().replace(/\s+/g, " ");
+  if (!fullName) return { ok: false, error: "Enter the person's name." };
+  if (fullName.length > 120) return { ok: false, error: "That name is too long." };
   const worker = target.role !== "client";
   // The mobile is half of a worker's sign-in, so it cannot be taken away.
   if (worker && !phone) return { ok: false, error: "A mobile number is needed: it is how they sign in." };
@@ -108,17 +115,9 @@ export async function updateContact(
 
   if (email && !isValidEmail(email)) return { ok: false, error: "That email address does not look right." };
 
-  if (worker && phone !== (target.phone ?? "")) {
-    const { data: sameNumber } = await admin
-      .from("profiles")
-      .select("full_name")
-      .eq("active", true)
-      .neq("role", "client")
-      .neq("id", profileId)
-      .like("phone", `%${phone.replace(/\D/g, "").slice(-10)}`);
-    if ((sameNumber ?? []).some((p) => normaliseName(p.full_name) === normaliseName(target.full_name))) {
-      return { ok: false, error: `Someone else named ${target.full_name} has this mobile number, so they could not be told apart at sign-in.` };
-    }
+  if (phone && phone !== (target.phone ?? "")) {
+    const holder = await mobileHolder(phone, profileId);
+    if (holder) return { ok: false, error: mobileTakenMessage(holder) };
   }
 
   if (email !== (target.email ?? "")) {
@@ -138,8 +137,8 @@ export async function updateContact(
     if (error) return { ok: false, error: error.message };
   }
 
-  if (phone !== (target.phone ?? "")) {
-    const { error } = await admin.from("profiles").update({ phone: phone || null }).eq("id", profileId);
+  if (phone !== (target.phone ?? "") || fullName !== target.full_name) {
+    const { error } = await admin.from("profiles").update({ phone: phone || null, full_name: fullName }).eq("id", profileId);
     if (error) return { ok: false, error: error.message };
   }
 
@@ -148,7 +147,11 @@ export async function updateContact(
     action: "contact_updated",
     entity: "profiles",
     entityId: profileId,
-    detail: { email_changed: email !== (target.email ?? ""), phone_changed: phone !== (target.phone ?? "") },
+    detail: {
+      email_changed: email !== (target.email ?? ""),
+      phone_changed: phone !== (target.phone ?? ""),
+      ...(fullName !== target.full_name ? { name_from: target.full_name, name_to: fullName } : {}),
+    },
     ip: await clientIp(),
   });
 

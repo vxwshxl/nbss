@@ -191,6 +191,7 @@ export function GuardsWorkspace({
   function runContact(row: PersonRow, form: FormData) {
     start(async () => {
       const result = await updateContact(row.id, {
+        fullName: String(form.get("full_name") ?? ""),
         email: String(form.get("email") ?? ""),
         phone: String(form.get("phone") ?? ""),
       });
@@ -200,7 +201,7 @@ export function GuardsWorkspace({
       }
       setEditing(false);
       setVersion((v) => v + 1);
-      toast.success("Contact details saved", { description: row.full_name });
+      toast.success("Details saved", { description: String(form.get("full_name") ?? row.full_name) });
     });
   }
 
@@ -569,19 +570,25 @@ export function GuardsWorkspace({
           detail && canManage ? (
             <div className="space-y-5 border-t border-border pt-5">
               {editing ? (
-                <form
-                  className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
-                  action={(form) => runContact(detail, form)}
-                >
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="edit-email">Email</Label>
-                    <Input id="edit-email" name="email" type="email" defaultValue={p.email ?? ""} autoFocus />
+                <form className="grid gap-3 sm:grid-cols-2" action={(form) => runContact(detail, form)}>
+                  <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <Label htmlFor="edit-name">Full name</Label>
+                    <Input id="edit-name" name="full_name" defaultValue={p.name} required maxLength={120} autoFocus />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Label htmlFor="edit-phone">Mobile</Label>
                     <PhoneInput id="edit-phone" name="phone" defaultValue={p.phone ?? ""} />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input id="edit-email" name="email" type="email" defaultValue={p.email ?? ""} />
+                  </div>
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
+                    {detail.role === "client"
+                      ? "Clients sign in with Google, using this email."
+                      : "They sign in with this name and mobile. Names can repeat; a mobile number belongs to one person only."}
+                  </p>
+                  <div className="flex justify-end gap-2 sm:col-span-2">
                     <Button type="button" variant="outline" size="lg" onClick={() => setEditing(false)}>
                       Cancel
                     </Button>
@@ -628,7 +635,7 @@ export function GuardsWorkspace({
                 {!editing && (
                   <Button variant="outline" size="sm" disabled={pending} onClick={() => setEditing(true)}>
                     <Pencil data-icon="inline-start" />
-                    Edit contact
+                    Edit details
                   </Button>
                 )}
                 {isDeveloper && (

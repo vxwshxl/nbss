@@ -21,7 +21,7 @@ import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui
 import { Field, PhoneLink, Stat } from "@/components/console/preview-kit";
 import { StatusPill } from "@/components/ui/status-pill";
 import { initials } from "@/lib/ui/initials";
-import { daysLabel, windowLabel } from "@/lib/roster";
+import { daysLabel, hoursLabel } from "@/lib/roster";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/auth";
 
@@ -151,12 +151,17 @@ function Card({ p, children }: { p: PersonPreview; children?: React.ReactNode })
                 {p.guard.posting ? (
                   <>
                     Posted at <span className="font-semibold">{p.guard.posting.site}</span> ·{" "}
-                    {windowLabel(p.guard.posting.starts, p.guard.posting.ends)} · {daysLabel(p.guard.posting.days)}
+                    {hoursLabel(p.guard.posting.starts, p.guard.posting.ends, p.guard.posting.breaks)} · {daysLabel(p.guard.posting.days)}
                   </>
                 ) : (
                   <span className="text-muted-foreground">No standing post. Free for cover shifts.</span>
                 )}
               </span>
+              {p.guard.posting && (
+                <Link href={`/console/roster?guard=${p.id}&hours=1`} className="text-xs font-medium text-primary-ink hover:underline">
+                  Edit hours
+                </Link>
+              )}
               <Link href={`/console/roster?guard=${p.id}`} className="text-xs font-medium text-primary-ink hover:underline">
                 {p.guard.posting ? "Move" : "Post"}
               </Link>
