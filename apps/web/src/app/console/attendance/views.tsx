@@ -4,6 +4,7 @@ import { CalendarCheck, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Clo
 import { DayList, GuardCards, Legend, MonthGrid } from "@/components/console/attendance-views";
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
+import { SiteFilter } from "@/components/console/site-filter";
 import { peopleIds, readPeople } from "@/lib/people";
 import { StatCard } from "@/components/console/stat-card";
 import { registerBetween, tallyRegister } from "@/lib/attendance-register";
@@ -22,6 +23,12 @@ const VIEWS: { key: View; label: string; icon: typeof Grid3x3 }[] = [
 /** The request's clock, read once. */
 function nowMs(): number {
   return Date.now();
+}
+
+/** The sites the attendance pages filter by: those in service, and the chosen one even if it is not. */
+export async function siteOptions(supabase: Awaited<ReturnType<typeof supabaseServer>>, selected?: string) {
+  const { data } = await supabase.from("sites").select("id, name, active").order("name");
+  return (data ?? []).filter((s) => s.active || s.id === selected).map((s) => ({ id: s.id, name: s.active ? s.name : `${s.name} (out of service)` }));
 }
 
 export function ViewTabs({ view, keep = "" }: { view: View; keep?: string }) {
@@ -66,7 +73,10 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId, pe
 
   const supabase = await supabaseServer();
   const [from, to] = view === "day" ? [date, date] : [`${month}-01`, days.at(-1)!];
-  const rows = await registerBetween(supabase, from, to, { siteId, now: nowMs(), guardIds: await peopleIds(supabase, people) });
+  const [rows, sites] = await Promise.all([
+    peopleIds(supabase, people).then((guardIds) => registerBetween(supabase, from, to, { siteId, now: nowMs(), guardIds })),
+    siteOptions(supabase, siteId),
+  ]);
   const t = tallyRegister(rows);
   const monthName = new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
   const dayName = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -81,9 +91,12 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId, pe
   return (
     <div className="space-y-6">
       <PageHeader title="Attendance" action={<PeopleTabs value={people} />} />
-      <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+      <div className="flex flex-col items-center gap-3 lg:flex-row lg:justify-between">
         <ViewTabs view={view} keep={site} />
-        {stepper}
+        <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <SiteFilter sites={sites} value={siteId} />
+          {stepper}
+        </div>
       </div>
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Present" value={String(t.present)} hint={`${t.late} late`} icon={CalendarCheck} tone="emerald" />

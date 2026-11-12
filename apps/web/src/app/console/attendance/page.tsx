@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { requireSession } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import { AttendanceViews, ViewTabs } from "@/app/console/attendance/views";
+import { AttendanceViews, ViewTabs, siteOptions } from "@/app/console/attendance/views";
+import { SiteFilter } from "@/components/console/site-filter";
 import { PeopleTabs } from "@/components/console/people-tabs";
 import { peopleIds, readPeople, workerLabel } from "@/lib/people";
 
@@ -54,7 +55,7 @@ export default async function AttendancePage({
   const people = readPeople(q.people);
   const ids = mine ? null : await peopleIds(supabase, people);
   if (ids) query = query.in("guard_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-  const attendance = await query;
+  const [attendance, sites] = await Promise.all([query, mine ? Promise.resolve([]) : siteOptions(supabase, siteId)]);
 
   const rows: AttendanceRow[] = (attendance.data ?? []).map((r) => {
     const guard = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
@@ -95,7 +96,12 @@ export default async function AttendancePage({
   return (
     <div className="space-y-6">
       <PageHeader title={mine ? "My attendance" : "Attendance"} action={mine ? undefined : <PeopleTabs value={people} />} />
-      {!mine && <ViewTabs view="punches" keep={`${siteId ? `&site=${siteId}` : ""}${people !== "all" ? `&people=${people}` : ""}`} />}
+      {!mine && (
+        <div className="flex flex-col items-center gap-3 lg:flex-row lg:justify-between">
+          <ViewTabs view="punches" keep={`${siteId ? `&site=${siteId}` : ""}${people !== "all" ? `&people=${people}` : ""}`} />
+          <SiteFilter sites={sites} value={siteId} />
+        </div>
+      )}
 
       <Panel
         tone="sky"

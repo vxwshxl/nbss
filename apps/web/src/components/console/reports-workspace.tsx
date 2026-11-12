@@ -18,7 +18,8 @@ export type GuardReport = {
   workedMinutes: number;
   overtimeMinutes: number;
   late: number;
-  missed: number;
+  /** Rostered days with no check-in that day: the Attendance page's A. */
+  absent: number;
   replaced: number;
   covered: number;
   flagged: number;
@@ -33,7 +34,10 @@ export type SiteReport = {
   daysStaffed: number;
   guards: number;
   workedMinutes: number;
-  missed: number;
+  /** Guard-days present and absent at this site, and the attendance rate. */
+  present: number;
+  absent: number;
+  rate: number | null;
   sos: number;
 };
 
@@ -57,7 +61,7 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
       header: "Person",
       cell: (r) => (
         <span className="block">
-          <Link href={`/console/reports/guard/${r.id}?from=${from}&to=${to}`} className="block font-medium text-primary-ink hover:underline">
+          <Link data-row-primary href={`/console/reports/guard/${r.id}?from=${from}&to=${to}`} className="block font-medium text-primary-ink hover:underline">
             {r.name}
           </Link>
           <span className="block text-xs text-muted-foreground">
@@ -74,7 +78,7 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
     { header: "Hours", className: "tabular-nums", cell: (r) => duration(r.workedMinutes), printCell: (r) => hours(r.workedMinutes), sortValue: (r) => r.workedMinutes, total: (rs) => hours(rs.reduce((n, r) => n + r.workedMinutes, 0)) },
     { header: "Overtime", className: "tabular-nums", cell: (r) => (r.overtimeMinutes ? duration(r.overtimeMinutes) : "-"), printCell: (r) => hours(r.overtimeMinutes), sortValue: (r) => r.overtimeMinutes },
     { header: "Late", className: "tabular-nums", cell: (r) => r.late || "-", sortValue: (r) => r.late },
-    { header: "Missed", className: "tabular-nums", cell: (r) => (r.missed ? <span className="font-semibold text-rose-600">{r.missed}</span> : "-"), printCell: (r) => r.missed, sortValue: (r) => r.missed },
+    { header: "Absent", className: "tabular-nums", cell: (r) => (r.absent ? <span className="font-semibold text-rose-600">{r.absent}</span> : "-"), printCell: (r) => r.absent, sortValue: (r) => r.absent, total: (rs) => rs.reduce((n, r) => n + r.absent, 0) },
     { header: "Replaced / covered", className: "tabular-nums", cell: (r) => `${r.replaced} / ${r.covered}`, sortValue: (r) => r.covered },
     {
       header: "Flagged",
@@ -90,7 +94,9 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
       header: "Site",
       cell: (r) => (
         <span className="block">
-          <span className="block font-medium">{r.name}</span>
+          <Link data-row-primary href={`/console/reports/site/${r.id}?from=${from}&to=${to}`} className="block font-medium text-primary-ink hover:underline">
+            {r.name}
+          </Link>
           {r.district && <span className="block text-xs text-muted-foreground">{r.district}</span>}
         </span>
       ),
@@ -102,7 +108,9 @@ export function ReportsWorkspace({ from, to, guards, sites }: { from: string; to
     { header: "Days staffed", className: "tabular-nums", cell: (r) => r.daysStaffed, sortValue: (r) => r.daysStaffed },
     { header: "Different people", className: "tabular-nums", cell: (r) => r.guards, sortValue: (r) => r.guards },
     { header: "Hours worked", className: "tabular-nums", cell: (r) => hours(r.workedMinutes), sortValue: (r) => r.workedMinutes, total: (rs) => hours(rs.reduce((n, r) => n + r.workedMinutes, 0)) },
-    { header: "Missed shifts", className: "tabular-nums", cell: (r) => r.missed || "-", sortValue: (r) => r.missed },
+    { header: "Present", className: "tabular-nums", cell: (r) => r.present || "-", printCell: (r) => r.present, sortValue: (r) => r.present, total: (rs) => rs.reduce((n, r) => n + r.present, 0) },
+    { header: "Absent", className: "tabular-nums", cell: (r) => (r.absent ? <span className="font-semibold text-rose-600">{r.absent}</span> : "-"), printCell: (r) => r.absent, sortValue: (r) => r.absent, total: (rs) => rs.reduce((n, r) => n + r.absent, 0) },
+    { header: "Attendance", className: "tabular-nums", cell: (r) => (r.rate == null ? "-" : `${r.rate}%`), sortValue: (r) => r.rate ?? -1 },
     { header: "SOS", className: "tabular-nums", cell: (r) => r.sos || "-", sortValue: (r) => r.sos },
   ];
 

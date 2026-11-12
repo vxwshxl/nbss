@@ -1,10 +1,11 @@
-import { CalendarCheck, Clock, TriangleAlert, UserRoundX } from "lucide-react";
+import { CalendarCheck, CalendarX2, Clock, TriangleAlert } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
 import { readPeople, workerLabel } from "@/lib/people";
 import { ReportsWorkspace, type GuardReport, type SiteReport } from "@/components/console/reports-workspace";
 import { StatCard } from "@/components/console/stat-card";
+import { registerBetween, tallyRegister } from "@/lib/attendance-register";
 import { requireRole } from "@/lib/auth";
 import { istDate, istInstant } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -16,6 +17,11 @@ function defaults(): { from: string; to: string } {
 }
 
 const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+/** The request's clock, read once. */
+function nowMs(): number {
+  return Date.now();
+}
 
 /** Attendance for payroll and billing: days, hours, lateness and exceptions per guard and per site. */
 /** `siteId`: one site's workspace reports on that site alone. */
@@ -51,6 +57,18 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
   const S = (shifts.data ?? []).filter((s) => people === "all" || (s.guard_id != null && keptIds.has(s.guard_id)));
   const dayOf = (iso: string | null) => (iso ? istDate(new Date(iso)) : "");
 
+  // Absent and Present come from the register the Attendance page draws, so the two pages
+  // agree: a rostered day that ended with no check-in that day is Absent (counted by day,
+  // a duty handed to someone else is not held against the guard).
+  const register = await registerBetween(supabase, from, to, { siteId, now: nowMs(), guardIds: people === "all" ? null : [...keptIds] });
+  const regBy = (pick: (r: (typeof register)[number]) => string) => {
+    const m = new Map<string, typeof register>();
+    for (const r of register) m.set(pick(r), [...(m.get(pick(r)) ?? []), r]);
+    return m;
+  };
+  const regByGuard = regBy((r) => r.guardId);
+  const regBySite = regBy((r) => r.siteId);
+
   const guardRows: GuardReport[] = kept
     .map((g) => {
       const mine = A.filter((a) => a.guard_id === g.id && a.status !== "rejected");
@@ -66,17 +84,18 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
         overtimeMinutes: mine.reduce((n, a) => n + (a.overtime_minutes ?? 0), 0),
         // Late days, not late punches, as days present are counted.
         late: new Set(mine.filter((a) => a.status === "late").map((a) => dayOf(a.check_in_at))).size,
-        missed: sh.filter((s) => s.status === "missed").length,
+        absent: tallyRegister(regByGuard.get(g.id) ?? []).absent,
         replaced: sh.filter((s) => s.replaced_by_shift).length,
         covered: sh.filter((s) => s.replaces_shift).length,
         flagged: mine.filter((a) => a.device_flag).length,
         offRoster: mine.filter((a) => a.off_roster).length,
       };
     })
-    .filter((r) => r.shifts > 0 || r.missed > 0 || r.replaced > 0);
+    .filter((r) => r.shifts > 0 || r.absent > 0 || r.replaced > 0);
 
   const siteRows: SiteReport[] = (sites.data ?? []).map((s) => {
     const here = A.filter((a) => a.site_id === s.id && a.status !== "rejected");
+    const t = tallyRegister(regBySite.get(s.id) ?? []);
     return {
       id: s.id,
       name: s.name,
@@ -85,7 +104,9 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
       daysStaffed: new Set(here.map((a) => dayOf(a.check_in_at))).size,
       guards: new Set(here.map((a) => a.guard_id)).size,
       workedMinutes: here.reduce((n, a) => n + (a.worked_minutes ?? 0), 0),
-      missed: S.filter((x) => x.site_id === s.id && x.status === "missed").length,
+      present: t.present,
+      absent: t.absent,
+      rate: t.rate,
       sos: (sos.data ?? []).filter((x) => x.site_id === s.id).length,
     };
   });
@@ -97,7 +118,7 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
       <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Hours worked" value={(total / 60).toFixed(0)} hint={`${from} to ${to}`} icon={Clock} tone="emerald" />
         <StatCard label="Shifts worked" value={String(guardRows.reduce((n, r) => n + r.shifts, 0))} hint={`${guardRows.length} ${people === "housekeeping" ? "housekeepers" : people === "guard" ? "guards" : "people"}`} icon={CalendarCheck} tone="sky" />
-        <StatCard label="Missed shifts" value={String(guardRows.reduce((n, r) => n + r.missed, 0))} hint="Rostered, nobody came" icon={UserRoundX} tone="rose" />
+        <StatCard label="Absent" value={String(guardRows.reduce((n, r) => n + r.absent, 0))} hint="Rostered, no check-in" icon={CalendarX2} tone="rose" />
         <StatCard label="Flagged check-ins" value={String(guardRows.reduce((n, r) => n + r.flagged + r.offRoster, 0))} hint="Other phone or off the roster" icon={TriangleAlert} tone="amber" />
       </div>
       <ReportsWorkspace from={from} to={to} guards={guardRows} sites={siteRows} />
