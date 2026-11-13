@@ -32,8 +32,8 @@ import { DialogHost } from "@/components/dialog";
 import { ErrorScreen } from "@/components/error-screen";
 import { UpdateGate } from "@/components/update-screen";
 import { NotificationRouter } from "@/lib/notification-router";
-import { preloadBrandMark } from "@/components/brand-mark";
-import { LogBox } from "react-native";
+import { brandMarkPreloaded, preloadBrandMark } from "@/components/brand-mark";
+import { LogBox, View } from "react-native";
 import { IS_EXPO_GO } from "@/lib/runtime";
 
 // Expo Go's own notices about push being limited there: true, expected, and not this
@@ -78,10 +78,12 @@ export default function RootLayout() {
   });
 
   // The logo the loading screen shows, cached first so it is there on the first frame.
-  const [markReady, setMarkReady] = useState(false);
+  // Ready at once when the app was already running and only the screen was rebuilt.
+  const [markReady, setMarkReady] = useState(brandMarkPreloaded);
   useEffect(() => {
+    if (markReady) return;
     void preloadBrandMark().then(() => setMarkReady(true));
-  }, []);
+  }, [markReady]);
 
   useEffect(() => {
     // Hidden on an error too, deliberately. A missing font means the app falls back to
@@ -94,7 +96,9 @@ export default function RootLayout() {
     void ensureChannels();
   }, []);
 
-  if ((!fontsLoaded && !fontError) || !markReady) return null;
+  // The splash's own colour while waiting, never nothing: an empty frame is the phone's
+  // white window, which guards read as the app having broken.
+  if ((!fontsLoaded && !fontError) || !markReady) return <View style={{ flex: 1, backgroundColor: color.appBg }} />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

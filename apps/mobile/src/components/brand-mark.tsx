@@ -21,15 +21,31 @@ const MARK = require("../../assets/images/mark.png");
  * asset comes over the network from the bundler, so without this the loading screen
  * shows a blank square where the logo goes; capped so a slow link never holds the app.
  */
+let markLoaded = false;
+
+/**
+ * Whether the mark was already preloaded in this JS session. Android can rebuild the
+ * screen while the app stays alive (tracking keeps it running): the root then mounts
+ * again, and must not wait a second time with nothing drawn, which shows as a white flash.
+ */
+export function brandMarkPreloaded(): boolean {
+  return markLoaded;
+}
+
 export function preloadBrandMark(capMs = 2500): Promise<void> {
   // Native resolves the bundler asset; on web the import already is the URL.
   const uri: string | undefined =
     typeof RNImage.resolveAssetSource === "function" ? RNImage.resolveAssetSource(MARK)?.uri : typeof MARK === "string" ? MARK : MARK?.uri;
-  if (!uri) return Promise.resolve();
+  if (!uri) {
+    markLoaded = true;
+    return Promise.resolve();
+  }
   return Promise.race([
     Image.prefetch(uri).then(() => undefined, () => undefined),
     new Promise<void>((resolve) => setTimeout(resolve, capMs)),
-  ]);
+  ]).then(() => {
+    markLoaded = true;
+  });
 }
 
 export function BrandMark({
