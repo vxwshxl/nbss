@@ -87,5 +87,5 @@ export async function writeSheet({
 
   const name = `${site.shortName}-${title}`.replace(/[^\w-]+/g, "-").replace(/-+/g, "-").toLowerCase();
   const date = new Date().toLocaleDateString("en-CA", { timeZone: site.timeZone });
-  await writeXlsxFile(sheet, { columns: widths, sheet: title.slice(0, 31) }).toFile(`${name}-${date}.xlsx`);
+  await writeXlsxFile(sheet, { columns: widths, sheet: title.replace(/[\\/?*[\]:]/g, " ").slice(0, 31) }).toFile(`${name}-${date}.xlsx`);
 }

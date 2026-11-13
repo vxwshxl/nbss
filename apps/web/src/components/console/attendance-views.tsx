@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { RegisterEntry } from "@/lib/attendance-register";
+import type { Outcome, RegisterEntry } from "@/lib/attendance-register";
 import { CAME, tallyRegister } from "@/lib/attendance-register";
 import { cn } from "@/lib/utils";
 
@@ -10,9 +10,42 @@ export { Legend };
 
 const hours = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? ` ${String(m % 60).padStart(2, "0")}m` : ""}`;
 
+/** One guard's line of the register: a mark per day and the totals. Plain data, so a client can print or export it. */
+export type SheetRow = {
+  id: string;
+  name: string;
+  code: string;
+  /** One per day of `days`: the day's mark, or null for no duty. */
+  marks: (Outcome | null)[];
+  present: number;
+  late: number;
+  absent: number;
+  minutes: number;
+};
+
+/**
+ * The register a guard per row. A day the guard came is never shown as absent: the
+ * mark is the worst of the check-ins that day, and only a day with none shows a missed duty.
+ */
+export function registerSheet(rows: RegisterEntry[], days: string[]): SheetRow[] {
+  const guards = [...new Map(rows.map((r) => [r.guardId, { id: r.guardId, name: r.guardName, code: r.guardCode }])).values()].sort((a, b) => a.name.localeCompare(b.name));
+  const cell = new Map<string, RegisterEntry[]>();
+  for (const r of rows) cell.set(`${r.guardId}|${r.day}`, [...(cell.get(`${r.guardId}|${r.day}`) ?? []), r]);
+  return guards.map((g) => {
+    const t = tallyRegister(rows.filter((r) => r.guardId === g.id));
+    const marks = days.map((d) => {
+      const list = cell.get(`${g.id}|${d}`) ?? [];
+      const attended = list.filter((r) => CAME.includes(r.outcome));
+      const pool = attended.length ? attended : list;
+      return pool.length ? RANK.find((o) => pool.some((r) => r.outcome === o))! : null;
+    });
+    return { ...g, marks, present: t.present, late: t.late, absent: t.absent, minutes: t.minutes };
+  });
+}
+
 /** The register as a grid: a row per guard, a column per day, a coloured letter per duty. */
 export function MonthGrid({ rows, days, today }: { rows: RegisterEntry[]; days: string[]; today: string }) {
-  const guards = [...new Map(rows.map((r) => [r.guardId, { id: r.guardId, name: r.guardName, code: r.guardCode }])).values()].sort((a, b) => a.name.localeCompare(b.name));
+  const guards = registerSheet(rows, days);
   const cell = new Map<string, RegisterEntry[]>();
   for (const r of rows) cell.set(`${r.guardId}|${r.day}`, [...(cell.get(`${r.guardId}|${r.day}`) ?? []), r]);
   if (guards.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">No duties in this month.</p>;
@@ -35,8 +68,7 @@ export function MonthGrid({ rows, days, today }: { rows: RegisterEntry[]; days: 
         </thead>
         <tbody>
           {guards.map((g) => {
-            const mine = rows.filter((r) => r.guardId === g.id);
-            const t = tallyRegister(mine);
+            const t = { present: g.present, absent: g.absent, minutes: g.minutes };
             return (
               <tr key={g.id} className="group">
                 <td className="sticky left-0 z-10 border-t border-app-line-soft bg-card px-3 py-1.5 group-hover:bg-muted/60">
@@ -45,13 +77,9 @@ export function MonthGrid({ rows, days, today }: { rows: RegisterEntry[]; days: 
                   </Link>
                   <span className="font-mono text-[10px] text-muted-foreground">{g.code}</span>
                 </td>
-                {days.map((d) => {
+                {days.map((d, i) => {
                   const list = cell.get(`${g.id}|${d}`) ?? [];
-                  // A day the guard came is never shown as absent: the mark is the worst of the
-                  // check-ins that day, and only a day with none shows a missed duty.
-                  const attended = list.filter((r) => CAME.includes(r.outcome));
-                  const pool = attended.length ? attended : list;
-                  const worst = pool.length ? RANK.find((o) => pool.some((r) => r.outcome === o))! : null;
+                  const worst = g.marks[i];
                   return (
                     <td key={d} className="border-t border-app-line-soft px-0.5 py-1.5 text-center">
                       {worst ? (

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarCheck, CalendarX2, Clock, Grid3x3, MapPin, Percent, Radio, Users } from "lucide-react";
 
-import { GuardCards, Legend, MonthGrid } from "@/components/console/attendance-views";
+import { GuardCards, Legend, MonthGrid, registerSheet } from "@/components/console/attendance-views";
+import { RegisterExport } from "@/components/console/register-export";
 import { OUTCOME, RANK } from "@/components/console/attendance-key";
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
@@ -184,7 +185,13 @@ export default async function SiteReportPage({
         </Panel>
       )}
 
-      <Panel tone="sky" icon={Grid3x3} title="Register, day by day" bodyClassName="space-y-4 p-3 sm:p-4">
+      <Panel
+        tone="sky"
+        icon={Grid3x3}
+        title="Register, day by day"
+        action={<RegisterExport title={`${site.name} register ${from} to ${to}`} days={days} sheet={registerSheet(rows, days)} />}
+        bodyClassName="space-y-4 p-3 sm:p-4"
+      >
         <MonthGrid rows={rows} days={days} today={today} />
         <Legend />
       </Panel>

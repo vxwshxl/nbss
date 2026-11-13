@@ -26,6 +26,7 @@ export function TablePrintPreview<T>({
   columns,
   rows,
   getRowKey,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -33,6 +34,8 @@ export function TablePrintPreview<T>({
   columns: Column<T>[];
   rows: T[];
   getRowKey: (row: T, index: number) => string;
+  /** Many narrow columns (a month register): printed landscape, with tight cells. */
+  wide?: boolean;
 }) {
 
   // Lock background scroll and wire Escape while the overlay is open.
@@ -53,6 +56,7 @@ export function TablePrintPreview<T>({
   if (!open || typeof document === "undefined") return null;
 
   const printCols = columns.filter((c) => !c.noPrint);
+  const cellPad = wide ? "px-0.5 py-1 print:py-0.5" : "px-2 py-2 print:py-1";
   const printedAt = new Date().toLocaleDateString(undefined, {
     year: "numeric",
     month: "long",
@@ -65,6 +69,7 @@ export function TablePrintPreview<T>({
       data-print-overlay
       className="table-print-portal fixed inset-0 z-50 flex flex-col bg-black/40"
     >
+      {wide && <style>{"@media print { @page { size: A4 landscape; } }"}</style>}
       {/* Toolbar — screen only */}
       <div className="no-print flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
         <p className="truncate text-sm font-semibold">{title} · Print preview</p>
@@ -88,7 +93,7 @@ export function TablePrintPreview<T>({
       >
         <div
           id="table-print-doc"
-          className="mx-auto max-w-4xl overflow-hidden rounded-xl border border-border bg-card print:max-w-none print:rounded-none print:border-0"
+          className={`mx-auto ${wide ? "max-w-7xl" : "max-w-4xl"} overflow-hidden rounded-xl border border-border bg-card print:max-w-none print:rounded-none print:border-0`}
         >
           {/* Branded header */}
           <div className="flex items-center gap-4 border-b border-border px-6 py-5 print:px-0 print:py-3">
@@ -117,11 +122,11 @@ export function TablePrintPreview<T>({
 
           {/* Data */}
           <div className="overflow-x-auto px-6 py-5 print:overflow-visible print:px-0 print:py-3">
-            <table className="w-full text-sm">
+            <table className={wide ? "w-full text-[11px] print:text-[9px]" : "w-full text-sm"}>
               <thead>
                 <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
                   {printCols.map((c, i) => (
-                    <th key={i} className="px-2 py-2 font-medium print:py-1">
+                    <th key={i} className={`${cellPad} font-medium ${wide ? (c.headClassName ?? "") : ""}`}>
                       {c.printHeader ?? c.header}
                     </th>
                   ))}
@@ -141,7 +146,7 @@ export function TablePrintPreview<T>({
                   rows.map((row, i) => (
                     <tr key={getRowKey(row, i)}>
                       {printCols.map((c, ci) => (
-                        <td key={ci} className="px-2 py-2 align-top print:py-1">
+                        <td key={ci} className={`${cellPad} align-top ${wide ? (c.className ?? "") : ""}`}>
                           {c.printCell ? c.printCell(row) : c.cell(row)}
                         </td>
                       ))}
@@ -153,7 +158,7 @@ export function TablePrintPreview<T>({
                 <tfoot>
                   <tr className="border-t-2 border-foreground font-semibold">
                     {printCols.map((c, ci) => (
-                      <td key={ci} className={`px-2 py-2 print:py-1 ${c.className ?? ""}`}>
+                      <td key={ci} className={`${cellPad} ${c.className ?? ""}`}>
                         {c.total ? c.total(rows) : ci === 0 ? "Total" : null}
                       </td>
                     ))}

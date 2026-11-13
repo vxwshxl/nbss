@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { CalendarCheck, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Clock, Grid3x3, List, Percent, Users } from "lucide-react";
 
-import { DayList, GuardCards, Legend, MonthGrid } from "@/components/console/attendance-views";
+import { DayList, GuardCards, Legend, MonthGrid, registerSheet } from "@/components/console/attendance-views";
+import { RegisterExport } from "@/components/console/register-export";
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
 import { SiteFilter } from "@/components/console/site-filter";
@@ -107,6 +108,13 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId, pe
       <section className="overflow-hidden rounded-2xl border border-app-line bg-card p-4 shadow-e1">
         {view === "month" && (
           <div className="space-y-4">
+            <div className="flex justify-end">
+              <RegisterExport
+                title={`Attendance ${monthName}${siteId ? ` ${sites.find((s) => s.id === siteId)?.name ?? ""}` : ""}${people === "guard" ? " guards" : people === "housekeeping" ? " housekeepers" : ""}`}
+                days={days}
+                sheet={registerSheet(rows, days)}
+              />
+            </div>
             <MonthGrid rows={rows} days={days} today={today} />
             <Legend />
           </div>
