@@ -171,7 +171,7 @@ const STATUSES: Status[] = ["new", "contacted", "closed"];
  * triage checks who is calling rather than trusting that only the console can.
  */
 export async function updateStatus(id: string, status: Status): Promise<void> {
-  await requireRoleSession("admin", "supervisor");
+  await requireRoleSession("admin", "field_officer");
   if (!STATUSES.includes(status)) throw new Error("Unknown status.");
   await setStatus(id, status);
   revalidatePath("/console/submissions");

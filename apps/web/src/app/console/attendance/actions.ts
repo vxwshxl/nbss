@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { audit, requireRoleSession } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
 
 /**
@@ -18,7 +18,15 @@ import type { Enums } from "@/lib/supabase/types";
  *   · the original coordinates, accuracy and distance are never overwritten,
  *     only the verdict on them changes;
  *   · every decision names the reviewer and lands in the audit log.
+ *
+ * The write goes through the admin client, so the punch is first looked up as the
+ * signed-in person: a supervisor finds only their own site's (0077), and a punch
+ * at another site reads as not there.
  */
+async function visiblePunch(id: string): Promise<boolean> {
+  const { data } = await (await supabaseServer()).from("attendance").select("id").eq("id", id).maybeSingle();
+  return !!data;
+}
 
 type Verdict = Extract<Enums["attendance_status"], "present" | "late" | "absent" | "rejected">;
 
@@ -35,6 +43,7 @@ export async function reviewAttendance(
   if (reason.length < 4) {
     return { ok: false, error: "Give a reason for the change: it is kept with the record." };
   }
+  if (!(await visiblePunch(id))) return { ok: false, error: "That punch no longer exists." };
 
   const admin = supabaseAdmin();
 
@@ -87,6 +96,7 @@ export async function forceCheckOut(id: string, note: string): Promise<ReviewRes
 
   const reason = note.trim();
   if (reason.length < 4) return { ok: false, error: "Give a reason for closing this shift." };
+  if (!(await visiblePunch(id))) return { ok: false, error: "That punch no longer exists." };
 
   const admin = supabaseAdmin();
 

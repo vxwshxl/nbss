@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
  * on a round trip to do it.
  */
 export default async function SubmissionsPage() {
-  const session = await requireRoleSession("admin", "supervisor");
+  const session = await requireRoleSession("admin", "field_officer");
 
   const [submissions, counts] = await Promise.all([
     listSubmissions(),

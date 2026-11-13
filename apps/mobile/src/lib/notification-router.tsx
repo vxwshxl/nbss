@@ -1,11 +1,12 @@
 import { router, usePathname, useRootNavigationState, type Href } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
+import { isStaff, type Role } from "@nbss/shared/identity";
+
 import { useAuth } from "./auth";
 import { ensureTracking } from "./keep-alive";
 import { Notifications } from "./push";
 
-type Role = "developer" | "admin" | "supervisor" | "guard" | "client";
 type Push = { type: string; alert_id?: string; shift_id?: string; audience?: string };
 
 /**
@@ -34,7 +35,7 @@ function pushOf(raw: unknown, depth = 0): Push | null {
 
 /** Where a tapped notification leads, for this person. Null: just open the app. */
 function targetFor(p: Push, role: Role): Href | null {
-  const staff = role === "developer" || role === "admin" || role === "supervisor";
+  const staff = isStaff(role);
   if (p.type === "sos" && p.alert_id) {
     // A guard's SOS lives in their SOS tab; the office and clients get the alert's own page.
     return role === "guard" && p.audience === "on_duty_guard" ? "/(guard)/alerts" : `/sos/${p.alert_id}`;

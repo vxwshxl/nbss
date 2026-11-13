@@ -19,7 +19,7 @@ export type Person = {
 };
 
 /** The roles the list can be narrowed to, in this order. */
-const ROLES: RoleChoice[] = ["admin", "supervisor", "guard", "housekeeping", "client", "developer"];
+const ROLES: RoleChoice[] = ["admin", "field_officer", "supervisor", "guard", "housekeeping", "client", "developer"];
 
 /**
  * View as, as schoolerp has it: one control in the header.

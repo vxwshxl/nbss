@@ -15,7 +15,7 @@ export type Enums = {
   sos_response: "responding" | "on_scene" | "cannot_respond";
   sos_status: "active" | "acknowledged" | "resolved" | "false_alarm";
   tracking_mode: "on_duty" | "emergency";
-  user_role: "developer" | "admin" | "supervisor" | "guard" | "client";
+  user_role: "developer" | "admin" | "field_officer" | "supervisor" | "guard" | "client";
 };
 
 export type Database = {

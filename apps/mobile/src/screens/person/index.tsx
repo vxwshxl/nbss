@@ -181,7 +181,7 @@ export function PersonPage({ id }: { id: string }) {
   const now = useNow(30_000);
   const { role: myRole } = useAuth();
   // Who may post people, as on the website's Roster: administrators and supervisors.
-  const canPost = myRole === "admin" || myRole === "developer" || myRole === "supervisor";
+  const canPost = myRole === "admin" || myRole === "developer" || myRole === "field_officer" || myRole === "supervisor";
   const loader = useCallback(() => load(id), [id]);
   const { data: d, error, refreshing, reload, refresh } = useLoader(loader);
   // The shift whose route is shown: the one picked from Recent check-ins, else the open one, else the latest.

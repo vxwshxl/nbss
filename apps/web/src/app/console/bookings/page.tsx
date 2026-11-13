@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /** Every request for guards from a signed-in client, newest first. */
 export default async function BookingsPage() {
-  const session = await requireRoleSession("admin", "supervisor");
+  const session = await requireRoleSession("admin", "field_officer");
   const supabase = await supabaseServer();
 
   const [{ data }, { data: sites }] = await Promise.all([

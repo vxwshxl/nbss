@@ -1,6 +1,7 @@
 
 import { toRing } from "@nbss/shared/geo";
-import type { LivePosition } from "@nbss/shared/realtime";
+import { seesAllSites } from "@nbss/shared/identity";
+import { LIVE_MAP_CHANNEL, siteChannel, type LivePosition } from "@nbss/shared/realtime";
 
 import { PageHeader } from "@/components/console/page-header";
 import { LiveTracking, type DutyGuard, type NotArrived } from "@/components/tracking/live-tracking";
@@ -24,7 +25,7 @@ function nowIso(): string {
  */
 /** `siteId`: one site's workspace shows only that site. */
 export async function LiveView({ siteId }: { siteId?: string } = {}) {
-  await requireRole("admin", "supervisor");
+  const profile = await requireRole("admin", "supervisor");
   const supabase = await supabaseServer();
   const now = nowIso();
 
@@ -143,6 +144,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
         sites={liveSites}
         sosGuards={(sos.data ?? []).map((s) => s.raised_by)}
         notArrived={notArrived}
+        channels={seesAllSites(profile.role) ? [LIVE_MAP_CHANNEL] : liveSites.map((s) => siteChannel(s.id))}
       />
     </div>
   );

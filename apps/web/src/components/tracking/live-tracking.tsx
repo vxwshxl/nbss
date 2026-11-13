@@ -127,6 +127,10 @@ function useNow(everyMs: number) {
  * channel (0005/0022 → broadcast_positions). The page also re-reads the table
  * every minute, so a dropped socket costs a minute of staleness, never a frozen
  * map that looks live.
+ *
+ * `channels`: `live-map` for the office; a supervisor, who may not open it (0077),
+ * listens on each of their own sites' channels instead, which carry the same batch
+ * cut down to that site.
  */
 export function LiveTracking({
   guards,
@@ -134,12 +138,14 @@ export function LiveTracking({
   sites,
   sosGuards,
   notArrived,
+  channels = [LIVE_MAP_CHANNEL],
 }: {
   guards: DutyGuard[];
   initialPositions: LivePosition[];
   sites: LiveSite[];
   sosGuards: string[];
   notArrived: NotArrived[];
+  channels?: string[];
 }) {
   const router = useRouter();
   const now = useNow(10_000);
@@ -180,6 +186,9 @@ export function LiveTracking({
     onDutyRef.current = onDuty;
   }, [onDuty]);
 
+  // A string, so a parent passing a fresh array each render does not reopen the channels.
+  const channelKey = channels.join(",");
+
   // The batch, and a slow re-read behind it.
   useEffect(() => {
     const supabase = supabaseBrowser();
@@ -191,29 +200,32 @@ export function LiveTracking({
         return next;
       });
 
-    const channel = supabase
-      .channel(LIVE_MAP_CHANNEL, { config: { private: true } })
-      .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
-        const batch = payload as PositionBatch;
-        merge(batch.positions ?? []);
-        // Somebody checked in since the page was drawn.
-        if ((batch.positions ?? []).some((p) => !onDutyRef.current.has(p.guard_id))) router.refresh();
-      });
+    const topics = channelKey.split(",").filter(Boolean);
+    const joined = new Set<string>();
+    const subs = topics.map((topic) =>
+      supabase
+        .channel(topic, { config: { private: true } })
+        .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
+          const batch = payload as PositionBatch;
+          merge(batch.positions ?? []);
+          // Somebody checked in since the page was drawn.
+          if ((batch.positions ?? []).some((p) => !onDutyRef.current.has(p.guard_id))) router.refresh();
+        }),
+    );
 
     void supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
       if (data.session?.access_token) await supabase.realtime.setAuth(data.session.access_token);
       // Live once subscribed; back to Connecting only if the socket really drops
       // (supabase-js rejoins by itself and reports SUBSCRIBED again).
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          subscribed = true;
-          setLive(true);
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          subscribed = false;
-          setLive(false);
-        }
-      });
+      subs.forEach((channel, i) =>
+        channel.subscribe((status) => {
+          if (status === "SUBSCRIBED") joined.add(topics[i]!);
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") joined.delete(topics[i]!);
+          subscribed = joined.size > 0;
+          setLive(subscribed);
+        }),
+      );
     });
 
     // The re-read behind the channel: every minute while it is live, and every few
@@ -230,9 +242,9 @@ export function LiveTracking({
     return () => {
       cancelled = true;
       clearInterval(reread);
-      void supabase.removeChannel(channel);
+      for (const channel of subs) void supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [router, channelKey]);
 
   const rows = useMemo(
     () =>

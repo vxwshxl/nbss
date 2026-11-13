@@ -28,6 +28,7 @@ import type { Role } from "@/lib/auth";
 export const ROLE_LABEL: Record<Role, string> = {
   developer: "Developer",
   admin: "Administrator",
+  field_officer: "Field Officer",
   supervisor: "Supervisor",
   guard: "Guard",
   client: "Client",

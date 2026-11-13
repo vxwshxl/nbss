@@ -20,7 +20,9 @@ const TITLE: Record<PeopleKind, string> = {
  * every role, is still together on Users.
  */
 export async function PeopleView({ kind }: { kind: PeopleKind }) {
-  const session = await requireRoleSession("admin", "supervisor");
+  // The supervisors are the field officer's to manage; a supervisor sees the guards and
+  // housekeepers of their own site (Postgres filters the rows, 0077), not each other.
+  const session = kind === "supervisor" ? await requireRoleSession("admin", "field_officer") : await requireRoleSession("admin", "supervisor");
   const supabase = await supabaseServer();
 
   let q = supabase

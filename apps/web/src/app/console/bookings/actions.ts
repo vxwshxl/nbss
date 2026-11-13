@@ -20,7 +20,7 @@ export async function updateBooking(
   id: string,
   input: { status: BookingStatus; quoteRupees?: string; quoteNote?: string; siteId?: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await requireRoleSession("admin", "supervisor");
+  const session = await requireRoleSession("admin", "field_officer");
   if (!STATUSES.includes(input.status)) return { ok: false, error: "Unknown status." };
 
   const supabase = await supabaseServer();

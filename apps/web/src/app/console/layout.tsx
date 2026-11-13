@@ -1,4 +1,4 @@
-import { isStaff, roleChoice, roleLabel } from "@nbss/shared/identity";
+import { isStaff, roleChoice, roleLabel, seesAllSites } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
 import { signOut } from "@/app/console/actions";
@@ -108,7 +108,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   // Unactioned counts beside menu items: new enquiries (contacted and closed do not count).
   const badges: Record<string, number> = {};
-  if (staff) {
+  if (seesAllSites(profile.role)) {
     const counts = await countSubmissions().catch(() => null);
     if (counts?.new) badges["/console/submissions"] = counts.new;
   }

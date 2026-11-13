@@ -392,7 +392,7 @@ const enquiryInbox: AiTool = {
     "What is sitting on the front desk: how many quote requests, contact enquiries and job applications have come in off the public website, and how many nobody has picked up yet.",
   parameters: z.object({}),
   jsonSchema: empty,
-  roles: ["admin", "supervisor"],
+  roles: ["admin", "field_officer"],
   run: async (_args, ctx) => {
     office(ctx);
     // Imported lazily: the store reads a JSON file, and pulling it into the

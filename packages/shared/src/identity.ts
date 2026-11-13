@@ -14,14 +14,15 @@
  * half (session reading, account creation) stays where it can reach Postgres.
  */
 
-export type Role = "developer" | "admin" | "supervisor" | "guard" | "client";
+export type Role = "developer" | "admin" | "field_officer" | "supervisor" | "guard" | "client";
 
 /** Highest authority first. Mirrors the `user_role` enum's order in Postgres. */
-export const ROLES: readonly Role[] = ["developer", "admin", "supervisor", "guard", "client"];
+export const ROLES: readonly Role[] = ["developer", "admin", "field_officer", "supervisor", "guard", "client"];
 
 export const ROLE_LABEL: Record<Role, string> = {
   developer: "Developer",
   admin: "Administrator",
+  field_officer: "Field Officer",
   supervisor: "Supervisor",
   guard: "Guard",
   client: "Client",
@@ -34,10 +35,10 @@ export const ROLE_LABEL: Record<Role, string> = {
  */
 export type Trade = "security" | "housekeeping";
 
-/** The roles a person picks from: the five, with Housekeeper beside Guard. */
+/** The roles a person picks from: the six, with Housekeeper beside Guard. */
 export type RoleChoice = Role | "housekeeping";
 
-export const ROLE_CHOICES: readonly RoleChoice[] = ["developer", "admin", "supervisor", "guard", "housekeeping", "client"];
+export const ROLE_CHOICES: readonly RoleChoice[] = ["developer", "admin", "field_officer", "supervisor", "guard", "housekeeping", "client"];
 
 export const ROLE_CHOICE_LABEL: Record<RoleChoice, string> = { ...ROLE_LABEL, housekeeping: "Housekeeper" };
 
@@ -61,8 +62,20 @@ export function isWorker(role: Role): boolean {
   return role !== "client";
 }
 
+/**
+ * The office side: the console and the staff screens of the app. A supervisor is on
+ * it, but only for their own site; see `seesAllSites`.
+ */
 export function isStaff(role: Role): boolean {
-  return role === "developer" || role === "admin" || role === "supervisor";
+  return seesAllSites(role) || role === "supervisor";
+}
+
+/**
+ * Every site, not just one's own: what `is_staff()` means in Postgres (0077). A
+ * field officer runs the whole area; a supervisor sees the sites they are posted to.
+ */
+export function seesAllSites(role: Role): boolean {
+  return role === "developer" || role === "admin" || role === "field_officer";
 }
 
 /** Administrators and developers. A developer can do everything an admin can. */
@@ -74,9 +87,18 @@ export function isAdmin(role: Role): boolean {
  * Whether `role` passes a check written as a list of roles. A developer passes
  * any list an administrator would, so call sites keep naming "admin" and the
  * developer comes along without every list repeating it.
+ *
+ * Likewise a field officer passes any list a supervisor would: they do all a
+ * supervisor does, at every site (what the data shows is decided by Postgres).
+ * Pages for the whole area only, such as enquiries or users, name "field_officer"
+ * and leave "supervisor" out.
  */
 export function roleAllowed(role: Role, allowed: readonly Role[]): boolean {
-  return allowed.includes(role) || (role === "developer" && allowed.includes("admin"));
+  return (
+    allowed.includes(role) ||
+    (role === "developer" && allowed.includes("admin")) ||
+    (role === "field_officer" && allowed.includes("supervisor"))
+  );
 }
 
 const STAFF_DOMAIN = "staff.nbss.co.in";

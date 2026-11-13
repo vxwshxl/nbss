@@ -71,7 +71,8 @@ const choiceOf = (r: { role: Role; trade?: string | null }): RoleChoice => roleC
 const ROLES: { value: RoleChoice; label: string; note: string }[] = [
   { value: "guard", label: "Guard", note: "Own shifts and attendance only" },
   { value: "housekeeping", label: "Housekeeper", note: "Works a site as a guard does: shifts, attendance, SOS" },
-  { value: "supervisor", label: "Supervisor", note: "Sites they are responsible for" },
+  { value: "supervisor", label: "Supervisor", note: "Their own site only: its guards, roster, attendance and SOS" },
+  { value: "field_officer", label: "Field Officer", note: "The whole area: every site, supervisor, guard and client" },
   { value: "admin", label: "Administrator", note: "Everything, including settings" },
   { value: "developer", label: "Developer", note: "Everything, and can appoint developers" },
   { value: "client", label: "Client", note: "Read-only view of their own site" },
@@ -82,6 +83,7 @@ const ROLE_LABEL: Record<RoleChoice, string> = {
   guard: "Guard",
   housekeeping: "Housekeeper",
   supervisor: "Supervisor",
+  field_officer: "Field Officer",
   admin: "Administrator",
   client: "Client",
 };
@@ -91,6 +93,7 @@ const ROLE_TONE: Record<RoleChoice, "emerald" | "violet" | "rose" | "sky" | "amb
   guard: "emerald",
   housekeeping: "sky",
   supervisor: "violet",
+  field_officer: "amber",
   admin: "rose",
   client: "sky",
 };
@@ -99,6 +102,7 @@ const TABS: { value: RoleChoice | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "developer", label: "Developers" },
   { value: "admin", label: "Admins" },
+  { value: "field_officer", label: "Field Officers" },
   { value: "supervisor", label: "Supervisors" },
   { value: "guard", label: "Guards" },
   { value: "housekeeping", label: "Housekeepers" },

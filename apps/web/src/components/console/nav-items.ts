@@ -70,8 +70,12 @@ type NavGroup = { label?: string; items: NavItem[] };
  * Every destination declares which roles may reach it, rather than each role
  * declaring its own menu. Four hand-written menus is how a route ends up in
  * three of them and missing from the fourth after a rename — and this product
- * has four audiences whose screens genuinely overlap: a supervisor and an admin
- * share almost everything, a guard and a client share almost nothing.
+ * has several audiences whose screens genuinely overlap: a field officer and an admin
+ * share almost everything, a supervisor has the same screens for their own site only
+ * (Postgres filters the rows, 0077), a guard and a client share almost nothing.
+ *
+ * A field officer passes every list that names "supervisor" (see `roleAllowed`);
+ * the whole-area pages name "field_officer" and leave the supervisor out.
  *
  * This is presentation, not protection. A nav that omits a link does not stop
  * anyone typing the URL, so every page behind these links calls `requireRole`
@@ -91,8 +95,8 @@ export const groups: NavGroup[] = [
         roles: ["admin", "supervisor"],
         exact: true,
       },
-      { href: "/console/submissions", label: "Enquiries", icon: Inbox, roles: ["admin", "supervisor"] },
-      { href: "/console/bookings", label: "Bookings", icon: ClipboardList, roles: ["admin", "supervisor"] },
+      { href: "/console/submissions", label: "Enquiries", icon: Inbox, roles: ["admin", "field_officer"] },
+      { href: "/console/bookings", label: "Bookings", icon: ClipboardList, roles: ["admin", "field_officer"] },
     ],
   },
   {
@@ -130,7 +134,7 @@ export const groups: NavGroup[] = [
     items: [
       { href: "/console/guards", label: "Guards", icon: UserRound, roles: ["admin", "supervisor"] },
       { href: "/console/housekeepers", label: "Housekeepers", icon: BrushCleaning, roles: ["admin", "supervisor"] },
-      { href: "/console/supervisors", label: "Supervisors", icon: UserRoundCog, roles: ["admin", "supervisor"] },
+      { href: "/console/supervisors", label: "Supervisors", icon: UserRoundCog, roles: ["admin", "field_officer"] },
       { href: "/console/devices", label: "Devices", icon: Smartphone, roles: ["admin", "supervisor"] },
       { href: "/console/sos", label: "SOS alerts", icon: Siren, roles: ["admin", "supervisor"] },
     ],
@@ -170,8 +174,8 @@ export const groups: NavGroup[] = [
   {
     label: "Administration",
     items: [
-      { href: "/console/users", label: "Users", icon: Users, roles: ["admin", "supervisor"] },
-      { href: "/console/roles", label: "Roles", icon: KeyRound, roles: ["admin", "supervisor"] },
+      { href: "/console/users", label: "Users", icon: Users, roles: ["admin", "field_officer"] },
+      { href: "/console/roles", label: "Roles", icon: KeyRound, roles: ["admin", "field_officer"] },
       { href: "/console/audit", label: "Audit log", icon: ScrollText, roles: ["admin"] },
       { href: "/console/app-updates", label: "App updates", icon: Download, roles: ["admin"] },
       { href: "/console/guide", label: "Guide", icon: BookOpen, roles: ["admin"] },

@@ -5,7 +5,8 @@ import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-nati
 
 import { clock12, istTime } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
-import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
+import { seesAllSites } from "@nbss/shared/identity";
+import { EVENTS, LIVE_MAP_CHANNEL, siteChannel, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Avatar } from "@/components/avatar";
@@ -22,6 +23,7 @@ import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
 import { useNow } from "@/hooks/use-now";
 import { directionsUrl, liveAlerts, toFence, type Site } from "@/lib/duty";
+import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
@@ -110,24 +112,33 @@ export default function LiveRoute() {
 
   useLiveTables(["attendance", "sos_alerts", "sites", "site_postings"], reloadAll);
 
+  // The office hears every site on live-map; a supervisor may not open it (0077) and
+  // listens on their own sites' channels, which carry the same batch for that site.
+  const { role } = useAuth();
+  const topics = (role && seesAllSites(role) ? [LIVE_MAP_CHANNEL] : (board?.sites ?? []).map((s) => siteChannel(s.id))).join(",");
   useEffect(() => {
-    const channel = supabase
-      .channel(LIVE_MAP_CHANNEL, { config: { private: true } })
-      .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
-        const batch = payload as PositionBatch;
-        setLastAt(batch.at);
-        setPositions((cur) => {
-          const next = { ...cur };
-          for (const p of batch.positions ?? []) next[p.guard_id] = { ...next[p.guard_id], ...p };
-          return next;
-        });
-      })
-      .on("broadcast", { event: EVENTS.sos }, () => void reload())
-      .subscribe();
+    const channels = topics
+      .split(",")
+      .filter(Boolean)
+      .map((topic) =>
+        supabase
+          .channel(topic, { config: { private: true } })
+          .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
+            const batch = payload as PositionBatch;
+            setLastAt(batch.at);
+            setPositions((cur) => {
+              const next = { ...cur };
+              for (const p of batch.positions ?? []) next[p.guard_id] = { ...next[p.guard_id], ...p };
+              return next;
+            });
+          })
+          .on("broadcast", { event: EVENTS.sos }, () => void reload())
+          .subscribe(),
+      );
     return () => {
-      void supabase.removeChannel(channel);
+      for (const channel of channels) void supabase.removeChannel(channel);
     };
-  }, [reload]);
+  }, [reload, topics]);
 
   // Only this side of Test / Live: the guards the (mode-filtered) profiles query returned.
   const list = useMemo(() => (board ? Object.values(positions).filter((p) => board.names.has(p.guard_id)) : []), [positions, board]);

@@ -138,6 +138,7 @@ export function homeFor(role: Role): string {
   switch (role) {
     case "developer":
     case "admin":
+    case "field_officer":
     case "supervisor":
       return "/console";
     case "guard":

@@ -3,7 +3,7 @@ import type { Role } from "@/lib/auth";
 /**
  * What the assistant is, per role.
  *
- * Four audiences whose questions barely overlap, so four framings. The point of
+ * Audiences whose questions barely overlap, so a framing each. The point of
  * keeping them in one file is that the scope note a reader is shown and the
  * tools that role is actually offered are edited side by side — the failure
  * mode of a role-scoped assistant is a greeting that promises more than the
@@ -36,17 +36,29 @@ export const PERSONAS: Record<Exclude<Role, "developer">, Persona> = {
       "How much overtime went out in the last 30 days?",
     ],
   },
-  supervisor: {
-    audience: "a supervisor running deployments day to day.",
+  field_officer: {
+    audience: "a field officer running the whole area: every site, its supervisors, guards, housekeepers and clients.",
     scopeNote:
-      "I read the duty board, the site register, the roster and the enquiry desk. I can't see anything the console can't, I don't change anything, and every figure I give you names the lookup it came from.",
+      "I read the duty board, the site register, the roster and the enquiry desk, for every site. I can't see anything the console can't, I don't change anything, and every figure I give you names the lookup it came from.",
     suggestions: [
       "Who is on duty right now?",
       "Which sites have nobody in them?",
       "Is anything waiting for review?",
       "How many guards arrived late today?",
+      "What has come in on the enquiry forms?",
       "Show me this week's hours",
-      "How did Ripun's shifts go this month?",
+    ],
+  },
+  supervisor: {
+    audience: "a supervisor running their own site day to day. They see only the sites they are posted to.",
+    scopeNote:
+      "I read the duty board, the register and the roster of your own site. I can't see other sites or anything the console can't, I don't change anything, and every figure I give you names the lookup it came from.",
+    suggestions: [
+      "Who is on duty right now?",
+      "Is anything waiting for review?",
+      "How many guards arrived late today?",
+      "Show me this week's hours",
+      "Who is rostered tomorrow?",
     ],
   },
   guard: {

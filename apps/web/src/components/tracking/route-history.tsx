@@ -12,7 +12,7 @@ import { ROUTE_HUES, RoutesOverview } from "@/components/tracking/routes-overvie
 import { TrailMap, type TrailSite } from "@/components/tracking/trail-map";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/browser";
-import { EVENTS, LIVE_MAP_CHANNEL, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
+import { EVENTS, siteChannel, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
 import {
   STATE_CHIP,
   STATE_LABEL,
@@ -150,13 +150,16 @@ export function RouteHistory({
   }, [selected]);
 
   // Live while the shift is open: the guard's new positions join the route as they
-  // arrive (the live map's channel says when, and a slow poll backs it up), as on Live
+  // arrive (the shift's site channel says when, and a slow poll backs it up), as on Live
   // tracking. The head follows the latest point only if it was already there, so
   // someone replaying an earlier stretch is not pulled away from it.
   const liveId = shift && !shift.checkOutAt ? shift.attendanceId : null;
   const liveGuard = shift?.guardId ?? null;
+  // The site's own channel, not live-map: it carries this guard's positions, and a
+  // supervisor may open it where live-map is the office's alone (0077).
+  const liveSite = liveId ? (shift?.siteId ?? null) : null;
   useEffect(() => {
-    if (!liveId || !liveGuard) return;
+    if (!liveId || !liveGuard || !liveSite) return;
     const supabase = supabaseBrowser();
     let cancelled = false;
     let last = 0;
@@ -171,7 +174,7 @@ export function RouteHistory({
       if (wasAtEnd && !playingRef.current) setHead(Math.max(0, pts.length - 1));
     };
     const channel = supabase
-      .channel(LIVE_MAP_CHANNEL, { config: { private: true } })
+      .channel(siteChannel(liveSite), { config: { private: true } })
       .on("broadcast", { event: EVENTS.positions }, ({ payload }) => {
         const batch = (payload as PositionBatch).positions ?? [];
         setHeard((cur) => {
@@ -192,7 +195,7 @@ export function RouteHistory({
       clearInterval(poll);
       void supabase.removeChannel(channel);
     };
-  }, [liveId, liveGuard]);
+  }, [liveId, liveGuard, liveSite]);
 
   // The route on screen belongs to the selected shift, or there is none yet.
   const loading = !!selected && loaded?.id !== selected;

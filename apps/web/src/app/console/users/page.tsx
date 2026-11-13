@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 /** Every account in the console — staff, guards and clients — split by role. */
 export default async function UsersPage() {
-  const session = await requireRoleSession("admin", "supervisor");
+  const session = await requireRoleSession("admin", "field_officer");
   const supabase = await supabaseServer();
 
   const { data } = await supabase

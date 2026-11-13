@@ -26,9 +26,15 @@ const ROLE_INFO: Record<RoleChoice, { summary: string; can: string[]; tone: stri
     tone: "from-emerald-50 to-teal-50 border-emerald-200",
     chip: "bg-emerald-600",
   },
+  field_officer: {
+    summary: "Runs the whole area: every site, and the supervisors, guards, housekeepers and clients working it.",
+    can: ["Watch live tracking and route history at every site", "Post guards and supervisors, build the roster, assign replacements", "Answer enquiries and bookings", "Answer and close SOS alerts", "Review attendance and reports"],
+    tone: "from-indigo-50 to-blue-50 border-indigo-200",
+    chip: "bg-indigo-600",
+  },
   supervisor: {
-    summary: "Runs deployments day to day: who is where, covers, SOS and attendance.",
-    can: ["Watch live tracking and route history", "Build the roster and assign replacements", "Answer and close SOS alerts", "Review attendance and reports"],
+    summary: "Runs their own site day to day: who is on duty, covers, SOS and attendance there. Sees no other site.",
+    can: ["Watch live tracking and route history at their site", "Build their site's roster and assign replacements", "Answer and close SOS alerts at their site", "Review their site's attendance and reports"],
     tone: "from-sky-50 to-cyan-50 border-sky-200",
     chip: "bg-sky-600",
   },
@@ -54,11 +60,11 @@ const ROLE_INFO: Record<RoleChoice, { summary: string; can: string[]; tone: stri
 
 /**
  * The roles and what each may open, built from the same menu rules the console uses,
- * so it cannot drift out of date. Developers, administrators and supervisors can read
+ * so it cannot drift out of date. Developers, administrators and field officers can read
  * it; the developer role itself is shown to developers only.
  */
 export default async function RolesPage() {
-  const session = await requireRoleSession("admin", "supervisor");
+  const session = await requireRoleSession("admin", "field_officer");
   const viewer = session.realProfile.role;
   const shown = ROLE_CHOICES.filter((r) => r !== "developer" || viewer === "developer");
 
