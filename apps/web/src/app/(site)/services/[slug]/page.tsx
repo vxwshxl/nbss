@@ -149,13 +149,19 @@ export default async function ServiceDetailPage({ params }: Params) {
               <p className="label-heading">
                 Talk to the deployment desk
               </p>
-              <a
-                href={`tel:${tel(site.phone)}`}
-                className="mt-2 flex items-center gap-2 font-display text-xl font-bold tracking-tight transition-colors hover:text-primary"
-              >
-                <Phone className="size-4 text-primary" strokeWidth={2} />
-                {site.phone}
-              </a>
+              <ul className="mt-2 flex flex-col gap-1">
+                {site.phones.map((phone) => (
+                  <li key={phone}>
+                    <a
+                      href={`tel:${tel(phone)}`}
+                      className="flex items-center gap-2 font-display text-xl font-bold tracking-tight transition-colors hover:text-primary"
+                    >
+                      <Phone className="size-4 text-primary" strokeWidth={2} />
+                      {phone}
+                    </a>
+                  </li>
+                ))}
+              </ul>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 {site.hoursShort}. Supervision and deployment run 24 × 7.
               </p>

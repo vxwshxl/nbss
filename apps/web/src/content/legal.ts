@@ -54,7 +54,7 @@ export const privacyPolicy: LegalDoc = {
       heading: "Who we are and how to reach us",
       body: [
         `National Bodo Security Service ("NBSS", "we") is a security service provider with its registered office in Kokrajhar, Bodoland Territorial Council (BTC), Assam, India. For the purposes of the Digital Personal Data Protection Act, 2023, NBSS is the data fiduciary for the personal information collected through this website.`,
-        `Every question, correction or complaint under this policy goes to the office: call ${site.phone}, or write to the registered office at Kokrajhar, BTC, Assam. It is answered by the management directly, not a call centre.`,
+        `Every question, correction or complaint under this policy goes to the office: call ${site.phonesText}, or write to the registered office at Kokrajhar, BTC, Assam. It is answered by the management directly, not a call centre.`,
       ],
     },
     {
@@ -110,7 +110,7 @@ export const privacyPolicy: LegalDoc = {
       heading: "How long we keep it",
       body: [
         "Submissions are kept for as long as it takes to deal with them (answering the enquiry, closing out the quotation, completing the recruitment round) and for any period the law requires records to be held after that. When a submission no longer serves the purpose it was given for, it is deleted.",
-        `If you want yours removed sooner, ask. Call ${site.phone} and quote the reference number every submission is given (it looks like NBSS-00123), and it will be erased unless a legal obligation requires keeping it.`,
+        `If you want yours removed sooner, ask. Call ${site.phonesText} and quote the reference number every submission is given (it looks like NBSS-00123), and it will be erased unless a legal obligation requires keeping it.`,
       ],
     },
     {
@@ -126,7 +126,7 @@ export const privacyPolicy: LegalDoc = {
         "Raise a grievance and receive an answer.",
       ],
       after: [
-        `To exercise any of these, call ${site.phone} or write to the registered office, quoting your reference number if you have one. If you believe a grievance has not been resolved, you may complain to the Data Protection Board of India.`,
+        `To exercise any of these, call ${site.phonesText} or write to the registered office, quoting your reference number if you have one. If you believe a grievance has not been resolved, you may complain to the Data Protection Board of India.`,
       ],
     },
     {
@@ -194,7 +194,7 @@ export const termsAndConditions: LegalDoc = {
       heading: "Job applications",
       body: [
         "Submitting an application does not guarantee an interview or employment. Shortlisting is at NBSS's discretion, and every appointment is conditional on the police verification and document checks completed before deployment.",
-        `NBSS never asks for money through this website: no application fee, no processing fee, no deposit for a uniform or a posting. If anyone demands payment in NBSS's name for a job, do not pay: report it to the office on ${site.phone}.`,
+        `NBSS never asks for money through this website: no application fee, no processing fee, no deposit for a uniform or a posting. If anyone demands payment in NBSS's name for a job, do not pay: report it to the office on ${site.phonesText}.`,
       ],
     },
     {
@@ -230,7 +230,7 @@ export const termsAndConditions: LegalDoc = {
       id: "changes-and-contact",
       heading: "Changes and contact",
       body: [
-        `These terms may be revised as the site changes; the date at the top identifies the version in force, and continued use after a revision is acceptance of it. Questions about these terms go to the office: ${site.phone}, or the registered office at Kokrajhar, BTC, Assam.`,
+        `These terms may be revised as the site changes; the date at the top identifies the version in force, and continued use after a revision is acceptance of it. Questions about these terms go to the office: ${site.phonesText}, or the registered office at Kokrajhar, BTC, Assam.`,
       ],
     },
   ],

@@ -91,12 +91,18 @@ export default function ContactPage() {
                     {channel.title}
                   </h2>
                   {isPhone ? (
-                    <a
-                      href={`tel:${tel(site.phone)}`}
-                      className="mt-1.5 block font-display text-2xl font-bold tracking-tight transition-colors hover:text-primary"
-                    >
-                      {site.phone}
-                    </a>
+                    <ul className="mt-1.5 flex flex-col gap-0.5">
+                      {site.phones.map((phone) => (
+                        <li key={phone}>
+                          <a
+                            href={`tel:${tel(phone)}`}
+                            className="block font-display text-xl font-bold tracking-tight transition-colors hover:text-primary sm:text-2xl"
+                          >
+                            {phone}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                   {isPhone ? (
                     <a

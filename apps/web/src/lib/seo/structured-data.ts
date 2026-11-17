@@ -181,6 +181,14 @@ export function siteStructuredData() {
               closes: "18:00",
             },
           },
+          // The other office lines, so a search result can offer every number.
+          ...site.phones.slice(1).map((phone) => ({
+            "@type": "ContactPoint",
+            contactType: "customer service",
+            telephone: e164(phone),
+            areaServed: "IN",
+            availableLanguage: ["en", "as", "brx", "hi", "bn"],
+          })),
           {
             "@type": "ContactPoint",
             contactType: "emergency",

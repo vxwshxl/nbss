@@ -15,7 +15,10 @@ export const COMPANY = {
   name: "National Bodo Security Service",
   shortName: "NBSS",
   tagline: "Your Safety, Our Responsibility.",
+  /** The main desk line: the one a single "Call" button dials. */
   phone: "+91 70020 71628",
+  /** Every number the office answers, main desk first. Lists of contact details show all of them. */
+  phones: ["+91 70020 71628", "+91 75770 36205", "+91 76360 94225", "+91 84864 74966"],
   /** IANA zone for every date and clock either client formats. */
   timeZone: "Asia/Kolkata",
   city: "Kokrajhar",
@@ -25,6 +28,11 @@ export const COMPANY = {
   deskHours: "24 × 7",
   officeHours: "Mon–Sat, 9:00 AM – 6:00 PM IST",
 } as const;
+
+/** The office numbers for a sentence: "+91 70020 71628, +91 75770 36205, … or +91 84864 74966". */
+export function phonesInProse(phones: readonly string[] = COMPANY.phones): string {
+  return phones.length < 2 ? (phones[0] ?? "") : `${phones.slice(0, -1).join(", ")} or ${phones[phones.length - 1]}`;
+}
 
 /** Strips a phone number down to something a `tel:` link accepts. */
 export function tel(value: string): string {

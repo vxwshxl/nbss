@@ -55,7 +55,7 @@ Personnel categories: security guards, security supervisors, gunmen, bouncers, a
 - Attendance at client sites is recorded against a geofence on the guard's own phone, with supervision and deployment cover ${site.hours[1]?.replace("Supervision & deployment desk: ", "") ?? "24 × 7"}.
 
 ## Contact
-- Phone: ${site.phone}
+- Phone: ${site.phones.join(", ")}
 - Email: ${site.email}
 - Office hours: ${hours}
 - Deployment and supervision desk: 24 × 7

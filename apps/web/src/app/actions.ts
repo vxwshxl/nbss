@@ -102,7 +102,7 @@ export async function submitEnquiry(_prev: FormState, data: FormData): Promise<F
     success: {
       reference: saved.id,
       title: `Message received: reference ${saved.id}`,
-      body: `The deployment desk answers enquiries within one working day. If it is urgent, call ${site.phone} and quote your reference.`,
+      body: `The deployment desk answers enquiries within one working day. If it is urgent, call ${site.phonesText} and quote your reference.`,
     },
   };
 }

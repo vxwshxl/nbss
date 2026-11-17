@@ -73,7 +73,7 @@ export function EnquiryForm() {
         <div className="flex flex-col gap-3 border-t border-app-line-soft pt-5">
           <SubmitButton idle="Send the enquiry" busy="Sending…" />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Answered within one working day. Urgent? Call the deployment desk on {site.phone}.
+            Answered within one working day. Urgent? Call the deployment desk on {site.phonesText}.
           </p>
         </div>
       </form>

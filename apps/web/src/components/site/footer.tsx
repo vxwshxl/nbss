@@ -149,9 +149,11 @@ export function SiteFooter() {
                   ))}
                 </span>
               </span>
-              <a href={`tel:${tel(site.phone)}`} className={`${link} flex items-center gap-2.5`}>
-                <Phone className="size-4 shrink-0 text-gold-soft" aria-hidden /> {site.phone}
-              </a>
+              {site.phones.map((phone) => (
+                <a key={phone} href={`tel:${tel(phone)}`} className={`${link} flex items-center gap-2.5`}>
+                  <Phone className="size-4 shrink-0 text-gold-soft" aria-hidden /> {phone}
+                </a>
+              ))}
               <a href={`mailto:${site.email}`} className={`${link} flex items-center gap-2.5`}>
                 <Mail className="size-4 shrink-0 text-gold-soft" aria-hidden /> {site.email}
               </a>

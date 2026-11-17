@@ -219,7 +219,7 @@ export default function CareersPage() {
               <p>
                 NBSS never charges a fee for a job, for training, for a uniform or for a
                 &ldquo;placement&rdquo;. If anyone asks you for money in our name, call{" "}
-                <span className="font-semibold">{site.phone}</span> and tell us.
+                <span className="font-semibold">{site.phonesText}</span> and tell us.
               </p>
             </div>
           </Reveal>

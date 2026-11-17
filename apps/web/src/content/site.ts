@@ -13,7 +13,7 @@
  * copy problem. Add them here as the client confirms them.
  */
 
-import { COMPANY } from "@nbss/shared/company";
+import { COMPANY, phonesInProse } from "@nbss/shared/company";
 
 export type Link = { label: string; url: string };
 
@@ -34,6 +34,10 @@ export const site = {
   descriptor:
     "National Bodo Security Service (NBSS) is a trusted, professionally managed security agency headquartered in Kokrajhar, Bodoland Territorial Council (BTC), Assam, supplying trained, police-verified security personnel to government, corporate, institutional and commercial clients across Assam, with the Bodoland Territorial Region at its heart.",
   phone: COMPANY.phone,
+  /** All four office numbers, main desk first. */
+  phones: COMPANY.phones,
+  /** The four numbers joined for a sentence ("… or +91 84864 74966"). */
+  phonesText: phonesInProse(COMPANY.phones),
   /** Confirmed by the client. Enquiries from the contact form are mailed here too. */
   email: "support@nbsskokrajhar.com",
   address: {
@@ -306,7 +310,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "How is the service priced?",
-    a: "Pricing is competitive and transparent. The quotation sets out the wage, the applicable statutory heads and the agency service charge separately, so there is nothing bundled or hidden. Call 7002071628 to arrange a site visit and a quotation.",
+    a: "Pricing is competitive and transparent. The quotation sets out the wage, the applicable statutory heads and the agency service charge separately, so there is nothing bundled or hidden. Call 70020 71628, 75770 36205, 76360 94225 or 84864 74966 to arrange a site visit and a quotation.",
   },
 ];
 

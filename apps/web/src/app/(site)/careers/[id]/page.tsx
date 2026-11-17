@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Phone, TriangleAlert } from "lucide-react";
@@ -147,12 +148,17 @@ export default async function VacancyPage({ params }: Params) {
               <p>
                 NBSS never charges a fee for a job, training, a uniform or a placement. If
                 anyone asks you for money in our name, call{" "}
-                <a
-                  href={`tel:${tel(site.phone)}`}
-                  className="font-semibold underline underline-offset-2"
-                >
-                  {site.phone}
-                </a>{" "}
+                {site.phones.map((phone, i) => (
+                  <Fragment key={phone}>
+                    {i > 0 && (i === site.phones.length - 1 ? " or " : ", ")}
+                    <a
+                      href={`tel:${tel(phone)}`}
+                      className="font-semibold whitespace-nowrap underline underline-offset-2"
+                    >
+                      {phone}
+                    </a>
+                  </Fragment>
+                ))}{" "}
                 and report it.
               </p>
             </div>
@@ -182,13 +188,19 @@ export default async function VacancyPage({ params }: Params) {
               <p className="label-heading">
                 Questions about the role
               </p>
-              <a
-                href={`tel:${tel(site.phone)}`}
-                className="mt-2 flex items-center gap-2 font-display text-xl font-bold tracking-tight transition-colors hover:text-primary"
-              >
-                <Phone className="size-4 text-primary" strokeWidth={2} />
-                {site.phone}
-              </a>
+              <ul className="mt-2 flex flex-col gap-1">
+                {site.phones.map((phone) => (
+                  <li key={phone}>
+                    <a
+                      href={`tel:${tel(phone)}`}
+                      className="flex items-center gap-2 font-display text-xl font-bold tracking-tight transition-colors hover:text-primary"
+                    >
+                      <Phone className="size-4 text-primary" strokeWidth={2} />
+                      {phone}
+                    </a>
+                  </li>
+                ))}
+              </ul>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 Monday to Saturday, {site.officeOpen}–{site.officeClose} IST. Or walk into
                 the Kokrajhar office.

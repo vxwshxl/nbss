@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { PageHead } from "@/components/marketing/page-head";
@@ -109,12 +110,17 @@ export function LegalArticle({ doc, other }: { doc: LegalDoc; other: LegalDoc })
             <footer className="mt-8 rounded-xl border border-app-line-soft bg-muted/50 p-5 text-sm leading-relaxed text-muted-foreground">
               <p>
                 Questions about this document are answered by the office, in person:{" "}
-                <a
-                  href={`tel:${tel(site.phone)}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {site.phone}
-                </a>
+                {site.phones.map((phone, i) => (
+                  <Fragment key={phone}>
+                    {i > 0 && ", "}
+                    <a
+                      href={`tel:${tel(phone)}`}
+                      className="font-medium whitespace-nowrap text-primary hover:underline"
+                    >
+                      {phone}
+                    </a>
+                  </Fragment>
+                ))}
                 , or the {site.address.label.toLowerCase()} at{" "}
                 {site.address.lines.join(", ")}.
               </p>
