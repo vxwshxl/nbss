@@ -1,5 +1,7 @@
 import "server-only";
 
+import { fetchAll } from "@nbss/shared/paging";
+
 import { istDate, istInstant } from "@/lib/roster";
 import type { supabaseServer } from "@/lib/supabase/server";
 
@@ -48,23 +50,24 @@ export async function registerBetween(
     .gte("starts_at", start)
     .lt("starts_at", end)
     .or("status.neq.cancelled,replaced_by_shift.not.is.null")
-    .limit(20000);
+    .order("starts_at");
   let aq = supabase
     .from("attendance")
     .select("id, guard_id, site_id, shift_id, check_in_at, check_out_at, worked_minutes, status, profiles!attendance_guard_id_fkey(full_name, employee_code), sites(name)")
     .gte("check_in_at", start)
     .lt("check_in_at", end)
-    .order("check_in_at")
-    .limit(20000);
+    .order("check_in_at");
   if (opts.siteId) {
     sq = sq.eq("site_id", opts.siteId);
     aq = aq.eq("site_id", opts.siteId);
   }
-  if (opts.guardIds) {
-    sq = sq.in("guard_id", opts.guardIds);
-    aq = aq.in("guard_id", opts.guardIds);
-  }
-  const [shifts, att] = await Promise.all([sq, aq]);
+  // Every row in the window, a page at a time (the database stops at 1,000 a request).
+  // The people filter is applied here rather than in the request, whose URL would
+  // otherwise carry every guard's id.
+  const [allShifts, allAtt] = await Promise.all([fetchAll(sq), fetchAll(aq)]);
+  const keep = opts.guardIds ? new Set(opts.guardIds) : null;
+  const shifts = { data: keep ? allShifts.data.filter((s) => s.guard_id && keep.has(s.guard_id)) : allShifts.data };
+  const att = { data: keep ? allAtt.data.filter((a) => keep.has(a.guard_id)) : allAtt.data };
 
   const byShift = new Map<string, NonNullable<typeof att.data>>();
   for (const a of att.data ?? []) if (a.shift_id) byShift.set(a.shift_id, [...(byShift.get(a.shift_id) ?? []), a]);

@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Bot, Eye, User, Users } from "lucide-react";
@@ -33,9 +34,10 @@ export default async function ImpressionsPage({ searchParams }: { searchParams: 
   const r = RANGES.find((x) => x.key === range) ?? RANGES[1];
 
   const supabase = await supabaseServer();
-  let q = supabase.from("page_visits").select("page_name, user_count, bot_count").limit(10000);
+  let q = supabase.from("page_visits").select("page_name, user_count, bot_count").order("visit_date");
   if (r.days) q = q.gte("visit_date", istDay(-(r.days - 1)));
-  const [{ data }, { data: counters }] = await Promise.all([q, supabase.from("site_counters").select("key, value")]);
+  // One row a page a day: past 1,000 within a few months, so read a page at a time.
+  const [{ data }, { data: counters }] = await Promise.all([fetchAll(q, { tiebreak: "page_name" }), supabase.from("site_counters").select("key, value")]);
 
   const byPage = new Map<string, { users: number; bots: number }>();
   for (const v of data ?? []) {

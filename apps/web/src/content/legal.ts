@@ -45,9 +45,9 @@ export const privacyPolicy: LegalDoc = {
   href: "/privacy-policy",
   title: "Plain words about your information.",
   shortTitle: "Privacy Policy",
-  lede: "What this website collects, why, where it goes and the rights you hold over it, written to match what the site actually does, not what a template promises.",
-  updated: "19 August 2026",
-  updatedISO: "2026-08-19",
+  lede: "What this website and the NBSS Kokrajhar app collect, why, where it goes and the rights you hold over it, written to match what they actually do, not what a template promises.",
+  updated: "18 November 2026",
+  updatedISO: "2026-11-18",
   sections: [
     {
       id: "who-we-are",
@@ -71,6 +71,25 @@ export const privacyPolicy: LegalDoc = {
       after: [
         "Alongside each submission the server records the time it arrived, the sending device's IP address and its browser identifier. These are kept solely to tell genuine submissions from automated spam.",
         "Identity and address documents are never collected through this website. Candidates who are shortlisted bring them in person to a verification interview at the Kokrajhar office.",
+      ],
+    },
+    {
+      id: "mobile-app",
+      heading: "The NBSS Kokrajhar app",
+      body: [
+        "The NBSS Kokrajhar app (Android and iPhone) is the working tool for NBSS staff (guards, housekeepers, supervisors and the office) and for clients who have engaged NBSS. Staff accounts are created by NBSS; clients sign in with Google. What the app collects depends on who is using it:",
+      ],
+      list: [
+        "Account details: your name, employee code, role, phone number and email address, and for a Google sign-in the name, email address and profile picture Google shares.",
+        "Location, staff only: your position when you check in or out, and, only while you are checked in for a duty, your position every few moments, including while the app is closed or the screen is off (background location). It is used to confirm you are at your site, to show the control room that the site is covered, and to find you quickly if you raise an SOS. Tracking stops the moment you check out. Clients' locations are not tracked.",
+        "SOS: when you raise an SOS, your position, the time and any note you add are sent to the people alerted (staff on duty at that site, supervisors, the office and the site's client).",
+        "Phone status, staff only: the phone's make and model, operating system and app version, battery level and charging state, and whether location, GPS, notifications and battery-saver settings allow the app to work. These are used to tell a phone that has stopped reporting from a guard who has left.",
+        "Notifications: a push token so the app can deliver SOS alerts and duty notices.",
+        "Assistant: anything you type to the in-app assistant, used to answer that question.",
+      ],
+      after: [
+        "Location history is kept in full for 30 days, then reduced to one point every ten minutes, and deleted after one year. Attendance records (check-in and check-out times and places) are kept as employment and billing records for as long as the law requires.",
+        "The app shows no advertising, contains no analytics or advertising tracker, and its data is never sold or used for marketing.",
       ],
     },
     {
@@ -102,7 +121,7 @@ export const privacyPolicy: LegalDoc = {
       heading: "Where it is stored and who sees it",
       body: [
         "Submissions are stored on this website's own server and are readable only by authorised NBSS staff through a password-protected operations area.",
-        "We do not sell personal information and we do not share it with anyone for their marketing. It leaves NBSS in only two situations: the infrastructure provider that hosts the site processes it in the ordinary course of running the server, and a court, the police or another authority may lawfully require it.",
+        "We do not sell personal information and we do not share it with anyone for their marketing. It leaves NBSS in only these situations: the infrastructure provider that hosts our server processes it in the ordinary course of running it; the app's maps are drawn by Google Maps (Android) or Apple Maps (iPhone); notifications are delivered through Google Firebase Cloud Messaging, Apple Push Notification service and Expo's push service; questions typed to the app's assistant are answered by Sarvam AI; and a court, the police or another authority may lawfully require it.",
       ],
     },
     {
@@ -127,6 +146,14 @@ export const privacyPolicy: LegalDoc = {
       ],
       after: [
         `To exercise any of these, call ${site.phonesText} or write to the registered office, quoting your reference number if you have one. If you believe a grievance has not been resolved, you may complain to the Data Protection Board of India.`,
+      ],
+    },
+    {
+      id: "delete-account",
+      heading: "Deleting your app account",
+      body: [
+        `You can ask for your app account and the personal information attached to it to be deleted at any time: from the app (Account, then Delete my account), from nbsskokrajhar.com/delete-account, by calling ${site.phonesText}, or by writing to ${site.email}. We confirm who you are, then delete the account within 30 days.`,
+        "For staff, attendance and duty records that employment, wage or tax law requires us to keep are retained for that period and then deleted; your account, location history and phone details are removed.",
       ],
     },
     {
@@ -231,6 +258,42 @@ export const termsAndConditions: LegalDoc = {
       heading: "Changes and contact",
       body: [
         `These terms may be revised as the site changes; the date at the top identifies the version in force, and continued use after a revision is acceptance of it. Questions about these terms go to the office: ${site.phonesText}, or the registered office at Kokrajhar, BTC, Assam.`,
+      ],
+    },
+  ],
+};
+
+/** What Google Play links to as the app's account-deletion page (/delete-account). */
+export const deleteAccount: LegalDoc = {
+  href: "/delete-account",
+  title: "Delete your NBSS Kokrajhar app account.",
+  shortTitle: "Delete your account",
+  lede: "How to have your account in the NBSS Kokrajhar app, and the personal information attached to it, deleted, and what is kept afterwards.",
+  updated: "18 November 2026",
+  updatedISO: "2026-11-18",
+  sections: [
+    {
+      id: "how",
+      heading: "How to ask",
+      body: ["Any one of these is enough:"],
+      list: [
+        "In the app: open Account, then Delete my account.",
+        `Write to ${site.email} from the email address on the account (for a Google sign-in, that Google address), or give your employee code, with the subject "Delete my account".`,
+        `Call ${site.phonesText}.`,
+      ],
+      after: ["We confirm who you are before deleting anything, so nobody can delete someone else's account. The account is deleted within 30 days of that, and you are told when it is done."],
+    },
+    {
+      id: "what-is-deleted",
+      heading: "What is deleted",
+      body: ["Your account and sign-in, your name, phone number, email address and photo, your location history, your phone's details and its notification token, and anything you typed to the assistant."],
+    },
+    {
+      id: "what-is-kept",
+      heading: "What is kept, and for how long",
+      body: [
+        "For staff, attendance and duty records (when you checked in and out, and where) are employment, wage and tax records. They are kept for the period the law requires, then deleted. SOS records that may be needed as evidence of an incident are kept for the same period.",
+        "For clients, invoices and service records for your organisation are kept for the period tax law requires.",
       ],
     },
   ],

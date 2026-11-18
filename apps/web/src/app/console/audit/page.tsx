@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 import { ScrollText } from "lucide-react";
 
@@ -21,16 +22,17 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const supabase = await supabaseServer();
 
   // One day, month or year at a time, as the table only grows.
-  const { data } = await supabase
+  const { data } = await fetchAll(
+    supabase
     .from("audit_log")
     .select("id, actor_id, actor_code, action, entity, entity_id, detail, ip, created_at")
     // "View as" is a developer's tool, not something the office needs to read here.
     .not("action", "in", "(impersonation_started,impersonation_stopped)")
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
-    .order("created_at", { ascending: false })
-    .limit(5000);
-  const raw = data ?? [];
+    .order("created_at", { ascending: false }),
+  );
+  const raw = data;
 
   /**
    * Who and where, by name. A guard's check-in is logged with their id but no code,

@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import { isAdmin, roleLabel } from "@nbss/shared/identity";
 import type { Metadata } from "next";
 
@@ -28,10 +29,12 @@ export default async function SitesPage() {
     supabase.from("attendance").select("site_id").is("check_out_at", null),
     // Who is rostered there at all, so an empty site reads as "nobody is here
     // yet" rather than "nobody works here".
-    supabase
-      .from("shifts")
-      .select("site_id, guard_id")
-      .in("status", ["scheduled", "in_progress"]),
+    fetchAll(
+      supabase
+        .from("shifts")
+        .select("site_id, guard_id")
+        .in("status", ["scheduled", "in_progress"])
+    ),
     // Locations sent from the field (0073), newest first.
     supabase
       .from("location_pins")

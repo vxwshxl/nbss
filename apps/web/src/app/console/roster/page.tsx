@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CalendarRange, CircleHelp, UserRoundX, Users } from "lucide-react";
@@ -49,13 +50,15 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
       .eq("active", true),
     // Guards, housekeepers (guards by trade) and supervisors: anyone who can be posted to a site.
     supabase.from("profiles").select("id, full_name, employee_code, phone, role, trade").in("role", ["guard", "supervisor"]).eq("active", true).order("full_name"),
-    supabase
-      .from("shifts")
-      .select("id, site_id, guard_id, starts_at, ends_at, status, notes, posting_id, shift_type, replaces_shift")
-      .neq("status", "cancelled")
-      .gte("ends_at", from.toISOString())
-      .lt("starts_at", to.toISOString())
-      .order("starts_at"),
+    fetchAll(
+      supabase
+        .from("shifts")
+        .select("id, site_id, guard_id, starts_at, ends_at, status, notes, posting_id, shift_type, replaces_shift")
+        .neq("status", "cancelled")
+        .gte("ends_at", from.toISOString())
+        .lt("starts_at", to.toISOString())
+        .order("starts_at")
+    ),
     supabase.from("attendance").select("id, guard_id, site_id").is("check_out_at", null),
     supabase
       .from("attendance")

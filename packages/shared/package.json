@@ -14,7 +14,8 @@
     "./realtime": "./src/realtime.ts",
     "./company": "./src/company.ts",
     "./shifts": "./src/shifts.ts",
-    "./trail": "./src/trail.ts"
+    "./trail": "./src/trail.ts",
+    "./paging": "./src/paging.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

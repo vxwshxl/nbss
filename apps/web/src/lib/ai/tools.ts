@@ -1,5 +1,7 @@
 import "server-only";
 
+import { fetchAll } from "@nbss/shared/paging";
+
 import { expandEmployeeCode, isStaff, roleAllowed } from "@nbss/shared/identity";
 import { z } from "zod";
 
@@ -714,13 +716,14 @@ const rosterCover: AiTool = {
 
     const [sites, shifts] = await Promise.all([
       supabase.from("sites").select("id, name, guards_required").eq("active", true).order("name"),
-      supabase
-        .from("shifts")
-        .select("site_id, guard_id, starts_at")
-        .neq("status", "cancelled")
-        .gte("starts_at", istInstant(dates[0]!, "00:00").toISOString())
-        .lt("starts_at", istInstant(istDay(days), "00:00").toISOString())
-        .limit(5000),
+      fetchAll(
+        supabase
+          .from("shifts")
+          .select("site_id, guard_id, starts_at")
+          .neq("status", "cancelled")
+          .gte("starts_at", istInstant(dates[0]!, "00:00").toISOString())
+          .lt("starts_at", istInstant(istDay(days), "00:00").toISOString()),
+      ),
     ]);
 
     // Guards rostered per site per IST start date: the figure in each Roster page cell.

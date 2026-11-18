@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 import { BellOff, BellRing, Siren, Timer } from "lucide-react";
 
@@ -30,7 +31,7 @@ export default async function SosPage({ searchParams }: { searchParams: Promise<
   const supabase = await supabaseServer();
 
   const [inPeriod, open] = await Promise.all([
-    supabase.from("sos_alerts").select(SOS_SELECT).gte("raised_at", from.toISOString()).lt("raised_at", to.toISOString()).order("raised_at", { ascending: false }).limit(2000),
+    fetchAll(supabase.from("sos_alerts").select(SOS_SELECT).gte("raised_at", from.toISOString()).lt("raised_at", to.toISOString()).order("raised_at", { ascending: false })),
     supabase.from("sos_alerts").select(SOS_SELECT).in("status", ["active", "acknowledged"]).order("raised_at", { ascending: false }),
   ]);
   const seen = new Set((inPeriod.data ?? []).map((a) => a.id));

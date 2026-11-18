@@ -1,3 +1,5 @@
+import { fetchAll } from "@nbss/shared/paging";
+
 import type { supabaseServer } from "@/lib/supabase/server";
 
 /**
@@ -18,11 +20,37 @@ export function workerLabel(trade?: string | null): string {
   return trade === "housekeeping" ? "Housekeeper" : "Guard";
 }
 
-/** The accounts a filter keeps, or null for everyone. */
+/**
+ * The accounts a filter keeps, or null for everyone. Meant for filtering rows already
+ * read (`new Set(ids)`): a list of every guard's id in the request itself grows past
+ * what a URL can carry as the company does (200 ids is already 7 KB). To filter in the
+ * query, use `peopleScope` and `narrowTo`.
+ */
 export async function peopleIds(supabase: Awaited<ReturnType<typeof supabaseServer>>, people: People): Promise<string[] | null> {
+  const scope = await peopleScope(supabase, people);
+  return scope ? scope.keep : null;
+}
+
+/** Who a filter keeps and who it leaves out, so a query can name whichever is shorter. */
+export async function peopleScope(supabase: Awaited<ReturnType<typeof supabaseServer>>, people: People): Promise<{ keep: string[]; skip: string[] } | null> {
   if (people === "all") return null;
-  let q = supabase.from("profiles").select("id").eq("role", "guard");
-  q = people === "housekeeping" ? q.eq("trade", "housekeeping") : q.neq("trade", "housekeeping");
-  const { data } = await q;
-  return (data ?? []).map((p) => p.id);
+  const { data } = await fetchAll(supabase.from("profiles").select("id, trade").eq("role", "guard"));
+  const keep: string[] = [];
+  const skip: string[] = [];
+  for (const p of data) ((p.trade === "housekeeping") === (people === "housekeeping") ? keep : skip).push(p.id);
+  return { keep, skip };
+}
+
+const NOBODY = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * Narrows a query to the people a scope keeps, naming the shorter list: "only these 2
+ * housekeepers", or "everyone but these 2" for guards, rather than 200 guards' ids.
+ */
+export function narrowTo<Q>(query: Q, scope: { keep: string[]; skip: string[] } | null, column = "guard_id"): Q {
+  if (!scope) return query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q = query as any;
+  if (scope.keep.length <= scope.skip.length) return q.in(column, scope.keep.length ? scope.keep : [NOBODY]);
+  return scope.skip.length ? q.not(column, "in", `(${scope.skip.join(",")})`) : query;
 }

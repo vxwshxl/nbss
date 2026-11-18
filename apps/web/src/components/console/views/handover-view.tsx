@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import { PageHeader } from "@/components/console/page-header";
 import { PeriodSwitch } from "@/components/console/period-switch";
 import { HandoverWorkspace, type AppNote, type HandoverNote } from "@/components/console/handover-workspace";
@@ -24,16 +25,17 @@ export async function HandoverView({ siteId, searchParams }: { siteId?: string; 
   const { from, to } = periodBounds(period, at);
   const supabase = await supabaseServer();
   const [notes, sites, recent] = await Promise.all([
-    supabase
-      .from("handover_notes")
-      .select(
-        "id, site_id, attendance_id, body, created_at, profiles!handover_notes_author_id_fkey(full_name, role, employee_code, phone, avatar_url), sites(name, district), attendance(check_in_at, check_out_at)",
-      )
-      .gte("created_at", from.toISOString())
-      .lt("created_at", to.toISOString())
-      .match(siteId ? { site_id: siteId } : {})
-      .order("created_at", { ascending: false })
-      .limit(2000),
+    fetchAll(
+      supabase
+        .from("handover_notes")
+        .select(
+          "id, site_id, attendance_id, body, created_at, profiles!handover_notes_author_id_fkey(full_name, role, employee_code, phone, avatar_url), sites(name, district), attendance(check_in_at, check_out_at)",
+        )
+        .gte("created_at", from.toISOString())
+        .lt("created_at", to.toISOString())
+        .match(siteId ? { site_id: siteId } : {})
+        .order("created_at", { ascending: false }),
+    ),
     supabase.from("sites").select("id, name").eq("active", true).match(siteId ? { id: siteId } : {}).order("name"),
     supabase
       .from("handover_notes")

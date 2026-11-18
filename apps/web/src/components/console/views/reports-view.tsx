@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import { CalendarCheck, CalendarX2, Clock, TriangleAlert } from "lucide-react";
 
 import { PageHeader } from "@/components/console/page-header";
@@ -37,17 +38,19 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
 
   const supabase = await supabaseServer();
   const [guards, sites, att, shifts, sos] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, employee_code, trade").eq("role", "guard").order("full_name"),
+    fetchAll(supabase.from("profiles").select("id, full_name, employee_code, trade").eq("role", "guard").order("full_name")),
     supabase.from("sites").select("id, name, district, guards_required").match(siteId ? { id: siteId } : {}).order("name"),
-    supabase
-      .from("attendance")
-      .select("guard_id, site_id, check_in_at, worked_minutes, overtime_minutes, status, device_flag, off_roster")
-      .gte("check_in_at", start)
-      .lt("check_in_at", end)
-      .match(siteId ? { site_id: siteId } : {})
-      .limit(20000),
-    supabase.from("shifts").select("guard_id, site_id, status, replaces_shift, replaced_by_shift").gte("starts_at", start).lt("starts_at", end).match(siteId ? { site_id: siteId } : {}).limit(20000),
-    supabase.from("sos_alerts").select("site_id").gte("raised_at", start).lt("raised_at", end).match(siteId ? { site_id: siteId } : {}),
+    // A page at a time: a month of a few hundred guards is thousands of rows.
+    fetchAll(
+      supabase
+        .from("attendance")
+        .select("guard_id, site_id, check_in_at, worked_minutes, overtime_minutes, status, device_flag, off_roster")
+        .gte("check_in_at", start)
+        .lt("check_in_at", end)
+        .match(siteId ? { site_id: siteId } : {}),
+    ),
+    fetchAll(supabase.from("shifts").select("guard_id, site_id, status, replaces_shift, replaced_by_shift").gte("starts_at", start).lt("starts_at", end).match(siteId ? { site_id: siteId } : {})),
+    fetchAll(supabase.from("sos_alerts").select("site_id").gte("raised_at", start).lt("raised_at", end).match(siteId ? { site_id: siteId } : {})),
   ]);
 
   // Everyone who checks in, or only Guards or Housekeepers (?people=).

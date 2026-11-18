@@ -1,5 +1,6 @@
 "use server";
 
+import { fetchAll } from "@nbss/shared/paging";
 import { requireRoleSession } from "@/lib/auth";
 import { istDate, readBreaks, type Break } from "@/lib/roster";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -48,13 +49,14 @@ export async function siteDetail(siteId: string): Promise<SiteDetail | { error: 
       .eq("site_id", siteId)
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false }),
-    supabase
-      .from("attendance")
-      .select("guard_id, check_in_at, status, worked_minutes, profiles!attendance_guard_id_fkey(id, full_name, employee_code, phone)")
-      .eq("site_id", siteId)
-      .gte("check_in_at", since)
-      .order("check_in_at", { ascending: false })
-      .limit(2000),
+    fetchAll(
+      supabase
+        .from("attendance")
+        .select("guard_id, check_in_at, status, worked_minutes, profiles!attendance_guard_id_fkey(id, full_name, employee_code, phone)")
+        .eq("site_id", siteId)
+        .gte("check_in_at", since)
+        .order("check_in_at", { ascending: false }),
+    ),
     supabase
       .from("sos_alerts")
       .select("id, status, kind, raised_at, guard:profiles!sos_alerts_raised_by_fkey(full_name)")

@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -101,12 +102,14 @@ export default async function SiteWorkspacePage({ params }: { params: Promise<{ 
       .eq("site_id", id)
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false }),
-    supabase
-      .from("attendance")
-      .select("id, guard_id, check_in_at, check_out_at, worked_minutes, overtime_minutes, status, check_in_distance_m, profiles!attendance_guard_id_fkey(full_name, employee_code)")
-      .eq("site_id", id)
-      .gte("check_in_at", monthAgo.toISOString())
-      .order("check_in_at", { ascending: false }),
+    fetchAll(
+      supabase
+        .from("attendance")
+        .select("id, guard_id, check_in_at, check_out_at, worked_minutes, overtime_minutes, status, check_in_distance_m, profiles!attendance_guard_id_fkey(full_name, employee_code)")
+        .eq("site_id", id)
+        .gte("check_in_at", monthAgo.toISOString())
+        .order("check_in_at", { ascending: false })
+    ),
     supabase
       .from("shifts")
       .select("id, guard_id, starts_at, ends_at, status, posting_id, guard:profiles!shifts_guard_id_fkey(full_name, employee_code, phone, role)")

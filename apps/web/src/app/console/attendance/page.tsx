@@ -15,7 +15,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { AttendanceViews, ViewTabs, siteOptions } from "@/app/console/attendance/views";
 import { SiteFilter } from "@/components/console/site-filter";
 import { PeopleTabs } from "@/components/console/people-tabs";
-import { peopleIds, readPeople, workerLabel } from "@/lib/people";
+import { narrowTo, peopleScope, readPeople, workerLabel } from "@/lib/people";
 
 export const metadata: Metadata = { title: "Attendance" };
 export const dynamic = "force-dynamic";
@@ -53,8 +53,7 @@ export default async function AttendancePage({
   if (siteId) query = query.eq("site_id", siteId);
   const mine = session.profile.role === "guard";
   const people = readPeople(q.people);
-  const ids = mine ? null : await peopleIds(supabase, people);
-  if (ids) query = query.in("guard_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+  if (!mine) query = narrowTo(query, await peopleScope(supabase, people));
   const [attendance, sites] = await Promise.all([query, mine ? Promise.resolve([]) : siteOptions(supabase, siteId)]);
 
   const rows: AttendanceRow[] = (attendance.data ?? []).map((r) => {

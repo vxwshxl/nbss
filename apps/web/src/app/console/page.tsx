@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -108,10 +109,12 @@ export default async function ConsoleDashboard() {
       )
       .is("check_out_at", null)
       .order("check_in_at", { ascending: false }),
-    supabase
-      .from("attendance")
-      .select("id, guard_id, worked_minutes, overtime_minutes, status")
-      .gte("check_in_at", startOfToday.toISOString()),
+    fetchAll(
+      supabase
+        .from("attendance")
+        .select("id, guard_id, worked_minutes, overtime_minutes, status")
+        .gte("check_in_at", startOfToday.toISOString())
+    ),
     supabase
       .from("sos_alerts")
       .select("id, status, kind, raised_at, raised_by, guard:profiles!sos_alerts_raised_by_fkey(full_name, phone), sites(name)")
@@ -119,23 +122,29 @@ export default async function ConsoleDashboard() {
       .order("raised_at", { ascending: false }),
     // Rostered shifts that have started and are not yet over, still waiting for
     // their guard — "not arrived" once the site's grace period has passed.
-    supabase
-      .from("shifts")
-      .select("id, guard_id, site_id, starts_at, guard:profiles!shifts_guard_id_fkey(full_name, phone, role), sites(name, grace_minutes)")
-      .eq("status", "scheduled")
-      .lte("starts_at", new Date().toISOString())
-      .gt("ends_at", new Date().toISOString())
-      .order("starts_at"),
+    fetchAll(
+      supabase
+        .from("shifts")
+        .select("id, guard_id, site_id, starts_at, guard:profiles!shifts_guard_id_fkey(full_name, phone, role), sites(name, grace_minutes)")
+        .eq("status", "scheduled")
+        .lte("starts_at", new Date().toISOString())
+        .gt("ends_at", new Date().toISOString())
+        .order("starts_at")
+    ),
     // The last 30 days of punches, for the charts.
-    supabase
-      .from("attendance")
-      .select("check_in_at, check_out_at, worked_minutes, overtime_minutes, status, sites(name)")
-      .gte("check_in_at", monthAgo.toISOString()),
-    supabase
-      .from("shifts")
-      .select("status")
-      .gte("starts_at", startOfToday.toISOString())
-      .lt("starts_at", endOfToday.toISOString()),
+    fetchAll(
+      supabase
+        .from("attendance")
+        .select("check_in_at, check_out_at, worked_minutes, overtime_minutes, status, sites(name)")
+        .gte("check_in_at", monthAgo.toISOString())
+    ),
+    fetchAll(
+      supabase
+        .from("shifts")
+        .select("status")
+        .gte("starts_at", startOfToday.toISOString())
+        .lt("starts_at", endOfToday.toISOString())
+    ),
     // Every site as a card: open one to work in it alone.
     supabase.from("sites").select("id, name, district, client_name, guards_required").eq("active", true).order("name"),
     supabase.from("sos_alerts").select("site_id").in("status", ["active", "acknowledged"]),

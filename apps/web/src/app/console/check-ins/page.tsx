@@ -1,10 +1,11 @@
+import { fetchAll } from "@nbss/shared/paging";
 import type { Metadata } from "next";
 
 import { CheckInsLog, type CheckInRow } from "@/components/console/check-ins-log";
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
 import { PeriodSwitch } from "@/components/console/period-switch";
-import { peopleIds, readPeople, workerLabel } from "@/lib/people";
+import { narrowTo, peopleScope, readPeople, workerLabel } from "@/lib/people";
 import { requireRoleSession } from "@/lib/auth";
 import { periodBounds, readPeriod } from "@/lib/period";
 import { istDay } from "@/lib/roster";
@@ -29,7 +30,7 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
   const { from, to } = periodBounds(view, at);
 
   const supabase = await supabaseServer();
-  const ids = await peopleIds(supabase, people);
+  const scope = await peopleScope(supabase, people);
   let query = supabase
     .from("attendance")
     .select(
@@ -37,12 +38,12 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
     )
     .gte("check_in_at", from.toISOString())
     .lt("check_in_at", to.toISOString())
-    .order("check_in_at", { ascending: false })
-    .limit(5000);
-  if (ids) query = query.in("guard_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-  const { data } = await query;
+    .order("check_in_at", { ascending: false });
+  query = narrowTo(query, scope);
+  // A month or a year of check-ins is thousands of rows: read them a page at a time.
+  const { data } = await fetchAll(query);
 
-  const list = data ?? [];
+  const list = data;
   const deviceIds = [...new Set(list.map((r) => r.device_id).filter((d): d is string => !!d))];
   const { data: phones } = deviceIds.length
     ? await supabase.from("guard_devices").select("profile_id, device_id, brand, model").in("device_id", deviceIds)
