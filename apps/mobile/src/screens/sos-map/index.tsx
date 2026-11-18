@@ -8,7 +8,7 @@ import { distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
-import { MAP_COLOR, fenceRing } from "@/components/live-map/shared";
+import { MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
@@ -76,7 +76,7 @@ export function SosMap({ failed }: { failed?: string }) {
     [areas],
   );
   const people: MapPerson[] = useMemo(
-    () => friends.flatMap((f) => (f.lat != null && f.lng != null ? [{ id: f.id, lat: f.lat, lng: f.lng, label: first(f.name), tone: MAP_COLOR.inside }] : [])),
+    () => friends.flatMap((f) => (f.lat != null && f.lng != null ? [{ id: f.id, lat: f.lat, lng: f.lng, label: first(f.name), initials: initialsOf(f.name), sub: f.battery != null ? `${f.battery}%` : undefined, heading: f.heading, tone: MAP_COLOR.inside }] : [])),
     [friends],
   );
 

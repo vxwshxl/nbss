@@ -13,7 +13,7 @@ import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus 
 
 import { Button } from "@/components/button";
 import { SolidButton } from "@/components/solid-button";
-import { circleRing } from "@/components/live-map/shared";
+import { circleRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet } from "@/components/map-sheet";
 import { Text } from "@/components/text";
@@ -177,7 +177,7 @@ export function SosAlarm({
           : p.role === "responder" && p.response !== "cannot_respond"
             ? `${first(p.name)}${p.distance_m != null ? ` · ${formatDistance(p.distance_m)}` : ""}`
             : first(p.name);
-      out.push({ id: p.id, lat: p.lat, lng: p.lng, tone, label });
+      out.push({ id: p.id, lat: p.lat, lng: p.lng, tone, label, initials: initialsOf(p.name), big: p.role === "raiser" });
     }
     return out;
   }, [people, profile?.id]);

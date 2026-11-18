@@ -137,7 +137,7 @@ export function DutyDetail({ id }: { id: string }) {
 
   const marks = [
     ...routeMarks(trail, head, !!a?.check_out_at),
-    ...sos.filter((x) => x.lat != null && x.lng != null).map((x) => ({ id: `sos-${x.id}`, lat: x.lat!, lng: x.lng!, tone: color.sos, label: `SOS ${clock(x.raised_at)}` })),
+    ...sos.filter((x) => x.lat != null && x.lng != null).map((x) => ({ id: `sos-${x.id}`, lat: x.lat!, lng: x.lng!, tone: color.sos, initials: "SOS", label: "SOS", sub: clock(x.raised_at) })),
   ];
   // The route point nearest a moment, so an SOS in the list can move the playback there.
   const nearest = (iso: string) => {
@@ -339,12 +339,12 @@ function routeMarks(route: RoutePoint[], head: number | null, ended: boolean): M
   if (route.length < 2) return [];
   const first = route[0]!;
   const last = route.at(-1)!;
-  const marks: MapPerson[] = [{ id: "start", lat: first.lat, lng: first.lng, tone: "#059669", label: `In ${clockOf(first.at)}` }];
-  if (ended) marks.push({ id: "end", lat: last.lat, lng: last.lng, tone: "#1f2937", label: `Out ${clockOf(last.at)}` });
+  const marks: MapPerson[] = [{ id: "start", lat: first.lat, lng: first.lng, tone: "#059669", initials: "IN", label: "In", sub: clockOf(first.at) }];
+  if (ended) marks.push({ id: "end", lat: last.lat, lng: last.lng, tone: "#1f2937", initials: "OUT", label: "Out", sub: clockOf(last.at) });
   if (head != null) {
     const h = route[Math.min(head, route.length - 1)]!;
     // No label: the time is under the bar, and a fixed marker glides instead of being redrawn.
-    marks.push({ id: "head", lat: h.lat, lng: h.lng, tone: "#2563eb", big: true });
+    marks.push({ id: "head", lat: h.lat, lng: h.lng, tone: "#2563eb", big: true, initials: "" });
   }
   return marks;
 }

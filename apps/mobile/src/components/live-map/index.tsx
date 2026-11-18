@@ -4,7 +4,7 @@ import { color } from "@/theme/tokens";
 
 import { MapCanvas } from "@/components/map-canvas";
 
-import { MAP_COLOR, fenceRing, type LiveMapProps } from "./shared";
+import { MAP_COLOR, fenceRing, initialsOf, type LiveMapProps } from "./shared";
 
 export type { LiveMapProps, MapSite } from "./shared";
 export { ATTRIBUTION } from "./shared";
@@ -44,8 +44,8 @@ export function LiveMap({ me, site, inside, frameKey, padding, trail, areas = []
     return [
       ...friends
         .filter((f) => !raised.has(f.id))
-        .map((f) => ({ id: f.id, lat: f.lat, lng: f.lng, label: f.name.split(/\s+/)[0], tone: MAP_COLOR.inside, frame: false })),
-      ...(sos?.raisers ?? []).map((r) => ({ id: `sos:${r.id}`, lat: r.lat, lng: r.lng, label: r.label, tone: color.sos, big: true, frame: false })),
+        .map((f) => ({ id: f.id, lat: f.lat, lng: f.lng, label: f.name.split(/\s+/)[0], initials: initialsOf(f.name), tone: MAP_COLOR.inside, frame: false })),
+      ...(sos?.raisers ?? []).map((r) => ({ id: `sos:${r.id}`, lat: r.lat, lng: r.lng, label: r.label, initials: "SOS", tone: color.sos, big: true, frame: false })),
     ];
   }, [friends, sos]);
   return (

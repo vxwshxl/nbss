@@ -5,8 +5,8 @@ import { StyleSheet, View } from "react-native";
 
 import { GOOGLE_MAPS_KEY } from "@/lib/config";
 
-import { MAP_COLOR } from "./live-map/shared";
-import type { MapCanvasProps } from "./map-canvas";
+import { MAP_COLOR, initialsOf } from "./live-map/shared";
+import type { MapCanvasProps, MapPerson } from "./map-canvas";
 
 export type { MapCanvasProps, MapFence, MapPerson } from "./map-canvas";
 
@@ -34,6 +34,50 @@ function load(): Promise<G> {
 
 function dot(color: string, size: number) {
   return { path: 0 as google.maps.SymbolPath, scale: size, fillColor: color, fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 };
+}
+
+const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * A guard as the website draws them, as one SVG image: the circle in the state colour
+ * with initials and a white ring, the heading pointer turned around it, a halo when
+ * picked, and the name chip (dark when picked) hung underneath. The image is anchored
+ * on the circle's centre, so the circle sits exactly on the point.
+ */
+function guardIcon(p: MapPerson): google.maps.Icon {
+  const big = Boolean(p.big);
+  const D = big ? 42 : 30;
+  const halo = D + 18;
+  const label = p.label ? `${p.label}${p.sub ? ` ${p.sub}` : ""}` : "";
+  const fs = big ? 12 : 11;
+  const chipW = label ? Math.ceil(label.length * fs * 0.6) + 16 : 0;
+  const top = 14; // room for the pointer above the circle
+  const W = Math.max(halo + 4, chipW + 4);
+  const cx = W / 2;
+  const cy = top + halo / 2;
+  const chipY = cy + (big ? halo : D) / 2 + 3;
+  const H = chipY + (label ? 20 : 0) + 2;
+  const tri = p.heading != null
+    ? `<g transform="rotate(${Math.round(p.heading)} ${cx} ${cy})"><path d="M ${cx - 7} ${cy - D / 2 - 1} L ${cx} ${cy - D / 2 - 11} L ${cx + 7} ${cy - D / 2 - 1} Z" fill="${p.tone}" stroke="#fff" stroke-width="1"/></g>`
+    : "";
+  const [subName, subRest] = p.sub ? [esc(p.label ?? ""), esc(` ${p.sub}`)] : [esc(label), ""];
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+    `<defs><filter id="s" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-opacity="0.35"/></filter></defs>` +
+    (big ? `<circle cx="${cx}" cy="${cy}" r="${halo / 2}" fill="${p.tone}" fill-opacity="0.28"/>` : "") +
+    tri +
+    `<circle cx="${cx}" cy="${cy}" r="${D / 2}" fill="${p.tone}" stroke="#fff" stroke-width="${big ? 3 : 2.5}" filter="url(#s)"/>` +
+    `<text x="${cx}" y="${cy + (big ? 5 : 4)}" text-anchor="middle" font-family="Geist, Inter, system-ui, sans-serif" font-weight="700" font-size="${big ? 14 : 11}" fill="#fff">${esc(p.initials ?? initialsOf(p.label))}</text>` +
+    (label
+      ? `<rect x="${cx - chipW / 2}" y="${chipY}" width="${chipW}" height="19" rx="6" fill="${big ? "#0f172a" : "#fff"}" fill-opacity="${big ? 1 : 0.96}" filter="url(#s)"/>` +
+        `<text x="${cx}" y="${chipY + 13.5}" text-anchor="middle" font-family="Geist, Inter, system-ui, sans-serif" font-weight="600" font-size="${fs}" fill="${big ? "#fff" : "#111"}">${subName}<tspan font-weight="500" fill="${big ? "#cbd5e1" : "#555"}">${subRest}</tspan></text>`
+      : "") +
+    `</svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    size: new google.maps.Size(W, H),
+    anchor: new google.maps.Point(cx, cy),
+  };
 }
 
 export function MapCanvas({ fences = [], people = [], me = null, route = null, trail = null, path = null, frameKey = "", padding, onPersonPress, onFencePress }: MapCanvasProps) {
@@ -79,7 +123,7 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
     if (route) drawn.push(new g.Polyline({ map, path: route, strokeOpacity: 0, icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: MAP_COLOR.route, scale: 3 }, offset: "0", repeat: "12px" }] }));
     for (const p of people) {
       if (p.frame !== false) bounds.extend(p);
-      const m = new g.Marker({ map, position: p, icon: dot(p.tone, p.big ? 12 : 8), zIndex: p.big ? 900 : 100, label: p.label ? { text: p.label, fontSize: "11px", fontWeight: "600", className: "nbss-map-label" } : undefined });
+      const m = new g.Marker({ map, position: p, icon: guardIcon(p), zIndex: p.big ? 900 : 100 });
       if (onPersonPress) m.addListener("click", () => onPersonPress(p.id));
       drawn.push(m);
     }

@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { istTime } from "@nbss/shared/company";
 import { duration, km, routeEvents, toPoints, trailStats, type RouteEvent, type TrailPoint, type TrailTuple } from "@nbss/shared/trail";
 
-import { MAP_COLOR, fenceRing, type MapSite } from "@/components/live-map/shared";
+import { MAP_COLOR, fenceRing, initialsOf, type MapSite } from "@/components/live-map/shared";
 import { MapCanvas } from "@/components/map-canvas";
 import { Panel, PanelRow } from "@/components/panel";
 import { Text } from "@/components/text";
@@ -70,7 +70,7 @@ export function RouteCard({
   const fences = useMemo(() => (site ? [{ id: site.id, name: site.name, ring: fenceRing(site), tone: MAP_COLOR.inside, quiet: true }] : []), [site]);
   const path = useMemo(() => ({ points: route.points, upTo: picked?.index ?? null }), [route.points, picked?.index]);
   const dot = at
-    ? [{ id: "guard", lat: at.lat, lng: at.lng, tone: at.inside === false ? MAP_COLOR.outside : MAP_COLOR.me, label: picked ? `${name} ${istTime(new Date(picked.at).toISOString())}` : name, frame: false }]
+    ? [{ id: "guard", lat: at.lat, lng: at.lng, tone: at.inside === false ? MAP_COLOR.outside : MAP_COLOR.me, label: name, initials: initialsOf(name), sub: picked ? istTime(new Date(picked.at).toISOString()) : undefined, frame: false }]
     : [];
 
   return (

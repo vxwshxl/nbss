@@ -7,7 +7,7 @@ import { COMPANY, istTime } from "@nbss/shared/company";
 import { SOS_KIND_LABEL, SOS_STATUS_LABEL, isLive, type SosKind, type SosStatus } from "@nbss/shared/sos";
 
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
-import { fenceRing } from "@/components/live-map/shared";
+import { fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
 import { Select } from "@/components/select";
@@ -137,7 +137,17 @@ export function StaffSos() {
     }));
   const pins: MapPerson[] = list
     .filter((r) => r.lat != null && r.lng != null)
-    .map((r) => ({ id: r.id, lat: r.lat!, lng: r.lng!, tone: isLive(r.status) ? color.destructive : "#94a3b8", big: isLive(r.status), label: isLive(r.status) ? r.raiser.split(" ")[0] : undefined }));
+    .map((r) => ({
+      id: r.id,
+      lat: r.lat!,
+      lng: r.lng!,
+      // Red still ringing, blue help on the way, green resolved, grey a false alarm.
+      tone: SOS_TONE[r.status as keyof typeof SOS_TONE] ?? "#94a3b8",
+      big: isLive(r.status),
+      initials: initialsOf(r.raiser),
+      // Names on every pin while few enough to read; only the open ones beyond that.
+      label: isLive(r.status) || list.length <= 12 ? r.raiser.split(" ")[0] : undefined,
+    }));
 
   return (
     <View style={styles.root}>
@@ -244,6 +254,8 @@ export function StaffSos() {
     </View>
   );
 }
+
+const SOS_TONE = { active: "#dc2626", acknowledged: "#2563eb", resolved: "#16a34a", false_alarm: "#94a3b8" } as const;
 
 function Count({ value, label, tone }: { value: number; label: string; tone: string }) {
   return (

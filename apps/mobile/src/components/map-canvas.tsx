@@ -8,7 +8,7 @@ import { runsByFence } from "@nbss/shared/trail";
 import { Text } from "@/components/text";
 import { font } from "@/theme/tokens";
 
-import { MAP_COLOR, type MapPoint } from "./live-map/shared";
+import { MAP_COLOR, initialsOf, type MapPoint } from "./live-map/shared";
 
 /**
  * Google Maps, on the phone: react-native-maps with the Google provider on
@@ -36,12 +36,21 @@ export type MapFence = {
 };
 export type MapPerson = MapPoint & {
   id: string;
+  /** The name on the chip under the circle (a first name). */
   label?: string;
+  /** Beside the name, quieter: the battery ("48%") or a time. */
+  sub?: string;
+  /** In the circle; from `label` when not given. */
+  initials?: string;
+  /** Degrees from north: a pointer turns around the circle, as on the website. */
+  heading?: number | null;
   tone: string;
-  /** Bigger, ringed dot: the person who raised an SOS. */
+  /** Bigger and ringed, with a dark chip: the person picked, or who raised an SOS. */
   big?: boolean;
   frame?: boolean;
 };
+
+export { initialsOf };
 
 export type MapCanvasProps = {
   fences?: MapFence[];
@@ -214,14 +223,16 @@ export function MapCanvas({
           />
         )}
 
-        {/* Each guard is two markers of fixed size: the dot, centred exactly on the point,
-            and the name hung under it. One marker holding both put the dot wherever the
-            measured box happened to centre, which drifted off the point as the map zoomed out. */}
+        {/* Each guard is two markers of fixed size, as the website draws them: the circle
+            (initials, the state colour, a pointer for the heading), centred exactly on
+            the point, and the name chip hung under it. One marker holding both put the
+            circle wherever the measured box happened to centre, which drifted off the
+            point as the map zoomed out. */}
         {people.map((p) => {
-          const d = p.big ? BIG_DOT : DOT;
+          const g = geometry(p.big);
           return (
             <Marker
-              key={`${p.id}-${p.tone}-${p.big ? 1 : 0}`}
+              key={`${p.id}-${p.tone}-${p.big ? 1 : 0}-${Math.round((p.heading ?? -1) / 10)}`}
               coordinate={{ latitude: p.lat, longitude: p.lng }}
               anchor={{ x: 0.5, y: 0.5 }}
               centerOffset={{ x: 0, y: 0 }}
@@ -229,42 +240,49 @@ export function MapCanvas({
               zIndex={p.big ? 900 : 100}
               onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
             >
-              <View style={{ width: d, height: d }}>
-                {p.big ? (
-                  <View style={[styles.bigRing, { borderColor: alpha(p.tone, 0.35) }]}>
-                    <View style={[styles.bigDot, { backgroundColor: p.tone }]} />
+              <View style={{ width: g.box, height: g.box, alignItems: "center", justifyContent: "center" }}>
+                {p.big && <View style={{ position: "absolute", width: g.halo, height: g.halo, borderRadius: g.halo / 2, backgroundColor: alpha(p.tone, 0.28) }} />}
+                {p.heading != null && (
+                  <View style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${Math.round(p.heading)}deg` }] }]}>
+                    <View style={[styles.pointer, { top: g.box / 2 - g.circle / 2 - 10, left: g.box / 2 - 7, borderBottomColor: p.tone }]} />
                   </View>
-                ) : (
-                  <View style={[styles.whoDot, { backgroundColor: p.tone }]} />
                 )}
-              </View>
-            </Marker>
-          );
-        })}
-        {people.map((p) =>
-          p.label ? (
-            <Marker
-              key={`label-${p.id}-${p.label}-${p.big ? 1 : 0}`}
-              coordinate={{ latitude: p.lat, longitude: p.lng }}
-              // The label's box starts at the point with a clear gap the size of half the dot,
-              // so it hangs under the dot: Android by the anchor, iPhone by the offset.
-              anchor={{ x: 0.5, y: 0 }}
-              centerOffset={{ x: 0, y: labelBox(p.big) / 2 }}
-              tracksViewChanges={false}
-              zIndex={p.big ? 899 : 99}
-              onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
-            >
-              <View style={[styles.who, { height: labelBox(p.big) }]}>
-                <View style={{ height: (p.big ? BIG_DOT : DOT) / 2 + 2 }} />
-                <View style={styles.whoLabel}>
-                  <Text style={styles.whoText} numberOfLines={1} clip>
-                    {p.label}
+                <View style={[styles.whoCircle, { width: g.circle, height: g.circle, borderRadius: g.circle / 2, backgroundColor: p.tone, borderWidth: p.big ? 3 : 2.5 }]}>
+                  <Text style={[styles.whoInitials, p.big && styles.whoInitialsBig]} numberOfLines={1} clip>
+                    {p.initials ?? initialsOf(p.label)}
                   </Text>
                 </View>
               </View>
             </Marker>
-          ) : null,
-        )}
+          );
+        })}
+        {people.map((p) => {
+          if (!p.label) return null;
+          const g = geometry(p.big);
+          return (
+            <Marker
+              key={`label-${p.id}-${p.label}-${p.sub ?? ""}-${p.big ? 1 : 0}`}
+              coordinate={{ latitude: p.lat, longitude: p.lng }}
+              // The chip's box starts at the point with a gap of half the circle, so it hangs
+              // under the circle: Android by the anchor, iPhone by the offset.
+              anchor={{ x: 0.5, y: 0 }}
+              centerOffset={{ x: 0, y: g.labelBox / 2 }}
+              tracksViewChanges={false}
+              zIndex={p.big ? 899 : 99}
+              onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
+            >
+              <View style={[styles.who, { height: g.labelBox }]}>
+                <View style={{ height: g.labelBox - WHO_LABEL_H }} />
+                <View style={[styles.whoLabel, p.big && styles.whoLabelBig]}>
+                  <Text style={[styles.whoText, p.big && styles.whoTextBig]} numberOfLines={1} clip>
+                    {p.label}
+                    {p.sub ? <Text style={[styles.whoSub, p.big && styles.whoSubBig]}>{` ${p.sub}`}</Text> : null}
+                  </Text>
+                </View>
+              </View>
+            </Marker>
+          );
+        })}
 
         {me && me.accuracyM && me.accuracyM < 500 ? (
           <Circle
@@ -336,11 +354,17 @@ function centre(ring: [number, number][]): { latitude: number; longitude: number
   return { latitude: lat / Math.max(1, ring.length), longitude: lng / Math.max(1, ring.length) };
 }
 
-const WHO_LABEL_H = 17;
-const DOT = 18;
-const BIG_DOT = 40;
-/** The name marker's height: a gap of half the dot, then the label. */
-const labelBox = (big?: boolean) => (big ? BIG_DOT : DOT) / 2 + 2 + WHO_LABEL_H;
+const WHO_LABEL_H = 19;
+/**
+ * A guard's marker, in points: the circle, the box around it (room for the heading
+ * pointer and the halo), and the name marker's height (a gap below the circle, then
+ * the chip). As the website: 30 across, 42 when picked.
+ */
+function geometry(big?: boolean) {
+  const circle = big ? 42 : 30;
+  const halo = circle + 18;
+  return { circle, halo, box: big ? 76 : 56, labelBox: (big ? halo : circle) / 2 + 3 + WHO_LABEL_H };
+}
 
 /** A shift's route in the fence's colours, the part after `upTo` dotted and faint. */
 function RoutePath({ points, upTo }: { points: (MapPoint & { inside: boolean | null })[]; upTo: number | null }) {
@@ -373,14 +397,19 @@ const styles = StyleSheet.create({
   pinStick: { width: 3, height: PIN_STICK_H },
   pinQuiet: { height: PIN_QUIET_H, paddingHorizontal: 7, opacity: 0.9 },
   pinTextQuiet: { fontSize: 10, lineHeight: 13 },
-  bigRing: { width: 40, height: 40, borderRadius: 20, borderWidth: 8, alignItems: "center", justifyContent: "center" },
-  bigDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 3, borderColor: "#fff" },
   who: { alignItems: "center" },
-  whoDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 3, borderColor: "#fff" },
-  // A fixed height, so the spacer above the dot can match it exactly.
-  whoLabel: { height: WHO_LABEL_H, justifyContent: "center", paddingHorizontal: 6, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.95)" },
-
+  whoCircle: { alignItems: "center", justifyContent: "center", borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
+  whoInitials: { fontFamily: font.bold, fontSize: 11, lineHeight: 13, color: "#fff" },
+  whoInitialsBig: { fontSize: 14, lineHeight: 17 },
+  // Which way they face or walk, turned around the circle with the heading.
+  pointer: { position: "absolute", width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderBottomWidth: 10, borderLeftColor: "transparent", borderRightColor: "transparent" },
+  // A fixed height, so the spacer above the circle can match it exactly.
+  whoLabel: { height: WHO_LABEL_H, justifyContent: "center", paddingHorizontal: 7, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.96)", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  whoLabelBig: { backgroundColor: "#0f172a" },
   whoText: { fontFamily: font.semibold, fontSize: 11, lineHeight: 14, color: "#111" },
+  whoTextBig: { color: "#fff", fontSize: 12, lineHeight: 15 },
+  whoSub: { fontFamily: font.medium, color: "#555" },
+  whoSubBig: { color: "#cbd5e1" },
   meBox: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   meHalo: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: alpha(MAP_COLOR.me, 0.2) },
   meDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: MAP_COLOR.me, borderWidth: 3, borderColor: "#fff" },

@@ -9,8 +9,8 @@ import { toRing } from "@nbss/shared/geo";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Avatar } from "@/components/avatar";
-import { MAP_COLOR, fenceRing } from "@/components/live-map/shared";
-import { MapCanvas, type MapFence } from "@/components/map-canvas";
+import { MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
+import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
 import { SolidButton } from "@/components/solid-button";
@@ -25,7 +25,8 @@ import { TONES } from "@/theme/tones";
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 type Site = { id: string; name: string; address: string | null; district: string | null; lat: number; lng: number; geofence_radius_m: number; polygon: unknown };
-type OnDuty = { id: string; site_id: string; guard_name: string; check_in_at: string };
+type OnDuty = { id: string; site_id: string; guard_id: string; guard_name: string; check_in_at: string };
+type Spot = { guard_id: string; site_id: string; lat: number; lng: number; heading: number | null; battery: number | null; inside_fence: boolean | null };
 
 const hours = (m: number) => (m % 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${Math.floor(m / 60)}h`);
 
@@ -49,7 +50,7 @@ export function ClientHome() {
     const me = profile?.id ?? "";
     const [sites, live, month, alerts] = await Promise.all([
       supabase.from("sites").select("id, name, address, district, lat, lng, geofence_radius_m, polygon").eq("client_id", me).eq("active", true).order("name"),
-      supabase.from("client_attendance").select("id, site_id, guard_name, check_in_at").is("check_out_at", null).order("check_in_at"),
+      supabase.from("client_attendance").select("id, site_id, guard_id, guard_name, check_in_at").is("check_out_at", null).order("check_in_at"),
       fetchAll(supabase.from("client_attendance").select("id, guard_id, check_in_at, worked_minutes, overtime_minutes").gte("check_in_at", monthStart.toISOString())),
       liveAlerts(),
     ]);
@@ -65,6 +66,23 @@ export function ClientHome() {
     };
   }, [profile?.id]);
   const { data, refreshing, reload, refresh } = useLoader(load);
+
+  // Where the guards on duty at my sites are now (0078 lets a client read exactly
+  // that and nothing more), re-read every 20 seconds while this screen is open.
+  const [spots, setSpots] = useState<Spot[]>([]);
+  useEffect(() => {
+    let alive = true;
+    const read = async () => {
+      const { data: rows } = await supabase.from("guard_positions").select("guard_id, site_id, lat, lng, heading, battery, inside_fence");
+      if (alive) setSpots((rows ?? []) as Spot[]);
+    };
+    void read();
+    const t = setInterval(() => void read(), 20_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [data]);
 
   // Fresh on arrival, on any change at their sites (a guard checking in, an SOS), and
   // the moment an SOS push lands. Told rather than polling, so an idle screen costs nothing.
@@ -94,10 +112,29 @@ export function ClientHome() {
     [sites, onDuty, alerts],
   );
 
+  const names = useMemo(() => new Map(onDuty.map((o) => [o.guard_id, o.guard_name])), [onDuty]);
+  const people: MapPerson[] = useMemo(
+    () =>
+      spots
+        .filter((p) => names.has(p.guard_id))
+        .map((p) => ({
+          id: p.guard_id,
+          lat: p.lat,
+          lng: p.lng,
+          label: names.get(p.guard_id)!.split(" ")[0],
+          initials: initialsOf(names.get(p.guard_id)),
+          sub: p.battery != null ? `${p.battery}%` : undefined,
+          heading: p.heading,
+          tone: p.inside_fence === false ? MAP_COLOR.outside : MAP_COLOR.inside,
+          frame: false,
+        })),
+    [spots, names],
+  );
+
   return (
     <View style={styles.root}>
       <View style={StyleSheet.absoluteFill}>
-        <MapCanvas fences={fences} frameKey={`${sites.length}|${frame}`} padding={{ top: 24, right: 24, bottom: sheetH + 16, left: 24 }} />
+        <MapCanvas fences={fences} people={people} frameKey={`${sites.length}|${frame}`} padding={{ top: 24, right: 24, bottom: sheetH + 16, left: 24 }} />
       </View>
 
       <MapSheet

@@ -12,7 +12,7 @@ import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
-import { MAP_COLOR, fenceRing } from "@/components/live-map/shared";
+import { MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet, type SheetSnap } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
@@ -187,7 +187,8 @@ export default function LiveRoute() {
   const dots = useMemo<MapPerson[]>(
     () =>
       list.map((p) => {
-        const first = board?.names.get(p.guard_id)?.full_name.split(" ")[0];
+        const full = board?.names.get(p.guard_id)?.full_name;
+        const first = full?.split(" ")[0];
         const mine = p.guard_id === guard;
         // The guard looked at stands out; a moment on their timeline moves their dot there.
         const at = mine && momentAt ? momentAt : p;
@@ -195,7 +196,11 @@ export default function LiveRoute() {
           id: p.guard_id,
           lat: at.lat,
           lng: at.lng,
-          label: mine && momentEvent ? `${first ?? ""} ${istTime(new Date(momentEvent.at).toISOString())}` : first,
+          label: first,
+          initials: initialsOf(full),
+          // As the website: the battery beside the name, or the moment's time when one is picked.
+          sub: mine && momentEvent ? istTime(new Date(momentEvent.at).toISOString()) : p.battery != null ? `${p.battery}%` : undefined,
+          heading: mine && momentAt ? null : p.heading,
           tone: p.mode === "emergency" ? color.destructive : (mine && momentAt ? momentAt.inside !== false : p.inside_fence) ? MAP_COLOR.inside : MAP_COLOR.outside,
           big: mine,
           frame: focus === "all" || (focus === "guard" && mine),
