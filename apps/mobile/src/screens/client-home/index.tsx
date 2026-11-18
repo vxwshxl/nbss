@@ -120,7 +120,7 @@ export function ClientHome() {
               {onDuty.length ? `${onDuty.length} guard${onDuty.length === 1 ? "" : "s"} on duty` : sites.length ? "Nobody on duty right now" : "No sites yet"}
             </Text>
             <View style={styles.counts}>
-              <Count value={String(sites.length)} label="sites" tone={TONES.sky.chipText} />
+              <Count value={String(sites.length)} label={sites.length === 1 ? "site" : "sites"} tone={TONES.sky.chipText} />
               <Count value={hours(data?.minutes ?? 0)} label="man-hours" tone={TONES.emerald.chipText} />
               <Count value={hours(data?.overtime ?? 0)} label="overtime" tone={TONES.violet.chipText} />
             </View>

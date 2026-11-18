@@ -48,12 +48,21 @@ Everything the Play Console asks for, in the order it asks. Graphics are rebuilt
 |---|---|---|
 | App icon | `icon-512.png` | 512 × 512 PNG, opaque |
 | Feature graphic | `feature-1024x500.png` | 1024 × 500 PNG |
-| Phone screenshots | to take (see below) | 2–8, 9:16, at least 1080 × 1920 |
+| Phone screenshots | `screenshots/01…09` | 1080 × 2400 PNG, upload 01–08 (09 optional) |
 
-Screenshots to take from a phone signed in with a TEST account (no real names or phone
-numbers on screen): 1 Duty screen with the site map, 2 Check-in, 3 Live map (supervisor)
-with the sheet at half, 4 A guard picked on Live with their route, 5 SOS screen, 6 Client
-home. Take them on a 1080 × 2400 phone and upload as they are.
+Screenshots, in upload order (taken 18 Nov 2026 from the app's web build at Android phone
+size, signed in as TEST accounts with demo data that was deleted afterwards; no real
+person, phone number or site appears):
+
+1. `01-office-guard-route.png`: office, a guard tapped on Live with their route so far
+2. `02-office-site.png`: office, a site with who is on duty, inside and posted
+3. `03-guard-duty.png`: guard, on duty inside the boundary, check out, SOS button
+4. `04-guard-sos.png`: guard, the SOS tab (hold the red button for 3 seconds)
+5. `05-supervisor-live.png`: supervisor, their site live, who is inside and when last heard
+6. `06-supervisor-today.png`: supervisor, today's duties (not arrived, on duty, later)
+7. `07-client-sites.png`: client, their site and the guards on duty now
+8. `08-client-book.png`: client, booking guards
+9. `09-office-sos-history.png`: office, SOS history on the map
 
 ## App content (Policy → App content)
 

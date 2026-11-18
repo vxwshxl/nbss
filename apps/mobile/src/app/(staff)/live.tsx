@@ -297,7 +297,7 @@ export default function LiveRoute() {
                 Live{lastAt ? ` · updated ${istTime(lastAt)}` : " · loading…"}
               </Text>
               <Text variant="title" weight="semibold">
-                {list.length} on duty · {board?.sites.length ?? 0} sites
+                {list.length} on duty · {board?.sites.length ?? 0} {board?.sites.length === 1 ? "site" : "sites"}
               </Text>
               <View style={styles.counts}>
                 <Count value={inside} label="inside" tone="#059669" active={group === "inside"} onPress={() => toggleGroup("inside")} />
@@ -513,36 +513,35 @@ function GuardBody({
   onMoment: (i: number | null) => void;
   onProfile: () => void;
 }) {
+  // The four actions in one row near the top, so none of them sits under the SOS
+  // button in the corner while the sheet is half way up.
   return (
     <>
+      <View style={styles.actions}>
+        {person?.phone ? <Action icon={Phone} label="Call" strong onPress={() => void Linking.openURL(`tel:${tel(person.phone!)}`)} /> : null}
+        {person?.phone ? <Action icon={MessageCircle} label="Message" onPress={() => void Linking.openURL(`sms:${tel(person.phone!)}`)} /> : null}
+        <Action icon={Navigation} label="Directions" onPress={() => void Linking.openURL(directionsUrl(p))} />
+        <Action icon={UserRound} label="Profile" onPress={onProfile} />
+      </View>
       <View style={styles.facts}>
         <Fact label="Battery" value={p.battery != null ? `${p.battery}%${p.charging ? " · charging" : ""}` : "-"} />
         <Fact label="Last heard" value={istTime(p.recorded_at)} />
-      </View>
-      <View style={styles.actions}>
-        {person?.phone ? (
-          <View style={styles.flex}>
-            <Button label="Call" icon={Phone} fullWidth onPress={() => void Linking.openURL(`tel:${tel(person.phone!)}`)} />
-          </View>
-        ) : null}
-        {person?.phone ? (
-          <View style={styles.flex}>
-            <Button label="Message" icon={MessageCircle} variant="outline" fullWidth onPress={() => void Linking.openURL(`sms:${tel(person.phone!)}`)} />
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.actions}>
-        <View style={styles.flex}>
-          <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => void Linking.openURL(directionsUrl(p))} />
-        </View>
-        <View style={styles.flex}>
-          <Button label="Full profile" icon={UserRound} variant="outline" fullWidth onPress={onProfile} />
-        </View>
       </View>
       <Panel tone="sky" icon={Navigation2} title="Route so far" subtitle={route.ready ? `${route.points.length} points · tap a moment to see it on the map` : "Loading the route…"} bare>
         <RouteDetails route={route} moment={moment} onMoment={onMoment} />
       </Panel>
     </>
+  );
+}
+
+function Action({ icon: Icon, label, strong, onPress }: { icon: typeof Phone; label: string; strong?: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.action, strong && styles.actionStrong, pressed && styles.pressed]}>
+      <Icon size={20} color={strong ? "#fff" : color.foreground} strokeWidth={2.2} />
+      <Text variant="caption" weight="semibold" tone="inherit" style={{ color: strong ? "#fff" : color.foreground }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -750,6 +749,8 @@ const styles = StyleSheet.create({
   siteHead: { flexDirection: "row", gap: space[3], alignItems: "flex-start" },
   pillRow: { flexDirection: "row", alignItems: "center", gap: space[2], marginTop: 2 },
   actions: { flexDirection: "row", gap: space[2] },
+  action: { flex: 1, minHeight: 64, alignItems: "center", justifyContent: "center", gap: 4, borderRadius: radius.lg, borderWidth: 1, borderColor: color.border, backgroundColor: color.card },
+  actionStrong: { backgroundColor: color.primary, borderColor: color.primary },
   siteDot: { width: 10, height: 10, borderRadius: 5 },
   sosIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.sos, alignItems: "center", justifyContent: "center" },
   close: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.muted, alignItems: "center", justifyContent: "center" },

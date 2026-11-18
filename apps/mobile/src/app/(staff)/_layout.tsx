@@ -64,11 +64,12 @@ export default function StaffLayout() {
             backgroundColor: color.card,
             borderTopColor: color.lineSoft,
             borderTopWidth: StyleSheet.hairlineWidth,
-            height: 64 + insets.bottom,
-            paddingBottom: insets.bottom + 8,
+            height: 72 + insets.bottom,
+            paddingBottom: insets.bottom + 10,
             paddingTop: 6,
           },
-          tabBarLabelStyle: { fontFamily: font.medium, fontSize: 12 },
+          // Room for the icon and a whole label, at any system font size (it was cut at the bottom).
+          tabBarLabelStyle: { fontFamily: font.medium, fontSize: 12, lineHeight: 16 },
           sceneStyle: { backgroundColor: color.appBg },
         }}
       >

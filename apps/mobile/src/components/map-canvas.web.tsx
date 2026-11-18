@@ -1,4 +1,5 @@
 /// <reference types="google.maps" />
+import { runsByFence } from "@nbss/shared/trail";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
@@ -35,7 +36,7 @@ function dot(color: string, size: number) {
   return { path: 0 as google.maps.SymbolPath, scale: size, fillColor: color, fillOpacity: 1, strokeColor: "#fff", strokeWeight: 3 };
 }
 
-export function MapCanvas({ fences = [], people = [], me = null, route = null, trail = null, frameKey = "", padding, onPersonPress, onFencePress }: MapCanvasProps) {
+export function MapCanvas({ fences = [], people = [], me = null, route = null, trail = null, path = null, frameKey = "", padding, onPersonPress, onFencePress }: MapCanvasProps) {
   const host = useRef<HTMLDivElement | null>(null);
   const [ctx, setCtx] = useState<{ g: G; map: google.maps.Map } | null>(null);
   const framed = useRef<string | null>(null);
@@ -64,6 +65,17 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
       drawn.push(poly);
     }
     if (trail && trail.length > 1) drawn.push(new g.Polyline({ map, path: trail, strokeColor: MAP_COLOR.me, strokeOpacity: 0.75, strokeWeight: 4 }));
+    // A shift's route, as on the phone: blue inside the fence, orange outside, the part
+    // after a picked moment faint.
+    if (path && path.points.length > 1) {
+      const cut = path.upTo == null ? path.points.length - 1 : Math.max(0, Math.min(path.upTo, path.points.length - 1));
+      for (const r of runsByFence(path.points.slice(0, cut + 1)))
+        drawn.push(new g.Polyline({ map, path: r.path, strokeColor: r.inside ? MAP_COLOR.me : MAP_COLOR.outside, strokeWeight: 4 }));
+      if (cut < path.points.length - 1)
+        for (const r of runsByFence(path.points.slice(cut)))
+          drawn.push(new g.Polyline({ map, path: r.path, strokeColor: r.inside ? MAP_COLOR.me : MAP_COLOR.outside, strokeOpacity: 0.45, strokeWeight: 3 }));
+      for (const p of path.points) bounds.extend(p);
+    }
     if (route) drawn.push(new g.Polyline({ map, path: route, strokeOpacity: 0, icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: MAP_COLOR.route, scale: 3 }, offset: "0", repeat: "12px" }] }));
     for (const p of people) {
       if (p.frame !== false) bounds.extend(p);
@@ -102,7 +114,7 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
       });
     }
     return () => drawn.forEach((d) => d.setMap(null));
-  }, [ctx, fences, people, me, route, trail, frameKey, padding, onPersonPress, onFencePress]);
+  }, [ctx, fences, people, me, route, trail, path, frameKey, padding, onPersonPress, onFencePress]);
 
   return (
     <View style={styles.fill}>
