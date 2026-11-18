@@ -1,12 +1,22 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useSyncExternalStore } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, Keyframe } from "react-native-reanimated";
 
 import { color, radius, shadow, space } from "@/theme/tokens";
 
 import { Button } from "./button";
 import { Text } from "./text";
+
+/**
+ * The card arrives as a system alert does: a quick fade with the slightest lift, no
+ * spring. Grown from nothing on a spring (as it was), a "Delete this?" took long
+ * enough to read as a show.
+ */
+const CARD_IN = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.96 }] },
+  100: { opacity: 1, transform: [{ scale: 1 }], easing: Easing.out(Easing.cubic) },
+}).duration(160);
 
 /**
  * The app's own popup, in place of the phone's native alert, so a message looks like
@@ -65,7 +75,7 @@ export function DialogHost() {
       <Animated.View entering={FadeIn.duration(140)} exiting={FadeOut.duration(120)} style={styles.scrimWrap}>
         {/* A tap outside counts as Cancel, and does nothing where there is no Cancel to press. */}
         <Pressable style={StyleSheet.absoluteFill} onPress={cancel ? () => close(d, cancel) : undefined} accessibilityLabel={cancel?.text} />
-        <Animated.View key={d.id} entering={ZoomIn.springify().damping(18).stiffness(260)} style={styles.card} accessibilityRole="alert">
+        <Animated.View key={d.id} entering={CARD_IN} exiting={FadeOut.duration(100)} style={styles.card} accessibilityRole="alert">
           <Text variant="title" weight="semibold">
             {d.title}
           </Text>

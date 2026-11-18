@@ -20,12 +20,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * flashing an empty state at somebody whose data is a few hundred milliseconds away.
  *
  * A NEW FETCHER LOADS AGAIN. Screens pass a `useCallback` that closes over what they
- * show (the day, the period, the person), so a new fetcher means a new question: it is
- * asked at once, the old answer is dropped (data goes back to `undefined`, so the screen
- * shows it is loading rather than yesterday's list under "Tomorrow"), and an answer to an
- * older question that arrives late is ignored. Until this, only the first fetcher was
- * ever asked: switching Yesterday / Today / Tomorrow changed the title and nothing else.
- * The fetcher must therefore be memoised (`useCallback`), as every caller's is.
+ * show (the day, the period, the person), so a new fetcher means a new question, asked
+ * at once. The current answer stays on screen until the new one arrives and replaces
+ * it in place, so switching Yesterday / Today / Tomorrow updates the list rather than
+ * emptying it and filling it again; an answer to an older question that arrives late
+ * is ignored. (Until this, only the first fetcher was ever asked: the day switch changed
+ * the title and nothing else.) The fetcher must be memoised, as every caller's is.
  */
 export function useLoader<T>(fetcher: () => Promise<T>): {
   data: T | undefined;
@@ -37,8 +37,7 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
   /** Loads again with the pull-to-refresh spinner showing. */
   refresh: () => Promise<void>;
 } {
-  // The answer, with the fetcher that gave it: an answer to an older question is not
-  // this screen's data any more.
+  // The newest answer, with the fetcher that gave it.
   const [answer, setAnswer] = useState<{ from: () => Promise<T>; value: T } | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,5 +96,5 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
   const reload = useCallback(() => run(false), [run]);
   const refresh = useCallback(() => run(true), [run]);
 
-  return { data: answer && answer.from === fetcher ? answer.value : undefined, refreshing, error, reload, refresh };
+  return { data: answer?.value, refreshing, error, reload, refresh };
 }
