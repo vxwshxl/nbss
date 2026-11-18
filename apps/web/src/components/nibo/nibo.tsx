@@ -34,6 +34,8 @@ type NiboProps = {
    * is right for anything rendered only in the browser.
    */
   uid?: string;
+  /** Framed on the cap and head alone, centred: for a small round button. */
+  head?: boolean;
 };
 
 export function Nibo(props: NiboProps) {
@@ -52,6 +54,7 @@ function NiboDrawing({
   still = false,
   title,
   uid: id,
+  head = false,
 }: NiboProps & { uid: string }) {
   const shell = `nibo-shell-${id}`;
   const visor = `nibo-visor-${id}`;
@@ -62,7 +65,9 @@ function NiboDrawing({
 
   return (
     <svg
-      viewBox="-60 -86 120 160"
+      // The whole robot is 120 × 160; the head view is a square on the cap and face
+      // (y −70 to +10), so a round button shows his face in the middle.
+      viewBox={head ? "-52 -82 104 104" : "-60 -86 120 160"}
       className={cn("nibo overflow-visible", still && "nibo-still", className)}
       data-mood={mood}
       role={title ? "img" : undefined}

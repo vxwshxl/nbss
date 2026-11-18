@@ -241,7 +241,7 @@ export function AssistantButton({ className }: { className?: string }) {
         className,
       )}
     >
-      <Nibo still uid="topbar" className="mt-2.5 size-10" />
+      <Nibo still head uid="topbar" className="size-8" />
     </button>
   );
 }
