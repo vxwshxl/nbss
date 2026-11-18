@@ -53,7 +53,7 @@ Everything the Play Console asks for, in the order it asks. Graphics are rebuilt
 
 Upload in number order; 01–08 are the core set, 09 is optional. The raw screens are in
 `raw/` (phone 1080 × 2400, tablet 1600 × 2560): change a headline in
-`scripts/frame-store-screenshots.mjs` and run `pnpm store:screenshots` to rebuild.
+`scripts/frame-store-screenshots.mjs` and run `pnpm store:screenshots` to rebuild (renders with Google Chrome; type is Geist with a Georgia italic accent).
 They were taken on 18 Nov 2026 from the app's web build, signed in as TEST accounts
 with demo guards, a demo client and two made-up sites, all deleted afterwards; no
 real person, phone number or site appears.
