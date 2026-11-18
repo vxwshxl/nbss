@@ -12,7 +12,7 @@ import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
-import { MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
+import { liveHeading, guardState, STATE_COLOR, MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet, type SheetSnap } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
@@ -92,17 +92,18 @@ export default function LiveRoute() {
   // A summary card tapped: the people it counts, listed above the sites.
   const [group, setGroup] = useState<Group | null>(null);
   // What the map frames: everything, the picked site alone, the guard, or where I am.
-  const [focusAsked, setFocus] = useState<"all" | "site" | "guard" | "me">("all");
+  const [focusAsked, setFocus] = useState<"all" | "site" | "guard" | "group" | "me">("all");
   const pick = (id: string | null) => {
     setGuard(null);
     setMoment(null);
     setPicked(id);
+    setGroup(null);
     setFocus(id ? "site" : "all");
   };
   const closeGuard = () => {
     setGuard(null);
     setMoment(null);
-    setFocus(picked ? "site" : "all");
+    setFocus(group ? "group" : picked ? "site" : "all");
   };
   const live = useLivePosition();
   const me = live.fix ? { lat: live.fix.lat, lng: live.fix.lng, accuracyM: live.fix.accuracyM, heading: live.heading } : null;
@@ -162,7 +163,7 @@ export default function LiveRoute() {
   // Only this side of Test / Live: the guards the (mode-filtered) profiles query returned.
   const list = useMemo(() => (board ? Object.values(positions).filter((p) => board.names.has(p.guard_id)) : []), [positions, board]);
   const site = board?.sites.find((s) => s.id === picked) ?? null;
-  const focus = focusAsked === "guard" && guard && !positions[guard] ? (picked ? "site" : "all") : focusAsked;
+  const focus = focusAsked === "guard" && guard && !positions[guard] ? (group ? "group" : picked ? "site" : "all") : focusAsked;
   // Gone off duty while looked at: the sheet and the map go back to where they were picked from.
   const gp = guard ? (positions[guard] ?? null) : null;
   const route = useRoute(gp?.attendance_id ?? null, true);
@@ -184,9 +185,29 @@ export default function LiveRoute() {
       })),
     [board, picked, sosSites, focus, guard, gp?.site_id],
   );
+  // Each guard's state as the website's Live tracking reads it: SOS, inside, outside,
+  // signal late or no signal. Colours, counts and lists all come from this.
+  const sosBy = useMemo(() => new Set(alerts.map((a) => a.raised_by)), [alerts]);
+  const stateOf = useCallback((p: LivePosition) => guardState(p, sosBy.has(p.guard_id), now), [sosBy, now]);
+
+  // The four counts do not overlap, as on the website: a quiet phone counts as
+  // "no signal" whether or not its last fix was inside.
+  const bucket = useCallback((p: LivePosition): Group => {
+    const st = stateOf(p);
+    return st === "stale" || st === "offline" ? "quiet" : st;
+  }, [stateOf]);
+  const inGroup = (p: LivePosition, g: Group) => bucket(p) === g;
+  const counted = { inside: 0, outside: 0, quiet: 0, sos: 0 };
+  for (const p of list) counted[bucket(p)]++;
+
+  // A card picked (Inside, Outside, No signal, SOS): the map shows only those guards,
+  // framed, and keeps up as they move between groups. The guard picked always shows.
   const dots = useMemo<MapPerson[]>(
     () =>
-      list.map((p) => {
+      list
+        .filter((p) => !group || bucket(p) === group || p.guard_id === guard)
+        .map((p) => {
+        const state = stateOf(p);
         const full = board?.names.get(p.guard_id)?.full_name;
         const first = full?.split(" ")[0];
         const mine = p.guard_id === guard;
@@ -200,21 +221,17 @@ export default function LiveRoute() {
           initials: initialsOf(full),
           // As the website: the battery beside the name, or the moment's time when one is picked.
           sub: mine && momentEvent ? istTime(new Date(momentEvent.at).toISOString()) : p.battery != null ? `${p.battery}%` : undefined,
-          heading: mine && momentAt ? null : p.heading,
-          tone: p.mode === "emergency" ? color.destructive : (mine && momentAt ? momentAt.inside !== false : p.inside_fence) ? MAP_COLOR.inside : MAP_COLOR.outside,
+          // No pointer for a phone that has gone quiet: its heading is old news.
+          heading: mine && momentAt ? null : liveHeading(state, p.heading),
+          // Grey when it has gone quiet, as on the website; a picked moment shows where they were then.
+          tone: mine && momentAt ? (momentAt.inside !== false ? MAP_COLOR.inside : MAP_COLOR.outside) : STATE_COLOR[state],
           big: mine,
-          frame: focus === "all" || (focus === "guard" && mine),
+          frame: focus === "all" || focus === "group" || (focus === "guard" && mine),
         };
       }),
-    [list, board, focus, guard, momentAt, momentEvent],
+    [list, board, focus, guard, momentAt, momentEvent, stateOf, group, bucket],
   );
 
-  const silent = (p: LivePosition) => freshness(new Date(p.recorded_at).getTime(), now) !== "live";
-  const sosBy = new Set(alerts.map((a) => a.raised_by));
-  const inGroup = (p: LivePosition, g: Group) =>
-    g === "inside" ? p.inside_fence : g === "outside" ? !p.inside_fence : g === "quiet" ? silent(p) : p.mode === "emergency" || sosBy.has(p.guard_id);
-  const quiet = list.filter(silent).length;
-  const inside = list.filter((p) => p.inside_fence).length;
   // The longest silent and the farthest out first: the ones to ring.
   const grouped = group
     ? list
@@ -229,7 +246,11 @@ export default function LiveRoute() {
     : [];
   const siteNames = useMemo(() => new Map((board?.sites ?? []).map((s) => [s.id, s.name])), [board]);
   const toggleGroup = (g: Group) => {
-    setGroup((cur) => (cur === g ? null : g));
+    const next = group === g ? null : g;
+    setGroup(next);
+    setGuard(null);
+    setMoment(null);
+    setFocus(next ? "group" : "all");
     setSnapTo({ to: "half", key: Date.now() });
   };
   const openPerson = (id: string) => router.push({ pathname: "/person/[id]", params: { id } });
@@ -252,7 +273,7 @@ export default function LiveRoute() {
           // My dot shows always; it is framed only when "my location" is asked for.
           me={me && focus === "me" ? me : me ? { ...me, frame: false } : null}
           // The guard's route arrives a moment after the tap; framed again once it has.
-          frameKey={board ? `sites|${frame}|${focus}|${picked ?? ""}|${guard ?? ""}|${guard && route.ready ? "route" : ""}` : ""}
+          frameKey={board ? `sites|${frame}|${focus}|${picked ?? ""}|${guard ?? ""}|${group ?? ""}|${guard && route.ready ? "route" : ""}` : ""}
           padding={{ top: 24, right: 24, bottom: sheetH + 16, left: 24 }}
           onPersonPress={pickGuard}
           onFencePress={pick}
@@ -305,10 +326,10 @@ export default function LiveRoute() {
                 {list.length} on duty · {board?.sites.length ?? 0} {board?.sites.length === 1 ? "site" : "sites"}
               </Text>
               <View style={styles.counts}>
-                <Count value={inside} label="inside" tone="#059669" active={group === "inside"} onPress={() => toggleGroup("inside")} />
-                <Count value={list.length - inside} label="outside" tone="#d97706" active={group === "outside"} onPress={() => toggleGroup("outside")} />
-                <Count value={quiet} label="no signal" tone="#64748b" active={group === "quiet"} onPress={() => toggleGroup("quiet")} />
-                <Count value={alerts.length} label="SOS" tone={color.sos} active={group === "sos"} onPress={() => toggleGroup("sos")} />
+                <Count value={counted.inside} label="inside" tone="#059669" active={group === "inside"} onPress={() => toggleGroup("inside")} />
+                <Count value={counted.outside} label="outside" tone="#d97706" active={group === "outside"} onPress={() => toggleGroup("outside")} />
+                <Count value={counted.quiet} label="no signal" tone="#64748b" active={group === "quiet"} onPress={() => toggleGroup("quiet")} />
+                <Count value={Math.max(counted.sos, alerts.length)} label="SOS" tone={color.sos} active={group === "sos"} onPress={() => toggleGroup("sos")} />
               </View>
             </View>
           )
@@ -346,7 +367,7 @@ export default function LiveRoute() {
                 siteNames={siteNames}
                 now={now}
                 onPerson={pickGuard}
-                onClose={() => setGroup(null)}
+                onClose={() => toggleGroup(group)}
               />
             )}
 
@@ -455,6 +476,11 @@ function PeoplePanel({
                         {heard(p.recorded_at, now)}
                       </Text>
                     </View>
+                    {person?.employee_code ? (
+                      <Text variant="caption" weight="medium" tone="muted" mono>
+                        {person.employee_code}
+                      </Text>
+                    ) : null}
                     <Text variant="caption" tone="muted" numberOfLines={2}>
                       {[
                         siteNames.get(p.site_id ?? "") ?? "A site",
@@ -484,11 +510,16 @@ function GuardHead({ p, person, site, now, onClose }: { p: LivePosition; person?
       <Avatar name={person?.full_name ?? "Guard"} uri={person?.avatar_url} size={44} />
       <View style={styles.flex}>
         <Text variant="label" weight="semibold" tone="primary" numberOfLines={1}>
-          {[site, person?.employee_code].filter(Boolean).join(" · ") || "On duty"}
+          {site || "On duty"}
         </Text>
         <Text variant="title" weight="semibold" numberOfLines={1}>
           {person?.full_name ?? "Guard"}
         </Text>
+        {person?.employee_code ? (
+          <Text variant="label" weight="medium" tone="muted" mono>
+            {person.employee_code}
+          </Text>
+        ) : null}
         <View style={styles.pillRow}>
           <StatusPill tone={p.mode === "emergency" ? "danger" : age} label={p.mode === "emergency" ? "SOS" : age === "live" ? "Live" : age === "stale" ? "No signal" : "Lost"} />
           <Text variant="caption" tone="muted" numberOfLines={1}>
@@ -662,6 +693,11 @@ function GuardRow({ p, person, site, now, first, onPress }: { p: LivePosition; p
             <Text weight="semibold" variant="label" numberOfLines={1}>
               {person?.full_name ?? "Guard"}
             </Text>
+            {person?.employee_code ? (
+              <Text variant="caption" weight="medium" tone="muted" mono>
+                {person.employee_code}
+              </Text>
+            ) : null}
             <Text variant="caption" tone="muted" numberOfLines={2}>
               {[site, p.inside_fence ? "inside" : `${Math.round(p.distance_m ?? 0)} m out`, p.battery !== null ? `${p.battery}%` : null].filter(Boolean).join(" · ")}
             </Text>

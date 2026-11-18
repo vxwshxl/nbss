@@ -1,3 +1,4 @@
+import { OFFLINE_AFTER_MS, STALE_AFTER_MS } from "@nbss/shared/location";
 import type { Ring } from "@nbss/shared/geo";
 
 /** What the maps draw — Google Maps on the phone and in the browser preview. */
@@ -88,4 +89,37 @@ export function initialsOf(name?: string | null): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
+/**
+ * A guard on duty as the website's Live tracking reads them (apps/web/src/lib/
+ * tracking.ts), so the phone and the console agree: SOS, inside or outside their
+ * fence while their phone reports, "signal late" after three missed heartbeats and
+ * "no signal" after eight. Heard is when the server last had a fix from them.
+ */
+export type GuardState = "sos" | "inside" | "outside" | "stale" | "offline";
+
+export const STATE_COLOR: Record<GuardState, string> = {
+  sos: "#dc2626",
+  inside: "#009164",
+  outside: "#d97706",
+  stale: "#a16207",
+  offline: "#94a3b8",
+};
+
+export function guardState(
+  p: { recorded_at: string; received_at?: string | null; inside_fence: boolean | null; mode?: string | null },
+  sos: boolean,
+  now: number,
+): GuardState {
+  if (sos || p.mode === "emergency") return "sos";
+  const age = now - new Date(p.received_at ?? p.recorded_at).getTime();
+  if (age > OFFLINE_AFTER_MS) return "offline";
+  if (age > STALE_AFTER_MS) return "stale";
+  return p.inside_fence === false ? "outside" : "inside";
+}
+
+/** A direction is drawn only while it is current: not for a phone that has gone quiet. */
+export function liveHeading(state: GuardState, heading: number | null | undefined): number | null {
+  return (state === "inside" || state === "outside" || state === "sos") && heading != null ? heading : null;
 }

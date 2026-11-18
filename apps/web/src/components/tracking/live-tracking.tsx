@@ -544,6 +544,7 @@ export function LiveTracking({
                         <span className="truncate text-sm font-semibold">{g.name}</span>
                         <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold", STATE_CHIP[state])}>{STATE_LABEL[state]}</span>
                       </span>
+                      {g.code && <span className="block font-mono text-xs font-medium text-muted-foreground">{g.code}</span>}
                       <span className="flex items-center gap-x-2.5 truncate text-xs text-muted-foreground">
                         <span className="truncate">{g.siteName}</span>
                         <BatteryChip level={p?.battery ?? null} charging={p?.charging ?? null} />

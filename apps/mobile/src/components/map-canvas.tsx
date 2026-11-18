@@ -111,7 +111,7 @@ export function MapCanvas({
   const map = useRef<MapView>(null);
   const ready = useRef(false);
   // Zoomed out past a few streets: names and site labels would pile on each other, so
-  // (as on the website) the chips go and a site is a dot until the map comes closer.
+  // (as on the website) the chips and site labels go until the map comes closer.
   const [far, setFar] = useState(false);
   const framed = useRef<string | null>(null);
 
@@ -184,17 +184,8 @@ export function MapCanvas({
         ))}
         {fences.map((f) => {
           const c = centre(f.ring);
-          if (far)
-            return (
-              <SettledMarker
-                key={`dot-${f.id}-${f.tone}`}
-                coordinate={c}
-                anchor={{ x: 0.5, y: 0.5 }}
-                onPress={onFencePress ? () => onFencePress(f.id) : undefined}
-              >
-                <View style={[styles.siteDot, { backgroundColor: f.tone }]} />
-              </SettledMarker>
-            );
+          // Zoomed out, a site is its boundary alone: no label, no dot.
+          if (far) return null;
           return (
             <SettledMarker
               key={`label-${f.id}-${f.tone}`}
@@ -447,7 +438,6 @@ const styles = StyleSheet.create({
   whoTextBig: { color: "#fff", fontSize: 12, lineHeight: 15 },
   whoSub: { fontFamily: font.medium, fontSize: 11, lineHeight: 14, color: "#555" },
   whoSubBig: { fontSize: 12, lineHeight: 15, color: "#cbd5e1" },
-  siteDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: "#fff" },
   meBox: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   meHalo: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: alpha(MAP_COLOR.me, 0.2) },
   meDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: MAP_COLOR.me, borderWidth: 3, borderColor: "#fff" },

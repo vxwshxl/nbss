@@ -8,7 +8,7 @@ import { distanceMetres, formatDistance, toRing } from "@nbss/shared/geo";
 
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
-import { MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
+import { liveHeading, guardState, STATE_COLOR, MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
@@ -76,8 +76,14 @@ export function SosMap({ failed }: { failed?: string }) {
     [areas],
   );
   const people: MapPerson[] = useMemo(
-    () => friends.flatMap((f) => (f.lat != null && f.lng != null ? [{ id: f.id, lat: f.lat, lng: f.lng, label: first(f.name), initials: initialsOf(f.name), sub: f.battery != null ? `${f.battery}%` : undefined, heading: f.heading, tone: MAP_COLOR.inside }] : [])),
-    [friends],
+    () => friends.flatMap((f) => (f.lat != null && f.lng != null ? [
+            (() => {
+              // As the website: grey and no pointer once their phone has gone quiet.
+              const state = f.heard_at ? guardState({ recorded_at: f.heard_at, inside_fence: f.inside }, false, now) : "offline";
+              return { id: f.id, lat: f.lat, lng: f.lng, label: first(f.name), initials: initialsOf(f.name), sub: f.battery != null ? `${f.battery}%` : undefined, heading: liveHeading(state, f.heading), tone: STATE_COLOR[state] };
+            })(),
+          ] : [])),
+    [friends, now],
   );
 
   // An SOS is open: show it, right here.
