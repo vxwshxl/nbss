@@ -87,9 +87,6 @@ export function MapSheet({
   // translation seen, so each frame moves it by just that frame's movement.
   const raw = useSharedValue(0);
   const lastTy = useSharedValue(0);
-  // Whether the touch began on the list (rather than the handle or header).
-  const onContent = useSharedValue(false);
-  const contentTop = useSharedValue(0);
 
   // The list's scroll, and the offset it is held at while the sheet is below full.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
@@ -145,77 +142,90 @@ export function MapSheet({
     };
   });
 
-  const { pan, native } = useMemo(() => {
+  /**
+   * Two drags share one routine. The header's (the handle, the title, the cards) always
+   * moves the sheet, wherever the list is scrolled to, as Google Maps' sheet does. The
+   * list's hands over: below full height it moves the sheet; at full height it scrolls
+   * the list, and only a pull down with the list already at its top brings the sheet
+   * down. Separate gestures rather than one that guesses from where the touch landed:
+   * that guess needed the list's measured top, and when it was missing every touch
+   * counted as the list's and the header could not move a scrolled sheet.
+   */
+  const { headerPan, contentPan, native } = useMemo(() => {
     // The ref is read when a drag settles, never while rendering.
     const settleTo = (to: SheetSnap) => settleRef.current(to);
     const native = Gesture.Native();
-    const pan = Gesture.Pan()
-      .simultaneousWithExternalGesture(native)
-      .activeOffsetY([-6, 6])
-      // A sideways swipe (a row of chips) is left to the content.
-      .failOffsetX([-24, 24])
-      .onBegin((e) => {
-        onContent.set(e.y >= contentTop.get());
-        // A fresh touch on a sheet at full height may scroll the list again. Until
-        // then it stays held, so a flick that carried the sheet up doesn't also
-        // fling the list.
-        locked.set(top.get() > pts.get().full + 0.5);
-      })
-      .onStart((e) => {
-        cancelAnimation(top);
-        raw.set(top.get());
-        lastTy.set(e.translationY);
-      })
-      .onUpdate((e) => {
-        const p = pts.get();
-        const dy = e.translationY - lastTy.get();
-        lastTy.set(e.translationY);
+    const build = (fromContent: boolean) =>
+      Gesture.Pan()
+        .activeOffsetY([-6, 6])
+        // A sideways swipe (a row of chips) is left to the content.
+        .failOffsetX([-24, 24])
+        .onBegin(() => {
+          // A fresh touch on a sheet at full height may scroll the list again. Until
+          // then it stays held, so a flick that carried the sheet up doesn't also
+          // fling the list.
+          locked.set(top.get() > pts.get().full + 0.5);
+        })
+        .onStart((e) => {
+          cancelAnimation(top);
+          raw.set(top.get());
+          lastTy.set(e.translationY);
+        })
+        .onUpdate((e) => {
+          const p = pts.get();
+          const dy = e.translationY - lastTy.get();
+          lastTy.set(e.translationY);
 
-        // At full height a swipe on the list belongs to the list: up always, and
-        // down until it is back at its top.
-        if (onContent.get() && top.get() <= p.full + 0.5 && (dy < 0 || scrollY.get() > 0.5)) {
-          top.set(p.full);
-          raw.set(p.full);
-          locked.set(false);
-          return;
-        }
+          // At full height a swipe on the list belongs to the list: up always, and
+          // down until it is back at its top.
+          if (fromContent && top.get() <= p.full + 0.5 && (dy < 0 || scrollY.get() > 0.5)) {
+            top.set(p.full);
+            raw.set(p.full);
+            locked.set(false);
+            return;
+          }
 
-        let r = raw.get() + dy;
-        // From the list the sheet stops dead at full, and the rest of the swipe
-        // scrolls; from the handle it gives a little, as a real sheet does.
-        if (onContent.get() && r < p.full) r = p.full;
-        raw.set(r);
-        const next = r < p.full ? p.full - (p.full - r) * 0.2 : r > p.peek ? p.peek + (r - p.peek) * 0.2 : r;
-        top.set(next);
-        locked.set(next > p.full + 0.5);
-      })
-      // Runs when a drag ends, on the UI thread; the lint reads the builder as render code.
-      // eslint-disable-next-line react-hooks/refs
-      .onEnd((e) => {
-        const p = pts.get();
-        const now = top.get();
-        let best: SheetSnap = "half";
-        let velocity = e.velocityY;
-        if (onContent.get() && now <= p.full + 0.5 && (scrollY.get() > 0.5 || e.velocityY < 0)) {
-          // The list took this swipe; the sheet stays where it is.
-          best = "full";
-          velocity = 0;
-        } else {
-          const projected = now + e.velocityY * 0.18;
-          let gap = Infinity;
-          for (const s of ORDER) {
-            const d = Math.abs(p[s] - projected);
-            if (d < gap) {
-              gap = d;
-              best = s;
+          let r = raw.get() + dy;
+          // From the list the sheet stops dead at full, and the rest of the swipe
+          // scrolls; from the header it gives a little, as a real sheet does.
+          if (fromContent && r < p.full) r = p.full;
+          raw.set(r);
+          const next = r < p.full ? p.full - (p.full - r) * 0.2 : r > p.peek ? p.peek + (r - p.peek) * 0.2 : r;
+          top.set(next);
+          locked.set(next > p.full + 0.5);
+        })
+        // Runs when a drag ends, on the UI thread.
+        .onEnd((e) => {
+          const p = pts.get();
+          const now = top.get();
+          let best: SheetSnap = "half";
+          let velocity = e.velocityY;
+          if (fromContent && now <= p.full + 0.5 && (scrollY.get() > 0.5 || e.velocityY < 0)) {
+            // The list took this swipe; the sheet stays where it is.
+            best = "full";
+            velocity = 0;
+          } else {
+            const projected = now + e.velocityY * 0.18;
+            let gap = Infinity;
+            for (const s of ORDER) {
+              const d = Math.abs(p[s] - projected);
+              if (d < gap) {
+                gap = d;
+                best = s;
+              }
             }
           }
-        }
-        locked.set(!(best === "full" && now <= p.full + 0.5));
-        top.set(withSpring(p[best], { ...SPRING, velocity }));
-        runOnJS(settleTo)(best);
-      });
-    return { pan, native };
+          locked.set(!(best === "full" && now <= p.full + 0.5));
+          top.set(withSpring(p[best], { ...SPRING, velocity }));
+          runOnJS(settleTo)(best);
+        });
+    // settleRef is read inside onEnd, when a drag ends on the UI thread; the lint reads
+    // building the gesture as if it ran then.
+    /* eslint-disable react-hooks/refs */
+    const headerPan = build(false);
+    const contentPan = build(true).simultaneousWithExternalGesture(native);
+    /* eslint-enable react-hooks/refs */
+    return { headerPan, contentPan, native };
     // Everything it reads is a shared value or goes through settleRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -241,10 +251,14 @@ export function MapSheet({
 
   // Pull to refresh only once the sheet is fully up; below that a pull down moves the sheet.
   const refresh = isValidElement(refreshControl)
-    ? cloneElement(refreshControl as ReactElement<{ enabled?: boolean }>, { enabled: snap === "full" })
+    ? cloneElement(refreshControl as ReactElement<{ enabled?: boolean }>, {
+        enabled: snap === "full",
+      })
     : refreshControl;
 
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: top.value }] }));
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: top.value }],
+  }));
   const floatStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: top.value }],
     opacity: interpolate(top.value, [points.full, points.half * 0.8], [0, 1], Extrapolation.CLAMP),
@@ -254,12 +268,7 @@ export function MapSheet({
   }));
 
   return (
-    <View
-      ref={box}
-      style={StyleSheet.absoluteFill}
-      pointerEvents="box-none"
-      onLayout={onLayout}
-    >
+    <View ref={box} style={StyleSheet.absoluteFill} pointerEvents="box-none" onLayout={onLayout}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.shade, shadeStyle]} />
 
       {floating && (
@@ -268,45 +277,57 @@ export function MapSheet({
         </Animated.View>
       )}
 
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.sheet, { height: height || undefined }, sheetStyle]}>
-          <View style={styles.grip}>
-            <View style={styles.handle} />
-          </View>
-          <View
-            onLayout={(e) => {
-              const hh = Math.round(e.nativeEvent.layout.height);
-              if (hh !== headerH) setHeaderH(hh);
-            }}
-            style={styles.header}
-          >
-            {header}
-          </View>
-          <GestureDetector gesture={native}>
-            <SheetScroll
-              ref={scrollRef}
-              onLayout={(e) => contentTop.set(e.nativeEvent.layout.y)}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-              bounces={false}
-              overScrollMode="never"
-              refreshControl={refresh}
-              contentContainerStyle={[styles.body, { paddingBottom: space[6] + (height ? points.full : 0) }]}
-              showsVerticalScrollIndicator={false}
-              style={styles.scroll}
+      <Animated.View style={[styles.sheet, { height: height || undefined }, sheetStyle]}>
+        <GestureDetector gesture={headerPan}>
+          <View>
+            <View style={styles.grip}>
+              <View style={styles.handle} />
+            </View>
+            <View
+              onLayout={(e) => {
+                const hh = Math.round(e.nativeEvent.layout.height);
+                if (hh !== headerH) setHeaderH(hh);
+              }}
+              style={styles.header}
             >
-              {children}
-            </SheetScroll>
-          </GestureDetector>
-        </Animated.View>
-      </GestureDetector>
+              {header}
+            </View>
+          </View>
+        </GestureDetector>
+        <GestureDetector gesture={contentPan}>
+          <View style={styles.scroll}>
+            <GestureDetector gesture={native}>
+              <SheetScroll
+                ref={scrollRef}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                bounces={false}
+                overScrollMode="never"
+                refreshControl={refresh}
+                contentContainerStyle={[styles.body, { paddingBottom: space[6] + (height ? points.full : 0) }]}
+                showsVerticalScrollIndicator={false}
+                style={styles.scroll}
+              >
+                {children}
+              </SheetScroll>
+            </GestureDetector>
+          </View>
+        </GestureDetector>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   shade: { backgroundColor: "#000" },
-  floating: { position: "absolute", left: 0, right: 0, top: -64, height: 56, paddingHorizontal: space[4] },
+  floating: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: -64,
+    height: 56,
+    paddingHorizontal: space[4],
+  },
   sheet: {
     position: "absolute",
     left: 0,
@@ -317,8 +338,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius["3xl"],
     ...shadow.raised,
   },
-  grip: { alignItems: "center", paddingTop: space[2.5], paddingBottom: space[4] },
-  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: color.border },
+  grip: {
+    alignItems: "center",
+    paddingTop: space[2.5],
+    paddingBottom: space[4],
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: color.border,
+  },
   header: { paddingHorizontal: space[5], paddingBottom: space[3] },
   scroll: { flex: 1 },
   body: { paddingHorizontal: space[5], gap: space[4] },
