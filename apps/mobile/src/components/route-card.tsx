@@ -12,6 +12,33 @@ import { Text } from "@/components/text";
 import { supabase } from "@/lib/supabase";
 import { color, radius, space } from "@/theme/tokens";
 
+/** A shift's route: its points (re-read every half minute while it is open), stats and timeline. */
+export function useRoute(attendanceId: string | null, open: boolean) {
+  const [loaded, setLoaded] = useState<{ id: string; points: TrailPoint[] } | null>(null);
+
+  useEffect(() => {
+    if (!attendanceId) return;
+    let cancelled = false;
+    const read = async () => {
+      const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
+      if (!cancelled) setLoaded({ id: attendanceId, points: toPoints((data as { points?: TrailTuple[] } | null)?.points) });
+    };
+    void read();
+    const poll = open ? setInterval(() => void read(), 30_000) : null;
+    return () => {
+      cancelled = true;
+      if (poll) clearInterval(poll);
+    };
+  }, [attendanceId, open]);
+
+  const ready = Boolean(attendanceId) && loaded?.id === attendanceId;
+  const points = useMemo(() => (ready ? loaded!.points : []), [ready, loaded]);
+  const stats = useMemo(() => (points.length > 1 ? trailStats(points) : null), [points]);
+  const events = useMemo(() => routeEvents(points, stats, []), [points, stats]);
+  return { ready, points, stats, events };
+}
+export type RouteData = ReturnType<typeof useRoute>;
+
 /**
  * One shift's route, as the website's Live tracking and Route history show it: the path
  * in the fence's colours, how far and how long outside, the stops and the quiet spells,
@@ -35,43 +62,38 @@ export function RouteCard({
   /** "Today's route", "Route · 27 Oct". */
   title: string;
 }) {
-  const [loaded, setLoaded] = useState<{ id: string; points: TrailPoint[] } | null>(null);
+  const route = useRoute(attendanceId, open);
   const [moment, setMoment] = useState<{ id: string; i: number } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const read = async () => {
-      const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
-      if (!cancelled) setLoaded({ id: attendanceId, points: toPoints((data as { points?: TrailTuple[] } | null)?.points) });
-    };
-    void read();
-    const poll = open ? setInterval(() => void read(), 30_000) : null;
-    return () => {
-      cancelled = true;
-      if (poll) clearInterval(poll);
-    };
-  }, [attendanceId, open]);
-
-  const points = useMemo(() => (loaded?.id === attendanceId ? loaded.points : []), [loaded, attendanceId]);
-  const stats = useMemo(() => (points.length > 1 ? trailStats(points) : null), [points]);
-  const events = useMemo(() => routeEvents(points, stats, []), [points, stats]);
-  const picked = moment?.id === attendanceId ? events[moment.i] : undefined;
-  const at = picked ? points[picked.index] : points.at(-1);
+  const picked = moment?.id === attendanceId ? route.events[moment.i] : undefined;
+  const at = picked ? route.points[picked.index] : route.points.at(-1);
 
   const fences = useMemo(() => (site ? [{ id: site.id, name: site.name, ring: fenceRing(site), tone: MAP_COLOR.inside, quiet: true }] : []), [site]);
-  const path = useMemo(() => ({ points, upTo: picked?.index ?? null }), [points, picked?.index]);
+  const path = useMemo(() => ({ points: route.points, upTo: picked?.index ?? null }), [route.points, picked?.index]);
   const dot = at
     ? [{ id: "guard", lat: at.lat, lng: at.lng, tone: at.inside === false ? MAP_COLOR.outside : MAP_COLOR.me, label: picked ? `${name} ${istTime(new Date(picked.at).toISOString())}` : name, frame: false }]
     : [];
 
   return (
-    <Panel tone="sky" icon={Navigation2} title={title} subtitle={loaded?.id === attendanceId ? `${points.length} points` : "Loading the route…"} bare>
+    <Panel tone="sky" icon={Navigation2} title={title} subtitle={route.ready ? `${route.points.length} points` : "Loading the route…"} bare>
       <View style={styles.map}>
         <MapCanvas fences={fences} people={dot} path={path} frameKey={attendanceId} />
       </View>
+      <RouteDetails route={route} moment={moment?.id === attendanceId ? moment.i : null} onMoment={(i) => setMoment(i == null ? null : { id: attendanceId, i })} />
+    </Panel>
+  );
+}
 
+/**
+ * The route's numbers and timeline without a map of its own, for a screen whose map
+ * already draws the path (the Live map). `moment` is the picked event's index.
+ */
+export function RouteDetails({ route, moment, onMoment }: { route: RouteData; moment: number | null; onMoment: (i: number | null) => void }) {
+  const { points, stats, events, ready } = route;
+  const picked = moment != null ? events[moment] : undefined;
+  return (
+    <>
       {picked && (
-        <Pressable accessibilityRole="button" onPress={() => setMoment(null)} style={styles.moment}>
+        <Pressable accessibilityRole="button" onPress={() => onMoment(null)} style={styles.moment}>
           <History size={14} color="#fff" strokeWidth={2.2} />
           <Text variant="caption" weight="semibold" tone="inverse" style={styles.flex} numberOfLines={1}>
             {istTime(new Date(picked.at).toISOString())} · {picked.text}
@@ -91,7 +113,7 @@ export function RouteCard({
         <Fact label="No signal" value={String(stats?.gaps.length ?? 0)} warn={(stats?.gaps.length ?? 0) > 0} />
       </PanelRow>
 
-      {points.length <= 1 && loaded?.id === attendanceId ? (
+      {points.length <= 1 && ready ? (
         <PanelRow>
           <Text variant="caption" tone="muted">
             No path yet beyond the check-in point.
@@ -105,7 +127,7 @@ export function RouteCard({
             <Pressable
               key={`${e.kind}-${e.at}-${i}`}
               accessibilityRole="button"
-              onPress={() => setMoment(active || e.kind === "now" ? null : { id: attendanceId, i })}
+              onPress={() => onMoment(active || e.kind === "now" ? null : i)}
               style={({ pressed }) => [styles.event, active && styles.eventActive, pressed && styles.pressed]}
             >
               <View style={[styles.icon, { backgroundColor: TONE[e.kind] }]}>
@@ -123,7 +145,7 @@ export function RouteCard({
           );
         })
       )}
-    </Panel>
+    </>
   );
 }
 

@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import { router } from "expo-router";
 import { Building2, ChevronRight, LocateFixed, Phone, ShieldCheck, Siren, UserRoundCheck } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -49,7 +50,7 @@ export function ClientHome() {
     const [sites, live, month, alerts] = await Promise.all([
       supabase.from("sites").select("id, name, address, district, lat, lng, geofence_radius_m, polygon").eq("client_id", me).eq("active", true).order("name"),
       supabase.from("client_attendance").select("id, site_id, guard_name, check_in_at").is("check_out_at", null).order("check_in_at"),
-      supabase.from("client_attendance").select("guard_id, check_in_at, worked_minutes, overtime_minutes").gte("check_in_at", monthStart.toISOString()),
+      fetchAll(supabase.from("client_attendance").select("id, guard_id, check_in_at, worked_minutes, overtime_minutes").gte("check_in_at", monthStart.toISOString())),
       liveAlerts(),
     ]);
     const rows = month.data ?? [];

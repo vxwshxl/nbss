@@ -359,7 +359,7 @@ export function PersonPage({ id }: { id: string }) {
                     <Pressable key={s.id} accessibilityRole="button" onPress={() => setPicked(s.id)}>
                     <PanelRow first={i === 0} style={shown?.id === s.id ? styles.picked : undefined}>
                       <View style={styles.flex}>
-                        <Text variant="label" weight="semibold" numberOfLines={1}>
+                        <Text variant="label" weight="semibold" numberOfLines={2}>
                           {s.site}
                         </Text>
                         <Text variant="caption" tone="muted">

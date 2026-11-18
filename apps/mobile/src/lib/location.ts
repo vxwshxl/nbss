@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppState, Linking } from "react-native";
+import { Alert, AppState, Linking, Platform } from "react-native";
 
 import { policyFor, type TrackingMode } from "@nbss/shared/location";
 
@@ -25,6 +25,27 @@ export type PermissionState =
   | { ok: false; need: "background"; canAsk: boolean }
   | { ok: false; need: "services" };
 
+/**
+ * Google Play's "prominent disclosure" for background location: said in the app, in
+ * these terms (location, collected even when the app is closed, what for), and agreed
+ * to with a tap, before the system's own prompt or settings page. Without it a build
+ * with ACCESS_BACKGROUND_LOCATION is rejected. Resolves true on Continue.
+ */
+export function discloseBackgroundLocation(): Promise<boolean> {
+  if (Platform.OS !== "android") return Promise.resolve(true);
+  return new Promise((resolve) => {
+    Alert.alert(
+      "Location while you are on duty",
+      "NBSS Kokrajhar collects your location while you are checked in for a duty, even when the app is closed or not in use. It is used to confirm you are at your site, to show your supervisors and the control room where you are, and to find you quickly if you raise an SOS.\n\nLocation stops being collected the moment you check out.\n\nOn the next screen, choose “Allow all the time”.",
+      [
+        { text: "Not now", style: "cancel", onPress: () => resolve(false) },
+        { text: "Continue", onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    );
+  });
+}
+
 /** Asks for what is missing, in the order the OS requires it to be asked. */
 export async function requestTracking(): Promise<PermissionState> {
   // Location switched off device-wide beats any permission. Worth distinguishing,
@@ -40,6 +61,9 @@ export async function requestTracking(): Promise<PermissionState> {
   // all it can use anyway.
   if (!CAN_TRACK_IN_BACKGROUND) return { ok: true };
 
+  const already = await Location.getBackgroundPermissionsAsync().catch(() => null);
+  if (already?.granted) return { ok: true };
+  if (!(await discloseBackgroundLocation())) return { ok: false, need: "background", canAsk: true };
   const background = await Location.requestBackgroundPermissionsAsync().catch(() => null);
   if (!background) return { ok: true };
   if (!background.granted) {

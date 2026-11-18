@@ -136,7 +136,7 @@ export function SosRinger({ staff = false }: { staff?: boolean }) {
           <Text variant="label" weight="bold" tone="inherit" style={styles.white} numberOfLines={1}>
             {a.raiser_name} needs help
           </Text>
-          <Text variant="caption" tone="inherit" style={styles.sub} numberOfLines={1}>
+          <Text variant="caption" tone="inherit" style={styles.sub} numberOfLines={2}>
             {a.site_name} · {SOS_KIND_LABEL[a.kind]}
           </Text>
         </View>

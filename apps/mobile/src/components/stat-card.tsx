@@ -80,6 +80,7 @@ export function StatCard({
         <Text
           weight="semibold"
           numberOfLines={1}
+          clip
           // An em-dash at full size reads as a thick black bar rather than as "no value",
           // so a missing figure is rendered at the hint's size instead of the figure's.
           style={

@@ -204,7 +204,7 @@ export function DutyDetail({ id }: { id: string }) {
           <View style={styles.headGap}>
             {d && outcome ? (
               <>
-                <Text variant="title" weight="semibold" numberOfLines={1}>
+                <Text variant="title" weight="semibold" numberOfLines={2}>
                   {d.site.name}
                 </Text>
                 <Text variant="caption" tone="muted" numberOfLines={1}>

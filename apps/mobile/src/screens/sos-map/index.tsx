@@ -194,7 +194,7 @@ export function SosMap({ failed }: { failed?: string }) {
                     <Text variant="label" weight="semibold" numberOfLines={1}>
                       {f.name}
                     </Text>
-                    <Text variant="caption" tone="muted" numberOfLines={1}>
+                    <Text variant="caption" tone="muted" numberOfLines={2}>
                       {f.site_name} · {f.lat == null ? "no signal" : ago(f.heard_at, now)}
                     </Text>
                   </View>
@@ -222,7 +222,7 @@ function FriendCard({ f, distance, now, onClose }: { f: Friend; distance: string
           <Text variant="title" weight="semibold" numberOfLines={1}>
             {f.name}
           </Text>
-          <Text variant="caption" weight="semibold" tone="primary" numberOfLines={1}>
+          <Text variant="caption" weight="semibold" tone="primary" numberOfLines={2}>
             On duty at {f.site_name}
           </Text>
         </View>

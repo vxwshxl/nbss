@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
-import { CalendarCheck, LogOut, Mail, Phone } from "lucide-react-native";
-import { Pressable, StyleSheet, View } from "react-native";
+import { CalendarCheck, LogOut, Mail, Phone, UserX } from "lucide-react-native";
+import { Alert, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { roleLabel } from "@nbss/shared/identity";
 
@@ -65,6 +65,44 @@ export function Account() {
 
       <Button label="Sign out" variant="outline" icon={LogOut} fullWidth loading={loading} onPress={() => void signOut()} />
 
+      {/* Google Play requires an in-app way to ask for the account to be deleted. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() =>
+          Alert.alert(
+            "Delete your account?",
+            "NBSS deletes your account and its personal information within 30 days of confirming it is you. Records the law requires us to keep (attendance, invoices) are kept for that period. Send the request by email, or read what is deleted first.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "What is deleted", onPress: () => void WebBrowser.openBrowserAsync(`${WEB_URL}/delete-account`) },
+              {
+                text: "Email the request",
+                style: "destructive",
+                onPress: () => {
+                  const body = [
+                    "Please delete my NBSS Kokrajhar app account.",
+                    "",
+                    `Name: ${profile?.full_name ?? ""}`,
+                    `Employee code: ${profile?.employee_code ?? ""}`,
+                    `Email: ${profile?.email ?? ""}`,
+                    `Phone: ${profile?.phone ?? ""}`,
+                  ].join("\n");
+                  void Linking.openURL(`mailto:support@nbsskokrajhar.com?subject=${encodeURIComponent("Delete my account")}&body=${encodeURIComponent(body)}`).catch(() =>
+                    WebBrowser.openBrowserAsync(`${WEB_URL}/delete-account`),
+                  );
+                },
+              },
+            ],
+          )
+        }
+        style={({ pressed }) => [styles.delete, pressed && { opacity: 0.6 }]}
+      >
+        <UserX size={16} color="#b91c1c" strokeWidth={2} />
+        <Text variant="label" weight="semibold" tone="danger">
+          Delete my account
+        </Text>
+      </Pressable>
+
       <View style={styles.legal}>
         <LegalLink label="Terms" path="/terms-and-conditions" />
         <Text variant="caption" tone="muted">
@@ -99,6 +137,7 @@ function Fact({ icon: Icon, value }: { icon: typeof Phone; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  delete: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], paddingVertical: space[2] },
   body: { gap: space[4], paddingTop: space[4], paddingBottom: 120 },
   hero: { gap: space[4], padding: space[5], borderRadius: radius["2xl"], overflow: "hidden" },
   heroTop: { flexDirection: "row", alignItems: "center", gap: space[4] },

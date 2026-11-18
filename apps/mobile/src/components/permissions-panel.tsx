@@ -4,6 +4,7 @@ import { BatteryCharging, Bell, ChevronRight, LocateFixed, RefreshCw, ShieldChec
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
 
+import { discloseBackgroundLocation } from "@/lib/location";
 import { Notifications } from "@/lib/push";
 import { registerHandset } from "@/lib/device";
 import { autostartHint, autostartReadable, autostartState, brandNeedsAutostart, confirmAutostart, openAutostartSettings, openBatterySettings, unconfirmAutostart } from "@/lib/readiness";
@@ -56,6 +57,7 @@ async function read(location: boolean): Promise<Perm[]> {
       return;
     }
     if (!CAN_TRACK_IN_BACKGROUND) return;
+    if (!(await discloseBackgroundLocation())) return;
     const b = await Location.requestBackgroundPermissionsAsync().catch(() => null);
     if (b && !b.granted) await settings();
   };
@@ -79,7 +81,8 @@ async function read(location: boolean): Promise<Perm[]> {
       detail: "Set to “Allow all the time” so tracking continues when the app is closed.",
       state: "partial",
       label: "While open",
-      fix: bg && !bg.canAskAgain ? settings : askLocation,
+      // Settings is where Android 11+ grants "all the time"; the disclosure comes first either way.
+      fix: bg && !bg.canAskAgain ? async () => void ((await discloseBackgroundLocation()) && (await settings())) : askLocation,
     });
   } else {
     out.push({

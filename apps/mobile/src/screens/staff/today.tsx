@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import { router } from "expo-router";
 import { CalendarClock, CircleCheckBig, Clock3, Phone, UserRoundX } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
@@ -51,21 +52,25 @@ async function load(day: Day): Promise<Duty[]> {
   const start = istMidnight(Number(day));
   const end = start + 86_400_000;
   const [shifts, punches] = await Promise.all([
-    supabase
-      .from("shifts")
-      .select("id, guard_id, site_id, starts_at, ends_at, status, shift_type, profiles!shifts_guard_id_fkey(full_name, phone, avatar_url), sites(name, grace_minutes)")
-      .neq("status", "cancelled")
-      .lt("starts_at", new Date(end).toISOString())
-      .gt("ends_at", new Date(start).toISOString())
-      .order("starts_at"),
+    fetchAll(
+      supabase
+        .from("shifts")
+        .select("id, guard_id, site_id, starts_at, ends_at, status, shift_type, profiles!shifts_guard_id_fkey(full_name, phone, avatar_url), sites(name, grace_minutes)")
+        .neq("status", "cancelled")
+        .lt("starts_at", new Date(end).toISOString())
+        .gt("ends_at", new Date(start).toISOString())
+        .order("starts_at"),
+    ),
     // Every session that touches the day, open ones included: a duty worked in two
     // sessions shows its first in and last out.
-    supabase
-      .from("attendance")
-      .select("id, guard_id, shift_id, site_id, check_in_at, check_out_at, profiles!attendance_guard_id_fkey(full_name, phone, avatar_url), sites(name)")
-      .lt("check_in_at", new Date(end).toISOString())
-      .or(`check_out_at.is.null,check_out_at.gt.${new Date(start).toISOString()}`)
-      .order("check_in_at"),
+    fetchAll(
+      supabase
+        .from("attendance")
+        .select("id, guard_id, shift_id, site_id, check_in_at, check_out_at, profiles!attendance_guard_id_fkey(full_name, phone, avatar_url), sites(name)")
+        .lt("check_in_at", new Date(end).toISOString())
+        .or(`check_out_at.is.null,check_out_at.gt.${new Date(start).toISOString()}`)
+        .order("check_in_at"),
+    ),
   ]);
 
   const byShift = new Map<string, { in: string; out: string | null }>();
@@ -264,7 +269,7 @@ function Group({ show = true, title, hint, tone, rows, note, onPress }: { show?:
               <Text variant="label" weight="semibold" numberOfLines={1}>
                 {d.guard}
               </Text>
-              <Text variant="caption" tone="muted" numberOfLines={1}>
+              <Text variant="caption" tone="muted" numberOfLines={2}>
                 {[d.site, shiftTypeLabel(d.shift_type)].filter(Boolean).join(" · ")}
               </Text>
               <Text variant="caption" weight="medium" tone={tone === "rose" ? "danger" : "muted"} numberOfLines={1}>

@@ -224,7 +224,7 @@ export function StaffSos() {
                       <Text variant="label" weight="semibold" numberOfLines={1}>
                         {a.raiser} · {SOS_KIND_LABEL[a.kind]}
                       </Text>
-                      <Text variant="caption" tone="muted" numberOfLines={1}>
+                      <Text variant="caption" tone="muted" numberOfLines={2}>
                         {[a.site, a.district, `${day(a.raised_at)} ${istTime(a.raised_at)}`].filter(Boolean).join(" · ")}
                       </Text>
                       <Text variant="caption" weight="semibold" tone={isLive(a.status) ? "danger" : "muted"}>

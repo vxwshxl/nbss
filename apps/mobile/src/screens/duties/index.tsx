@@ -206,7 +206,7 @@ function DutyCard({ d, now, onAsk, onWithdraw }: { d: MyDuty; now: number; onAsk
       <View style={styles.cardHead}>
         <DateBox iso={d.starts_at} />
         <View style={styles.flex}>
-          <Text variant="label" weight="semibold" numberOfLines={1}>
+          <Text variant="label" weight="semibold" numberOfLines={2}>
             {d.site.name}
           </Text>
           <Text variant="caption" tone="muted" numberOfLines={1}>
@@ -462,7 +462,7 @@ function MonthTable({ rows, now, loading, title }: { rows: MyDuty[]; now: number
               <PanelRow first={i === 0} style={[o === "absent" && styles.absentRow, pressed && styles.pressedRow]}>
                 <DateBox iso={d.starts_at} small />
                 <View style={styles.flex}>
-                  <Text variant="label" weight="semibold" numberOfLines={1}>
+                  <Text variant="label" weight="semibold" numberOfLines={2}>
                     {d.site.name}
                   </Text>
                   <Text variant="caption" tone="muted" numberOfLines={1}>

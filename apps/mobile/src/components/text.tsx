@@ -18,6 +18,11 @@ type Weight = "regular" | "medium" | "semibold" | "bold" | "extrabold";
  * `allowFontScaling` is left on. The people reading this are outdoors and often over
  * fifty; someone who has turned their system font up did it for a reason, and a layout
  * that breaks under it is the layout's problem.
+ *
+ * Nothing is cut short with "…". A name, a site or an address wraps onto as many lines
+ * as it needs, so what a guard reads is the whole of it; `numberOfLines` is ignored
+ * unless `clip` is set, which is kept for the few places with a fixed height (the
+ * labels drawn on the map, a figure sized to its card).
  */
 export function Text({
   variant = "body",
@@ -25,6 +30,8 @@ export function Text({
   weight = "regular",
   mono,
   uppercase,
+  clip,
+  numberOfLines,
   style,
   ...rest
 }: TextProps & {
@@ -34,6 +41,8 @@ export function Text({
   /** Tabular figures, for a clock, a distance or a count that changes in place. */
   mono?: boolean;
   uppercase?: boolean;
+  /** Honour `numberOfLines` (cut with "…"); without it the text always shows in full. */
+  clip?: boolean;
 }) {
   const family: TextStyle = {
     fontFamily: mono
@@ -55,6 +64,7 @@ export function Text({
         uppercase && styles.uppercase,
         style,
       ]}
+      numberOfLines={clip ? numberOfLines : undefined}
       {...rest}
     />
   );

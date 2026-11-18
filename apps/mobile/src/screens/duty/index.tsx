@@ -398,7 +398,7 @@ export function Duty() {
               {target?.name ?? "No site to show yet"}
             </Text>
             {target && (
-              <Text variant="caption" tone="muted" numberOfLines={1}>
+              <Text variant="caption" tone="muted" numberOfLines={2}>
                 {[target.client_name, target.district].filter(Boolean).join(" · ") || target.address || "-"}
               </Text>
             )}
@@ -628,7 +628,7 @@ export function Duty() {
                     <MapPin size={16} color={in_ ? color.primary : color.mutedForeground} strokeWidth={2} />
                   </View>
                   <View style={styles.flex}>
-                    <Text variant="label" weight="semibold" numberOfLines={1}>
+                    <Text variant="label" weight="semibold" numberOfLines={2}>
                       {site.name}
                     </Text>
                     <Text variant="caption" tone={in_ ? "primary" : "muted"} numberOfLines={1}>

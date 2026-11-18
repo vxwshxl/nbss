@@ -240,11 +240,15 @@ export function SosAlarm({
         <View style={[styles.pill, { backgroundColor: isOpen ? color.sos : color.card }]}>
           <Siren size={18} color={isOpen ? "#fff" : color.mutedForeground} strokeWidth={2.2} />
           <View style={styles.flex}>
+            {/* What and when only: the site's name is spelt out in full in the sheet below,
+                where it has room, rather than cut off here. */}
             <Text variant="label" weight="bold" numberOfLines={1} style={{ color: isOpen ? "#fff" : color.foreground }}>
-              SOS · {SOS_KIND_LABEL[alert.kind]} · {data.site.name}
+              SOS · {SOS_KIND_LABEL[alert.kind]}
             </Text>
             <Text variant="caption" numberOfLines={1} style={{ color: isOpen ? "#ffffffd9" : color.mutedForeground }}>
-              {isOpen ? `Raised ${clock(alert.raised_at)} · ${Math.max(0, Math.round((now - new Date(alert.raised_at).getTime()) / 60_000))} min ago` : SOS_STATUS_LABEL[alert.status]}
+              {isOpen
+                ? `Raised ${clock(alert.raised_at)} · ${Math.max(0, Math.round((now - new Date(alert.raised_at).getTime()) / 60_000))} min ago`
+                : `${SOS_STATUS_LABEL[alert.status]} · raised ${clock(alert.raised_at)}`}
             </Text>
           </View>
         </View>
@@ -297,8 +301,12 @@ export function SosAlarm({
                 })}
               </View>
             )}
-            <Text variant="title" weight="semibold" numberOfLines={1}>
-              {mine ? "You raised this SOS" : `${raiser?.name ?? "A guard"} needs help`}
+            {/* Only an open SOS "needs help"; a closed one says what it was. */}
+            <Text variant="title" weight="semibold" numberOfLines={2}>
+              {mine ? "You raised this SOS" : isOpen ? `${raiser?.name ?? "A guard"} needs help` : `${raiser?.name ?? "A guard"} raised an SOS`}
+            </Text>
+            <Text variant="label" tone="muted" numberOfLines={2}>
+              at {data.site.name}
             </Text>
             <Text variant="label" weight="semibold" style={{ color: isOpen ? (coming.length ? TONE.help : color.sos) : color.mutedForeground }}>
               {statusLine}
@@ -368,7 +376,9 @@ export function SosAlarm({
         <Section title={`Responding · ${responders.length}`}>
           {responders.length === 0 ? (
             <Text variant="body" tone="muted">
-              Nobody has answered yet. Everyone on duty here, every supervisor and the client have been alerted.
+              {isOpen
+                ? "Nobody has answered yet. Everyone on duty here, every supervisor and the client have been alerted."
+                : "Nobody answered before it was closed."}
             </Text>
           ) : (
             responders.map((p) => <PersonRow key={p.id} p={p} highlight={p.response === "cannot_respond" ? undefined : "help"} you={p.id === profile?.id} />)

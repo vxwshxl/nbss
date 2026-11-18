@@ -184,7 +184,7 @@ export function MapCanvas({
             >
               <View style={styles.pin}>
                 <View style={[styles.pinLabel, f.quiet && styles.pinQuiet, { backgroundColor: f.tone }]}>
-                  <Text style={[styles.pinText, f.quiet && styles.pinTextQuiet]} numberOfLines={1}>
+                  <Text style={[styles.pinText, f.quiet && styles.pinTextQuiet]} numberOfLines={1} clip>
                     {f.name}
                   </Text>
                 </View>
@@ -257,7 +257,7 @@ export function MapCanvas({
               <View style={[styles.who, { height: labelBox(p.big) }]}>
                 <View style={{ height: (p.big ? BIG_DOT : DOT) / 2 + 2 }} />
                 <View style={styles.whoLabel}>
-                  <Text style={styles.whoText} numberOfLines={1}>
+                  <Text style={styles.whoText} numberOfLines={1} clip>
                     {p.label}
                   </Text>
                 </View>
@@ -367,7 +367,8 @@ const PIN_STICK_H = 10;
 const styles = StyleSheet.create({
   fill: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "#eef0ee", overflow: "hidden" },
   pin: { alignItems: "center" },
-  pinLabel: { maxWidth: 180, height: PIN_H, justifyContent: "center", paddingHorizontal: 10, borderRadius: 999 },
+  // No width cap: the site's whole name, on one line (the pin's height is fixed for iOS).
+  pinLabel: { height: PIN_H, justifyContent: "center", paddingHorizontal: 10, borderRadius: 999 },
   pinText: { color: "#fff", fontFamily: font.semibold, fontSize: 12, lineHeight: 16 },
   pinStick: { width: 3, height: PIN_STICK_H },
   pinQuiet: { height: PIN_QUIET_H, paddingHorizontal: 7, opacity: 0.9 },

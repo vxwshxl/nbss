@@ -1,3 +1,4 @@
+import { fetchAll } from "@nbss/shared/paging";
 import { router } from "expo-router";
 import { ChevronRight, Phone, Search, Users, X } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -12,6 +13,7 @@ import { Screen } from "@/components/screen";
 import { Segmented } from "@/components/segmented";
 import { Select } from "@/components/select";
 import { StatusPill } from "@/components/status-pill";
+import { ShowMoreRow, useShowMore } from "@/components/show-more";
 import { Text } from "@/components/text";
 import { useLiveTables } from "@/hooks/use-live-tables";
 import { useLoader } from "@/hooks/use-loader";
@@ -38,9 +40,9 @@ const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? nu
 
 async function load(): Promise<{ guards: Guard[]; sites: SiteChip[] }> {
   const [people, open, posts, sites] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, employee_code, phone, avatar_url, trade").eq("role", "guard").eq("active", true).order("full_name"),
+    fetchAll(supabase.from("profiles").select("id, full_name, employee_code, phone, avatar_url, trade").eq("role", "guard").eq("active", true).order("full_name")),
     supabase.from("attendance").select("guard_id, site_id, check_in_at, sites(name)").is("check_out_at", null),
-    supabase.from("site_postings").select("guard_id, site_id").eq("active", true).is("dates", null),
+    fetchAll(supabase.from("site_postings").select("guard_id, site_id").eq("active", true).is("dates", null)),
     supabase.from("sites").select("id, name, district").eq("active", true).order("name"),
   ]);
   const on = new Map((open.data ?? []).map((a) => [a.guard_id, a]));
@@ -89,6 +91,7 @@ export function StaffGuards() {
       return !t || `${g.name} ${g.code} ${g.dutySite ?? ""} ${g.postSiteId ? siteName.get(g.postSiteId) : ""}`.toLowerCase().includes(t);
     });
   const onCount = atSite.filter((g) => g.dutySite).length;
+  const page = useShowMore(list, `${q}|${show}|${site ?? ""}`);
 
   return (
     <Screen topInset={false} bottomInset={false} contentStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh()} />}>
@@ -132,7 +135,7 @@ export function StaffGuards() {
             </Text>
           </PanelRow>
         )}
-        {list.map((g, i) => (
+        {page.visible.map((g, i) => (
           <PanelRow key={g.id} first={i === 0}>
             {/* The row opens the guard; the phone beside it calls. Siblings, not nested. */}
             <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/person/[id]", params: { id: g.id } })} style={({ pressed }) => [styles.main, pressed && styles.pressed]}>
@@ -158,6 +161,7 @@ export function StaffGuards() {
             )}
           </PanelRow>
         ))}
+        <ShowMoreRow rest={page.rest} onPress={page.more} />
       </Panel>
     </Screen>
   );
