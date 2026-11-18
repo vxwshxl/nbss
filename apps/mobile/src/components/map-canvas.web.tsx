@@ -84,12 +84,16 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
   const host = useRef<HTMLDivElement | null>(null);
   const [ctx, setCtx] = useState<{ g: G; map: google.maps.Map } | null>(null);
   const framed = useRef<string | null>(null);
+  // Zoomed out, the name chips would pile up: as on the phone, only the picked one stays.
+  const [far, setFar] = useState(false);
 
   useEffect(() => {
     let gone = false;
     void load().then((g) => {
       if (gone || !host.current) return;
-      setCtx({ g, map: new g.Map(host.current, { center: { lat: 26.4015, lng: 90.2717 }, zoom: 14, disableDefaultUI: true, zoomControl: true, clickableIcons: false }) });
+      const map = new g.Map(host.current, { center: { lat: 26.4015, lng: 90.2717 }, zoom: 14, disableDefaultUI: true, zoomControl: true, clickableIcons: false });
+      map.addListener("zoom_changed", () => setFar((map.getZoom() ?? 20) < 14));
+      setCtx({ g, map });
     });
     return () => {
       gone = true;
@@ -123,7 +127,7 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
     if (route) drawn.push(new g.Polyline({ map, path: route, strokeOpacity: 0, icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: MAP_COLOR.route, scale: 3 }, offset: "0", repeat: "12px" }] }));
     for (const p of people) {
       if (p.frame !== false) bounds.extend(p);
-      const m = new g.Marker({ map, position: p, icon: guardIcon(p), zIndex: p.big ? 900 : 100 });
+      const m = new g.Marker({ map, position: p, icon: guardIcon(far && !p.big ? { ...p, label: undefined, sub: undefined } : p), zIndex: p.big ? 900 : 100 });
       if (onPersonPress) m.addListener("click", () => onPersonPress(p.id));
       drawn.push(m);
     }
@@ -158,7 +162,7 @@ export function MapCanvas({ fences = [], people = [], me = null, route = null, t
       });
     }
     return () => drawn.forEach((d) => d.setMap(null));
-  }, [ctx, fences, people, me, route, trail, path, frameKey, padding, onPersonPress, onFencePress]);
+  }, [ctx, fences, people, me, route, trail, path, frameKey, padding, onPersonPress, onFencePress, far]);
 
   return (
     <View style={styles.fill}>

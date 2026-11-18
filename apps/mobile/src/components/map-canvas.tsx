@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Platform, StyleSheet, View, type ViewStyle } from "react-native";
 import MapView, { Circle, Marker, Polygon, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from "react-native-maps";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
@@ -110,6 +110,9 @@ export function MapCanvas({
 }: MapCanvasProps) {
   const map = useRef<MapView>(null);
   const ready = useRef(false);
+  // Zoomed out past a few streets: names and site labels would pile on each other, so
+  // (as on the website) the chips go and a site is a dot until the map comes closer.
+  const [far, setFar] = useState(false);
   const framed = useRef<string | null>(null);
 
   const points = useMemo(() => {
@@ -166,6 +169,7 @@ export function MapCanvas({
           ready.current = true;
           frame();
         }}
+        onRegionChangeComplete={(r) => setFar(r.latitudeDelta > FAR_DELTA)}
       >
         {fences.map((f) => (
           <Polygon
@@ -180,15 +184,25 @@ export function MapCanvas({
         ))}
         {fences.map((f) => {
           const c = centre(f.ring);
+          if (far)
+            return (
+              <SettledMarker
+                key={`dot-${f.id}-${f.tone}`}
+                coordinate={c}
+                anchor={{ x: 0.5, y: 0.5 }}
+                onPress={onFencePress ? () => onFencePress(f.id) : undefined}
+              >
+                <View style={[styles.siteDot, { backgroundColor: f.tone }]} />
+              </SettledMarker>
+            );
           return (
-            <Marker
+            <SettledMarker
               key={`label-${f.id}-${f.tone}`}
               coordinate={c}
               anchor={{ x: 0.5, y: 1 }}
               // Apple Maps ignores `anchor` and centres the view: lift it by half its
               // height so the stick, not the middle of the label, is on the site.
               centerOffset={{ x: 0, y: -((f.quiet ? PIN_QUIET_H : PIN_H) + PIN_STICK_H) / 2 }}
-              tracksViewChanges={false}
               onPress={onFencePress ? () => onFencePress(f.id) : undefined}
             >
               <View style={styles.pin}>
@@ -199,7 +213,7 @@ export function MapCanvas({
                 </View>
                 <View style={[styles.pinStick, { backgroundColor: f.tone }]} />
               </View>
-            </Marker>
+            </SettledMarker>
           );
         })}
 
@@ -231,12 +245,11 @@ export function MapCanvas({
         {people.map((p) => {
           const g = geometry(p.big);
           return (
-            <Marker
+            <SettledMarker
               key={`${p.id}-${p.tone}-${p.big ? 1 : 0}-${Math.round((p.heading ?? -1) / 10)}`}
               coordinate={{ latitude: p.lat, longitude: p.lng }}
               anchor={{ x: 0.5, y: 0.5 }}
               centerOffset={{ x: 0, y: 0 }}
-              tracksViewChanges={false}
               zIndex={p.big ? 900 : 100}
               onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
             >
@@ -253,34 +266,40 @@ export function MapCanvas({
                   </Text>
                 </View>
               </View>
-            </Marker>
+            </SettledMarker>
           );
         })}
         {people.map((p) => {
-          if (!p.label) return null;
+          // Zoomed out, only the one picked (or an SOS) keeps its name.
+          if (!p.label || (far && !p.big)) return null;
           const g = geometry(p.big);
           return (
-            <Marker
+            <SettledMarker
               key={`label-${p.id}-${p.label}-${p.sub ?? ""}-${p.big ? 1 : 0}`}
               coordinate={{ latitude: p.lat, longitude: p.lng }}
               // The chip's box starts at the point with a gap of half the circle, so it hangs
               // under the circle: Android by the anchor, iPhone by the offset.
               anchor={{ x: 0.5, y: 0 }}
               centerOffset={{ x: 0, y: g.labelBox / 2 }}
-              tracksViewChanges={false}
               zIndex={p.big ? 899 : 99}
               onPress={onPersonPress ? () => onPersonPress(p.id) : undefined}
             >
               <View style={[styles.who, { height: g.labelBox }]}>
                 <View style={{ height: g.labelBox - WHO_LABEL_H }} />
+                {/* Name and battery as two texts, each with its own size: nested, the
+                    battery took the body size and the chip measured wrong. */}
                 <View style={[styles.whoLabel, p.big && styles.whoLabelBig]}>
                   <Text style={[styles.whoText, p.big && styles.whoTextBig]} numberOfLines={1} clip>
                     {p.label}
-                    {p.sub ? <Text style={[styles.whoSub, p.big && styles.whoSubBig]}>{` ${p.sub}`}</Text> : null}
                   </Text>
+                  {p.sub ? (
+                    <Text style={[styles.whoSub, p.big && styles.whoSubBig]} numberOfLines={1} clip>
+                      {p.sub}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
-            </Marker>
+            </SettledMarker>
           );
         })}
 
@@ -344,6 +363,24 @@ export function MapCanvas({
   );
 }
 
+/** How far out (degrees of latitude across the view) the map counts as zoomed out. */
+const FAR_DELTA = 0.03;
+
+/**
+ * A marker drawn from a view, redrawn for its first moments and then frozen.
+ * Frozen from the start (tracksViewChanges false), iOS snapshots the view before its
+ * text has been measured and keeps that: a chip cut short ("ALONGBAR 7"). Tracking
+ * for ever redraws every marker on every frame. Each new key starts tracking again.
+ */
+function SettledMarker(props: ComponentProps<typeof Marker>) {
+  const [settling, setSettling] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setSettling(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+  return <Marker {...props} tracksViewChanges={settling} />;
+}
+
 function centre(ring: [number, number][]): { latitude: number; longitude: number } {
   let lat = 0;
   let lng = 0;
@@ -404,12 +441,13 @@ const styles = StyleSheet.create({
   // Which way they face or walk, turned around the circle with the heading.
   pointer: { position: "absolute", width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderBottomWidth: 10, borderLeftColor: "transparent", borderRightColor: "transparent" },
   // A fixed height, so the spacer above the circle can match it exactly.
-  whoLabel: { height: WHO_LABEL_H, justifyContent: "center", paddingHorizontal: 7, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.96)", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  whoLabel: { height: WHO_LABEL_H, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.96)", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
   whoLabelBig: { backgroundColor: "#0f172a" },
   whoText: { fontFamily: font.semibold, fontSize: 11, lineHeight: 14, color: "#111" },
   whoTextBig: { color: "#fff", fontSize: 12, lineHeight: 15 },
-  whoSub: { fontFamily: font.medium, color: "#555" },
-  whoSubBig: { color: "#cbd5e1" },
+  whoSub: { fontFamily: font.medium, fontSize: 11, lineHeight: 14, color: "#555" },
+  whoSubBig: { fontSize: 12, lineHeight: 15, color: "#cbd5e1" },
+  siteDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: "#fff" },
   meBox: { width: 64, height: 64, alignItems: "center", justifyContent: "center" },
   meHalo: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: alpha(MAP_COLOR.me, 0.2) },
   meDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: MAP_COLOR.me, borderWidth: 3, borderColor: "#fff" },
