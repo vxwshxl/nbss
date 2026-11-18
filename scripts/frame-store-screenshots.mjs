@@ -111,6 +111,70 @@ function panorama(kind, frames) {
     .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${9 * s}" fill="#04140e" stroke="#6ee7b7" stroke-width="${4 * s}"/>`)
     .join("");
 
+  // A city under the map: a street grid set at an angle, broken into blocks, with a
+  // few arterial roads sweeping through it.
+  const streets = [];
+  const step = 92 * s;
+  for (let x = -H; x < TW + H; x += step) {
+    for (let y = -H * 0.5; y < H * 1.5; y += step * (2 + Math.floor(rnd(x + y) * 3))) {
+      if (rnd(x * 0.7 + y) < 0.32) continue;
+      streets.push(`<path d="M ${x} ${y} L ${x} ${y + step * (1 + Math.floor(rnd(x - y) * 3))}"/>`);
+    }
+  }
+  for (let y = -H * 0.5; y < H * 1.5; y += step) {
+    for (let x = -H; x < TW + H; x += step * (2 + Math.floor(rnd(y + x * 0.3) * 4))) {
+      if (rnd(y * 1.3 + x) < 0.32) continue;
+      streets.push(`<path d="M ${x} ${y} L ${x + step * (1 + Math.floor(rnd(y - x) * 4))} ${y}"/>`);
+    }
+  }
+  const arterials = [0, 1, 2].map((j) => {
+    const pts = [];
+    for (let x = -100; x <= TW + 100; x += W / 3) pts.push([x, H * (0.18 + 0.3 * j) + 140 * s * Math.sin(x * 0.0011 + j * 2)]);
+    return `<path d="${smooth(pts)}"/>`;
+  });
+
+  // Per frame: a geofence with a radar sweep in the open space, coordinates, guards.
+  const ll = (i) => `${(26.385 + rnd(i + 40) * 0.035).toFixed(4)}° N  ${(90.25 + rnd(i + 80) * 0.045).toFixed(4)}° E`;
+  const hud = [];
+  const radars = [];
+  frames.forEach((f, i) => {
+    const x0 = i * W;
+    // The fence sits behind the phone's edge, half of it showing, so the map runs on
+    // behind the device; its readout is a quiet line in the frame's top corner.
+    const edge = screenW / 2 + bezel;
+    const fx = x0 + W / 2 + f.shift * W + (i % 2 ? edge : -edge);
+    const fy = top + screenH * (i % 2 ? 0.5 : 0.3);
+    const r = 190 * s;
+    hud.push(
+      `<circle cx="${fx}" cy="${fy}" r="${r}" class="fence"/>` +
+        `<circle cx="${fx}" cy="${fy}" r="${r * 0.62}" class="ring"/>` +
+        `<circle cx="${fx}" cy="${fy}" r="${r * 0.28}" class="ring"/>` +
+        `<path d="M ${fx - r - 18 * s} ${fy} H ${fx - r + 14 * s} M ${fx + r - 14 * s} ${fy} H ${fx + r + 18 * s} M ${fx} ${fy - r - 18 * s} V ${fy - r + 14 * s} M ${fx} ${fy + r - 14 * s} V ${fy + r + 18 * s}" class="tick"/>` +
+        `<text x="${x0 + W - 80 * s}" y="${(i === 0 ? 118 : 74) * s}" class="mono" text-anchor="end">GEOFENCE ${String(i + 1).padStart(2, "0")} · ${Math.round(r / s / 1.6)} M</text>` +
+        `<text x="${x0 + W - 80 * s}" y="${(i === 0 ? 146 : 102) * s}" class="mono dim" text-anchor="end">${ll(i)}</text>`,
+    );
+    radars.push(`<div class="radar" style="left:${fx - r}px;top:${fy - r}px;width:${r * 2}px;height:${r * 2}px;--a:${Math.round(rnd(i + 3) * 360)}deg"></div>`);
+  });
+  // Guards on the route: a dot with fading rings, and a coordinate tag on some.
+  const guardsOnRoute = routePts
+    .filter((_, i) => i % 2 === 1)
+    .map(([x, y], i) => {
+      const tag = i % 2 === 0 ? `<text x="${x + 26 * s}" y="${y - 22 * s}" class="mono dim">${ll(i + 20)}</text>` : "";
+      return `<circle cx="${x}" cy="${y}" r="${46 * s}" fill="#34d399" fill-opacity="0.05"/><circle cx="${x}" cy="${y}" r="${26 * s}" fill="#34d399" fill-opacity="0.12"/><circle cx="${x}" cy="${y}" r="${10 * s}" fill="#34d399" stroke="#04140e" stroke-width="${4 * s}"/>${tag}`;
+    })
+    .join("");
+
+  // The status bar the screen starts with, as a phone or tablet shows it; the app
+  // begins below it (below the Dynamic Island on a phone), not under it.
+  const sb = phone ? Math.round((54 / 393) * screenW) : Math.round((24 / 834) * screenW);
+  const icons = (h) =>
+    `<svg height="${h}" viewBox="0 0 80 14"><g fill="#0b0b0c"><rect x="0" y="9" width="3.2" height="5" rx="1"/><rect x="5" y="6.5" width="3.2" height="7.5" rx="1"/><rect x="10" y="3.8" width="3.2" height="10.2" rx="1"/><rect x="15" y="1" width="3.2" height="13" rx="1"/>` +
+    `<path d="M31.5 3.3a10.6 10.6 0 0 1 7.6 3.1l1.4-1.5a12.7 12.7 0 0 0-18 0l1.4 1.5a10.6 10.6 0 0 1 7.6-3.1zm0 3.9a6.8 6.8 0 0 1 4.8 2l1.4-1.5a8.9 8.9 0 0 0-12.4 0l1.4 1.5a6.8 6.8 0 0 1 4.8-2zm0 3.9a3 3 0 0 1 2.1.9l-2.1 2.2-2.1-2.2a3 3 0 0 1 2.1-.9z"/>` +
+    `<rect x="47.5" y="1.5" width="25" height="11" rx="3.4" fill="none" stroke="#0b0b0c" stroke-opacity="0.4"/><rect x="49.5" y="3.5" width="18" height="7" rx="1.8"/><rect x="73.6" y="5" width="1.6" height="4" rx="0.8" fill-opacity="0.4"/></g></svg>`;
+  const statusBar = phone
+    ? `<div class="sb" style="height:${sb}px;padding:0 ${screenW * 0.085}px 0 ${screenW * 0.13}px"><b style="font-size:${Math.round(sb * 0.33)}px">9:41</b>${icons(Math.round(sb * 0.2))}</div>`
+    : `<div class="sb" style="height:${sb}px;padding:0 ${sb * 0.9}px"><b style="font-size:${Math.round(sb * 0.5)}px">9:41 <span>Wed 18 Nov</span></b>${icons(Math.round(sb * 0.42))}</div>`;
+
   const shots = frames
     .map((f, i) => {
       const x0 = i * W;
@@ -135,7 +199,7 @@ function panorama(kind, frames) {
       return `${brand}
 <h1 style="left:${x0 + 92 * s}px;top:${(i === 0 ? 200 : 150) * s}px">${f.a}<span>${f.b}</span></h1>
 <div class="glow" style="left:${cx - screenW * 0.9}px;top:${top - 120 * s}px;width:${screenW * 1.8}px;height:${screenH}px"></div>
-<div class="device" style="left:${cx - screenW / 2 - bezel}px;top:${top}px"><img src="${img}" style="width:${screenW}px;height:${screenH}px"><i class="${phone ? "island" : "cam"}"></i></div>
+<div class="device" style="left:${cx - screenW / 2 - bezel}px;top:${top}px"><div class="screen" style="width:${screenW}px;height:${screenH}px">${statusBar}<img src="${img}" style="width:${screenW}px;height:${screenH}px"></div>${phone ? '<i class="island"></i>' : '<i class="cam"></i>'}</div>
 ${out}`;
     })
     .join("\n");
@@ -149,7 +213,16 @@ body { position: relative; font-family: Geist, system-ui, sans-serif; background
   radial-gradient(ellipse ${W * 0.9}px ${H * 0.5}px at 0% 0%, rgba(0,145,100,0.30), transparent 70%),
   linear-gradient(180deg, #062419 0%, #04140e 46%, #031009 100%); }
 svg.map { position: absolute; left: 0; top: 0; }
-.contours path { fill: none; stroke: #6ee7b7; stroke-opacity: 0.075; stroke-width: ${1.6 * s}; }
+.contours path { fill: none; stroke: #6ee7b7; stroke-opacity: 0.04; stroke-width: ${1.4 * s}; }
+.streets path { fill: none; stroke: #6ee7b7; stroke-opacity: 0.07; stroke-width: ${2.2 * s}; stroke-linecap: round; }
+.arterials path { fill: none; stroke: #6ee7b7; stroke-opacity: 0.09; stroke-width: ${9 * s}; stroke-linecap: round; }
+.fence { fill: rgba(52,211,153,0.05); stroke: #34d399; stroke-opacity: 0.55; stroke-width: ${2.5 * s}; stroke-dasharray: ${10 * s} ${8 * s}; }
+.ring { fill: none; stroke: #6ee7b7; stroke-opacity: 0.18; stroke-width: ${1.5 * s}; }
+.tick { stroke: #6ee7b7; stroke-opacity: 0.7; stroke-width: ${2.5 * s}; }
+.mono { font-family: "SF Mono", Menlo, ui-monospace, monospace; font-size: ${19 * s}px; letter-spacing: 0.08em; fill: #6ee7b7; fill-opacity: 0.75; }
+.mono.dim { fill-opacity: 0.45; font-size: ${17 * s}px; }
+.radar { position: absolute; border-radius: 50%; background: conic-gradient(from var(--a), rgba(52,211,153,0.42), rgba(52,211,153,0) 70deg, transparent 360deg); }
+.hudgrid { position: absolute; inset: 0; opacity: 0.05; background-image: linear-gradient(#6ee7b7 1px, transparent 1px), linear-gradient(90deg, #6ee7b7 1px, transparent 1px); background-size: ${28 * s}px ${28 * s}px; }
 .route { fill: none; stroke: #34d399; stroke-width: ${5 * s}; stroke-linecap: round; stroke-dasharray: ${2 * s} ${16 * s}; opacity: 0.9; }
 .route-glow { fill: none; stroke: #10b981; stroke-width: ${26 * s}; opacity: 0.12; filter: blur(${8 * s}px); }
 .glow { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, rgba(16,185,129,0.34), rgba(16,185,129,0) 100%); }
@@ -159,17 +232,28 @@ h1 span { display: block; color: #6ee7b7; }
 .brand img { width: ${64 * s}px; height: ${64 * s}px; object-fit: contain; }
 .device { position: absolute; padding: ${bezel}px; border-radius: ${radius + bezel}px; background: #050607;
   box-shadow: inset 0 0 0 ${1.5 * s}px #2d333b, 0 0 0 ${2 * s}px #3f4650, 0 ${60 * s}px ${140 * s}px rgba(0,0,0,0.7); }
-.device img { display: block; border-radius: ${radius}px; }
-.island { position: absolute; top: ${bezel + 20 * s}px; left: 50%; transform: translateX(-50%); width: ${150 * s}px; height: ${44 * s}px; border-radius: 99px; background: #000; }
+.screen { position: relative; overflow: hidden; border-radius: ${radius}px; background: #fff; }
+.screen img { display: block; }
+.sb { display: flex; align-items: center; justify-content: space-between; background: #fff; color: #0b0b0c; }
+.sb b { font-weight: 600; letter-spacing: -0.01em; font-family: -apple-system, "SF Pro Text", Geist, sans-serif; }
+.sb b span { font-weight: 500; margin-left: 0.4em; }
+.island { position: absolute; top: ${bezel + Math.round((11 / 393) * screenW)}px; left: 50%; transform: translateX(-50%); width: ${Math.round((126 / 393) * screenW)}px; height: ${Math.round((37 / 393) * screenW)}px; border-radius: 99px; background: #000; }
 .cam { position: absolute; top: ${bezel / 2 - 5}px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: #1f2937; }
 .out { position: absolute; border-radius: ${30 * s}px; background-repeat: no-repeat; background-color: #fff;
   box-shadow: 0 0 0 ${1.5 * s}px rgba(255,255,255,0.6), 0 ${40 * s}px ${90 * s}px rgba(0,0,0,0.55), 0 ${8 * s}px ${20 * s}px rgba(0,0,0,0.3); }
 .out.round { border-radius: 50%; background-color: transparent; box-shadow: 0 ${30 * s}px ${70 * s}px rgba(185,28,28,0.55), 0 0 0 ${16 * s}px rgba(220,38,38,0.18), 0 0 0 ${40 * s}px rgba(220,38,38,0.08); }
 </style></head><body>
 <div class="sky"></div>
+<div class="hudgrid"></div>
 <svg class="map" width="${TW}" height="${H}" viewBox="0 0 ${TW} ${H}">
   <g class="contours">${contours.join("")}</g>
-  <path class="route-glow" d="${route}"/><path class="route" d="${route}"/>${nodes}
+  <g class="streets" transform="rotate(-14 ${TW / 2} ${H / 2})">${streets.join("")}</g>
+  <g class="arterials">${arterials.join("")}</g>
+</svg>
+${radars.join("")}
+<svg class="map" width="${TW}" height="${H}" viewBox="0 0 ${TW} ${H}">
+  ${hud.join("")}
+  <path class="route-glow" d="${route}"/><path class="route" d="${route}"/>${nodes}${guardsOnRoute}
 </svg>
 ${shots}
 </body></html>`;
