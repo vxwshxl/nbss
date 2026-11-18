@@ -216,6 +216,11 @@ export function StaffToday() {
           selected={only === "done"}
         />
       </CardGrid>
+      {!data && (
+        <Text variant="label" tone="muted" style={styles.centred}>
+          {`Loading ${day === "0" ? "today" : day === "-1" ? "yesterday" : "tomorrow"}'s duties…`}
+        </Text>
+      )}
       {data && all.length === 0 && (
         <Text variant="label" tone="muted" style={styles.centred}>
           No duty on the roster for this day.

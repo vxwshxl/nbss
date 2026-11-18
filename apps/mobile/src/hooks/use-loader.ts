@@ -18,6 +18,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * `data` is `undefined` until the first load finishes, which is deliberately distinct from
  * a load that finished and found nothing. Screens use it to show a spinner rather than
  * flashing an empty state at somebody whose data is a few hundred milliseconds away.
+ *
+ * A NEW FETCHER LOADS AGAIN. Screens pass a `useCallback` that closes over what they
+ * show (the day, the period, the person), so a new fetcher means a new question: it is
+ * asked at once, the old answer is dropped (data goes back to `undefined`, so the screen
+ * shows it is loading rather than yesterday's list under "Tomorrow"), and an answer to an
+ * older question that arrives late is ignored. Until this, only the first fetcher was
+ * ever asked: switching Yesterday / Today / Tomorrow changed the title and nothing else.
+ * The fetcher must therefore be memoised (`useCallback`), as every caller's is.
  */
 export function useLoader<T>(fetcher: () => Promise<T>): {
   data: T | undefined;
@@ -29,61 +37,56 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
   /** Loads again with the pull-to-refresh spinner showing. */
   refresh: () => Promise<void>;
 } {
-  const [data, setData] = useState<T | undefined>(undefined);
+  // The answer, with the fetcher that gave it: an answer to an older question is not
+  // this screen's data any more.
+  const [answer, setAnswer] = useState<{ from: () => Promise<T>; value: T } | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * The fetcher is held in a ref rather than listed as a dependency.
-   *
-   * Screens declare it with `useCallback`, but the moment one closes over a piece of state
-   * the identity changes on every render and the effect below would re-run forever. The
-   * ref keeps the newest one reachable without making it a trigger.
-   */
+  // The newest fetcher, for reload/refresh and for telling a late answer from a current
+  // one. Written in an effect, never during render (the compiler's refs rule).
   const fetcherRef = useRef(fetcher);
-
-  // Synced in an effect, not assigned during render. Writing a ref while rendering is what
-  // the compiler's "Cannot access refs during render" rule forbids, and it is right to:
-  // a render can be thrown away and re-run, so a write during one is not guaranteed to
-  // have happened once. `useRef(fetcher)` already holds the first one, and the mount
-  // effect below runs after this, so nothing is stale on the initial load.
-  useEffect(() => {
-    fetcherRef.current = fetcher;
-  }, [fetcher]);
-
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
-
-    fetcherRef
-      .current()
-      .then((result) => {
-        if (mounted.current) setData(result);
-      })
-      .catch((e: unknown) => {
-        if (mounted.current) setError(e instanceof Error ? e.message : String(e));
-      });
-
     return () => {
       mounted.current = false;
     };
   }, []);
 
   const run = useCallback(async (spinner: boolean) => {
+    const asked = fetcherRef.current;
     if (spinner) setRefreshing(true);
     try {
-      const result = await fetcherRef.current();
-      if (mounted.current) {
-        setData(result);
+      const value = await asked();
+      // Only the newest question's answer is kept.
+      if (mounted.current && asked === fetcherRef.current) {
+        setAnswer({ from: asked, value });
         setError(null);
       }
     } catch (e) {
-      if (mounted.current) setError(e instanceof Error ? e.message : String(e));
+      if (mounted.current && asked === fetcherRef.current) setError(e instanceof Error ? e.message : String(e));
     } finally {
       if (spinner && mounted.current) setRefreshing(false);
     }
   }, []);
+
+  // On mount, and whenever the screen asks something new. The state is set when the
+  // answer comes back, not in the effect body.
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+    fetcher()
+      .then((value) => {
+        if (mounted.current && fetcher === fetcherRef.current) {
+          setAnswer({ from: fetcher, value });
+          setError(null);
+        }
+      })
+      .catch((e: unknown) => {
+        if (mounted.current && fetcher === fetcherRef.current) setError(e instanceof Error ? e.message : String(e));
+      });
+  }, [fetcher]);
 
   /**
    * Two ways to load again, and the difference is the spinner. `reload` is silent:
@@ -94,5 +97,5 @@ export function useLoader<T>(fetcher: () => Promise<T>): {
   const reload = useCallback(() => run(false), [run]);
   const refresh = useCallback(() => run(true), [run]);
 
-  return { data, refreshing, error, reload, refresh };
+  return { data: answer && answer.from === fetcher ? answer.value : undefined, refreshing, error, reload, refresh };
 }
