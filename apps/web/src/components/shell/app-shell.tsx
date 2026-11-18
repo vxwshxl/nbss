@@ -11,12 +11,10 @@ import { Mark } from "@/components/brand";
 import { Nibo } from "@/components/nibo/nibo";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SITE_SECTIONS, siteFromPath, siteHref, type WorkspaceSite } from "@/lib/site-workspace";
-import { NiboCompanion } from "@/components/nibo/nibo-companion";
 import { cn } from "@/lib/utils";
 
 import { CommandPalette } from "./command-palette";
 import { findNavItem, type NavIndexItem } from "./nav-index";
-import { useMediaQuery } from "./use-media-query";
 
 /** Kept for layouts that still read it; the sidebar no longer collapses. */
 export const RAIL_COOKIE = "erp-rail";
@@ -26,10 +24,10 @@ export const RAIL_COOKIE = "erp-rail";
  * drawer on phones and tablets, a sticky frosted top bar with the page, search, "View
  * as" and the account menu, and the page on the pale ground.
  *
- * On desktop Nibo, the companion, floats in the corner; below lg he would sit over the
- * page, so he lives in the top bar instead, as a round button beside the account
- * avatar. Either opens the assistant, which floats over the page from the right on
- * wide screens and fills the screen below lg.
+ * Nibo lives in the top bar at every size, as a round button beside the account
+ * avatar. (He used to float in the desktop corner, over maps, tables and the last
+ * row's buttons.) It opens the assistant, which floats over the page from the right
+ * on wide screens and fills the screen below lg.
  * It is always mounted, only hidden, so the conversation survives closing it and
  * moving between pages.
  */
@@ -45,7 +43,6 @@ export function AppShell({
   topbarRight,
   topbarSecondary,
   banner,
-  companion,
   sites,
   children,
 }: {
@@ -73,8 +70,6 @@ export function AppShell({
   /** Full-width strip above the top bar: the "viewing as" banner. */
   banner?: React.ReactNode;
   defaultCollapsed?: boolean;
-  /** Nibo, the floating companion: whose preferences he keeps. */
-  companion?: { person: string } | null;
   /** Staff: the sites the top bar's workspace switcher offers. */
   sites?: WorkspaceSite[];
   children: React.ReactNode;
@@ -82,7 +77,6 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const desktop = useMediaQuery("(min-width: 64rem)");
 
   const openAssistant = useCallback(() => {
     setOpen(false);
@@ -93,15 +87,6 @@ export function AppShell({
   const toggle = useMemo<AssistantToggle | null>(
     () => (assistant ? { open: assistantOpen, toggle: assistantOpen ? closeAssistant : openAssistant } : null),
     [assistant, assistantOpen, openAssistant, closeAssistant],
-  );
-
-  // A button on one of Nibo's bubbles: open the panel, then put the question to it.
-  const askAssistant = useCallback(
-    (question: string) => {
-      openAssistant();
-      setTimeout(() => dispatchEvent(new CustomEvent("nibo:ask", { detail: question })), 140);
-    },
-    [openAssistant],
   );
 
   // Moving to another page closes the drawer.
@@ -198,26 +183,15 @@ export function AppShell({
             <Crumb brand={brand} home={brandHref} index={navIndex} sites={sites} />
             <CommandPalette index={navIndex} />
             {topbarSecondary}
-            {assistant && <AssistantButton className="lg:hidden" />}
+            {/* Nibo lives here, at every size, rather than floating over the page's corner
+                where it covered maps, tables and buttons. */}
+            {assistant && <AssistantButton />}
             {topbarRight}
           </header>
           <main id="main" className="@container/main mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 sm:px-6 sm:py-8">
             {children}
           </main>
         </div>
-
-        {companion && desktop && (
-          <NiboCompanion
-            key={companion.person}
-            person={companion.person}
-            nudges
-            tips
-            hidden={assistantOpen || open}
-            onOpen={assistant ? openAssistant : undefined}
-            onAsk={assistant ? askAssistant : undefined}
-            openLabel="Open Nibo, your assistant"
-          />
-        )}
 
         {assistant && (
           <aside
@@ -249,8 +223,7 @@ type AssistantToggle = { open: boolean; toggle: () => void };
 const AssistantToggleContext = createContext<AssistantToggle | null>(null);
 
 /**
- * Nibo as a round avatar beside the account's, opening the assistant panel. The top
- * bar shows it below lg, where the floating companion is not drawn.
+ * Nibo as a round avatar beside the account's, opening the assistant panel.
  */
 export function AssistantButton({ className }: { className?: string }) {
   const ctx = useContext(AssistantToggleContext);

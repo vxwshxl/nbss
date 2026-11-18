@@ -137,7 +137,6 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         ) : undefined
       }
       sidebarFooter={<WebsiteTag label={`${roleLabel(profile.role, profile.trade)} console · nbss.co.in`} />}
-      companion={{ person: realProfile.id }}
       nav={<ConsoleNav role={profile.role} sites={sites} badges={badges} />}
       sites={staff ? sites : undefined}
       topbarSecondary={

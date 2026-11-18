@@ -15,6 +15,7 @@ import {
   CircleX,
   Crosshair,
   History,
+  Expand,
   Maximize,
   Minimize,
   LocateOff,
@@ -380,6 +381,12 @@ export function LiveTracking({
   // the map full screen, and the card (drawn over it, outside it) vanished.
   const stage = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
+  // Each press of "Overall view" frames everyone again.
+  const [overview, setOverview] = useState(0);
+  const showEveryone = () => {
+    pick(null);
+    setOverview((n) => n + 1);
+  };
   useEffect(() => {
     const on = () => setFull(document.fullscreenElement === stage.current);
     document.addEventListener("fullscreenchange", on);
@@ -417,7 +424,7 @@ export function LiveTracking({
       <div ref={stage} className={cn("relative order-1 h-[62vh] min-h-[420px] bg-card lg:order-2 lg:h-[calc(100dvh-190px)]", full && "h-screen lg:h-screen")}>
         <LiveMap
           sites={site === ALL_SITES ? sites : sites.filter((x) => x.id === site)}
-          frameKey={site}
+          frameKey={`${site}|${overview}`}
           guards={markers}
           selected={selected}
           onSelect={pick}
@@ -452,6 +459,16 @@ export function LiveTracking({
           className="absolute top-[60px] right-3 z-10 grid size-10 place-items-center rounded-md bg-card text-foreground shadow-md ring-1 ring-border hover:bg-muted"
         >
           {full ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
+        </button>
+        {/* One press back to the whole picture: no guard picked, everyone on duty framed. */}
+        <button
+          type="button"
+          onClick={showEveryone}
+          aria-label="Overall view: show everyone"
+          title="Overall view"
+          className="absolute top-[110px] right-3 z-10 grid size-10 place-items-center rounded-md bg-card text-foreground shadow-md ring-1 ring-border hover:bg-muted"
+        >
+          <Expand className="size-5" />
         </button>
 
         {/* Full screen shows only the map, so there the guard's panel floats over it. */}
