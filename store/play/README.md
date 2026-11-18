@@ -48,21 +48,27 @@ Everything the Play Console asks for, in the order it asks. Graphics are rebuilt
 |---|---|---|
 | App icon | `icon-512.png` | 512 × 512 PNG, opaque |
 | Feature graphic | `feature-1024x500.png` | 1024 × 500 PNG |
-| Phone screenshots | `screenshots/01…09` | 1080 × 2400 PNG, upload 01–08 (09 optional) |
+| Phone screenshots | `screenshots/phone-01…09.png` | 1080 × 1920 (9:16), framed with a headline |
+| 7-inch and 10-inch tablet screenshots | `screenshots/tablet-01…09.png` | 1600 × 2560, framed (use the same set for both) |
 
-Screenshots, in upload order (taken 18 Nov 2026 from the app's web build at Android phone
-size, signed in as TEST accounts with demo data that was deleted afterwards; no real
-person, phone number or site appears):
+Upload in number order; 01–08 are the core set, 09 is optional. The raw screens are in
+`raw/` (phone 1080 × 2400, tablet 1600 × 2560): change a headline in
+`scripts/frame-store-screenshots.mjs` and run `pnpm store:screenshots` to rebuild.
+They were taken on 18 Nov 2026 from the app's web build, signed in as TEST accounts
+with demo guards, a demo client and two made-up sites, all deleted afterwards; no
+real person, phone number or site appears.
 
-1. `01-office-guard-route.png`: office, a guard tapped on Live with their route so far
-2. `02-office-site.png`: office, a site with who is on duty, inside and posted
-3. `03-guard-duty.png`: guard, on duty inside the boundary, check out, SOS button
-4. `04-guard-sos.png`: guard, the SOS tab (hold the red button for 3 seconds)
-5. `05-supervisor-live.png`: supervisor, their site live, who is inside and when last heard
-6. `06-supervisor-today.png`: supervisor, today's duties (not arrived, on duty, later)
-7. `07-client-sites.png`: client, their site and the guards on duty now
-8. `08-client-book.png`: client, booking guards
-9. `09-office-sos-history.png`: office, SOS history on the map
+1. Every guard, live: office, a guard tapped on Live with their route, battery, direction
+2. Each site at a glance: office, a site with who is on duty, inside and posted
+3. Check in at the gate: guard, on duty inside the boundary
+4. Help in three seconds: guard, the SOS tab and the hold-to-raise button
+5. Your site, right now: supervisor, who is outside their site, live
+6. Today's duties, sorted: supervisor
+7. Your guards, on the map: client, their guards on duty on the map
+8. Book guards in minutes: client
+9. Every SOS, on the map: office, SOS history coloured by outcome
+
+**App version**: 1.1.0 (versionCode is set by EAS, one higher each build).
 
 ## App content (Policy → App content)
 
