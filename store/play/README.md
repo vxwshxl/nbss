@@ -48,25 +48,21 @@ Everything the Play Console asks for, in the order it asks. Graphics are rebuilt
 |---|---|---|
 | App icon | `icon-512.png` | 512 × 512 PNG, opaque |
 | Feature graphic | `feature-1024x500.png` | 1024 × 500 PNG |
-| Phone screenshots | `screenshots/phone-01…09.png` | 1080 × 1920 (9:16), framed with a headline |
-| 7-inch and 10-inch tablet screenshots | `screenshots/tablet-01…09.png` | 1600 × 2560, framed (use the same set for both) |
+| Phone screenshots | `screenshots/phone-01…09.png` | 1080 × 1920 (9:16) |
+| 7-inch and 10-inch tablet screenshots | `screenshots/tablet-01…09.png` | 1600 × 2560 (use the same set for both) |
 
-Upload in number order; 01–08 are the core set, 09 is optional. The raw screens are in
-`raw/` (phone 1080 × 2400, tablet 1600 × 2560): change a headline in
-`scripts/frame-store-screenshots.mjs` and run `pnpm store:screenshots` to rebuild (renders with Google Chrome; type is Geist with a Georgia italic accent).
-They were taken on 18 Nov 2026 from the app's web build, signed in as TEST accounts
-with demo guards, a demo client and two made-up sites, all deleted afterwards; no
-real person, phone number or site appears.
+Upload in number order. The set is one panorama cut into frames, so in the store they
+read as one picture: a short headline per frame, the real app large and running off
+the bottom, a patrol route threading through. Story: 01 every guard live (office) ·
+02 SOS (guard) · 03 check in at the gate (guard) · 04 who left their post
+(supervisor) · 05 every site at a glance · 06 today's duties · 07 see your guards
+(client) · 08 book guards (client) · 09 every SOS on the record.
 
-1. Every guard, live: office, a guard tapped on Live with their route, battery, direction
-2. Each site at a glance: office, a site with who is on duty, inside and posted
-3. Check in at the gate: guard, on duty inside the boundary
-4. Help in three seconds: guard, the SOS tab and the hold-to-raise button
-5. Your site, right now: supervisor, who is outside their site, live
-6. Today's duties, sorted: supervisor
-7. Your guards, on the map: client, their guards on duty on the map
-8. Book guards in minutes: client
-9. Every SOS, on the map: office, SOS history coloured by outcome
+The raw screens are in `raw/` (phone 1080 × 2400, tablet 1600 × 2560), taken on
+18 Nov 2026 from the app's web build with TEST accounts and demo data that was deleted
+afterwards; no real person, phone number or site appears. Headlines and order live in
+`scripts/frame-store-screenshots.mjs`; `pnpm store:screenshots` rebuilds them (Google
+Chrome renders the HTML, sharp cuts the frames).
 
 **App version**: 1.1.0 (versionCode is set by EAS, one higher each build).
 

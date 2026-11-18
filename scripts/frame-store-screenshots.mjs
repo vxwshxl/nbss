@@ -1,14 +1,18 @@
 /**
- * Google Play screenshots: each raw screen from store/play/raw/ laid out as a store
- * image (who it is for, a headline with an accent, the screen in a device frame, and
- * one callout naming the feature), rendered by Chrome into store/play/screenshots/.
+ * Google Play screenshots, as one continuous panorama per device size, cut into frames.
  *
- *   phone   1080 × 1920 (9:16)   from raw/phone-*.png   (1080 × 2400 screens)
- *   tablet  1600 × 2560 (10:16)  from raw/tablet-*.png  (1600 × 2560 screens)
+ * Built on what the best-converting store sets do: a short benefit headline (under six
+ * words, large, left-aligned, no labels or badges), one consistent system across the
+ * set, the real app large and running off the bottom edge, and on a few frames one
+ * piece of real UI pulled out of the screen and enlarged ("breakout"), never a drawn
+ * callout. The background runs on across frames, so side by side in the store they read
+ * as one picture: deep green with faint topographic contours and a patrol route
+ * threading from phone to phone.
  *
- * Laid out in HTML rather than drawn, for the type: Geist (the app's own face, from
- * the website's fonts) with a serif italic accent, real shadows and the device frame.
- * Needs Google Chrome installed; nothing else.
+ *   phone   1080 × 1920 each   from raw/phone-*.png   (1080 × 2400 screens)
+ *   tablet  1600 × 2560 each   from raw/tablet-*.png  (1600 × 2560 screens)
+ *
+ * Rendered by Google Chrome from HTML (Geist, the app's own face) and cut with sharp.
  *
  *   pnpm store:screenshots
  */
@@ -20,148 +24,178 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import sharp from "sharp";
+
 const run = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RAW = path.join(ROOT, "store", "play", "raw");
 const OUT = path.join(ROOT, "store", "play", "screenshots");
 const FONT = pathToFileURL(path.join(ROOT, "apps", "web", "public", "fonts", "geist-sans-variable.woff2")).href;
+const LOGO = pathToFileURL(path.join(ROOT, "apps", "web", "public", "logo", "nbss-256.webp")).href;
 const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 /**
- * Per screen: who it is for, the headline (the accent in italic serif), and one
- * callout that names what the screen shows. Callouts say only what the screen does.
+ * The story, in store order. `a` is the headline's first line, `b` its second (in the
+ * accent). `shift` moves the phone off centre (fraction of the frame) to make room for
+ * a breakout; `out` is that breakout: a region [x, y, w, h] of the raw screen, enlarged
+ * beside the phone (a tablet without its own region borrows the phone's).
  */
-const COPY = {
-  "01-office-guard-route": { who: "For the office", lead: "Every guard,", accent: "live.", note: { icon: "route", text: "Route, battery and direction", tone: "blue" }, at: 0.07, side: "left" },
-  "02-office-site": { who: "For the office", lead: "Each site,", accent: "at a glance.", note: { icon: "shield", text: "On duty · inside · posted", tone: "green" }, at: 0.07, side: "left" },
-  "03-guard-duty": { who: "For guards", lead: "Check in", accent: "at the gate.", note: { icon: "check", text: "Inside the boundary", tone: "green" }, at: 0.15, side: "left" },
-  "04-guard-sos": { who: "For guards", lead: "Help in", accent: "three seconds.", note: { icon: "sos", text: "Hold SOS · everyone is alerted", tone: "red" }, at: 0.13, side: "right" },
-  "05-supervisor-live": { who: "For supervisors", lead: "Your site,", accent: "right now.", note: { icon: "alert", text: "Outside their site · 224 m", tone: "amber" }, at: 0.085, side: "left" },
-  "06-supervisor-today": { who: "For supervisors", lead: "Today's duties,", accent: "sorted.", note: { icon: "clock", text: "Not arrived · on duty · later", tone: "violet" }, at: 0.075, side: "right" },
-  "07-client-sites": { who: "For clients", lead: "Your guards,", accent: "on the map.", note: { icon: "check", text: "Verified at your boundary", tone: "green" }, at: 0.09, side: "left" },
-  "08-client-book": { who: "For clients", lead: "Book guards", accent: "in minutes.", note: { icon: "phone", text: "We call you back to confirm", tone: "green" }, at: 0.86, side: "right" },
-  "09-office-sos-history": { who: "For the office", lead: "Every SOS,", accent: "on the map.", note: { icon: "legend" }, at: 0.2, side: "right" },
-};
+const FRAMES = [
+  { raw: "01-office-guard-route", a: "Every guard.", b: "Live, on one map.", shift: 0 },
+  { raw: "04-guard-sos", a: "Help arrives", b: "in three seconds.", shift: -0.05,
+    out: { phone: [846, 1980, 180, 180], tablet: null, at: 0.6, side: "right", scale: 1.9, round: true } },
+  { raw: "03-guard-duty", a: "Check in", b: "only at the gate.", shift: 0 },
+  { raw: "05-supervisor-live", a: "See who left", b: "their post.", shift: 0 },
+  { raw: "02-office-site", a: "Every site,", b: "at a glance.", shift: 0 },
+  { raw: "06-supervisor-today", a: "Today's duties,", b: "already sorted.", shift: 0 },
+  { raw: "07-client-sites", a: "See your guards,", b: "live.", shift: 0 },
+  { raw: "08-client-book", a: "Book guards", b: "in minutes.", shift: 0 },
+  { raw: "09-office-sos-history", a: "Every SOS,", b: "on the record.", shift: 0 },
+];
 
-const TONE = { green: "#059669", blue: "#2563eb", red: "#dc2626", amber: "#d97706", violet: "#7c3aed" };
+/** A smooth path through points (Catmull-Rom as cubic Béziers). */
+function smooth(pts) {
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const [p1, p2] = [pts[i], pts[i + 1]];
+    const p3 = pts[i + 2] ?? p2;
+    d += ` C ${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6}, ${p2[0] - (p3[0] - p1[0]) / 6} ${p2[1] - (p3[1] - p1[1]) / 6}, ${p2[0]} ${p2[1]}`;
+  }
+  return d;
+}
 
-// Lucide-style strokes, so the callouts match the app's icons.
-const ICON = {
-  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
-  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
-  check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
-  sos: '<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/>',
-  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
-  phone: '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>',
-};
-
-const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-function page(kind, shot, c) {
+function panorama(kind, frames) {
   const phone = kind === "phone";
   const W = phone ? 1080 : 1600;
   const H = phone ? 1920 : 2560;
-  // Type, the device and the callout, sized for each canvas.
-  const s = phone ? 1 : 1.42;
-  const screenW = phone ? 620 : 1120;
-  const screenH = phone ? Math.round((620 * 2400) / 1080) : Math.round((1120 * 2560) / 1600);
-  const bezel = phone ? 16 : 26;
-  const radius = phone ? 78 : 46;
-  const top = phone ? 470 : 640;
+  const N = frames.length;
+  const TW = W * N;
+  const s = phone ? 1 : 1.46;
 
-  const legend = [
-    ["#dc2626", "Open"],
-    ["#2563eb", "Help coming"],
-    ["#16a34a", "Resolved"],
-    ["#94a3b8", "False alarm"],
-  ];
-  const note =
-    c.note.icon === "legend"
-      ? `<div class="note legend">${legend.map(([col, t]) => `<span><i style="background:${col}"></i>${t}</span>`).join("")}</div>`
-      : `<div class="note"><b style="background:${TONE[c.note.tone]}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICON[c.note.icon]}</svg></b><span>${esc(c.note.text)}</span></div>`;
+  // The phone: large, the top of the app in view, running off the bottom edge.
+  const screenW = phone ? 760 : 1200;
+  const rawW = phone ? 1080 : 1600;
+  const rawH = phone ? 2400 : 2560;
+  const k = screenW / rawW;
+  const screenH = Math.round(rawH * k);
+  const bezel = phone ? 15 : 24;
+  const radius = phone ? 92 : 50;
+  const top = phone ? 610 : 820;
+
+  // Topographic contours across the whole panorama, faint, and the patrol route.
+  const rnd = (i) => {
+    const v = Math.sin(i * 12.9898) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const contours = [];
+  for (let i = 0; i < 26; i++) {
+    const base = (H / 26) * i + 20;
+    const f1 = 0.0011 + rnd(i) * 0.0009;
+    const f2 = 0.0037 + rnd(i + 7) * 0.002;
+    const a1 = 38 + rnd(i + 3) * 60;
+    const a2 = 10 + rnd(i + 5) * 16;
+    const ph = rnd(i + 9) * 6;
+    const pts = [];
+    for (let x = -40; x <= TW + 40; x += 60) pts.push([x, base + a1 * Math.sin(x * f1 + ph) + a2 * Math.sin(x * f2 + ph * 2)]);
+    contours.push(`<path d="${smooth(pts)}"/>`);
+  }
+  const routePts = [];
+  for (let f = 0; f <= N; f++) {
+    routePts.push([f * W - W * 0.08, top + screenH * (f % 2 ? 0.22 : 0.48)]);
+    routePts.push([f * W + W * 0.5, top + screenH * (f % 2 ? 0.58 : 0.12)]);
+  }
+  const route = smooth(routePts);
+  const nodes = routePts
+    .filter((_, i) => i % 2 === 0)
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${9 * s}" fill="#04140e" stroke="#6ee7b7" stroke-width="${4 * s}"/>`)
+    .join("");
+
+  const shots = frames
+    .map((f, i) => {
+      const x0 = i * W;
+      const cx = x0 + W / 2 + f.shift * W;
+      const img = pathToFileURL(path.join(RAW, `${kind}-${f.raw}.png`)).href;
+      const brand = i === 0 ? `<div class="brand" style="left:${x0 + 92 * s}px;top:${96 * s}px"><img src="${LOGO}"><span>NBSS Kokrajhar</span></div>` : "";
+      let out = "";
+      const fromPhone = kind === "tablet" && f.out && !f.out.tablet;
+      const crop = f.out ? (fromPhone ? f.out.phone : f.out[kind]) : null;
+      if (crop) {
+        // A region of the real screen, enlarged and lifted out beside the phone.
+        const srcW = fromPhone ? 1080 : rawW;
+        const srcH = fromPhone ? 2400 : rawH;
+        const src = fromPhone ? pathToFileURL(path.join(RAW, `phone-${f.raw}.png`)).href : img;
+        const kk = (fromPhone ? (760 / 1080) * s : k) * f.out.scale;
+        const [rx, ry, rw, rh] = crop;
+        const w = rw * kk;
+        const h = rh * kk;
+        const left = f.out.side === "left" ? cx - screenW / 2 - bezel - 64 * s : cx + screenW / 2 + bezel + 64 * s - w;
+        out = `<div class="out${f.out.round ? " round" : ""}" style="left:${left}px;top:${top + screenH * f.out.at}px;width:${w}px;height:${h}px;background-image:url('${src}');background-size:${srcW * kk}px ${srcH * kk}px;background-position:-${rx * kk}px -${ry * kk}px"></div>`;
+      }
+      return `${brand}
+<h1 style="left:${x0 + 92 * s}px;top:${(i === 0 ? 200 : 150) * s}px">${f.a}<span>${f.b}</span></h1>
+<div class="glow" style="left:${cx - screenW * 0.9}px;top:${top - 120 * s}px;width:${screenW * 1.8}px;height:${screenH}px"></div>
+<div class="device" style="left:${cx - screenW / 2 - bezel}px;top:${top}px"><img src="${img}" style="width:${screenW}px;height:${screenH}px"><i class="${phone ? "island" : "cam"}"></i></div>
+${out}`;
+    })
+    .join("\n");
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face { font-family: Geist; src: url("${FONT}") format("woff2"); font-weight: 100 900; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: ${W}px; height: ${H}px; overflow: hidden; }
-body {
-  font-family: Geist, system-ui, sans-serif; color: #fff; position: relative;
-  background:
-    radial-gradient(ellipse 70% 45% at 50% 62%, rgba(52, 211, 153, 0.28), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(255, 255, 255, 0.10), transparent 70%),
-    linear-gradient(165deg, #036b4c 0%, #01462f 55%, #00301f 100%);
-}
-/* The fine grid of the reference layouts, faint. */
-.grid { position: absolute; inset: 0; opacity: 0.09;
-  background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
-  background-size: ${54 * s}px ${54 * s}px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 78%); }
-/* A sweep of the accent behind the device. */
-.sweep { position: absolute; left: -15%; right: -15%; top: ${top + screenH * 0.42}px; height: ${260 * s}px;
-  background: linear-gradient(90deg, rgba(52,211,153,0) 0%, rgba(52,211,153,0.55) 35%, rgba(167,243,208,0.6) 60%, rgba(52,211,153,0) 100%);
-  transform: rotate(-9deg); border-radius: 50%; filter: blur(${2 * s}px); }
-header { position: absolute; top: ${(phone ? 92 : 120)}px; left: 0; right: 0; text-align: center; }
-.who { display: inline-flex; align-items: center; gap: ${10 * s}px; padding: ${10 * s}px ${22 * s}px; border-radius: 999px;
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
-  font-size: ${24 * s}px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #d1fae5; }
-.who i { width: ${10 * s}px; height: ${10 * s}px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 ${4 * s}px rgba(52,211,153,0.25); }
-h1 { margin-top: ${30 * s}px; font-size: ${84 * s}px; line-height: 1.02; font-weight: 750; letter-spacing: -0.035em; }
-h1 em { display: block; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400;
-  letter-spacing: -0.02em; color: #a7f3d0; font-size: ${92 * s}px; margin-top: ${4 * s}px; }
-.device { position: absolute; left: 50%; top: ${top}px; transform: translateX(-50%);
-  padding: ${bezel}px; border-radius: ${radius + bezel}px; background: #07090c;
-  box-shadow: 0 0 0 ${2 * s}px #4b525c, 0 0 0 ${5 * s}px #1b1f24, 0 ${50 * s}px ${110 * s}px rgba(0,0,0,0.55), 0 ${10 * s}px ${30 * s}px rgba(0,0,0,0.35); }
-.device img { display: block; width: ${screenW}px; height: ${screenH}px; border-radius: ${radius}px; }
-.island { position: absolute; top: ${bezel + 18}px; left: 50%; transform: translateX(-50%); width: 132px; height: 38px; border-radius: 20px; background: #000; }
-.cam { position: absolute; top: ${bezel / 2 - 5}px; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; border-radius: 50%; background: #1f2937; box-shadow: inset 0 0 0 3px #0b0f14; }
-.btn { position: absolute; width: ${5 * s}px; border-radius: 3px; background: #2a3038; }
-.note { position: absolute; ${c.side === "left" ? `left: ${phone ? 56 : 90}px;` : `right: ${phone ? 56 : 90}px;`} top: ${top + Math.round(screenH * c.at)}px;
-  display: flex; align-items: center; gap: ${16 * s}px; padding: ${18 * s}px ${28 * s}px ${18 * s}px ${18 * s}px; border-radius: ${26 * s}px;
-  background: #fff; color: #0f172a; font-size: ${30 * s}px; font-weight: 620; letter-spacing: -0.01em;
-  box-shadow: 0 ${24 * s}px ${50 * s}px rgba(0,0,0,0.35), 0 ${4 * s}px ${12 * s}px rgba(0,0,0,0.18); }
-.note b { display: grid; place-items: center; width: ${56 * s}px; height: ${56 * s}px; border-radius: ${16 * s}px; }
-.note b svg { width: ${30 * s}px; height: ${30 * s}px; }
-.legend { gap: ${20 * s}px; padding: ${20 * s}px ${26 * s}px; font-size: ${24 * s}px; flex-wrap: wrap; max-width: ${phone ? 470 : 760}px; }
-.legend span { display: inline-flex; align-items: center; gap: ${8 * s}px; }
-.legend i { width: ${20 * s}px; height: ${20 * s}px; border-radius: 50%; border: ${3 * s}px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
+html, body { width: ${TW}px; height: ${H}px; overflow: hidden; }
+body { position: relative; font-family: Geist, system-ui, sans-serif; background: #04140e; }
+.sky { position: absolute; inset: 0; background:
+  radial-gradient(ellipse ${W * 0.9}px ${H * 0.5}px at 0% 0%, rgba(0,145,100,0.30), transparent 70%),
+  linear-gradient(180deg, #062419 0%, #04140e 46%, #031009 100%); }
+svg.map { position: absolute; left: 0; top: 0; }
+.contours path { fill: none; stroke: #6ee7b7; stroke-opacity: 0.075; stroke-width: ${1.6 * s}; }
+.route { fill: none; stroke: #34d399; stroke-width: ${5 * s}; stroke-linecap: round; stroke-dasharray: ${2 * s} ${16 * s}; opacity: 0.9; }
+.route-glow { fill: none; stroke: #10b981; stroke-width: ${26 * s}; opacity: 0.12; filter: blur(${8 * s}px); }
+.glow { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, rgba(16,185,129,0.34), rgba(16,185,129,0) 100%); }
+h1 { position: absolute; color: #fff; font-size: ${96 * s}px; line-height: 0.98; font-weight: 720; letter-spacing: -0.045em; }
+h1 span { display: block; color: #6ee7b7; }
+.brand { position: absolute; display: flex; align-items: center; gap: ${18 * s}px; color: #d1fae5; font-size: ${34 * s}px; font-weight: 600; letter-spacing: -0.02em; }
+.brand img { width: ${64 * s}px; height: ${64 * s}px; object-fit: contain; }
+.device { position: absolute; padding: ${bezel}px; border-radius: ${radius + bezel}px; background: #050607;
+  box-shadow: inset 0 0 0 ${1.5 * s}px #2d333b, 0 0 0 ${2 * s}px #3f4650, 0 ${60 * s}px ${140 * s}px rgba(0,0,0,0.7); }
+.device img { display: block; border-radius: ${radius}px; }
+.island { position: absolute; top: ${bezel + 20 * s}px; left: 50%; transform: translateX(-50%); width: ${150 * s}px; height: ${44 * s}px; border-radius: 99px; background: #000; }
+.cam { position: absolute; top: ${bezel / 2 - 5}px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: #1f2937; }
+.out { position: absolute; border-radius: ${30 * s}px; background-repeat: no-repeat; background-color: #fff;
+  box-shadow: 0 0 0 ${1.5 * s}px rgba(255,255,255,0.6), 0 ${40 * s}px ${90 * s}px rgba(0,0,0,0.55), 0 ${8 * s}px ${20 * s}px rgba(0,0,0,0.3); }
+.out.round { border-radius: 50%; background-color: transparent; box-shadow: 0 ${30 * s}px ${70 * s}px rgba(185,28,28,0.55), 0 0 0 ${16 * s}px rgba(220,38,38,0.18), 0 0 0 ${40 * s}px rgba(220,38,38,0.08); }
 </style></head><body>
-<div class="grid"></div><div class="sweep"></div>
-<header><div class="who"><i></i>${esc(c.who)}</div><h1>${esc(c.lead)}<em>${esc(c.accent)}</em></h1></header>
-<div class="device">
-  <img src="${pathToFileURL(path.join(RAW, shot)).href}">
-  ${phone ? '<div class="island"></div>' : '<div class="cam"></div>'}
-  ${phone
-    ? `<div class="btn" style="left:-${7 * s}px;top:${190}px;height:70px"></div><div class="btn" style="left:-${7 * s}px;top:${290}px;height:120px"></div><div class="btn" style="right:-${7 * s}px;top:${260}px;height:150px"></div>`
-    : `<div class="btn" style="top:-${7 * s}px;right:${160}px;width:110px;height:${5 * s}px"></div>`}
-</div>
-${note}
+<div class="sky"></div>
+<svg class="map" width="${TW}" height="${H}" viewBox="0 0 ${TW} ${H}">
+  <g class="contours">${contours.join("")}</g>
+  <path class="route-glow" d="${route}"/><path class="route" d="${route}"/>${nodes}
+</svg>
+${shots}
 </body></html>`;
 }
 
 await mkdir(OUT, { recursive: true });
+for (const f of await readdir(OUT)) if (f.endsWith(".png")) await rm(path.join(OUT, f));
 const tmp = await mkdtemp(path.join(os.tmpdir(), "nbss-shots-"));
-const files = (await readdir(RAW)).filter((f) => /^(phone|tablet)-.*\.png$/.test(f)).sort();
 try {
-  for (const f of files) {
-    const kind = f.startsWith("phone") ? "phone" : "tablet";
-    const c = COPY[f.replace(/^(phone|tablet)-/, "").replace(/\.png$/, "")];
-    if (!c) continue;
-    const html = path.join(tmp, f.replace(/\.png$/, ".html"));
-    await writeFile(html, page(kind, f, c));
-    const [w, h] = kind === "phone" ? [1080, 1920] : [1600, 2560];
-    await run(CHROME, [
-      "--headless=new",
-      "--disable-gpu",
-      "--hide-scrollbars",
-      "--allow-file-access-from-files",
-      "--force-device-scale-factor=1",
-      `--window-size=${w},${h}`,
-      "--virtual-time-budget=4000",
-      `--screenshot=${path.join(OUT, f)}`,
-      pathToFileURL(html).href,
-    ]);
-    console.log("framed", f);
+  for (const kind of ["phone", "tablet"]) {
+    const have = new Set(await readdir(RAW));
+    const frames = FRAMES.filter((f) => have.has(`${kind}-${f.raw}.png`));
+    const [W, H] = kind === "phone" ? [1080, 1920] : [1600, 2560];
+    const html = path.join(tmp, `${kind}.html`);
+    const wide = path.join(tmp, `${kind}.png`);
+    await writeFile(html, panorama(kind, frames));
+    await run(
+      CHROME,
+      ["--headless=new", "--disable-gpu", "--hide-scrollbars", "--allow-file-access-from-files", "--force-device-scale-factor=1", `--window-size=${W * frames.length},${H}`, "--virtual-time-budget=5000", `--screenshot=${wide}`, pathToFileURL(html).href],
+      { maxBuffer: 1 << 26 },
+    );
+    for (let i = 0; i < frames.length; i++) {
+      const name = `${kind}-${String(i + 1).padStart(2, "0")}.png`;
+      await sharp(wide).extract({ left: i * W, top: 0, width: W, height: H }).png({ compressionLevel: 9 }).toFile(path.join(OUT, name));
+      console.log("frame", name, "←", frames[i].raw);
+    }
   }
 } finally {
   await rm(tmp, { recursive: true, force: true });
