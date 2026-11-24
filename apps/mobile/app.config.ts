@@ -99,6 +99,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // the setting that decides whether tracking survives the app being closed.
       "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
     ],
+    // Pulled in by libraries, used by nothing in the app, and each one a question in
+    // Play review: drawing over other apps, shared storage (ignored on Android 13+
+    // anyway), biometrics (secure-store's unused option) and DUMP. Taken out of the
+    // merged manifest at build time.
+    blockedPermissions: [
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.USE_BIOMETRIC",
+      "android.permission.USE_FINGERPRINT",
+      "android.permission.DUMP",
+    ],
   },
 
   plugins: [
