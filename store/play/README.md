@@ -70,9 +70,14 @@ Chrome renders the HTML, sharp cuts the frames).
 
 - **Privacy policy**: the URL above.
 - **Ads**: No ads.
-- **App access**: Restricted. Give Google a TEST guard login and a TEST supervisor login
-  (employee code + password), with the note: "Staff accounts are issued by NBSS. Sign in
-  with Staff login, then the employee code and password below."
+- **App access**: "All or some functionality is restricted". Add two instructions:
+  - *Guard*: on the sign-in screen tap **Staff & guards: name and mobile**, name `Ranjit Basumatary`,
+    mobile `9000000001`.
+  - *Supervisor*: same button, name `Test Supervisor`, mobile `9000000010`.
+  - Note for reviewers: "Staff accounts are issued by NBSS; these two are test accounts
+    and show test data only. Clients sign in with Google. Check-in works only inside a
+    site's boundary, so the guard account shows its duty screen without checking in."
+  (Both verified against the live sign-in on 24 Nov 2026.)
 - **Content rating**: questionnaire, category "Utility, productivity, communication or
   other"; answer No to every content question. Expected: Rated for 3+ / Everyone.
 - **Target audience**: 18 and over only. Not designed for children.
