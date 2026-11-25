@@ -122,7 +122,8 @@ Save stays disabled until the video link is filled:
   can see a site is covered and reach a guard who raises an SOS. Guards keep their phone
   in a pocket with the screen off, so tracking must continue in the background. It stops
   at check-out."
-- Video (YouTube, unlisted, 30 to 60 s): open the app as a TEST guard → the "Location while
+- Video: https://www.youtube.com/watch?v=03PxMGq1BA4 (unlisted, 1:43, recorded 25 Nov 2026 on an
+  Android 15 emulator with TEST-G1). Script it follows: open the app as a TEST guard → the "Location while
   you are on duty" explanation appears → Continue → choose "Allow all the time" → check
   in → lock the phone → show the supervisor's Live map with the dot moving → check out.
 
