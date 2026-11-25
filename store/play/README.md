@@ -108,7 +108,15 @@ count as sharing.
 
 ### Sensitive permissions (Policy → App content → Sensitive app permissions)
 
-**Background location** (ACCESS_BACKGROUND_LOCATION)
+**Background location** (ACCESS_BACKGROUND_LOCATION). The console form has three fields, and
+Save stays disabled until the video link is filled:
+- App purpose: "NBSS Kokrajhar is the work app of a security agency. Guards check in at their site,
+  see their duties and raise an SOS; supervisors and the office see who is on duty and where, and
+  respond to emergencies."
+- Location access: "Live duty tracking. When a guard checks in for a duty, the app shares their
+  location with their supervisors and the office until they check out, including while the phone is
+  locked in a pocket. This lets the office confirm the site is covered and reach a guard who raises
+  an SOS. A persistent notification shows while it runs, and tracking stops at check-out."
 - Feature: "Live duty tracking and SOS for security guards"
 - Why it is needed: "Guards are tracked only while checked in for a duty, so supervisors
   can see a site is covered and reach a guard who raises an SOS. Guards keep their phone
@@ -118,7 +126,8 @@ count as sharing.
   you are on duty" explanation appears → Continue → choose "Allow all the time" → check
   in → lock the phone → show the supervisor's Live map with the dot moving → check out.
 
-**Foreground service type: location** (FOREGROUND_SERVICE_LOCATION)
+**Foreground service type: location** (FOREGROUND_SERVICE_LOCATION). Tick "User-initiated location
+sharing" and give the same video link (required; Save is disabled without it).
 - Use: "Location tracking during a guard's duty, started by the guard's check-in and
   shown as a persistent notification; stopped at check-out." Same video.
 
