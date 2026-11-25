@@ -243,7 +243,7 @@ function NoteItem({ n, canEdit, oneSite }: { n: HandoverNote; canEdit: boolean; 
               <LogOut className="size-3.5" /> Left at check-out
               {n.shiftIn && (
                 <span>
-                  · on duty {clock(n.shiftIn)} – {n.shiftOut ? clock(n.shiftOut) : "now"}
+                  · on duty {clock(n.shiftIn)} - {n.shiftOut ? clock(n.shiftOut) : "now"}
                 </span>
               )}
             </span>

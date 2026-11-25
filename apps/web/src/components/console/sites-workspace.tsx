@@ -418,7 +418,7 @@ export function SitesWorkspace({
               <dt className="text-muted-foreground">Boundary</dt>
               <dd>{picked.ring ? `Area · ${picked.ring.length} points` : `${picked.geofence_radius_m} m radius`}</dd>
               <dt className="text-muted-foreground">Shift</dt>
-              <dd className="tabular-nums">{picked.shift_start ? `${clock(picked.shift_start)}–${clock(picked.shift_end)}` : "Not fixed"}</dd>
+              <dd className="tabular-nums">{picked.shift_start ? `${clock(picked.shift_start)}-${clock(picked.shift_end)}` : "Not fixed"}</dd>
               <dt className="text-muted-foreground">Grace</dt>
               <dd className="tabular-nums">{picked.grace_minutes} min</dd>
               <dt className="text-muted-foreground">Standard shift</dt>

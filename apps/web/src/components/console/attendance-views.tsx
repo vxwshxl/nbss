@@ -169,7 +169,7 @@ export function DayList({ rows }: { rows: RegisterEntry[] }) {
             </Link>
             <span className="block truncate text-xs text-muted-foreground">
               {r.siteName} · {clock(r.startsAt)}
-              {r.endsAt ? `–${clock(r.endsAt)}` : ""}
+              {r.endsAt ? `-${clock(r.endsAt)}` : ""}
             </span>
           </span>
           <span className="text-right text-xs">

@@ -45,7 +45,7 @@ export default function AboutPage() {
       <PageHead
         eyebrow="Company profile"
         crumb="About"
-        title="Safety, protection and peace of mind."
+        title="Who we are and how we work."
         lede={site.descriptor}
         image="/img/nbss/parade-night.webp"
       />

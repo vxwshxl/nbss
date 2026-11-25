@@ -110,7 +110,7 @@ export async function savePosting(input: {
     const where = (Array.isArray(clash.sites) ? clash.sites[0] : clash.sites) as { name: string } | null;
     return {
       ok: false,
-      error: `${guard.full_name} is already posted at ${where?.name ?? "another site"} ${clockLabel(clash.starts)}–${clockLabel(clash.ends)} at those times. Choose hours that do not overlap.`,
+      error: `${guard.full_name} is already posted at ${where?.name ?? "another site"} ${clockLabel(clash.starts)}-${clockLabel(clash.ends)} at those times. Choose hours that do not overlap.`,
     };
   }
 

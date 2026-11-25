@@ -368,7 +368,7 @@ export function SitePreviewDialog({
                   <Field
                     icon={Clock}
                     label="Shift window"
-                    value={site.shift_start ? `${clock(site.shift_start)} – ${clock(site.shift_end)}` : "Not set"}
+                    value={site.shift_start ? `${clock(site.shift_start)} - ${clock(site.shift_end)}` : "Not set"}
                   />
                   <Field icon={Timer} label="Grace" value={`${site.grace_minutes} min`} />
                   <Field icon={Hourglass} label="Standard shift" value={`${shiftHours(site.standard_shift_minutes)} · then overtime`} />

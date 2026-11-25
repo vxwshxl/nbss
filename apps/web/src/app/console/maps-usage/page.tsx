@@ -144,7 +144,7 @@ export default async function MapsUsagePage({ searchParams }: { searchParams: Pr
   let bars: { key: string; label: string; tip: string; n: number }[];
   if (view === "day") {
     const byHour = new Map(r.hours.map((h) => [Number(h.hour), Number(h.n)]));
-    bars = Array.from({ length: 24 }, (_, h) => ({ key: String(h), label: hourLabel(h), tip: `${hourLabel(h)}–${hourLabel((h + 1) % 24)}`, n: byHour.get(h) ?? 0 }));
+    bars = Array.from({ length: 24 }, (_, h) => ({ key: String(h), label: hourLabel(h), tip: `${hourLabel(h)}-${hourLabel((h + 1) % 24)}`, n: byHour.get(h) ?? 0 }));
   } else if (view === "month") {
     bars = Array.from({ length: daysIn(y, m) }, (_, i) => {
       const day = `${at}-${pad(i + 1)}`;

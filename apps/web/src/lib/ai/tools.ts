@@ -222,7 +222,7 @@ const listSites: AiTool = {
         boundary: Array.isArray(s.polygon)
           ? `drawn area, ${s.polygon.length} points`
           : `${s.geofence_radius_m} m radius`,
-        shift: s.shift_start ? `${s.shift_start}–${s.shift_end}` : "not set",
+        shift: s.shift_start ? `${s.shift_start}-${s.shift_end}` : "not set",
         graceMinutes: s.grace_minutes,
         standardShift: hours(s.standard_shift_minutes),
         inService: s.active,
@@ -603,7 +603,7 @@ async function readRosterDay(supabase: Supabase, offset: number) {
       guard: g?.full_name ?? "A guard",
       code: g?.employee_code ?? null,
       site: place?.name ?? "a site",
-      hours: `${clockAt(s.starts_at)} – ${clockAt(s.ends_at)}`,
+      hours: `${clockAt(s.starts_at)} - ${clockAt(s.ends_at)}`,
       state,
       ...(state === "checked in at another site" ? { checkedInAt: here?.site } : {}),
       ...(state === "not arrived" ? { lateBy: hours(Math.round((now - start) / 60_000)) } : {}),

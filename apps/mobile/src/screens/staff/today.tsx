@@ -246,8 +246,8 @@ export function StaffToday() {
         onPress={open}
         note={(d) => `In ${istTime(d.inAt!)} · ${mins(now - new Date(d.inAt!).getTime())}${d.offRoster ? " · not rostered" : ` · ends ${istTime(d.ends_at)}`}`}
       />
-      <Group show={shows("coming")} title="Starting later" hint="Duty begins later" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
-      <Group show={shows("done")} title="Missed" hint="The duty ended and they never checked in" tone="amber" rows={missed} onPress={open} note={(d) => `Was due ${istTime(d.starts_at)} – ${istTime(d.ends_at)}`} />
+      <Group show={shows("coming")} title="Starting later" hint="Duty begins later" tone="sky" rows={coming} onPress={open} note={(d) => `${istTime(d.starts_at)} - ${istTime(d.ends_at)}`} />
+      <Group show={shows("done")} title="Missed" hint="The duty ended and they never checked in" tone="amber" rows={missed} onPress={open} note={(d) => `Was due ${istTime(d.starts_at)} - ${istTime(d.ends_at)}`} />
       <Group
         show={shows("done")}
         title="Completed"
@@ -255,7 +255,7 @@ export function StaffToday() {
         tone="slate"
         rows={completed}
         onPress={open}
-        note={(d) => `${istTime(d.inAt!)} – ${d.outAt ? istTime(d.outAt) : "?"}${d.inAt && d.outAt ? ` · ${mins(new Date(d.outAt).getTime() - new Date(d.inAt).getTime())}` : ""}`}
+        note={(d) => `${istTime(d.inAt!)} - ${d.outAt ? istTime(d.outAt) : "?"}${d.inAt && d.outAt ? ` · ${mins(new Date(d.outAt).getTime() - new Date(d.inAt).getTime())}` : ""}`}
       />
     </Screen>
   );

@@ -26,7 +26,7 @@ import { AREAS_SERVED, BRAND_ALTERNATE_NAMES } from "@/lib/seo/structured-data";
 export const dynamic = "force-static";
 
 export function GET() {
-  const hours = `${site.officeOpen}–${site.officeClose} IST, Monday to Saturday`;
+  const hours = `${site.officeOpen} to ${site.officeClose} IST, Monday to Saturday`;
 
   const body = `# ${site.name} (NBSS)
 

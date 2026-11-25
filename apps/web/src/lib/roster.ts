@@ -27,7 +27,7 @@ export function clock(value: string | null | undefined): string {
 
 /** "8:00 pm – 8:00 am". */
 export function windowLabel(starts: string, ends: string): string {
-  return `${clock(starts)} – ${clock(ends)}`;
+  return `${clock(starts)} - ${clock(ends)}`;
 }
 
 // Breaks: one set of rules for the website and the app.
@@ -37,8 +37,8 @@ export { checkBreaks, hoursLabel, parts, readBreaks, type Break } from "@nbss/sh
 export function daysLabel(days: number[]): string {
   const sorted = [...days].sort((a, b) => a - b);
   if (sorted.length === 7) return "Every day";
-  if (sorted.join() === "1,2,3,4,5") return "Mon–Fri";
-  if (sorted.join() === "1,2,3,4,5,6") return "Mon–Sat";
+  if (sorted.join() === "1,2,3,4,5") return "Mon-Fri";
+  if (sorted.join() === "1,2,3,4,5,6") return "Mon-Sat";
   return sorted.map((d) => WEEKDAYS[d - 1]?.short ?? d).join(", ");
 }
 

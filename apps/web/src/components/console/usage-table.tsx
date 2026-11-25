@@ -28,7 +28,7 @@ export function UsageTable({ title, rows, empty }: { title: string; rows: UsageR
           {(
             [
               { key: "count", label: "Most", icon: ArrowDownWideNarrow },
-              { key: "name", label: "A–Z", icon: ArrowDownAZ },
+              { key: "name", label: "A-Z", icon: ArrowDownAZ },
             ] as const
           ).map((o) => (
             <button

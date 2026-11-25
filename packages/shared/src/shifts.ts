@@ -85,7 +85,7 @@ export function checkBreaks(starts: string, ends: string, breaks: Break[]): { ok
   for (const b of sorted) {
     const s = offset(starts, b.starts);
     const e = offset(starts, b.ends);
-    const label = `${clock(b.starts)} – ${clock(b.ends)}`;
+    const label = `${clock(b.starts)} - ${clock(b.ends)}`;
     if (s === 0 || e <= s || e >= len) return { ok: false, error: `The break ${label} must sit inside the shift's hours.` };
     if (s < last) return { ok: false, error: `The break ${label} overlaps another break.` };
     last = e;
@@ -111,9 +111,9 @@ export function parts(starts: string, ends: string, breaks: Break[]): { starts: 
 
 /** "8:00 am – 8:00 pm", or with breaks "8:00 am – 12:00 pm, 1:00 pm – 8:00 pm". */
 export function hoursLabel(starts: string, ends: string, breaks: Break[] = []): string {
-  if (breaks.length === 0) return `${clock(starts)} – ${clock(ends)}`;
+  if (breaks.length === 0) return `${clock(starts)} - ${clock(ends)}`;
   return parts(starts, ends, breaks)
-    .map((p) => `${clock(p.starts)} – ${clock(p.ends)}`)
+    .map((p) => `${clock(p.starts)} - ${clock(p.ends)}`)
     .join(", ");
 }
 

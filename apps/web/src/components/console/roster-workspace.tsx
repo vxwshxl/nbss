@@ -375,7 +375,7 @@ export function RosterWorkspace({
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium">{s.guardName}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {siteName(s.siteId)} · {time(s.startsAt)} – {time(s.endsAt)}
+                        {siteName(s.siteId)} · {time(s.startsAt)} - {time(s.endsAt)}
                         {s.cover ? " · cover" : ""}
                       </span>
                     </span>
@@ -688,7 +688,7 @@ export function RosterWorkspace({
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           {shiftTypeLabel(s.shiftType) ? `${shiftTypeLabel(s.shiftType)} · ` : ""}
-                          {time(s.startsAt)} – {time(s.endsAt)}
+                          {time(s.startsAt)} - {time(s.endsAt)}
                           {s.replacing ? ` · replacing ${s.replacing}` : ""}
                         </span>
                       </span>
@@ -999,7 +999,7 @@ function ShiftTypePicker({ starts, ends, onPick }: { starts: string; ends: strin
           >
             <span className="text-sm font-semibold">{t.label}</span>
             <span className="text-[11px] text-muted-foreground tabular-nums">
-              {clock(`${t.starts}:00`)}–{clock(`${t.ends}:00`)}
+              {clock(`${t.starts}:00`)}-{clock(`${t.ends}:00`)}
             </span>
           </button>
         ))}

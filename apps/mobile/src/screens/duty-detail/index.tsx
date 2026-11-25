@@ -208,7 +208,7 @@ export function DutyDetail({ id }: { id: string }) {
                   {d.site.name}
                 </Text>
                 <Text variant="caption" tone="muted" numberOfLines={1}>
-                  {[d.kind === "off_roster" ? "Not on the roster" : type, d.kind !== "off_roster" ? `${clock(d.starts_at)} – ${clock(d.ends_at)}` : null].filter(Boolean).join(" · ")}
+                  {[d.kind === "off_roster" ? "Not on the roster" : type, d.kind !== "off_roster" ? `${clock(d.starts_at)} - ${clock(d.ends_at)}` : null].filter(Boolean).join(" · ")}
                 </Text>
                 <View style={styles.pills}>
                   <StatusPill tone={OUTCOME_TONE[outcome]} label={outcome === "on_duty" ? "On duty now" : OUTCOME_LABEL[outcome]} />
@@ -254,7 +254,7 @@ export function DutyDetail({ id }: { id: string }) {
           <Panel tone="emerald" title="Shift" icon={CalendarDays} bare>
             <Field first label="Date" value={longDate(d.starts_at)} />
             <Field label="Duty" value={d.kind === "off_roster" ? "Not on the roster" : (type ?? "Duty")} />
-            {d.kind !== "off_roster" && <Field label="Time" value={`${clock(d.starts_at)} – ${clock(d.ends_at)}`} />}
+            {d.kind !== "off_roster" && <Field label="Time" value={`${clock(d.starts_at)} - ${clock(d.ends_at)}`} />}
             {d.site.address ? <Field label="Address" value={[d.site.address, d.site.district].filter(Boolean).join(", ")} /> : null}
             {d.replacing && <Field label="Covering for" value={d.replacing} />}
             {d.replaced_by && <Field label="Handed to" value={d.replaced_by} />}
@@ -295,7 +295,7 @@ export function DutyDetail({ id }: { id: string }) {
                 <Field
                   key={x.id}
                   label={`Session ${i + 1}`}
-                  value={`${clock(x.check_in_at)} – ${x.check_out_at ? clock(x.check_out_at) : "now"}`}
+                  value={`${clock(x.check_in_at)} - ${x.check_out_at ? clock(x.check_out_at) : "now"}`}
                   sub={[x.worked_minutes != null ? hm(x.worked_minutes) : x.check_out_at ? null : "on duty", x.auto_check_out ? "auto check-out" : null].filter(Boolean).join(" · ") || undefined}
                 />
               ))}
@@ -364,7 +364,7 @@ function routeTotals(route: RoutePoint[]) {
 function RouteSummary({ route }: { route: RoutePoint[] }) {
   const { walked, outside, span } = routeTotals(route);
   return (
-    <Panel tone="violet" title="Your route" subtitle={`${clockOf(route[0]!.at)} – ${clockOf(route.at(-1)!.at)}`} icon={RouteIcon}>
+    <Panel tone="violet" title="Your route" subtitle={`${clockOf(route[0]!.at)} - ${clockOf(route.at(-1)!.at)}`} icon={RouteIcon}>
       <View style={styles.routeStats}>
         <RouteStat value={formatDistance(walked)} label="walked" />
         <RouteStat value={hm(Math.round(span / 60_000))} label="tracked" />

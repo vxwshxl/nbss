@@ -87,7 +87,7 @@ export default async function GuardAttendancePage({
         }
       : null;
     const site = one(s.sites as unknown as { name: string } | null)?.name ?? "A site";
-    const window = `${shiftTypeLabel(s.shift_type) ? `${shiftTypeLabel(s.shift_type)} · ` : ""}${clock(s.starts_at)}–${clock(s.ends_at)}`;
+    const window = `${shiftTypeLabel(s.shift_type) ? `${shiftTypeLabel(s.shift_type)} · ` : ""}${clock(s.starts_at)}-${clock(s.ends_at)}`;
     let status: RegisterRow["status"];
     if (s.replaced_by_shift && !a) status = "replaced";
     else if (a) status = !a.check_out_at ? "on_duty" : (a.status as RegisterRow["status"]);
@@ -99,7 +99,7 @@ export default async function GuardAttendancePage({
       s.replaced_by_shift && !a ? "Handed to another guard" : null,
       a?.device_flag ? (a.device_flag === "shared_device" ? "Another guard's phone" : "Unapproved phone") : null,
       a?.review_note && a.status !== "present" ? a.review_note : null,
-      sessions.length > 1 ? `${sessions.length} sessions: ${sessions.map((x) => `${clock(x.check_in_at!)}–${x.check_out_at ? clock(x.check_out_at) : "now"}`).join(", ")}` : null,
+      sessions.length > 1 ? `${sessions.length} sessions: ${sessions.map((x) => `${clock(x.check_in_at!)}-${x.check_out_at ? clock(x.check_out_at) : "now"}`).join(", ")}` : null,
     ].filter(Boolean);
     return {
       key: s.id,

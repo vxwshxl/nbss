@@ -129,9 +129,9 @@ async function load(id: string): Promise<Detail | null> {
         const shift = one(a.shifts as unknown as { starts_at: string; ends_at: string } | { starts_at: string; ends_at: string }[] | null);
         const hours = one(a.sites as unknown as { shift_start: string | null; shift_end: string | null } | { shift_start: string | null; shift_end: string | null }[] | null);
         const duty = shift
-          ? `${istTime(shift.starts_at)} – ${istTime(shift.ends_at)}`
+          ? `${istTime(shift.starts_at)} - ${istTime(shift.ends_at)}`
           : hours?.shift_start && hours.shift_end
-            ? `${clock12(hours.shift_start)} – ${clock12(hours.shift_end)} (site hours)`
+            ? `${clock12(hours.shift_start)} - ${clock12(hours.shift_end)} (site hours)`
             : null;
         const place = one(a.sites as unknown as SiteRow | SiteRow[] | null);
         const fence: MapSite | null = place
@@ -306,7 +306,7 @@ export function PersonPage({ id }: { id: string }) {
                 {d.posting ? (
                   <>
                     <Row label="Site" value={d.posting.site} first />
-                    <Row label="Hours" value={`${d.posting.breaks.length ? hoursLabel(d.posting.starts, d.posting.ends, d.posting.breaks) : `${clock12(d.posting.starts)} – ${clock12(d.posting.ends)}`}${d.posting.shift && !d.posting.breaks.length ? ` · ${shiftTypeLabel(d.posting.shift)}` : ""}`} />
+                    <Row label="Hours" value={`${d.posting.breaks.length ? hoursLabel(d.posting.starts, d.posting.ends, d.posting.breaks) : `${clock12(d.posting.starts)} - ${clock12(d.posting.ends)}`}${d.posting.shift && !d.posting.breaks.length ? ` · ${shiftTypeLabel(d.posting.shift)}` : ""}`} />
                     <Row label="Days" value={d.posting.days.length === 7 || d.posting.days.length === 0 ? "Every day" : d.posting.days.map((n) => WEEK[n]).join(", ")} />
                   </>
                 ) : (
@@ -363,7 +363,7 @@ export function PersonPage({ id }: { id: string }) {
                           {s.site}
                         </Text>
                         <Text variant="caption" tone="muted">
-                          {shortDay(s.in)} · {istTime(s.in)} – {s.out ? istTime(s.out) : "now"}
+                          {shortDay(s.in)} · {istTime(s.in)} - {s.out ? istTime(s.out) : "now"}
                           {s.minutes ? ` · ${Math.floor(s.minutes / 60)}h ${s.minutes % 60}m` : ""}
                         </Text>
                       </View>

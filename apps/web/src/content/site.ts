@@ -66,7 +66,7 @@ export const site = {
   officeOpen: "9:00 AM",
   officeClose: "6:00 PM",
   /** Ready-made for the places that quote the window inside a sentence. */
-  hoursShort: "Mon–Sat, 9:00 AM – 6:00 PM IST",
+  hoursShort: "Mon to Sat, 9:00 AM to 6:00 PM IST",
   hours: [
     "Office: Mon to Sat, 9:00 AM to 6:00 PM IST",
     "Supervision & deployment desk: 24 × 7",

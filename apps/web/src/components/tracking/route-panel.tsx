@@ -256,7 +256,7 @@ export function DutyLine({ duty, now, past = false }: { duty: Duty; now: number;
   }
   const { from, to } =
     duty.kind === "shift" ? { from: new Date(duty.start).getTime(), to: new Date(duty.end).getTime() } : siteWindow(duty.start, duty.end, now);
-  const label = duty.kind === "shift" ? `${istClock(from)} – ${istClock(to)}` : `${wallClock(duty.start)} – ${wallClock(duty.end)}`;
+  const label = duty.kind === "shift" ? `${istClock(from)} - ${istClock(to)}` : `${wallClock(duty.start)} - ${wallClock(duty.end)}`;
   const over = now > to;
   const note = past ? null : now < from ? `starts in ${duration((from - now) / 60_000)}` : over ? `ended ${duration((now - to) / 60_000)} ago` : `ends in ${duration((to - now) / 60_000)}`;
   return (

@@ -95,13 +95,13 @@ export function ReplacementsWorkspace({
         <span className="block">
           <span className="block font-medium">{r.siteName}</span>
           <span className="block text-xs text-muted-foreground">
-            {day(r.startsAt)} · {typeLabel(r.shiftType)} · {time(r.startsAt)} – {time(r.endsAt)}
+            {day(r.startsAt)} · {typeLabel(r.shiftType)} · {time(r.startsAt)} - {time(r.endsAt)}
           </span>
         </span>
       ),
       sortValue: (r) => r.startsAt,
       searchValue: (r) => `${r.siteName} ${r.fromGuard} ${r.toGuard}`,
-      printCell: (r) => `${r.siteName}, ${day(r.startsAt)} ${time(r.startsAt)}–${time(r.endsAt)}`,
+      printCell: (r) => `${r.siteName}, ${day(r.startsAt)} ${time(r.startsAt)}-${time(r.endsAt)}`,
     },
     {
       header: "Handed over",
@@ -138,7 +138,7 @@ export function ReplacementsWorkspace({
                     {r.guardName} <span className="font-normal text-muted-foreground">can&apos;t make</span> {r.duty.siteName}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {day(r.duty.startsAt)} · {typeLabel(r.duty.shiftType)} · {time(r.duty.startsAt)} – {time(r.duty.endsAt)}
+                    {day(r.duty.startsAt)} · {typeLabel(r.duty.shiftType)} · {time(r.duty.startsAt)} - {time(r.duty.endsAt)}
                     {r.reason ? ` · “${r.reason}”` : ""}
                   </span>
                 </span>
@@ -199,7 +199,7 @@ export function ReplacementsWorkspace({
             ) : (
               <>
                 <div className="mb-3 flex items-center justify-between gap-2 text-sm">
-                  <span className="text-muted-foreground">Tick the duties to hand over — one day, or several.</span>
+                  <span className="text-muted-foreground">Tick the duties to hand over. One day or several is fine.</span>
                   <button type="button" className="font-medium text-primary" onClick={() => setPicked(new Set(picked.size === mine.length ? [] : mine.map((d) => d.id)))}>
                     {picked.size === mine.length ? "Clear" : "Select all"}
                   </button>
@@ -228,7 +228,7 @@ export function ReplacementsWorkspace({
                           <span className="min-w-0">
                             <span className="block font-medium">{day(d.startsAt)}</span>
                             <span className="block text-xs text-muted-foreground">
-                              {d.siteName} · {typeLabel(d.shiftType)} · {time(d.startsAt)} – {time(d.endsAt)}
+                              {d.siteName} · {typeLabel(d.shiftType)} · {time(d.startsAt)} - {time(d.endsAt)}
                               {d.status === "in_progress" ? " · on duty now" : d.status === "missed" ? " · not arrived" : ""}
                             </span>
                           </span>
@@ -321,7 +321,7 @@ function AssignDialog({
         title={`Cover for ${from.guardName}`}
         meta={
           <span>
-            {shifts.length === 1 ? `${from.siteName} · ${day(from.startsAt)}, ${time(from.startsAt)} – ${time(from.endsAt)}` : `${shifts.length} duties`}
+            {shifts.length === 1 ? `${from.siteName} · ${day(from.startsAt)}, ${time(from.startsAt)} - ${time(from.endsAt)}` : `${shifts.length} duties`}
           </span>
         }
         badge={<HeroPill>{typeLabel(from.shiftType)}</HeroPill>}
@@ -331,7 +331,7 @@ function AssignDialog({
           <ul className="space-y-1 text-sm">
             {shifts.map((s) => (
               <li key={s.id} className="flex items-center gap-2 text-muted-foreground">
-                <CalendarClock className="size-3.5" /> {day(s.startsAt)} · {s.siteName} · {time(s.startsAt)} – {time(s.endsAt)}
+                <CalendarClock className="size-3.5" /> {day(s.startsAt)} · {s.siteName} · {time(s.startsAt)} - {time(s.endsAt)}
               </li>
             ))}
           </ul>
@@ -356,7 +356,7 @@ function AssignDialog({
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">{g.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {g.clash ? `Busy: ${g.clash.siteName}, ${day(g.clash.startsAt)} ${time(g.clash.startsAt)} – ${time(g.clash.endsAt)}` : "Free for these hours"}
+                      {g.clash ? `Busy: ${g.clash.siteName}, ${day(g.clash.startsAt)} ${time(g.clash.startsAt)} - ${time(g.clash.endsAt)}` : "Free for these hours"}
                     </span>
                   </span>
                   <span className="font-mono text-xs text-muted-foreground">{g.code}</span>

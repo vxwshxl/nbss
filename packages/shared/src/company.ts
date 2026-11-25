@@ -26,7 +26,7 @@ export const COMPANY = {
   state: "Assam",
   /** The deployment desk is staffed around the clock; the office is not. */
   deskHours: "24 × 7",
-  officeHours: "Mon–Sat, 9:00 AM – 6:00 PM IST",
+  officeHours: "Mon to Sat, 9:00 AM to 6:00 PM IST",
 } as const;
 
 /** The office numbers for a sentence: "+91 70020 71628, +91 75770 36205, … or +91 84864 74966". */

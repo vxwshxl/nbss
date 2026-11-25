@@ -22,7 +22,7 @@ export async function updateOwnProfile(_prev: ProfileState, data: FormData): Pro
   const worker = session.profile.role !== "client";
   // Name and mobile are a worker's sign-in, so the mobile cannot be left blank.
   if (worker && !phone) return { ok: false, error: "Your mobile number is needed: you sign in with it." };
-  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6–9)." };
+  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6 to 9)." };
 
   const admin = supabaseAdmin();
   // One mobile, one active account (0075). Names may repeat.

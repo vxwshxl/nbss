@@ -250,7 +250,7 @@ export function BookWorkspace({
                     {t.label}
                   </span>
                   <span className="pl-6 text-xs text-muted-foreground">
-                    {t.code === "full_day" ? "Round the clock" : `${clock(`${t.starts}:00`)} – ${clock(`${t.ends}:00`)}`}
+                    {t.code === "full_day" ? "Round the clock" : `${clock(`${t.starts}:00`)} - ${clock(`${t.ends}:00`)}`}
                   </span>
                 </label>
               ))}

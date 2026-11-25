@@ -163,7 +163,7 @@ export default function BookRoute() {
             {SHIFT_TYPES.map((t) => (
               <Chip
                 key={t.code}
-                label={t.code === "full_day" ? "24 Hours" : `${t.label} ${clock(t.starts)}–${clock(t.ends)}`}
+                label={t.code === "full_day" ? "24 Hours" : `${t.label} ${clock(t.starts)}-${clock(t.ends)}`}
                 selected={shifts.includes(t.code)}
                 onPress={() => setShifts((cur) => (cur.includes(t.code) ? cur.filter((x) => x !== t.code) : [...cur, t.code]))}
               />

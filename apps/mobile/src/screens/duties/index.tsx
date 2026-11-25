@@ -210,7 +210,7 @@ function DutyCard({ d, now, onAsk, onWithdraw }: { d: MyDuty; now: number; onAsk
             {d.site.name}
           </Text>
           <Text variant="caption" tone="muted" numberOfLines={1}>
-            {[type, `${clock(d.starts_at)} – ${clock(d.ends_at)}`].filter(Boolean).join(" · ")}
+            {[type, `${clock(d.starts_at)} - ${clock(d.ends_at)}`].filter(Boolean).join(" · ")}
           </Text>
           {d.replacing && (
             <Text variant="caption" weight="semibold" tone="primary" numberOfLines={1}>
@@ -298,7 +298,7 @@ export function AskCover({
           </Text>
           {duty && (
             <Text variant="body" tone="muted">
-              {duty.site.name} · {dayLabel(duty.starts_at)}, {clock(duty.starts_at)} – {clock(duty.ends_at)}. The office will send someone in your place.
+              {duty.site.name} · {dayLabel(duty.starts_at)}, {clock(duty.starts_at)} - {clock(duty.ends_at)}. The office will send someone in your place.
             </Text>
           )}
           <TextInput
@@ -468,7 +468,7 @@ function MonthTable({ rows, now, loading, title }: { rows: MyDuty[]; now: number
                   <Text variant="caption" tone="muted" numberOfLines={1}>
                     {d.kind === "off_roster"
                       ? "Not on the roster"
-                      : [type, `${clock(d.starts_at)}–${clock(d.ends_at)}`].filter(Boolean).join(" · ")}
+                      : [type, `${clock(d.starts_at)}-${clock(d.ends_at)}`].filter(Boolean).join(" · ")}
                   </Text>
                   <View style={styles.pill}>
                     <StatusPill tone={OUTCOME_TONE[o]} label={OUTCOME_LABEL[o]} />
@@ -479,7 +479,7 @@ function MonthTable({ rows, now, loading, title }: { rows: MyDuty[]; now: number
                     {d.attendance?.worked_minutes != null ? hm(d.attendance.worked_minutes) : "-"}
                   </Text>
                   <Text variant="caption" tone="muted" mono>
-                    {d.attendance?.check_in_at ? `${clock(d.attendance.check_in_at)}${d.attendance.check_out_at ? `–${clock(d.attendance.check_out_at)}${d.attendance.auto_check_out ? " auto" : ""}` : ""}` : ""}
+                    {d.attendance?.check_in_at ? `${clock(d.attendance.check_in_at)}${d.attendance.check_out_at ? `-${clock(d.attendance.check_out_at)}${d.attendance.auto_check_out ? " auto" : ""}` : ""}` : ""}
                   </Text>
                 </View>
               </PanelRow>

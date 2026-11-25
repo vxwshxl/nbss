@@ -202,7 +202,7 @@ export default async function VacancyPage({ params }: Params) {
                 ))}
               </ul>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Monday to Saturday, {site.officeOpen}–{site.officeClose} IST. Or walk into
+                Monday to Saturday, {site.officeOpen} to {site.officeClose} IST. Or walk into
                 the Kokrajhar office.
               </p>
             </Panel>

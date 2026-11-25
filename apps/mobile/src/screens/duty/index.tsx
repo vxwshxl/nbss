@@ -331,7 +331,7 @@ export function Duty() {
     duty: `On duty · since ${since ? istTime(since) : "-"} IST`,
     picked: "Checking in at",
     post: post
-      ? `${post.replacing ? `Replacing ${post.replacing}` : "Your duty"} · ${shiftTypeLabel(post.shiftType) ? `${shiftTypeLabel(post.shiftType)} · ` : ""}${istTime(post.startsAt)} – ${istTime(post.endsAt)}`
+      ? `${post.replacing ? `Replacing ${post.replacing}` : "Your duty"} · ${shiftTypeLabel(post.shiftType) ? `${shiftTypeLabel(post.shiftType)} · ` : ""}${istTime(post.startsAt)} - ${istTime(post.endsAt)}`
       : "Your duty",
     here: "You are at",
     nearest: "Nearest site",

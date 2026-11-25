@@ -114,7 +114,7 @@ count as sharing.
   can see a site is covered and reach a guard who raises an SOS. Guards keep their phone
   in a pocket with the screen off, so tracking must continue in the background. It stops
   at check-out."
-- Video (YouTube, unlisted, 30–60 s): open the app as a TEST guard → the "Location while
+- Video (YouTube, unlisted, 30 to 60 s): open the app as a TEST guard → the "Location while
   you are on duty" explanation appears → Continue → choose "Allow all the time" → check
   in → lock the phone → show the supervisor's Live map with the dot moving → check out.
 

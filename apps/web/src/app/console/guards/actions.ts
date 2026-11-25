@@ -42,7 +42,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     return { ok: false, values, error: "Only a developer can create another developer." };
   }
   if (!fullName) return { ok: false, values, error: "Enter the person's full name." };
-  if (!isValidPhone(phone)) return { ok: false, values, error: "Enter a 10-digit mobile number (an Indian mobile starts with 6–9)." };
+  if (!isValidPhone(phone)) return { ok: false, values, error: "Enter a 10-digit mobile number (an Indian mobile starts with 6 to 9)." };
   if (email && !isValidEmail(email)) return { ok: false, values, error: "That email address does not look right." };
   if (role === "client" && !email) {
     return { ok: false, values, error: "Clients sign in with Google: enter the Gmail address they will use." };
@@ -111,7 +111,7 @@ export async function updateContact(
   const worker = target.role !== "client";
   // The mobile is half of a worker's sign-in, so it cannot be taken away.
   if (worker && !phone) return { ok: false, error: "A mobile number is needed: it is how they sign in." };
-  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit mobile number (an Indian mobile starts with 6–9)." };
+  if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit mobile number (an Indian mobile starts with 6 to 9)." };
 
   if (email && !isValidEmail(email)) return { ok: false, error: "That email address does not look right." };
 

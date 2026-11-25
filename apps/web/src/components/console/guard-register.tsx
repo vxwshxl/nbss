@@ -235,7 +235,7 @@ function DayTile({ day, today, outside, list }: { day: string; today: boolean; o
           {firstIn ? (
             <span className="block truncate tabular-nums">
               {firstIn}
-              {lastOut ? `–${lastOut}` : " · now"}
+              {lastOut ? `-${lastOut}` : " · now"}
             </span>
           ) : (
             duty && <span className="block truncate text-muted-foreground tabular-nums">{duty}</span>

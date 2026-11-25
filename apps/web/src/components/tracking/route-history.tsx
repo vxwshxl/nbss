@@ -323,7 +323,7 @@ export function RouteHistory({
                 <span className="block truncate text-xs text-muted-foreground">
                   {s.siteName} · {new Date(s.checkInAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" })},{" "}
                   {istClock(new Date(s.checkInAt).getTime())}
-                  {s.checkOutAt ? ` – ${istClock(new Date(s.checkOutAt).getTime())}` : ""}
+                  {s.checkOutAt ? ` - ${istClock(new Date(s.checkOutAt).getTime())}` : ""}
                 </span>
                 {s.deviceFlag && (
                   <span className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-amber-700">

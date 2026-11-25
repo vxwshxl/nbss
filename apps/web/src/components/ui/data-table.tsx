@@ -406,7 +406,7 @@ export function DataTable<T>({
 
       <div className="mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-border py-4 text-[13px] text-secondary-fg sm:mx-6">
         <span className="tabular-nums">
-          {processed.length === 0 ? "0 results" : `${from}–${to} of ${processed.length}`}
+          {processed.length === 0 ? "0 results" : `${from}-${to} of ${processed.length}`}
         </span>
         {pageCount > 1 && (
           <div className="flex items-center gap-1">

@@ -28,7 +28,7 @@ export function loadGoogleMaps(): Promise<typeof google.maps> {
     }
     w.__nbssMapsReady = () => resolve(w.google!.maps);
     // Google calls this when the key is refused (wrong referrer, API not enabled).
-    w.gm_authFailure = () => console.error("[maps] Google refused the API key — check its referrer restrictions.");
+    w.gm_authFailure = () => console.error("[maps] Google refused the API key. Check its referrer restrictions.");
 
     const params = new URLSearchParams({
       key: KEY,

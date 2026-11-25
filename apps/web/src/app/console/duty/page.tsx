@@ -204,7 +204,7 @@ export default async function DutyPage() {
           <CalendarRange className="size-5 shrink-0" />
           <p className="text-sm">
             <span className="font-semibold">Your post:</span>{" "}
-            {(Array.isArray(post.sites) ? post.sites[0] : post.sites)?.name ?? "a site"} · {time(post.starts_at)} –{" "}
+            {(Array.isArray(post.sites) ? post.sites[0] : post.sites)?.name ?? "a site"} · {time(post.starts_at)} -{" "}
             {time(post.ends_at)}
           </p>
         </div>
