@@ -15,9 +15,9 @@ Everything the Play Console asks for, in the order it asks. Graphics are rebuilt
 - **Privacy policy**: https://nbsskokrajhar.com/privacy-policy
 - **Account deletion URL**: https://nbsskokrajhar.com/delete-account
 
-**Short description** (80 max, 74 used):
+**Short description** (80 max, 76 used):
 
-> Duty, attendance, live tracking and SOS for NBSS guards, supervisors and clients.
+> Duty, attendance, live map and SOS for NBSS guards, supervisors and clients.
 
 **Full description**:
 
@@ -48,8 +48,8 @@ Everything the Play Console asks for, in the order it asks. Graphics are rebuilt
 |---|---|---|
 | App icon | `icon-512.png` | 512 × 512 PNG, opaque |
 | Feature graphic | `feature-1024x500.png` | 1024 × 500 PNG |
-| Phone screenshots | `screenshots/phone-01…09.png` | 1080 × 1920 (9:16) |
-| 7-inch and 10-inch tablet screenshots | `screenshots/tablet-01…09.png` | 1600 × 2560 (use the same set for both) |
+| Phone screenshots | `screenshots/phone-01…08.png` | 1080 × 1920 (9:16); Play takes 8 at most, so 09 is spare |
+| 7-inch and 10-inch tablet screenshots | `screenshots/tablet-01…08.png` | 1440 × 2560 (9:16, Play rejects 10:16); same set for both |
 
 Upload in number order. The set is one panorama cut into frames, so in the store they
 read as one picture: a short headline per frame, the real app large and running off

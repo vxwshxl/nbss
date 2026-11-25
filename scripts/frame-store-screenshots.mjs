@@ -10,7 +10,7 @@
  * threading from phone to phone.
  *
  *   phone   1080 × 1920 each   from raw/phone-*.png   (1080 × 2400 screens)
- *   tablet  1600 × 2560 each   from raw/tablet-*.png  (1600 × 2560 screens)
+ *   tablet  1440 × 2560 each (9:16, as Play requires)   from raw/tablet-*.png  (1600 × 2560 screens)
  *
  * Rendered by Google Chrome from HTML (Geist, the app's own face) and cut with sharp.
  *
@@ -67,7 +67,7 @@ function smooth(pts) {
 
 function panorama(kind, frames) {
   const phone = kind === "phone";
-  const W = phone ? 1080 : 1600;
+  const W = phone ? 1080 : 1440;
   const H = phone ? 1920 : 2560;
   const N = frames.length;
   const TW = W * N;
@@ -266,7 +266,7 @@ try {
   for (const kind of ["phone", "tablet"]) {
     const have = new Set(await readdir(RAW));
     const frames = FRAMES.filter((f) => have.has(`${kind}-${f.raw}.png`));
-    const [W, H] = kind === "phone" ? [1080, 1920] : [1600, 2560];
+    const [W, H] = kind === "phone" ? [1080, 1920] : [1440, 2560];
     const html = path.join(tmp, `${kind}.html`);
     const wide = path.join(tmp, `${kind}.png`);
     await writeFile(html, panorama(kind, frames));
