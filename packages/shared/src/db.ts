@@ -176,6 +176,9 @@ export type Database = {
           detail: Json | null;
           ip: string | null;
           created_at: string;
+          source: string;
+          before: Json | null;
+          after: Json | null;
         };
         Insert: {
           id?: number;
@@ -187,6 +190,9 @@ export type Database = {
           detail?: Json | null;
           ip?: string | null;
           created_at?: string;
+          source?: string;
+          before?: Json | null;
+          after?: Json | null;
         };
         Update: {
           id?: number;
@@ -198,6 +204,9 @@ export type Database = {
           detail?: Json | null;
           ip?: string | null;
           created_at?: string;
+          source?: string;
+          before?: Json | null;
+          after?: Json | null;
         };
         Relationships: [];
       };

@@ -45,7 +45,7 @@ export async function reviewAttendance(
   }
   if (!(await visiblePunch(id))) return { ok: false, error: "That punch no longer exists." };
 
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
 
   const { data: row } = await admin
     .from("attendance")
@@ -98,7 +98,7 @@ export async function forceCheckOut(id: string, note: string): Promise<ReviewRes
   if (reason.length < 4) return { ok: false, error: "Give a reason for closing this shift." };
   if (!(await visiblePunch(id))) return { ok: false, error: "That punch no longer exists." };
 
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
 
   const { data: row } = await admin
     .from("attendance")

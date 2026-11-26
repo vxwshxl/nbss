@@ -58,7 +58,7 @@ export async function addGuard(_prev: GuardFormState, data: FormData): Promise<G
     session.realProfile.role === "developer"
       ? parseMode((await cookies()).get(DATA_MODE_COOKIE)?.value) === "test"
       : Boolean((session.realProfile as { is_test?: boolean }).is_test);
-  if (isTest) await supabaseAdmin().from("profiles").update({ is_test: true }).eq("id", created.id);
+  if (isTest) await supabaseAdmin(session.realProfile.id).from("profiles").update({ is_test: true }).eq("id", created.id);
 
   await audit({
     actor: session.realProfile,
@@ -94,7 +94,7 @@ export async function updateContact(
   input: { email: string; phone: string; fullName?: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireRoleSession("admin");
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
 
   const { data: target } = await admin
     .from("profiles")
@@ -170,7 +170,7 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
     throw new Error("You cannot deactivate the account you are signed in with.");
   }
 
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
   if (session.realProfile.role !== "developer") {
     const { data: target } = await admin.from("profiles").select("role").eq("id", profileId).maybeSingle();
     if (target?.role === "developer") throw new Error("Only a developer can deactivate a developer.");
@@ -195,7 +195,7 @@ export async function setAccountActive(profileId: string, active: boolean): Prom
 /** Switches someone's SOS button on or off (0052). */
 export async function setPersonSos(profileId: string, enabled: boolean): Promise<void> {
   const session = await requireRoleSession("admin");
-  const { error } = await supabaseAdmin().from("profiles").update({ sos_enabled: enabled }).eq("id", profileId);
+  const { error } = await supabaseAdmin(session.realProfile.id).from("profiles").update({ sos_enabled: enabled }).eq("id", profileId);
   if (error) throw new Error(error.message);
 
   await audit({
@@ -220,7 +220,7 @@ export async function changeRole(profileId: string, choice: RoleChoice): Promise
     throw new Error("You cannot remove your own administrator access.");
   }
 
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
 
   // Granting or taking away the developer role is a developer's call alone.
   const { data: current } = await admin.from("profiles").select("role, email, phone").eq("id", profileId).maybeSingle();
@@ -323,7 +323,7 @@ export async function deleteAccount(profileId: string): Promise<void> {
     throw new Error("You cannot delete the account you are signed in with.");
   }
 
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
 
   const { data: target } = await admin
     .from("profiles")

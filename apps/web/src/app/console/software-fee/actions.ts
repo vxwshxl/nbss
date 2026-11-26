@@ -21,7 +21,7 @@ async function payer() {
 export async function startFeePayment(invoiceId: string): Promise<Start> {
   const session = await payer();
   if (!session) return { ok: false, error: "Only an administrator can pay the software fee." };
-  const db = supabaseAdmin();
+  const db = supabaseAdmin(session.realProfile.id);
   const { data: inv } = await db.from("software_fee_invoices").select("id, number, period, total_paise, status, is_test").eq("id", invoiceId).maybeSingle();
   if (!inv) return { ok: false, error: "That invoice was not found." };
   if (!razorpayConfigured()) {
@@ -75,7 +75,7 @@ export async function saveFeeSettings(input: { perAccountRupees: number; gstPerc
   const gst = Number(input.gstPercent);
   if (!Number.isFinite(paise) || paise < 0 || paise > 1_000_000) return { ok: false, error: "Enter a rate between ₹0 and ₹10,000." };
   if (!Number.isFinite(gst) || gst < 0 || gst > 50) return { ok: false, error: "GST must be between 0 and 50%." };
-  const { error } = await supabaseAdmin()
+  const { error } = await supabaseAdmin(session.realProfile.id)
     .from("software_fee_settings")
     .update({ per_guard_paise: paise, gst_percent: gst, updated_at: new Date().toISOString(), updated_by: session.realProfile.id })
     .eq("id", true);
@@ -87,7 +87,7 @@ export async function saveFeeSettings(input: { perAccountRupees: number; gstPerc
 export async function setFeeSkipped(invoiceId: string, skip: boolean, note?: string): Promise<{ ok: boolean; error?: string }> {
   const session = await currentSession();
   if (session?.realProfile.role !== "developer" || session.impersonating) return { ok: false, error: "Only a developer can skip a month." };
-  const { error } = await supabaseAdmin()
+  const { error } = await supabaseAdmin(session.realProfile.id)
     .from("software_fee_invoices")
     .update({ status: skip ? "skipped" : "unpaid", skip_note: skip ? (note?.trim() || "Free month") : null, updated_at: new Date().toISOString() })
     .eq("id", invoiceId)

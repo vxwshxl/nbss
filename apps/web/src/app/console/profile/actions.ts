@@ -24,7 +24,7 @@ export async function updateOwnProfile(_prev: ProfileState, data: FormData): Pro
   if (worker && !phone) return { ok: false, error: "Your mobile number is needed: you sign in with it." };
   if (phone && !isValidPhone(phone)) return { ok: false, error: "Enter a 10-digit phone number (an Indian mobile starts with 6 to 9)." };
 
-  const admin = supabaseAdmin();
+  const admin = supabaseAdmin(session.realProfile.id);
   // One mobile, one active account (0075). Names may repeat.
   if (phone && phone !== (session.profile.phone ?? "")) {
     const holder = await mobileHolder(phone, session.profile.id);

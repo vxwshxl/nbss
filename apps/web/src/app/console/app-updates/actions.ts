@@ -44,7 +44,7 @@ export async function saveRelease(_prev: ReleaseState, data: FormData): Promise<
   if (versionName.length > 40) return refuse("Keep the version name short, like 1.0.1.");
   if (notes.length > 500) return refuse("Keep what's new under 500 characters: it is shown on a phone.");
 
-  const { error } = await supabaseAdmin()
+  const { error } = await supabaseAdmin(session.realProfile.id)
     .from("app_release")
     .update({
       version_code: versionCode,

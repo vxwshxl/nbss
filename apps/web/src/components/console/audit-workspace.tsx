@@ -1,21 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Database, ExternalLink, Globe, KeyRound, ScrollText, UserRound } from "lucide-react";
+import { ArrowUpRight, Dot, Info, LogIn, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
 
-import {
-  Field,
-  FieldGrid,
-  PreviewActions,
-  PreviewBody,
-  PreviewDialog,
-  PreviewHero,
-  Section,
-} from "@/components/console/preview-kit";
-import { Button } from "@/components/ui/button";
-import { DataTable, type Column } from "@/components/ui/data-table";
-import { StatusPill } from "@/components/ui/status-pill";
+import { cn, matchesSearch } from "@/lib/utils";
 import type { Tone } from "@/lib/ui/tones";
 
 export type AuditRow = {
@@ -31,6 +20,10 @@ export type AuditRow = {
   detail: unknown;
   ip: string | null;
   created_at: string;
+  /** app: written by the code in words. trigger: a row change the database recorded. */
+  source: "app" | "trigger";
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
 };
 
 const IST = "Asia/Kolkata";
@@ -111,12 +104,23 @@ const ENTITY_HREF: Record<string, (id: string) => string> = {
 };
 
 const ENTITY_LABEL: Record<string, string> = {
-  profiles: "person",
+  profiles: "account",
   sites: "site",
+  site_postings: "roster posting",
+  shifts: "shift",
+  shift_types: "shift type",
   attendance: "punch",
+  guard_devices: "phone",
   service_requests: "booking",
-  sos_alerts: "alert",
+  replacement_requests: "cover request",
+  sos_alerts: "SOS alert",
+  handover_notes: "handover note",
+  location_pins: "location pin",
   submissions: "enquiry",
+  app_release: "app update",
+  software_fee_settings: "software fee setting",
+  software_fee_invoices: "software fee invoice",
+  software_fee_extras: "software fee charge",
 };
 
 /**
@@ -170,131 +174,460 @@ function summary(r: AuditRow): string {
   return parts.join(" · ");
 }
 
-export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
-  const [detail, setDetail] = useState<AuditRow | null>(null);
+/* ------------------------------------------------------------------ feed -- */
 
-  const columns: Column<AuditRow>[] = [
-    {
-      header: "When",
-      cell: (r) => <span className="tabular-nums">{dateTime(r.created_at)}</span>,
-      sortValue: (r) => r.created_at,
-      printCell: (r) => dateTime(r.created_at),
-    },
-    {
-      header: "Who",
-      cell: (r) =>
-        r.who ? (
-          <span className="block min-w-0">
-            <span className="block truncate text-sm font-medium">{r.who.name}</span>
-            {r.who.phone && <span className="block font-mono text-xs text-muted-foreground">{r.who.phone}</span>}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">{r.actor_code ?? "System"}</span>
-        ),
-      sortValue: (r) => r.who?.name ?? r.actor_code ?? "",
-      searchValue: (r) => `${r.who?.name ?? ""} ${r.who?.phone ?? ""} ${r.actor_code ?? ""}`,
-      printCell: (r) => (r.who ? `${r.who.name}${r.who.phone ? ` · ${r.who.phone}` : ""}` : (r.actor_code ?? "System")),
-    },
-    {
-      header: "Action",
-      cell: (r) => (
-        <StatusPill label={ACTION_LABEL[r.action] ?? r.action} tone={toneFor(r.action)} />
-      ),
-      sortValue: (r) => ACTION_LABEL[r.action] ?? r.action,
-      searchValue: (r) => `${ACTION_LABEL[r.action] ?? ""} ${r.action}`,
-      printCell: (r) => ACTION_LABEL[r.action] ?? r.action,
-    },
-    {
-      header: "Where",
-      cell: (r) => <span className="text-sm">{r.site ?? <span className="text-muted-foreground">-</span>}</span>,
-      sortValue: (r) => r.site ?? "",
-      searchValue: (r) => r.site ?? "",
-      printCell: (r) => r.site ?? "-",
-    },
-    {
-      header: "Details",
-      cell: (r) => <span className="block max-w-[22rem] truncate text-sm text-muted-foreground">{summary(r) || "-"}</span>,
-      searchValue: (r) => `${summary(r)} ${r.entity ?? ""} ${r.entity_id ?? ""}`,
-      printCell: (r) => summary(r) || "-",
-    },
-    {
-      header: "From",
-      className: "text-right",
-      headClassName: "text-right",
-      cell: (r) => <span className="font-mono text-sm">{r.ip ?? "-"}</span>,
-      searchValue: (r) => r.ip ?? "",
-      printCell: (r) => r.ip ?? "-",
-    },
-  ];
+type Group = "all" | "people" | "sites" | "roster" | "punches" | "bookings" | "sos" | "phones" | "fees" | "signins";
+
+const GROUPS: { key: Group; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "people", label: "People" },
+  { key: "sites", label: "Sites" },
+  { key: "roster", label: "Roster" },
+  { key: "punches", label: "Punches" },
+  { key: "bookings", label: "Bookings" },
+  { key: "sos", label: "SOS" },
+  { key: "phones", label: "Phones" },
+  { key: "fees", label: "Software fee" },
+  { key: "signins", label: "Sign-ins" },
+];
+
+const ENTITY_GROUP: Record<string, Group> = {
+  profiles: "people",
+  sites: "sites",
+  location_pins: "sites",
+  handover_notes: "sites",
+  site_postings: "roster",
+  shifts: "roster",
+  shift_types: "roster",
+  replacement_requests: "roster",
+  attendance: "punches",
+  guard_devices: "phones",
+  service_requests: "bookings",
+  submissions: "bookings",
+  sos_alerts: "sos",
+  software_fee_settings: "fees",
+  software_fee_invoices: "fees",
+  software_fee_extras: "fees",
+};
+
+function groupOf(r: AuditRow): Group {
+  if (r.action === "sign_in" || r.action === "sign_out") return "signins";
+  if (r.action.startsWith("check_") || r.action === "auto_check_out" || r.action.startsWith("attendance")) return "punches";
+  if (r.action.startsWith("sos")) return "sos";
+  if (r.action.startsWith("device")) return "phones";
+  if (r.action.startsWith("posting") || r.action.startsWith("replacement") || r.action === "off_roster_approved") return "roster";
+  if (r.action.startsWith("booking") || r.action.startsWith("submission")) return "bookings";
+  if (r.action.startsWith("site") || r.action.startsWith("location_pin") || r.action.startsWith("handover")) return "sites";
+  return (r.entity && ENTITY_GROUP[r.entity]) || (r.entity === "profiles" ? "people" : "all");
+}
+
+const IST_DAY = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: IST });
+
+function dayLabel(key: string): string {
+  const today = IST_DAY(new Date().toISOString());
+  const yesterday = IST_DAY(new Date(Date.now() - 86_400_000).toISOString());
+  if (key === today) return "Today";
+  if (key === yesterday) return "Yesterday";
+  const d = new Date(`${key}T12:00:00+05:30`);
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: key.slice(0, 4) === today.slice(0, 4) ? undefined : "numeric", timeZone: IST });
+}
+
+const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true, timeZone: IST });
+
+/** Field names in words. Anything not listed is read off the column name. */
+const FIELD_LABEL: Record<string, string> = {
+  id: "Record id",
+  full_name: "Name",
+  employee_code: "Employee code",
+  lat: "Latitude",
+  lng: "Longitude",
+  geofence_radius_m: "Geofence radius (m)",
+  max_accuracy_m: "Accuracy allowed (m)",
+  guard_id: "Guard",
+  site_id: "Site",
+  profile_id: "Person",
+  client_id: "Client",
+  raised_by: "Raised by",
+  sent_by: "Sent by",
+  author_id: "Written by",
+  replacement_guard: "Cover guard",
+  first_responder: "First responder",
+  sos_enabled: "SOS on",
+  is_test: "Test record",
+  must_change_pin: "Must change PIN",
+  per_guard_paise: "Rate per account",
+  gst_percent: "GST %",
+  starts: "Starts",
+  ends: "Ends",
+};
+
+function fieldLabel(k: string): string {
+  if (FIELD_LABEL[k]) return FIELD_LABEL[k];
+  const words = k.replace(/_paise$/, "").replace(/_id$/, "").replace(/_m$/, " (m)").replace(/_/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const UUID = /^[0-9a-f-]{36}$/i;
+
+/** A recorded value in words: names for ids, rupees for paise, IST for times. */
+function show(key: string, v: unknown, names: Record<string, string>): string {
+  if (v === null || v === undefined || v === "") return "empty";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (typeof v === "number" && key.endsWith("_paise")) return `₹${(v / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+  if (typeof v === "string") {
+    if (UUID.test(v)) return names[v] ?? v.slice(0, 8);
+    if (ISO_TIME.test(v)) return dateTime(v);
+    return v.length > 160 ? `${v.slice(0, 160)}…` : v;
+  }
+  const text = JSON.stringify(v);
+  return text.length > 160 ? `${text.slice(0, 160)}…` : text;
+}
+
+function changesOf(r: AuditRow): { key: string; from: unknown; to: unknown }[] {
+  if (!r.before || !r.after) return [];
+  const keys = new Set([...Object.keys(r.before), ...Object.keys(r.after)]);
+  const out: { key: string; from: unknown; to: unknown }[] = [];
+  for (const k of keys) if (JSON.stringify(r.before[k]) !== JSON.stringify(r.after[k])) out.push({ key: k, from: r.before[k], to: r.after[k] });
+  return out;
+}
+
+/** What the changed record is, in a few words: its name, or whose and where. */
+function recordName(r: AuditRow, names: Record<string, string>): string {
+  const x = (r.after ?? r.before ?? {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof x[k] === "string" && x[k] ? (x[k] as string) : "");
+  const who = (k: string) => (str(k) ? (names[str(k)] ?? "") : "");
+  switch (r.entity) {
+    case "profiles":
+      return [str("full_name"), str("employee_code")].filter(Boolean).join(" · ");
+    case "sites":
+      return str("name");
+    case "service_requests":
+      return [str("reference"), str("organisation") || str("contact_name")].filter(Boolean).join(" · ");
+    case "submissions":
+      return [str("name"), str("subject") || str("kind")].filter(Boolean).join(" · ");
+    case "software_fee_invoices":
+      return str("number");
+    case "software_fee_extras":
+      return str("label");
+    case "app_release":
+      return x.version_name ? `${str("version_name")} (build ${String(x.version_code ?? "")})` : "";
+    case "shift_types":
+      return str("label") || str("code");
+    case "guard_devices":
+      return [who("profile_id"), [str("brand"), str("model")].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
+    case "location_pins":
+      return who("sent_by");
+    case "handover_notes":
+      return [who("author_id"), who("site_id")].filter(Boolean).join(" at ");
+    case "sos_alerts":
+      return [who("raised_by"), who("site_id")].filter(Boolean).join(" at ");
+    default:
+      return [who("guard_id"), who("site_id")].filter(Boolean).join(" at ");
+  }
+}
+
+const VERB = { insert: "added", update: "changed", delete: "removed" } as const;
+
+function article(noun: string) {
+  return /^[aeiou]/i.test(noun) || noun.startsWith("SOS") ? "an" : "a";
+}
+
+const KIND_STYLE = {
+  insert: { icon: Plus, tile: "bg-emerald-100 text-emerald-700" },
+  update: { icon: PencilLine, tile: "bg-amber-100 text-amber-700" },
+  delete: { icon: Trash2, tile: "bg-rose-100 text-rose-700" },
+} as const;
+
+const TONE_TILE: Partial<Record<Tone, string>> = {
+  rose: "bg-rose-100 text-rose-700",
+  amber: "bg-amber-100 text-amber-700",
+  violet: "bg-violet-100 text-violet-700",
+  slate: "bg-slate-100 text-slate-600",
+  sky: "bg-sky-100 text-sky-700",
+};
+
+const PAGE = 60;
+
+export function AuditWorkspace({ rows, names }: { rows: AuditRow[]; names: Record<string, string> }) {
+  const [group, setGroup] = useState<Group>("all");
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState<number | null>(null);
+  const [shown, setShown] = useState(PAGE);
+  const [about, setAbout] = useState(false);
+
+  const counts = useMemo(() => {
+    const c: Partial<Record<Group, number>> = { all: rows.length };
+    for (const r of rows) {
+      const g = groupOf(r);
+      c[g] = (c[g] ?? 0) + 1;
+    }
+    return c;
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const inGroup = group === "all" ? rows : rows.filter((r) => groupOf(r) === group);
+    if (!query.trim()) return inGroup;
+    return inGroup.filter((r) =>
+      matchesSearch(query, [
+        r.who?.name,
+        r.who?.phone,
+        r.actor_code,
+        r.site,
+        r.action,
+        ACTION_LABEL[r.action],
+        r.entity,
+        r.entity && ENTITY_LABEL[r.entity],
+        r.ip,
+        summary(r),
+        recordName(r, names),
+        r.source === "trigger" ? changesOf(r).map((c) => fieldLabel(c.key)) : null,
+        r.detail,
+      ]),
+    );
+  }, [rows, group, query, names]);
+
+  const days = useMemo(() => {
+    const out: { key: string; items: AuditRow[] }[] = [];
+    for (const r of filtered.slice(0, shown)) {
+      const key = IST_DAY(r.created_at);
+      const last = out[out.length - 1];
+      if (last?.key === key) last.items.push(r);
+      else out.push({ key, items: [r] });
+    }
+    return out;
+  }, [filtered, shown]);
+
+  const pick = (g: Group) => {
+    setGroup(g);
+    setOpen(null);
+    setShown(PAGE);
+  };
 
   return (
-    <>
-      <DataTable
-        columns={columns}
-        data={rows}
-        getRowKey={(r) => String(r.id)}
-        interactiveRows
-        rowPreview={false}
-        onRowClick={setDetail}
-        printTitle="Audit log"
-        initialPageSize={50}
-        searchPlaceholder="Search anything in the log…"
-        emptyMessage="Nothing recorded yet."
-      />
-
-      <PreviewDialog open={!!detail} onClose={() => setDetail(null)} label="Audit entry">
-        {detail && (
-          <>
-            <PreviewHero
-              icon={ScrollText}
-              tone={toneFor(detail.action) === "rose" ? "rose" : toneFor(detail.action) === "amber" ? "amber" : "brand"}
-              title={ACTION_LABEL[detail.action] ?? detail.action}
-              meta={
-                <>
-                  <span>{dateTime(detail.created_at)}</span>
-                  {(detail.who || detail.actor_code) && <span aria-hidden>·</span>}
-                  {detail.who ? <span>{detail.who.name}</span> : detail.actor_code && <span className="font-mono">{detail.actor_code}</span>}
-                </>
-              }
-            />
-            <PreviewBody>
-              <FieldGrid>
-                <Field icon={UserRound} label="Who" value={detail.who ? `${detail.who.name}${detail.who.phone ? ` · ${detail.who.phone}` : ""}` : detail.actor_code} />
-                <Field icon={Database} label="Where" value={detail.site} />
-                <Field icon={Globe} label="From" mono value={detail.ip} />
-                <Field icon={KeyRound} label="Action key" mono value={detail.action} />
-                <Field icon={Database} label="Record" mono value={detail.entity} />
-              </FieldGrid>
-              {detail.entity_id && (
-                <p className="rounded-lg bg-muted/50 px-3 py-2 font-mono text-xs break-all text-muted-foreground">
-                  {detail.entity_id}
-                </p>
-              )}
-              <Section title="Recorded detail">
-                {/* The raw payload, verbatim. Mono earns its place here —
-                    this is data being read for exactness, not prose — and it
-                    is deliberately not prettied into a field list, because
-                    the shape of the payload is itself part of the record. */}
-                <pre className="overflow-x-auto rounded-lg border border-app-line-soft bg-muted/50 p-3 font-mono text-xs leading-relaxed">
-                  {detail.detail
-                    ? JSON.stringify(detail.detail, null, 2)
-                    : "No additional detail was recorded."}
-                </pre>
-              </Section>
-            </PreviewBody>
-            {detail.entity && detail.entity_id && ENTITY_HREF[detail.entity] && (
-              <PreviewActions>
-                <Button asChild size="sm">
-                  <Link href={ENTITY_HREF[detail.entity]!(detail.entity_id)}>
-                    <ExternalLink data-icon="inline-start" />
-                    Open this {ENTITY_LABEL[detail.entity] ?? "record"}
-                  </Link>
-                </Button>
-              </PreviewActions>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {GROUPS.filter((g) => g.key === "all" || counts[g.key]).map((g) => (
+          <button
+            key={g.key}
+            type="button"
+            onClick={() => pick(g.key)}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-colors",
+              group === g.key ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground hover:bg-muted",
             )}
-          </>
+          >
+            {g.label}
+            <span className={cn("tabular-nums text-[11px]", group === g.key ? "text-background/70" : "text-muted-foreground")}>{counts[g.key] ?? 0}</span>
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setAbout((v) => !v)}
+          aria-expanded={about}
+          className="ml-auto inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+        >
+          <Info className="size-3.5" /> How this log works
+        </button>
+      </div>
+
+      {about && (
+        <p className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+          Two kinds of entry. <b className="text-foreground">Event</b> lines are written by the website and the app in words: a sign-in, a
+          check-in, an SOS answered. <b className="text-foreground">Change</b> lines are written by the database itself whenever a record
+          is added, changed or removed, wherever it came from, with the record as it was before and after. Open one with Detail to
+          see exactly which fields moved. Nobody can edit or delete these entries from the console.
+        </p>
+      )}
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setShown(PAGE);
+          }}
+          placeholder="Search names, sites, fields, anything in the log…"
+          className="h-10 w-full rounded-xl border border-border bg-card pr-9 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+        />
+        {query && (
+          <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted">
+            <X className="size-3.5" />
+          </button>
         )}
-      </PreviewDialog>
-    </>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="rounded-2xl border-2 border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+          {rows.length ? "Nothing matches." : "Nothing recorded in this period."}
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          {days.map((day) => (
+            <section key={day.key}>
+              <h3 className="sticky top-0 z-[1] flex items-center gap-2 border-b border-border bg-muted/70 px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase backdrop-blur">
+                {dayLabel(day.key)}
+                <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums">{day.items.length}</span>
+              </h3>
+              <ul className="divide-y divide-border">
+                {day.items.map((r) => (
+                  <Entry key={r.id} r={r} names={names} open={open === r.id} onToggle={() => setOpen(open === r.id ? null : r.id)} />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {filtered.length > shown && (
+        <div className="flex items-center justify-center gap-3">
+          <p className="text-xs text-muted-foreground tabular-nums">
+            Showing {shown.toLocaleString("en-IN")} of {filtered.length.toLocaleString("en-IN")}
+          </p>
+          <button type="button" onClick={() => setShown((n) => n + PAGE * 2)} className="h-8 rounded-full border border-border bg-card px-4 text-[13px] font-medium hover:bg-muted">
+            Show more
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Entry({ r, names, open, onToggle }: { r: AuditRow; names: Record<string, string>; open: boolean; onToggle: () => void }) {
+  const change = r.source === "trigger" && (r.action === "insert" || r.action === "update" || r.action === "delete") ? r.action : null;
+  const changes = change === "update" ? changesOf(r) : [];
+  const noun = (r.entity && ENTITY_LABEL[r.entity]) ?? r.entity ?? "record";
+  const name = change ? recordName(r, names) : "";
+  const style = change ? KIND_STYLE[change] : null;
+  const Icon = style?.icon ?? (r.action === "sign_in" || r.action === "sign_out" ? LogIn : Dot);
+  const tile = style?.tile ?? TONE_TILE[toneFor(r.action)] ?? TONE_TILE.sky;
+  const detail = (r.detail ?? null) as Record<string, unknown> | null;
+  const hasDetail = change ? true : !!detail && Object.keys(detail).length > 0;
+  const href = r.entity && r.entity_id && ENTITY_HREF[r.entity] && change !== "delete" ? ENTITY_HREF[r.entity]!(r.entity_id) : null;
+  const actor = r.who?.name ?? r.actor_code ?? "System";
+  const line = change ? summaryOfChange(changes) : summary(r);
+
+  return (
+    <li className="px-4 py-3">
+      <div className="flex items-start gap-3">
+        <span className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg", tile)}>
+          <Icon className="size-4" strokeWidth={2.1} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] leading-snug">
+            <span className={cn("font-semibold", !r.who && !r.actor_code && "text-muted-foreground")}>{actor}</span>{" "}
+            {change ? (
+              <>
+                <span className="text-muted-foreground">
+                  {VERB[change]} {article(noun)} {noun}
+                </span>
+                {name && <span className="font-medium"> · {name}</span>}
+              </>
+            ) : (
+              <span className="text-muted-foreground">{(ACTION_LABEL[r.action] ?? r.action.replace(/[_.]/g, " ")).replace(/^./, (c) => c.toLowerCase())}</span>
+            )}
+            <span
+              className={cn(
+                "ml-2 inline-block rounded-md px-1.5 py-px align-[2px] text-[10px] font-semibold tracking-wider uppercase",
+                change ? "bg-violet-100 text-violet-700" : "bg-sky-100 text-sky-700",
+              )}
+            >
+              {change ? "Change" : "Event"}
+            </span>
+          </p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+            <time dateTime={r.created_at} title={dateTime(r.created_at)} className="tabular-nums">
+              {clock(r.created_at)}
+            </time>
+            {r.site && <span>· {r.site}</span>}
+            {r.ip && <span className="font-mono">· {r.ip}</span>}
+            {r.who?.phone && <span className="font-mono">· {r.who.phone}</span>}
+          </p>
+          {line && !open && <p className="mt-1 truncate text-[13px] text-muted-foreground">{line}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {href && (
+            <Link href={href} title={`Open this ${noun}`} className="grid size-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
+              <ArrowUpRight className="size-4" />
+            </Link>
+          )}
+          {hasDetail && (
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={onToggle}
+              className={cn(
+                "h-8 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
+                open ? "border-foreground bg-card" : "border-border bg-card hover:bg-muted",
+              )}
+            >
+              {open ? "Hide" : "Detail"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <div className="mt-3 ml-11 overflow-hidden rounded-xl border border-border bg-muted/30">
+          {change === "update" ? (
+            <Fields head={["Field", "Before", "After"]} rows={changes.map((c) => [fieldLabel(c.key), show(c.key, c.from, names), show(c.key, c.to, names)])} diff />
+          ) : change ? (
+            <Fields
+              head={["Field", change === "delete" ? "Was" : "Value"]}
+              rows={Object.entries((change === "delete" ? r.before : r.after) ?? {})
+                .filter(([, v]) => v !== null && v !== "" && !(Array.isArray(v) && !v.length))
+                .map(([k, v]) => [fieldLabel(k), show(k, v, names)])}
+            />
+          ) : (
+            <Fields head={["Detail", "Value"]} rows={Object.entries(detail ?? {}).map(([k, v]) => [fieldLabel(k), show(k, v, names)])} />
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function summaryOfChange(changes: { key: string }[]): string {
+  if (!changes.length) return "";
+  const names = changes.map((c) => fieldLabel(c.key));
+  return names.length > 4 ? `${names.slice(0, 4).join(", ")} +${names.length - 4} more` : names.join(", ");
+}
+
+function Fields({ head, rows, diff }: { head: string[]; rows: string[][]; diff?: boolean }) {
+  if (!rows.length) return <p className="px-4 py-3 text-sm text-muted-foreground">Nothing else was recorded.</p>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-border text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+            {head.map((h) => (
+              <th key={h} className="px-4 py-2 font-semibold">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/70">
+          {rows.map((cells, i) => (
+            <tr key={i} className="align-top">
+              {cells.map((c, j) => (
+                <td
+                  key={j}
+                  className={cn(
+                    "px-4 py-2 break-words",
+                    j === 0 ? "w-[28%] font-medium whitespace-nowrap" : "font-mono text-[12px]",
+                    diff && j === 1 && "text-rose-700 dark:text-rose-400",
+                    diff && j === 2 && "text-emerald-700 dark:text-emerald-400",
+                  )}
+                >
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 
 /** Marks an invoice paid. Idempotent: a payment already recorded is not recorded twice. */
 export async function markFeePaid(input: { invoiceId?: string; period?: string; test?: boolean; orderId?: string | null; paymentId: string; by?: string | null }): Promise<{ ok: boolean }> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin(input.by);
   const { data: done } = await db.from("software_fee_invoices").select("id").eq("razorpay_payment_id", input.paymentId).maybeSingle();
   if (done) return { ok: true };
   let q = db

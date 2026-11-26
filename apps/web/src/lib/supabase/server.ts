@@ -69,9 +69,16 @@ export async function supabaseServer() {
   });
 }
 
-/** Bypasses RLS. Never call this with input that has not been checked first. */
-export function supabaseAdmin() {
+/**
+ * Bypasses RLS. Never call this with input that has not been checked first.
+ *
+ * Pass the person doing it (`actorId`) on writes: the audit triggers (0081) read
+ * it from the x-actor-id header, so the change is logged under their name and
+ * not as "System".
+ */
+export function supabaseAdmin(actorId?: string | null) {
   return createClient<Database>(serverSupabaseUrl(), secretKey(), {
     auth: { autoRefreshToken: false, persistSession: false },
+    ...(actorId ? { global: { headers: { "x-actor-id": actorId } } } : {}),
   });
 }
