@@ -1,8 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createElement, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Dot, Info, LogIn, PencilLine, Plus, Search, Trash2, X } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bot,
+  CalendarClock,
+  ClipboardCheck,
+  Dot,
+  Info,
+  KeyRound,
+  LogIn,
+  LogOut,
+  MapPin,
+  PencilLine,
+  Plus,
+  ReceiptIndianRupee,
+  Search,
+  ShieldAlert,
+  Smartphone,
+  Trash2,
+  UserRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 import { cn, matchesSearch } from "@/lib/utils";
 import type { Tone } from "@/lib/ui/tones";
@@ -176,7 +197,7 @@ function summary(r: AuditRow): string {
 
 /* ------------------------------------------------------------------ feed -- */
 
-type Group = "all" | "people" | "sites" | "roster" | "punches" | "bookings" | "sos" | "phones" | "fees" | "signins";
+type Group = "all" | "people" | "sites" | "roster" | "punches" | "bookings" | "sos" | "phones" | "fees" | "signins" | "other";
 
 const GROUPS: { key: Group; label: string }[] = [
   { key: "all", label: "All" },
@@ -189,6 +210,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: "phones", label: "Phones" },
   { key: "fees", label: "Software fee" },
   { key: "signins", label: "Sign-ins" },
+  { key: "other", label: "Other" },
 ];
 
 const ENTITY_GROUP: Record<string, Group> = {
@@ -218,7 +240,8 @@ function groupOf(r: AuditRow): Group {
   if (r.action.startsWith("posting") || r.action.startsWith("replacement") || r.action === "off_roster_approved") return "roster";
   if (r.action.startsWith("booking") || r.action.startsWith("submission")) return "bookings";
   if (r.action.startsWith("site") || r.action.startsWith("location_pin") || r.action.startsWith("handover")) return "sites";
-  return (r.entity && ENTITY_GROUP[r.entity]) || (r.entity === "profiles" ? "people" : "all");
+  if (r.action.startsWith("account") || r.action.startsWith("role") || r.action.includes("pin") || r.action === "profile_updated" || r.action === "contact_updated") return "people";
+  return (r.entity && ENTITY_GROUP[r.entity]) || "other";
 }
 
 const IST_DAY = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: IST });
@@ -347,6 +370,25 @@ const TONE_TILE: Partial<Record<Tone, string>> = {
   sky: "bg-sky-100 text-sky-700",
 };
 
+/** An event's icon, by what kind of thing happened. */
+function eventIcon(r: AuditRow): LucideIcon {
+  const a = r.action;
+  if (a === "sign_in") return LogIn;
+  if (a === "sign_out") return LogOut;
+  if (a === "check_in" || a === "check_in_refused") return LogIn;
+  if (a === "check_out" || a === "auto_check_out") return LogOut;
+  if (a.startsWith("attendance")) return ClipboardCheck;
+  if (a.startsWith("sos")) return ShieldAlert;
+  if (a.startsWith("device") || a === "wake_phone") return Smartphone;
+  if (a === "ai_query") return Bot;
+  if (a.includes("pin")) return KeyRound;
+  if (a.startsWith("site") || a.startsWith("location") || a.startsWith("handover")) return MapPin;
+  if (a.startsWith("posting") || a.startsWith("replacement") || a.startsWith("off_roster")) return CalendarClock;
+  if (a.startsWith("booking") || a.startsWith("app_release")) return ReceiptIndianRupee;
+  if (a.startsWith("account") || a.startsWith("role") || a.includes("profile") || a.includes("contact") || a.startsWith("impersonation")) return UserRound;
+  return Dot;
+}
+
 const PAGE = 60;
 
 export function AuditWorkspace({ rows, names }: { rows: AuditRow[]; names: Record<string, string> }) {
@@ -360,7 +402,7 @@ export function AuditWorkspace({ rows, names }: { rows: AuditRow[]; names: Recor
     const c: Partial<Record<Group, number>> = { all: rows.length };
     for (const r of rows) {
       const g = groupOf(r);
-      c[g] = (c[g] ?? 0) + 1;
+      if (g !== "all") c[g] = (c[g] ?? 0) + 1;
     }
     return c;
   }, [rows]);
@@ -386,6 +428,12 @@ export function AuditWorkspace({ rows, names }: { rows: AuditRow[]; names: Recor
       ]),
     );
   }, [rows, group, query, names]);
+
+  const dayTotal = useMemo(() => {
+    const t = new Map<string, number>();
+    for (const r of filtered) t.set(IST_DAY(r.created_at), (t.get(IST_DAY(r.created_at)) ?? 0) + 1);
+    return t;
+  }, [filtered]);
 
   const days = useMemo(() => {
     const out: { key: string; items: AuditRow[] }[] = [];
@@ -468,7 +516,7 @@ export function AuditWorkspace({ rows, names }: { rows: AuditRow[]; names: Recor
             <section key={day.key}>
               <h3 className="sticky top-0 z-[1] flex items-center gap-2 border-b border-border bg-muted/70 px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase backdrop-blur">
                 {dayLabel(day.key)}
-                <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums">{day.items.length}</span>
+                <span className="rounded-full bg-background px-1.5 py-px text-[10px] tabular-nums">{dayTotal.get(day.key) ?? day.items.length}</span>
               </h3>
               <ul className="divide-y divide-border">
                 {day.items.map((r) => (
@@ -500,7 +548,7 @@ function Entry({ r, names, open, onToggle }: { r: AuditRow; names: Record<string
   const noun = (r.entity && ENTITY_LABEL[r.entity]) ?? r.entity ?? "record";
   const name = change ? recordName(r, names) : "";
   const style = change ? KIND_STYLE[change] : null;
-  const Icon = style?.icon ?? (r.action === "sign_in" || r.action === "sign_out" ? LogIn : Dot);
+  const Icon = style?.icon ?? eventIcon(r);
   const tile = style?.tile ?? TONE_TILE[toneFor(r.action)] ?? TONE_TILE.sky;
   const detail = (r.detail ?? null) as Record<string, unknown> | null;
   const hasDetail = change ? true : !!detail && Object.keys(detail).length > 0;
@@ -512,7 +560,7 @@ function Entry({ r, names, open, onToggle }: { r: AuditRow; names: Record<string
     <li className="px-4 py-3">
       <div className="flex items-start gap-3">
         <span className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg", tile)}>
-          <Icon className="size-4" strokeWidth={2.1} />
+          {createElement(Icon, { className: "size-4", strokeWidth: 2.1 })}
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[14px] leading-snug">
