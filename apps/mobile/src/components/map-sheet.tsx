@@ -100,6 +100,8 @@ export function MapSheet({
   // translation seen, so each frame moves it by just that frame's movement.
   const raw = useSharedValue(0);
   const lastTy = useSharedValue(0);
+  // Where a touch on the list started, to decide whose drag it is (see contentPan).
+  const touchY = useSharedValue(0);
 
   // The list's scroll, and the offset it is held at while the sheet is below full.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
@@ -162,20 +164,14 @@ export function MapSheet({
    * that guess needed the list's measured top, and when it was missing every touch
    * counted as the list's and the header could not move a scrolled sheet.
    */
-  const { headerPan, contentPan, native } = useMemo(() => {
+  const { headerPan, contentPan } = useMemo(() => {
     // The ref is read when a drag settles, never while rendering.
     const settleTo = (to: SheetSnap, at: number) => settleRef.current(to, at);
-    const native = Gesture.Native();
     const build = (fromContent: boolean) =>
       Gesture.Pan()
         .activeOffsetY([-6, 6])
         // A sideways swipe (a row of chips) is left to the content.
         .failOffsetX([-24, 24])
-        .onBegin(() => {
-          // A fresh touch on a sheet at full height may scroll the list again. Until
-          // then it stays held, so a flick that carried the sheet up doesn't also
-          // fling the list.
-        })
         .onStart((e) => {
           cancelAnimation(top);
           raw.set(top.get());
@@ -248,9 +244,26 @@ export function MapSheet({
     // building the gesture as if it ran then.
     /* eslint-disable react-hooks/refs */
     const headerPan = build(false);
-    const contentPan = build(true).simultaneousWithExternalGesture(native);
+    // A drag on the list is decided in its first few pixels, before the list's own
+    // scroll starts. With the sheet all the way up the list keeps it (a pull down at the
+    // list's top excepted, which lowers the sheet); below that the sheet takes it and
+    // the list is cancelled, so the two never move together (which is what jittered).
+    const contentPan = build(true)
+      .manualActivation(true)
+      .onTouchesDown((e) => {
+        "worklet";
+        touchY.set(e.allTouches[0]?.absoluteY ?? 0);
+      })
+      .onTouchesMove((e, state) => {
+        "worklet";
+        const dy = (e.allTouches[0]?.absoluteY ?? touchY.get()) - touchY.get();
+        if (Math.abs(dy) < 6) return;
+        const atTop = top.get() <= pts.get().full + 0.5;
+        if (atTop && (dy < 0 || scrollY.get() > 0.5)) state.fail();
+        else state.activate();
+      });
     /* eslint-enable react-hooks/refs */
-    return { headerPan, contentPan, native };
+    return { headerPan, contentPan };
     // Everything it reads is a shared value or goes through settleRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -335,9 +348,9 @@ export function MapSheet({
         </GestureDetector>
         <GestureDetector gesture={contentPan}>
           <View style={styles.scroll}>
-            <GestureDetector gesture={native}>
-              <SheetScroll
+            <SheetScroll
                 ref={scrollRef}
+                // Below full height a drag on the list moves the sheet, never the list.
                 scrollEnabled={atFull}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
@@ -350,7 +363,6 @@ export function MapSheet({
               >
                 <SheetReveal.Provider value={reveal}>{children}</SheetReveal.Provider>
               </SheetScroll>
-            </GestureDetector>
           </View>
         </GestureDetector>
       </Animated.View>
