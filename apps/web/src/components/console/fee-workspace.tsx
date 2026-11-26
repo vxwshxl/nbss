@@ -74,7 +74,7 @@ const day = (d: string) => new Date(d.length === 10 ? `${d}T00:00:00Z` : d).toLo
 function linesOf(inv: FeeInvoice): FeeLine[] {
   if (inv.lines && inv.lines.length) return inv.lines;
   if (!inv.amount_paise) return [];
-  return [{ label: "NBSS software · per active guard", qty: inv.guards, rate_paise: inv.per_guard_paise, amount_paise: inv.amount_paise }];
+  return [{ label: "NBSS software · per active account", qty: inv.guards, rate_paise: inv.per_guard_paise, amount_paise: inv.amount_paise }];
 }
 const isAccountsLine = (l: FeeLine) => l.label.startsWith("NBSS software");
 
@@ -349,8 +349,8 @@ export function FeeWorkspace({
         switched on (NBSS admins, supervisors, guards, housekeepers and field officers), whether it was used or not
         {gst > 0 ? `, plus ${gst}% GST` : ""}. Clients and developers are never billed, and an account an administrator switches off stops
         counting. While a month runs its amount follows today&apos;s accounts (<b>Live</b>); when the month ends, or is paid, its count and
-        lines are <b>locked</b> and never change. Months to come show no amount yet. November 2026 carries one charge only: the NBSS Kokrajhar
-        app on Google Play, ₹1,000 once. Only the oldest unpaid month can be paid.
+        lines are <b>locked</b> and never change. Months to come show no amount yet. November 2026 carries one charge only: App publish on
+        Google Play Store, ₹1,000 once plus GST. Only the oldest unpaid month can be paid.
       </p>
 
       <Accounts accounts={accounts} rate={rate} />

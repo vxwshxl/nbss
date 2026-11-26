@@ -50,7 +50,7 @@ drop policy if exists fee_extras_read on software_fee_extras;
 create policy fee_extras_read on software_fee_extras for select to authenticated using (is_billing_viewer());
 
 insert into software_fee_extras (period, is_test, label, tag, amount_paise)
-select '2026-11-01', false, 'NBSS Kokrajhar app on Google Play', 'One-time', 100000
+select '2026-11-01', false, 'App publish on Google Play Store', 'One-time', 100000
 where not exists (select 1 from software_fee_extras where period = '2026-11-01' and not is_test);
 
 -- The billable accounts on one side, by kind.
@@ -105,7 +105,7 @@ begin
       v_amount := 0;
       if v_billed then
         v_lines := v_lines || jsonb_build_array(jsonb_build_object(
-          'label', 'NBSS software · active accounts', 'qty', v_n,
+          'label', 'NBSS software · per active account', 'qty', v_n,
           'rate_paise', s.per_guard_paise, 'amount_paise', v_n * s.per_guard_paise));
         v_amount := v_n * s.per_guard_paise;
       end if;
