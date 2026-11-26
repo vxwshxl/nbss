@@ -79,6 +79,38 @@ function throttled(userId: string): boolean {
   return record.count > MAX_TURNS;
 }
 
+const MAX_CHARS = 4000;
+const MAX_MESSAGES = 24;
+
+/**
+ * A long chat must keep working. The app and the panel send the whole
+ * transcript, so one long answer (a full roster list) or a 13th question used to
+ * break every later turn with "Bad request". Older turns are cut to fit here
+ * instead: the last 24 messages, starting on a question, each cut to 4,000
+ * characters. Only the question being asked now is held to the limit as typed.
+ */
+function tidy(input: unknown): { body: unknown; tooLong?: boolean } | null {
+  if (!input || typeof input !== "object") return null;
+  const body = input as { messages?: unknown; page?: unknown };
+  if (!Array.isArray(body.messages) || body.messages.length === 0) return { body };
+  const all = body.messages as { role?: unknown; content?: unknown }[];
+  const last = all[all.length - 1];
+  if (typeof last?.content === "string" && last.content.length > MAX_CHARS) return { body, tooLong: true };
+  let kept = all.slice(-MAX_MESSAGES);
+  const firstQuestion = kept.findIndex((m) => m?.role === "user");
+  if (firstQuestion > 0) kept = kept.slice(firstQuestion);
+  const messages = kept.map((m) =>
+    typeof m?.content === "string" && m.content.length > MAX_CHARS ? { ...m, content: `${m.content.slice(0, MAX_CHARS - 1)}…` } : m,
+  );
+  let page = body.page;
+  if (page && typeof page === "object") {
+    const p = page as { path?: unknown; title?: unknown; text?: unknown };
+    const cut = (v: unknown, n: number) => (typeof v === "string" && v.length > n ? v.slice(0, n) : v);
+    page = { ...p, path: cut(p.path, 300), title: cut(p.title, 200), text: cut(p.text, 12000) };
+  }
+  return { body: { ...body, messages, page } };
+}
+
 export async function POST(req: Request) {
   const ctx = await getAiContext();
   if (!ctx) {
@@ -90,7 +122,11 @@ export async function POST(req: Request) {
   // on the request-scoped Supabase client, so a guard asking about another
   // guard is refused by Postgres rather than by a check written here.
 
-  const parsed = Body.safeParse(await req.json().catch(() => null));
+  const raw = tidy(await req.json().catch(() => null));
+  if (raw?.tooLong) {
+    return NextResponse.json({ error: "That question is too long. Please ask it in fewer words." }, { status: 400 });
+  }
+  const parsed = Body.safeParse(raw?.body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
