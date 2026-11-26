@@ -1,8 +1,8 @@
 import { fetchAll } from "@nbss/shared/paging";
 import { router } from "expo-router";
 import { ChevronRight, LocateFixed, Maximize2, MapPin, MessageCircle, Navigation, Navigation2, Phone, SatelliteDish, Search, Siren, UserRound, Users, X } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, RefreshControl, StyleSheet, TextInput, View } from "react-native";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Linking, Pressable, RefreshControl, StyleSheet, TextInput, View, type ViewInstance } from "react-native";
 
 import { clock12, istTime, tel } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
@@ -14,7 +14,7 @@ import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/button";
 import { liveHeading, guardState, STATE_COLOR, MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
-import { MapSheet, type SheetSnap } from "@/components/map-sheet";
+import { MapSheet, SheetReveal, type SheetSnap } from "@/components/map-sheet";
 import { Panel, PanelRow } from "@/components/panel";
 import { PermissionsPanel } from "@/components/permissions-panel";
 import { RouteDetails, useRoute } from "@/components/route-card";
@@ -398,6 +398,9 @@ function SitesPanel({
   onPick: (id: string) => void;
 }) {
   const [q, setQ] = useState("");
+  // Typing raises the sheet and brings the box to the top, so the keyboard never hides it.
+  const reveal = useContext(SheetReveal);
+  const box = useRef<ViewInstance>(null);
   const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const shown = words.length
     ? sites.filter((s) => {
@@ -409,7 +412,7 @@ function SitesPanel({
   return (
     <Panel tone="emerald" icon={MapPin} title="Sites" subtitle={words.length ? `${shown.length} of ${sites.length}` : "Tap one to see it"} bare>
       {sites.length > 5 && (
-        <View style={styles.siteSearchWrap}>
+        <View ref={box} style={styles.siteSearchWrap}>
           <View style={styles.siteSearch}>
             <Search size={18} color={color.mutedForeground} strokeWidth={2} />
             <TextInput
@@ -420,6 +423,7 @@ function SitesPanel({
               style={styles.siteSearchInput}
               returnKeyType="search"
               autoCorrect={false}
+              onFocus={() => reveal?.(box.current)}
             />
             {q ? (
               <Pressable accessibilityRole="button" accessibilityLabel="Clear" hitSlop={10} onPress={() => setQ("")} style={styles.siteSearchClear}>
@@ -836,7 +840,7 @@ function Count({ value, label, tone, active, onPress }: { value: number; label: 
 
 const styles = StyleSheet.create({
   // The same 16 px sides as the rows below it, so the field lines up with the names.
-  siteSearchWrap: { paddingHorizontal: space[4], paddingBottom: space[3] },
+  siteSearchWrap: { paddingHorizontal: space[4], paddingTop: space[3], paddingBottom: space[3] },
   siteSearch: {
     flexDirection: "row",
     alignItems: "center",

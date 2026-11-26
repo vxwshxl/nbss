@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { cloneElement, createContext, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { StyleSheet, View, type LayoutChangeEvent, type ScrollViewProps, type ViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, ScrollView as GestureScrollView } from "react-native-gesture-handler";
@@ -7,7 +7,6 @@ import Animated, {
   cancelAnimation,
   interpolate,
   runOnJS,
-  scrollTo,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -20,9 +19,16 @@ import { color, radius, shadow, space } from "@/theme/tokens";
 /** Where the sheet rests: just its header over a full map, half way, or the whole screen. */
 export type SheetSnap = "peek" | "half" | "full";
 
-const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
+// Just past critical damping: it glides in and settles without a bounce.
+const SPRING = { damping: 34, stiffness: 240, mass: 1 };
 /** A release faster than this (px/s) is a flick: it opens or closes to the next stop. Slower, the sheet stays where it is let go. */
 const FLICK = 1100;
+
+/**
+ * Brings something in the sheet into view: the sheet goes all the way up and the list
+ * scrolls the thing to the top, above the keyboard (a search box being typed in).
+ */
+export const SheetReveal = createContext<((target: ViewInstance | null) => void) | null>(null);
 
 // Gesture Handler's own ScrollView, so the sheet's drag and the list's scroll can
 // hand over to each other; React Native's would swallow one or the other.
@@ -67,6 +73,10 @@ export function MapSheet({
   const [height, setHeight] = useState(0);
   const [headerH, setHeaderH] = useState(0);
   const [snap, setSnap] = useState<SheetSnap>(initial);
+  // The list scrolls only while the sheet is all the way up; below that a drag on it
+  // moves the sheet. (Holding the list still with scrollTo while both moved did not
+  // hold on every phone, and could abort the app.)
+  const [atFull, setAtFull] = useState(initial === "full");
 
   // Where the area the sheet lives in starts on the screen. On a screen with no header
   // above it (the SOS map) that is the very top, and "full" must stop below the status
@@ -94,8 +104,6 @@ export function MapSheet({
   // The list's scroll, and the offset it is held at while the sheet is below full.
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useSharedValue(0);
-  const lockY = useSharedValue(0);
-  const locked = useSharedValue(initial !== "full");
 
   const onLayout = (e: LayoutChangeEvent) => {
     const h = Math.round(e.nativeEvent.layout.height);
@@ -113,7 +121,6 @@ export function MapSheet({
     pts.set(points);
     const at = points[snap];
     top.set(ready.get() ? withSpring(at, SPRING) : at);
-    locked.set(snap !== "full");
     ready.set(true);
     onSnap?.(snap, height - at);
     // Only the measured sizes move it; a snap is placed by the gesture itself.
@@ -125,11 +132,11 @@ export function MapSheet({
   if (snapTo && snapTo.key !== askedKey && height && headerH) {
     setAskedKey(snapTo.key);
     setSnap(snapTo.to);
+    setAtFull(snapTo.to === "full");
   }
   useEffect(() => {
     if (!snapTo || !height || !headerH) return;
     const at = points[snapTo.to];
-    locked.set(snapTo.to !== "full");
     top.set(withSpring(at, SPRING));
     onSnap?.(snapTo.to, height - at);
     // Only a new request moves it.
@@ -141,6 +148,7 @@ export function MapSheet({
   useLayoutEffect(() => {
     settleRef.current = (to: SheetSnap, at: number) => {
       setSnap(to);
+      setAtFull(at <= points.full + 0.5);
       onSnap?.(to, height - at);
     };
   });
@@ -167,7 +175,6 @@ export function MapSheet({
           // A fresh touch on a sheet at full height may scroll the list again. Until
           // then it stays held, so a flick that carried the sheet up doesn't also
           // fling the list.
-          locked.set(top.get() > pts.get().full + 0.5);
         })
         .onStart((e) => {
           cancelAnimation(top);
@@ -184,7 +191,6 @@ export function MapSheet({
           if (fromContent && top.get() <= p.full + 0.5 && (dy < 0 || scrollY.get() > 0.5)) {
             top.set(p.full);
             raw.set(p.full);
-            locked.set(false);
             return;
           }
 
@@ -195,7 +201,6 @@ export function MapSheet({
           raw.set(r);
           const next = r < p.full ? p.full - (p.full - r) * 0.2 : r > p.peek ? p.peek + (r - p.peek) * 0.2 : r;
           top.set(next);
-          locked.set(next > p.full + 0.5);
         })
         // Runs when a drag ends, on the UI thread.
         .onEnd((e) => {
@@ -205,7 +210,6 @@ export function MapSheet({
 
           if (fromContent && now <= p.full + 0.5 && (scrollY.get() > 0.5 || v < 0)) {
             // The list took this swipe; the sheet stays where it is.
-            locked.set(false);
             top.set(withSpring(p.full, SPRING));
             runOnJS(settleTo)("full", p.full);
             return;
@@ -237,7 +241,6 @@ export function MapSheet({
             to = dFull <= dHalf && dFull <= dPeek ? "full" : dHalf <= dPeek ? "half" : "peek";
             if (Math.abs(rest - p[to]) < 24) rest = p[to];
           }
-          locked.set(rest > p.full + 0.5);
           top.set(withSpring(rest, { ...SPRING, velocity: v }));
           runOnJS(settleTo)(to, rest);
         });
@@ -252,18 +255,10 @@ export function MapSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // While the sheet is below full the list is held at the offset it had; any scroll
-  // the shared touch gives it is put straight back, on the UI thread, before it shows.
+  // Where the list is scrolled to, for the drag to know whether it is at its top.
   const keep = (y: number) => {
     "worklet";
-    if (locked.get()) {
-      if (Math.abs(y - lockY.get()) > 0.5) scrollTo(scrollRef, 0, lockY.get(), false);
-      scrollY.set(lockY.get());
-    } else {
-      const at = Math.max(0, y);
-      lockY.set(at);
-      scrollY.set(at);
-    }
+    scrollY.set(Math.max(0, y));
   };
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => keep(e.contentOffset.y),
@@ -274,9 +269,31 @@ export function MapSheet({
   // Pull to refresh only once the sheet is fully up; below that a pull down moves the sheet.
   const refresh = isValidElement(refreshControl)
     ? cloneElement(refreshControl as ReactElement<{ enabled?: boolean }>, {
-        enabled: snap === "full",
+        enabled: atFull,
       })
     : refreshControl;
+
+  const reveal = useCallback(
+    (target: ViewInstance | null) => {
+      if (!target || !height) return;
+      top.set(withSpring(points.full, SPRING));
+      setSnap("full");
+      setAtFull(true);
+      onSnap?.("full", height - points.full);
+      // Once the sheet is up: how far the thing sits below the list's top, scrolled away.
+      setTimeout(() => {
+        const list = scrollRef.current as unknown as (ViewInstance & { scrollTo?: (o: { y: number; animated: boolean }) => void }) | null;
+        list?.measureInWindow((_lx: number, ly: number) => {
+          target.measureInWindow((_tx: number, ty: number) => {
+            list.scrollTo?.({ y: Math.max(0, scrollY.get() + (ty - ly) - space[3]), animated: true });
+          });
+        });
+      }, 420);
+    },
+    // Shared values and the ref are stable; the sizes are what change it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [height, points.full],
+  );
 
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: top.value }],
@@ -321,6 +338,7 @@ export function MapSheet({
             <GestureDetector gesture={native}>
               <SheetScroll
                 ref={scrollRef}
+                scrollEnabled={atFull}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
                 bounces={false}
@@ -330,7 +348,7 @@ export function MapSheet({
                 showsVerticalScrollIndicator={false}
                 style={styles.scroll}
               >
-                {children}
+                <SheetReveal.Provider value={reveal}>{children}</SheetReveal.Provider>
               </SheetScroll>
             </GestureDetector>
           </View>
