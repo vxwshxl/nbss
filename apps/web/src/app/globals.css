@@ -1784,16 +1784,31 @@ body[data-sos-live] [data-nibo] {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  /* Each invoice fills its A4 page, edge to edge (the page has no margin), its type
+   * a size up from the screen's popup and its company line at the foot of the page. */
   .fee-print-page {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
     break-after: page;
     page-break-after: always;
   }
-  .fee-print-page > * { width: 100%; max-width: 760px; }
   .fee-print-page:last-child { break-after: auto; page-break-after: auto; }
+  #fee-print-root #fee-invoice {
+    zoom: 1.2;
+    height: calc(297mm / 1.2);
+    display: flex;
+    flex-direction: column;
+  }
+  #fee-print-root .fee-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 34px 44px 30px;
+  }
+  #fee-print-root .fee-body > * { margin-top: 0 !important; }
+  #fee-print-root .fee-foot { margin-top: auto !important; }
 }
 
 /* The update screen's one button breathes, so the eye goes to it (App updates preview). */

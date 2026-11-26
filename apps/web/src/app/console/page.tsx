@@ -25,9 +25,10 @@ import {
   type NotArrivedRow,
   type OnDutyRow,
 } from "@/components/console/dashboard-tables";
+import { Breakdown, BusiestSites, HourlyCheckins, LateGuards, type LateGuard, type Part, type SiteStat } from "@/components/console/dashboard-insights";
 import { Card, CardTitle, Hello } from "@/components/crm/ui";
 import { StatTile } from "@/components/crm/stat";
-import { AreaTrend, BarList, DonutChart, Ring } from "@/components/crm/viz";
+import { AreaTrend, DonutChart, Ring } from "@/components/crm/viz";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { requireRoleSession } from "@/lib/auth";
@@ -135,7 +136,7 @@ export default async function ConsoleDashboard() {
     fetchAll(
       supabase
         .from("attendance")
-        .select("check_in_at, check_out_at, worked_minutes, overtime_minutes, status, sites(name)")
+        .select("guard_id, site_id, check_in_at, check_out_at, check_out_method, worked_minutes, overtime_minutes, status, sites(name), guard:profiles!attendance_guard_id_fkey(full_name, employee_code)")
         .gte("check_in_at", monthAgo.toISOString())
     ),
     fetchAll(
@@ -249,16 +250,50 @@ export default async function ConsoleDashboard() {
     { label: "Rejected", value: count("rejected"), hue: "brick" as const },
   ];
 
-  const bySite = new Map<string, number>();
+  // ---- the detail cards: sites in full, check-outs, check-ins by hour, guards most often late.
+  const siteStats = new Map<string, SiteStat & { who: Set<string> }>();
   for (const r of monthRows) {
+    if (!r.site_id) continue;
     const name = (Array.isArray(r.sites) ? r.sites[0]?.name : (r.sites as { name?: string } | null)?.name) ?? "Unknown site";
-    bySite.set(name, (bySite.get(name) ?? 0) + workedSoFar(r));
+    const s = siteStats.get(r.site_id) ?? { id: r.site_id, name, minutes: 0, punches: 0, guards: 0, late: 0, who: new Set<string>() };
+    s.minutes += workedSoFar(r);
+    s.punches += 1;
+    if (r.status === "late") s.late += 1;
+    s.who.add(r.guard_id);
+    siteStats.set(r.site_id, s);
   }
-  const SITE_HUES = ["jade", "sky", "gold", "teal", "plum"] as const;
-  const busiest = [...bySite.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([label, mins], i) => ({ label, value: Math.round(mins / 60), hue: SITE_HUES[i % SITE_HUES.length]!, sub: `${Math.round(mins / 60)} h` }));
+  const busiestSites: SiteStat[] = [...siteStats.values()]
+    .map(({ who, ...s }) => ({ ...s, guards: who.size }))
+    .sort((a, b) => b.minutes - a.minutes)
+    .slice(0, 8);
+
+  const checkouts: Part[] = [
+    { label: "Checked out at the gate", value: monthRows.filter((r) => r.check_out_at && r.check_out_method !== "auto_close").length, tone: "bg-[#009164]" },
+    { label: "Closed automatically (forgot to check out)", value: monthRows.filter((r) => r.check_out_method === "auto_close").length, tone: "bg-amber-500" },
+    { label: "Still on duty", value: monthRows.filter((r) => !r.check_out_at).length, tone: "bg-sky-500" },
+  ];
+  const markedParts: Part[] = [
+    { label: "On time", value: marked[0]!.value, tone: "bg-[#009164]" },
+    { label: "Late", value: marked[1]!.value, tone: "bg-amber-500" },
+    { label: "Needs review", value: marked[2]!.value, tone: "bg-sky-500" },
+    { label: "Rejected", value: marked[3]!.value, tone: "bg-red-500" },
+  ];
+
+  const hourly = Array.from({ length: 24 }, () => 0);
+  for (const r of monthRows) {
+    const h = Number(new Date(r.check_in_at).toLocaleString("en-GB", { hour: "2-digit", hour12: false, timeZone: site.timeZone })) % 24;
+    hourly[h] = (hourly[h] ?? 0) + 1;
+  }
+
+  const byGuard = new Map<string, LateGuard>();
+  for (const r of monthRows) {
+    const g = one(r.guard as unknown as { full_name: string; employee_code: string } | null);
+    const x = byGuard.get(r.guard_id) ?? { id: r.guard_id, name: g?.full_name ?? "A guard", code: g?.employee_code ?? "", late: 0, punches: 0 };
+    x.punches += 1;
+    if (r.status === "late") x.late += 1;
+    byGuard.set(r.guard_id, x);
+  }
+  const lateGuards = [...byGuard.values()].filter((g) => g.late > 0).sort((a, b) => b.late - a.late || b.punches - a.punches).slice(0, 6);
 
   const shiftsToday = (todayShifts.data ?? []).filter((r) => r.status !== "cancelled");
   const covered = shiftsToday.filter((r) => r.status === "in_progress" || r.status === "completed").length;
@@ -287,7 +322,6 @@ export default async function ConsoleDashboard() {
       />
 
       {alerts.length > 0 && <LiveSosPanel alerts={alerts} />}
-      {notArrived.length > 0 && <NotArrivedPanel rows={notArrived} />}
 
       {/* birdev's stat tiles: the first solid, the rest through the hues, a figure that
           needs someone in brick. */}
@@ -381,18 +415,29 @@ export default async function ConsoleDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 @4xl/main:grid-cols-2">
+      <div className="grid gap-4 @4xl/main:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <Card>
           <CardTitle title="How punches were marked" hint="Last 30 days" icon={CalendarCheck} hue="sky" />
           <DonutChart data={marked} total="punches" money={false} />
+          <div className="mt-5 space-y-5 border-t border-border pt-5">
+            <Breakdown title="Arrivals" parts={markedParts} />
+            <Breakdown title="Check-outs" parts={checkouts} href="/console/attendance" />
+          </div>
         </Card>
         <Card>
-          <CardTitle title="Busiest sites" hint="Hours worked, last 30 days" icon={Building2} hue="gold" right={<Link href="/console/sites" className="text-sm font-medium text-primary-ink hover:underline">All sites</Link>} />
-          {busiest.length ? (
-            <BarList data={busiest} money={false} />
-          ) : (
-            <p className="rounded-2xl border-2 border-dashed border-border px-4 py-10 text-center text-sm text-secondary-fg">No hours worked yet.</p>
-          )}
+          <CardTitle title="Busiest sites" hint="Last 30 days: hours, punches, guards and how often they were late" icon={Building2} hue="gold" right={<Link href="/console/sites" className="text-sm font-medium text-primary-ink hover:underline">All sites</Link>} />
+          <BusiestSites rows={busiestSites} />
+        </Card>
+      </div>
+
+      <div className="grid gap-4 @4xl/main:grid-cols-2">
+        <Card>
+          <CardTitle title="When guards check in" hint="Check-ins by hour of the day, last 30 days" icon={Clock3} hue="teal" />
+          <HourlyCheckins counts={hourly} />
+        </Card>
+        <Card>
+          <CardTitle title="Late most often" hint="Guards with the most late arrivals, last 30 days" icon={Timer} hue="gold" right={<Link href="/console/reports" className="text-sm font-medium text-primary-ink hover:underline">Reports</Link>} />
+          <LateGuards rows={lateGuards} />
         </Card>
       </div>
 
@@ -443,6 +488,9 @@ export default async function ConsoleDashboard() {
           <OnDutyTable rows={onDutyRows} canReview={!session.impersonating} />
         )}
       </Panel>
+
+      {/* Below who is on duty: who should be and is not, each with a number to ring. */}
+      {notArrived.length > 0 && <NotArrivedPanel rows={notArrived} />}
     </div>
   );
 }

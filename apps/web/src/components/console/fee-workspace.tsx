@@ -532,7 +532,7 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
   return (
     <div id="fee-invoice" className="bg-white text-[13px] leading-snug text-slate-800">
       <div className="h-1.5 bg-gradient-to-r from-[#006b4a] via-[#009164] to-[#14b8a6]" />
-      <div className="space-y-5 px-6 pt-5 pb-5 sm:px-9">
+      <div className="fee-body space-y-5 px-6 pt-5 pb-5 sm:px-9">
         {/* Title and number; the seller's mark on the right. */}
         <div className={cn("flex items-start justify-between gap-6", inDialog && "pr-8")}>
           <div>
@@ -661,7 +661,7 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
         </div>
 
         {/* The seller's registrations, as the reference's company information row. */}
-        <div>
+        <div className="fee-foot">
           <p className="border-b border-slate-200 pb-1.5 text-[12px] font-bold tracking-wide text-[#009164]">Company information</p>
           <div className="mt-2.5 grid grid-cols-1 gap-2 text-[11px] text-slate-600 sm:grid-cols-3">
             {s.seller_gstin && (
