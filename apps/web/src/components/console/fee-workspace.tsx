@@ -663,18 +663,18 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
         {/* The seller's registrations, as the reference's company information row. */}
         <div className="fee-foot">
           <p className="border-b border-slate-200 pb-1.5 text-[12px] font-bold tracking-wide text-[#009164]">Company information</p>
-          <div className="mt-2.5 grid grid-cols-1 gap-2 text-[11px] text-slate-600 sm:grid-cols-3">
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-slate-600">
             {s.seller_gstin && (
-              <p className="flex items-center gap-2">
+              <p className="flex items-center gap-1.5 whitespace-nowrap">
                 <Landmark className="size-4 shrink-0 text-slate-400" /> GSTIN <span className="font-mono font-semibold text-slate-800">{s.seller_gstin}</span>
               </p>
             )}
             {s.seller_cin && (
-              <p className="flex items-center gap-2">
+              <p className="flex items-center gap-1.5 whitespace-nowrap">
                 <Building2 className="size-4 shrink-0 text-slate-400" /> CIN <span className="font-mono font-semibold text-slate-800">{s.seller_cin}</span>
               </p>
             )}
-            <p className="flex items-center gap-2">
+            <p className="flex items-center gap-1.5 whitespace-nowrap">
               <MapPin className="size-4 shrink-0 text-slate-400" /> {s.seller_address ?? "Kokrajhar, Assam"}
             </p>
           </div>
