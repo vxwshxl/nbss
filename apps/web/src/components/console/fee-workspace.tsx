@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { BadgeCheck, FileText, HardHat, Loader2, Lock, Printer, Settings2, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
+import { BadgeCheck, Building2, FileText, HardHat, Landmark, Loader2, Lock, MapPin, Printer, Settings2, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { saveFeeSettings, setFeeSkipped, startFeePayment, verifyFeePayment } from "@/app/console/software-fee/actions";
@@ -358,7 +358,7 @@ export function FeeWorkspace({
       {canEdit && settings && <RateForm settings={settings} />}
 
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-3xl">
+        <DialogContent className="max-h-[96dvh] overflow-y-auto p-0 sm:max-w-[860px]">
           {open && settings && (
             <Invoice
               inv={open}
@@ -515,133 +515,185 @@ function KindCard({
   );
 }
 
+/**
+ * The tax invoice, laid out as a printed corporate invoice: the title and number with
+ * the seller's mark, who it is billed to beside the total due, the lines in a ruled
+ * table, then payment and the totals in an emerald block, and the seller's
+ * registrations at the foot. Sized to sit on one screen without scrolling (it only
+ * scrolls on a very short window), and printed as one A4 page.
+ */
 function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void; onPrint: () => void; inDialog?: boolean }) {
   const paid = inv.status === "paid";
   const skipped = inv.status === "skipped";
   const lines = linesOf(inv);
   const acc = inv.accounts ?? null;
-  return (
-    <div id="fee-invoice" className="overflow-hidden rounded-2xl">
-      {/* The band: who is billing, what this is, and whether it is settled. */}
-      <div className="relative bg-gradient-to-br from-[#006b4a] via-[#009164] to-[#14b8a6] px-6 py-6 pr-16 text-white sm:px-8 sm:pr-16">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold tracking-[0.2em] text-white/75 uppercase">Tax invoice</p>
-            {inDialog ? (
-              <DialogTitle className="mt-1 text-2xl font-extrabold tracking-tight text-white">{s.seller_name}</DialogTitle>
-            ) : (
-              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white">{s.seller_name}</h2>
-            )}
-            {s.seller_address && <p className="mt-0.5 text-sm text-white/80">{s.seller_address}</p>}
-          </div>
-          <span
-            className={cn(
-              "rounded-xl border-2 px-4 py-1.5 text-sm font-extrabold tracking-widest uppercase",
-              paid ? "border-white bg-white text-emerald-700" : skipped ? "border-white/60 bg-white/20 text-white" : "border-amber-200 bg-amber-300 text-amber-950",
-            )}
-          >
-            {paid ? "Paid" : skipped ? "Waived" : "Unpaid"}
-          </span>
-        </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <Meta label="Invoice no." value={inv.number} mono />
-          <Meta label="Period" value={month(inv.period)} />
-          <Meta label={paid ? "Paid on" : "Due on"} value={paid && inv.paid_at ? day(inv.paid_at) : day(inv.due_on)} />
-        </div>
-      </div>
+  const initials = s.seller_name
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-z]/.test(w) && !/^(private|limited|pvt|ltd)\.?$/i.test(w))
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+  const Title = inDialog ? DialogTitle : "h2";
 
-      <div className="space-y-6 px-6 py-6 sm:px-8">
-        {/* Seller and buyer, with the registrations a business needs to claim GST. */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-            <p className="text-[11px] font-bold tracking-widest text-emerald-700 uppercase">From</p>
-            <p className="mt-1 text-base font-bold">{s.seller_name}</p>
-            <div className="mt-3 grid gap-2">
-              {s.seller_gstin && <Reg label="GSTIN" value={s.seller_gstin} />}
-              {s.seller_cin && <Reg label="CIN" value={s.seller_cin} />}
+  return (
+    <div id="fee-invoice" className="bg-white text-[13px] leading-snug text-slate-800">
+      <div className="h-1.5 bg-gradient-to-r from-[#006b4a] via-[#009164] to-[#14b8a6]" />
+      <div className="space-y-5 px-6 pt-5 pb-5 sm:px-9">
+        {/* Title and number; the seller's mark on the right. */}
+        <div className={cn("flex items-start justify-between gap-6", inDialog && "pr-8")}>
+          <div>
+            <Title className="text-[28px] leading-none font-black tracking-[0.18em] text-slate-900">INVOICE</Title>
+            <div className="mt-2 h-0.5 w-full bg-slate-900" />
+            <p className="mt-1.5 font-mono text-[11px] tracking-[0.22em] text-slate-500">NO: {inv.number}</p>
+          </div>
+          <div className="flex items-center gap-3 text-right">
+            <div>
+              <p className="text-[15px] font-extrabold tracking-tight text-slate-900">{s.seller_name}</p>
+              <p className="text-[11px] tracking-wide text-slate-500">{s.seller_address ?? "Kokrajhar, Assam"}</p>
+            </div>
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#006b4a] to-[#14b8a6] text-sm font-black tracking-wider text-white shadow-sm">
+              {initials || "BT"}
+            </span>
+          </div>
+        </div>
+
+        {/* Billed to, the invoice's particulars, and what is due. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.1fr_1fr_auto] sm:gap-6">
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500">Invoice to</p>
+            <p className="mt-0.5 font-bold text-[#009164]">{s.buyer_name}</p>
+            <p className="mt-1 text-[12px] text-slate-600">Kokrajhar, Assam</p>
+            {s.buyer_gstin && <p className="text-[12px] text-slate-600">GSTIN: {s.buyer_gstin}</p>}
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[12px]">
+            <dt className="font-semibold text-slate-500">Period</dt>
+            <dd>{month(inv.period)}</dd>
+            <dt className="font-semibold text-slate-500">{paid ? "Paid on" : "Due on"}</dt>
+            <dd>{paid && inv.paid_at ? day(inv.paid_at) : day(inv.due_on)}</dd>
+            <dt className="font-semibold text-slate-500">Status</dt>
+            <dd>
+              <span
+                className={cn(
+                  "rounded px-1.5 py-px text-[10px] font-bold tracking-wider uppercase",
+                  paid ? "bg-emerald-100 text-emerald-700" : skipped ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-800",
+                )}
+              >
+                {paid ? "Paid" : skipped ? "Waived" : "Unpaid"}
+              </span>
+              {!paid && !skipped && <span className="ml-1.5 text-[11px] text-slate-500">{inv.locked_at ? "amount locked" : "live until month end"}</span>}
+            </dd>
+          </dl>
+          <div className="sm:text-right">
+            <p className="text-[11px] font-semibold text-slate-500">{paid ? "Total paid" : "Total due"}</p>
+            <p className="mt-0.5 border-b-2 border-slate-900 pb-0.5 text-[22px] font-black tracking-tight text-slate-900 tabular-nums">INR {inr(inv.total_paise).slice(1)}</p>
+          </div>
+        </div>
+
+        {/* The lines. */}
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-y-2 border-slate-800 text-[11px] font-bold text-slate-700">
+              <th className="w-12 bg-slate-50 py-2 pl-3 text-left">No.</th>
+              <th className="bg-slate-50 py-2 pr-3 text-left">Item description</th>
+              <th className="border-l border-slate-200 py-2 text-right">Rate</th>
+              <th className="py-2 text-center">Qty</th>
+              <th className="py-2 pr-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.length === 0 && (
+              <tr className="border-b border-slate-200">
+                <td colSpan={5} className="py-3 pl-3 text-slate-500">
+                  Nothing billed for {month(inv.period)}.
+                </td>
+              </tr>
+            )}
+            {lines.map((l, i) => (
+              <tr key={i} className="border-b border-slate-200 align-top">
+                <td className="bg-slate-50 py-2.5 pl-3 text-slate-500 tabular-nums">{String(i + 1).padStart(2, "0")}.</td>
+                <td className="bg-slate-50 py-2.5 pr-3">
+                  <p className="font-bold text-slate-900">
+                    {l.label}
+                    {l.tag && <span className="ml-2 rounded bg-emerald-100 px-1.5 py-px text-[9px] font-bold tracking-wider text-emerald-700 uppercase">{l.tag}</span>}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {isAccountsLine(l) && acc
+                      ? KINDS.filter((k) => acc[k.kind]).map((k) => `${acc[k.kind]} ${k.label.toLowerCase()}`).join(" · ")
+                      : month(inv.period)}
+                  </p>
+                </td>
+                <td className="border-l border-slate-200 py-2.5 text-right tabular-nums">{inr(l.rate_paise)}</td>
+                <td className="py-2.5 text-center tabular-nums">{l.qty}</td>
+                <td className="py-2.5 pr-3 text-right font-semibold tabular-nums">{inr(l.amount_paise)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Payment on the left, the totals in the emerald block on the right. */}
+        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[1fr_auto]">
+          <div className="space-y-2.5 text-[12px]">
+            <div>
+              <p className="font-bold text-slate-900">Payment</p>
+              <p className="text-slate-600">
+                {paid
+                  ? `Paid online${inv.paid_at ? ` on ${day(inv.paid_at)}` : ""}${inv.razorpay_payment_id ? ` · ${inv.razorpay_payment_id}` : ""}`
+                  : skipped
+                    ? `Waived · ${inv.skip_note ?? "free month"} · nothing due`
+                    : "Online through Razorpay (UPI, cards, net banking), from this page."}
+              </p>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">Terms</p>
+              <p className="text-slate-600">
+                Due on the {s.due_day}th of the month. A month&apos;s amount is locked when it ends or is paid. GST is charged at {Number(inv.gst_percent)}%.
+              </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
-            <p className="text-[11px] font-bold tracking-widest text-sky-700 uppercase">Billed to</p>
-            <p className="mt-1 text-base font-bold">{s.buyer_name}</p>
-            <div className="mt-3 grid gap-2">{s.buyer_gstin ? <Reg label="GSTIN" value={s.buyer_gstin} /> : <p className="text-xs text-muted-foreground">Kokrajhar, Assam</p>}</div>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-app-line">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-left text-[11px] tracking-wider text-muted-foreground uppercase">
-              <tr>
-                <th className="px-4 py-2.5 font-semibold">Description</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Qty</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Rate</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.length === 0 && (
-                <tr className="border-t border-app-line-soft">
-                  <td colSpan={4} className="px-4 py-3 text-muted-foreground">
-                    Nothing billed for {month(inv.period)}.
-                  </td>
-                </tr>
-              )}
-              {lines.map((l, i) => (
-                <tr key={i} className="border-t border-app-line-soft">
-                  <td className="px-4 py-3">
-                    <p className="font-semibold">
-                      {l.label}
-                      {l.tag && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-muted-foreground uppercase">{l.tag}</span>}
-                    </p>
-                    {isAccountsLine(l) && acc ? (
-                      <p className="text-xs text-muted-foreground">
-                        {KINDS.filter((k) => acc[k.kind]).map((k) => `${acc[k.kind]} ${k.label.toLowerCase()}`).join(" · ")} · {month(inv.period)}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">{month(inv.period)}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">{l.qty}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{inr(l.rate_paise)}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums">{inr(l.amount_paise)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <p className={cn("rounded-xl px-4 py-3 text-sm font-medium", paid ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
-            {paid
-              ? `Paid ${inv.paid_at ? day(inv.paid_at) : ""} online${inv.razorpay_payment_id ? ` · ${inv.razorpay_payment_id}` : ""}`
-              : skipped
-                ? `Waived · ${inv.skip_note ?? "Free month"} · nothing due`
-                : `Unpaid · due on ${day(inv.due_on)}${inv.locked_at ? " · amount locked" : " · amount live until the month ends"}`}
-          </p>
-          <dl className="w-full max-w-xs space-y-1.5 rounded-2xl bg-muted/50 p-4 text-sm sm:w-72">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Subtotal</dt>
+          <dl className="w-full overflow-hidden rounded-lg bg-[#009164] text-[12px] text-white sm:w-64">
+            <div className="flex justify-between border-b border-white/25 px-4 py-2">
+              <dt>Sub-total</dt>
               <dd className="tabular-nums">{inr(inv.amount_paise)}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">GST {Number(inv.gst_percent) > 0 ? `@ ${inv.gst_percent}%` : ""}</dt>
+            <div className="flex justify-between border-b border-white/25 px-4 py-2">
+              <dt>GST ({Number(inv.gst_percent)}%)</dt>
               <dd className="tabular-nums">{inr(inv.gst_paise)}</dd>
             </div>
-            <div className="flex justify-between border-t border-app-line pt-2 text-lg font-extrabold">
-              <dt>Total</dt>
+            <div className="flex justify-between bg-[#006b4a] px-4 py-2.5 text-[14px] font-extrabold">
+              <dt>Grand total</dt>
               <dd className="tabular-nums">{inr(inv.total_paise)}</dd>
             </div>
           </dl>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-app-line-soft pt-5 print:hidden">
-          <p className="text-[11px] text-muted-foreground">Computer-generated invoice · {s.seller_name}</p>
+        {/* The seller's registrations, as the reference's company information row. */}
+        <div>
+          <p className="border-b border-slate-200 pb-1.5 text-[12px] font-bold tracking-wide text-[#009164]">Company information</p>
+          <div className="mt-2.5 grid grid-cols-1 gap-2 text-[11px] text-slate-600 sm:grid-cols-3">
+            {s.seller_gstin && (
+              <p className="flex items-center gap-2">
+                <Landmark className="size-4 shrink-0 text-slate-400" /> GSTIN <span className="font-mono font-semibold text-slate-800">{s.seller_gstin}</span>
+              </p>
+            )}
+            {s.seller_cin && (
+              <p className="flex items-center gap-2">
+                <Building2 className="size-4 shrink-0 text-slate-400" /> CIN <span className="font-mono font-semibold text-slate-800">{s.seller_cin}</span>
+              </p>
+            )}
+            <p className="flex items-center gap-2">
+              <MapPin className="size-4 shrink-0 text-slate-400" /> {s.seller_address ?? "Kokrajhar, Assam"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3 print:hidden">
+          <p className="text-[11px] text-slate-400">Computer-generated invoice · no signature required</p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onPrint}>
+            <Button variant="outline" size="sm" onClick={onPrint}>
               <Printer data-icon="inline-start" /> Print
             </Button>
             {!paid && !skipped && online && inv.total_paise >= 100 && (
-              <Button onClick={onPay} disabled={paying}>
+              <Button size="sm" onClick={onPay} disabled={paying}>
                 {paying && <Loader2 className="animate-spin" />}
                 Pay {inr(inv.total_paise)}
               </Button>
@@ -649,25 +701,6 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="rounded-xl bg-white/12 px-3 py-2 ring-1 ring-white/20">
-      <p className="text-[10px] font-semibold tracking-widest text-white/70 uppercase">{label}</p>
-      <p className={cn("text-sm font-bold", mono && "font-mono")}>{value}</p>
-    </div>
-  );
-}
-
-/** A statutory number, large and copyable at a glance. */
-function Reg({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 ring-1 ring-black/5">
-      <span className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">{label}</span>
-      <span className="font-mono text-[15px] font-bold tracking-wide">{value}</span>
     </div>
   );
 }
