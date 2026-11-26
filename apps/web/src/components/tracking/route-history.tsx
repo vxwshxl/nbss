@@ -29,7 +29,7 @@ import {
 } from "@/lib/tracking";
 import { periodPhrase, type Period } from "@/lib/period";
 import { initials } from "@/lib/ui/initials";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch } from "@/lib/utils";
 
 export type RouteShift = {
   attendanceId: string;
@@ -253,7 +253,7 @@ export function RouteHistory({
   }
 
   const q = query.trim().toLowerCase();
-  const listed = q ? shifts.filter((s) => `${s.guardName} ${s.guardCode} ${s.siteName}`.toLowerCase().includes(q)) : shifts;
+  const listed = q ? shifts.filter((s) => matchesSearch(q, s)) : shifts;
   const at = points[head];
 
   return (

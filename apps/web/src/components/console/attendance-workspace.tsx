@@ -192,7 +192,7 @@ export function AttendanceWorkspace({
         onRowClick={(r) => setOpenId(r.id)}
         printTitle={showGuard ? "Attendance" : "My attendance"}
         searchPlaceholder={
-          showGuard ? "Search by name, code, role or site…" : "Search by site or state…"
+          "Search anything in the attendance…"
         }
         emptyMessage="No attendance recorded yet. Punches appear here as soon as someone checks in."
         rowClassName={(r) =>

@@ -15,7 +15,7 @@ import { Dropdown } from "@/components/ui/dropdown";
 import { Textarea } from "@/components/ui/textarea";
 import { periodPhrase, type Period } from "@/lib/period";
 import { initials } from "@/lib/ui/initials";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch } from "@/lib/utils";
 
 export type HandoverNote = {
   id: string;
@@ -92,7 +92,7 @@ export function HandoverWorkspace({
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const shown = notes.filter(
-    (n) => (!filter || n.siteId === filter) && (!q || `${n.body} ${n.author} ${n.authorCode ?? ""} ${n.siteName}`.toLowerCase().includes(q)),
+    (n) => (!filter || n.siteId === filter) && matchesSearch(q, n),
   );
 
   const groups: { key: string; notes: HandoverNote[] }[] = [];

@@ -71,6 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const result = await signInWorker(name, mobile, client);
 
   if (!result.ok) {
+    if (result.inactive) return NextResponse.json({ error: result.error, code: "inactive" }, { status: 403, headers: NO_STORE });
     recordFailure(ip, idKey);
     return NextResponse.json({ error: result.error }, { status: 401, headers: NO_STORE });
   }

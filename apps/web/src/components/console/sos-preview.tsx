@@ -12,6 +12,8 @@ import {
   Footprints,
   Gauge,
   MapPin,
+  Maximize2,
+  Minimize2,
   Navigation,
   Phone,
   Siren,
@@ -116,6 +118,7 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
     });
   }
 
+  const [mapTall, setMapTall] = useState(false);
   const live = d ? isLive(d.status) : false;
   const where: MapPunch[] =
     d?.lat != null && d.lng != null
@@ -194,7 +197,18 @@ export function SosPreviewDialog({ id, onClose }: { id: string | null; onClose: 
 
               {d.site && (
                 <Section title="Where">
-                  <SiteMap sites={[d.site]} punches={where} focus={d.site.id} height={230} />
+                  {/* Big enough to read the streets around the guard; Expand gives it most of the screen. */}
+                  <div className="relative">
+                    <SiteMap sites={[d.site]} punches={where} focus={d.site.id} height={mapTall ? "72vh" : "min(48vh, 440px)"} />
+                    <button
+                      type="button"
+                      onClick={() => setMapTall((v) => !v)}
+                      className="press absolute bottom-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-foreground shadow-md ring-1 ring-black/10 hover:bg-white"
+                    >
+                      {mapTall ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                      {mapTall ? "Smaller map" : "Expand map"}
+                    </button>
+                  </div>
                   <dl className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2">
                     <Field
                       icon={Crosshair}

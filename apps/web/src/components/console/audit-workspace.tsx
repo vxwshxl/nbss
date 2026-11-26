@@ -238,7 +238,7 @@ export function AuditWorkspace({ rows }: { rows: AuditRow[] }) {
         onRowClick={setDetail}
         printTitle="Audit log"
         initialPageSize={50}
-        searchPlaceholder="Search by name, mobile, action, site or address…"
+        searchPlaceholder="Search anything in the log…"
         emptyMessage="Nothing recorded yet."
       />
 

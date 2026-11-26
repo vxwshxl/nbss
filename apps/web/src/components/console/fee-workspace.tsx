@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Printer, Settings2 } from "lucide-react";
+import { BadgeCheck, FileText, HardHat, Loader2, Lock, Printer, Settings2, ShieldCheck, Sparkles, UserCog, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { saveFeeSettings, setFeeSkipped, startFeePayment, verifyFeePayment } from "@/app/console/software-fee/actions";
@@ -12,6 +12,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
+export type FeeLine = { label: string; tag?: string | null; qty: number; rate_paise: number; amount_paise: number };
 export type FeeInvoice = {
   id: string;
   number: string;
@@ -28,6 +29,9 @@ export type FeeInvoice = {
   due_on: string;
   paid_at: string | null;
   razorpay_payment_id: string | null;
+  lines?: FeeLine[] | null;
+  accounts?: Partial<Record<AccountKind, number>> | null;
+  locked_at?: string | null;
 };
 export type FeeSettings = {
   per_guard_paise: number;
@@ -39,11 +43,40 @@ export type FeeSettings = {
   seller_cin?: string | null;
   buyer_name: string;
   buyer_gstin: string | null;
+  account_billing_from?: string | null;
 };
+export type AccountKind = "admin" | "supervisor" | "guard" | "housekeeping" | "field_officer";
+export type BilledAccount = {
+  id: string;
+  name: string;
+  code: string;
+  kind: AccountKind;
+  phone: string | null;
+  since: string | null;
+  lastSeen: string | null;
+};
+
+/** The kinds of account billed, in the order the cards show them. */
+const KINDS: { kind: AccountKind; label: string; one: string; icon: typeof Users; tint: string }[] = [
+  { kind: "admin", label: "NBSS Admins", one: "Admin", icon: UserCog, tint: "text-violet-600 bg-violet-100" },
+  { kind: "supervisor", label: "Supervisors", one: "Supervisor", icon: BadgeCheck, tint: "text-sky-600 bg-sky-100" },
+  { kind: "guard", label: "Guards", one: "Guard", icon: ShieldCheck, tint: "text-emerald-700 bg-emerald-100" },
+  { kind: "housekeeping", label: "Housekeepers", one: "Housekeeper", icon: Sparkles, tint: "text-amber-700 bg-amber-100" },
+  { kind: "field_officer", label: "Field officers", one: "Field officer", icon: HardHat, tint: "text-rose-600 bg-rose-100" },
+];
+const kindLabel = (k: AccountKind) => KINDS.find((x) => x.kind === k)?.one ?? k;
 
 const inr = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const month = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
 const day = (d: string) => new Date(d.length === 10 ? `${d}T00:00:00Z` : d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: d.length === 10 ? "UTC" : "Asia/Kolkata" });
+
+/** The lines an invoice is made of: its frozen lines, or the old one-line per-guard form. */
+function linesOf(inv: FeeInvoice): FeeLine[] {
+  if (inv.lines && inv.lines.length) return inv.lines;
+  if (!inv.amount_paise) return [];
+  return [{ label: "NBSS software · per active guard", qty: inv.guards, rate_paise: inv.per_guard_paise, amount_paise: inv.amount_paise }];
+}
+const isAccountsLine = (l: FeeLine) => l.label.startsWith("NBSS software");
 
 type RazorpayCtor = new (o: Record<string, unknown>) => { open: () => void };
 declare global {
@@ -62,36 +95,95 @@ function loadCheckout(): Promise<boolean> {
   });
 }
 
-function StatusStamp({ status, big }: { status: "paid" | "unpaid" | "skipped"; big?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full font-bold tracking-wide uppercase",
-        big ? "border-2 px-4 py-1.5 text-sm" : "px-2.5 py-0.5 text-[11px]",
-        status === "paid" ? "border-emerald-600 bg-emerald-50 text-emerald-700" : status === "skipped" ? "border-slate-400 bg-slate-100 text-slate-600" : "border-amber-500 bg-amber-50 text-amber-700",
-      )}
-    >
-      {status === "paid" ? "Paid" : status === "skipped" ? "Skipped" : "Unpaid"}
-    </span>
-  );
+type Row = { period: string; inv: FeeInvoice | null };
+type State = "paid" | "unpaid" | "skipped" | "upcoming" | "nothing";
+
+function stateOf(r: Row): State {
+  if (!r.inv) return "upcoming";
+  if (r.inv.status !== "unpaid") return r.inv.status;
+  return r.inv.total_paise > 0 ? "unpaid" : "nothing";
+}
+
+function StatusPill({ state }: { state: State }) {
+  const map: Record<State, [string, string]> = {
+    paid: ["Paid", "bg-emerald-100 text-emerald-700"],
+    unpaid: ["Unpaid", "bg-amber-100 text-amber-800"],
+    skipped: ["Waived", "bg-slate-100 text-slate-600"],
+    upcoming: ["Upcoming", "bg-muted text-muted-foreground"],
+    nothing: ["Nothing due", "bg-emerald-50 text-emerald-700"],
+  };
+  const [label, cls] = map[state];
+  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", cls)}>{label}</span>;
+}
+
+/** The Indian financial year a month belongs to, as "2026–27". */
+function fy(period: string) {
+  const [y, m] = period.split("-").map(Number) as [number, number];
+  const start = m >= 4 ? y : y - 1;
+  return `${start}–${String((start + 1) % 100).padStart(2, "0")}`;
+}
+
+/** Every month from the first invoice to the end of the current financial year. */
+function schedule(invoices: FeeInvoice[]): { fy: string; rows: Row[] }[] {
+  if (!invoices.length) return [];
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const [ty, tm] = today.split("-").map(Number) as [number, number];
+  const endYear = tm >= 4 ? ty + 1 : ty; // March of this financial year
+  const first = invoices.map((i) => i.period).sort()[0]!;
+  let [y, m] = first.split("-").map(Number) as [number, number];
+  const byPeriod = new Map(invoices.map((i) => [i.period.slice(0, 7), i]));
+  const sections = new Map<string, Row[]>();
+  while (y < endYear || (y === endYear && m <= 3)) {
+    const period = `${y}-${String(m).padStart(2, "0")}-01`;
+    const key = fy(period);
+    if (!sections.has(key)) sections.set(key, []);
+    sections.get(key)!.push({ period, inv: byPeriod.get(period.slice(0, 7)) ?? null });
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return [...sections.entries()].map(([k, rows]) => ({ fy: k, rows })).reverse();
 }
 
 /**
- * The software fee's months, newest first. A row opens its invoice; an unpaid month can
- * be paid through Razorpay from the row or the invoice. A developer sees the rate form.
+ * The software fee as the year's months (as SchoolERP lays it out): each month's
+ * amount with its working underneath, its status, and what can be done with it.
+ * Only the oldest unpaid month can be paid; months to come are locked and show no
+ * amount yet. Underneath, every account being billed, by kind.
  */
-export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices: FeeInvoice[]; settings: FeeSettings | null; canEdit: boolean; online: boolean }) {
+export function FeeWorkspace({
+  invoices,
+  settings,
+  accounts,
+  canEdit,
+  online,
+}: {
+  invoices: FeeInvoice[];
+  settings: FeeSettings | null;
+  accounts: BilledAccount[];
+  canEdit: boolean;
+  online: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState<FeeInvoice | null>(null);
   const [paying, setPaying] = useState<string | null>(null);
   const [skipping, setSkipping] = useState<string | null>(null);
+  const sections = useMemo(() => schedule(invoices), [invoices]);
+  // The one month that can be paid now: the oldest unpaid one with something due.
+  const payableId = useMemo(
+    () => [...invoices].sort((a, b) => a.period.localeCompare(b.period)).find((i) => i.status === "unpaid" && i.total_paise >= 100)?.id ?? null,
+    [invoices],
+  );
+  const thisMonth = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
 
   async function skip(inv: FeeInvoice, on: boolean) {
     setSkipping(inv.id);
     const r = await setFeeSkipped(inv.id, on);
     setSkipping(null);
     if (r.ok) {
-      toast.success(on ? `${month(inv.period)} skipped: nothing due.` : `${month(inv.period)} is due again.`);
+      toast.success(on ? `${month(inv.period)} waived: nothing due.` : `${month(inv.period)} is due again.`);
       router.refresh();
     } else toast.error(r.error ?? "Could not change it.");
   }
@@ -124,16 +216,8 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
     }
   }
 
-  // Which months the table shows: this month by default, widened from the pickers.
-  const thisMonth = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
-  const [from, setFrom] = useState(thisMonth);
-  const [to, setTo] = useState(thisMonth);
-  const shown = invoices.filter((r) => r.period.slice(0, 7) >= from && r.period.slice(0, 7) <= to);
-
-  // Invoices to print: one from its row or the invoice. They are
-  // drawn into a sheet attached to <body> that only print shows, a page each.
+  // Invoices to print: drawn into a sheet attached to <body> that only print shows.
   const [printing, setPrinting] = useState<FeeInvoice[] | null>(null);
-  const printInvoices = (list: FeeInvoice[]) => setPrinting(list);
   useEffect(() => {
     if (!printing) return;
     document.body.classList.add("printing-fees");
@@ -150,94 +234,141 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
     };
   }, [printing]);
 
-  const columns: Column<FeeInvoice>[] = [
-    {
-      header: "Month",
-      cell: (r) => (
-        <button type="button" data-row-primary onClick={() => setOpen(r)} className="font-semibold hover:underline">
-          {month(r.period)}
-        </button>
-      ),
-      sortValue: (r) => r.period,
-      searchValue: (r) => month(r.period),
-      printCell: (r) => month(r.period),
-    },
-    { header: "Invoice", cell: (r) => <span className="font-mono text-xs text-muted-foreground">{r.number}</span>, sortValue: (r) => r.number, searchValue: (r) => r.number, printCell: (r) => r.number },
-    { header: "Guards", cell: (r) => <span className="tabular-nums">{r.guards}</span>, sortValue: (r) => r.guards, total: (rows) => rows.reduce((n, r) => n + r.guards, 0) },
-    { header: "Rate", cell: (r) => <span className="tabular-nums">{r.per_guard_paise ? inr(r.per_guard_paise) : "-"}</span>, sortValue: (r) => r.per_guard_paise, printCell: (r) => (r.per_guard_paise ? inr(r.per_guard_paise) : "-") },
-    {
-      header: "Total",
-      cell: (r) => <span className="font-semibold tabular-nums">{inr(r.total_paise)}</span>,
-      sortValue: (r) => r.total_paise,
-      printCell: (r) => inr(r.total_paise),
-      total: (rows) => inr(rows.filter((r) => r.status !== "skipped").reduce((n, r) => n + r.total_paise, 0)),
-    },
-    {
-      header: "Status",
-      cell: (r) => (
-        <span className="whitespace-nowrap">
-          <StatusStamp status={r.status} />
-          <span className="ml-2 text-xs text-muted-foreground">{r.status === "paid" && r.paid_at ? day(r.paid_at) : r.status === "skipped" ? (r.skip_note ?? "Free month") : `due ${day(r.due_on)}`}</span>
-        </span>
-      ),
-      sortValue: (r) => r.status,
-      searchValue: (r) => r.status,
-      printCell: (r) => (r.status === "paid" ? `Paid${r.paid_at ? ` ${day(r.paid_at)}` : ""}` : r.status === "skipped" ? `Skipped · ${r.skip_note ?? "Free month"}` : `Unpaid · due ${day(r.due_on)}`),
-    },
-    {
-      header: "",
-      noPrint: true,
-      cell: (inv) => (
-        <span className="flex items-center justify-end gap-2 whitespace-nowrap">
-          {settings && (
-            <Button size="sm" variant="outline" onClick={() => printInvoices([inv])} aria-label={`Print the ${month(inv.period)} invoice`}>
-              <Printer data-icon="inline-start" /> Print
-            </Button>
-          )}
-          {canEdit && inv.status !== "paid" && (
-            <Button size="sm" variant="outline" disabled={skipping === inv.id} onClick={() => void skip(inv, inv.status !== "skipped")}>
-              {inv.status === "skipped" ? "Un-skip" : "Skip month"}
-            </Button>
-          )}
-          {inv.status === "unpaid" && inv.total_paise >= 100 && !online && <span className="text-xs text-muted-foreground">Online payment not set up</span>}
-          {inv.status === "unpaid" && online && inv.total_paise >= 100 && (
-            <Button size="sm" onClick={() => void pay(inv)} disabled={paying === inv.id}>
-              {paying === inv.id && <Loader2 className="animate-spin" />}
-              Pay now
-            </Button>
-          )}
-        </span>
-      ),
-    },
-  ];
+  const rate = settings?.per_guard_paise ?? 3000;
+  const gst = Number(settings?.gst_percent ?? 0);
 
   return (
-    <div className="space-y-4">
-      {/* The months shown, centred above the table (as Reports has its range). */}
-      <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-app-line bg-card p-3 text-sm shadow-e1">
-        <span className="text-muted-foreground">Months</span>
-        <input type="month" aria-label="From month" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)} className="h-10 rounded-xl border border-border bg-background px-3 tabular-nums" />
-        <span className="text-muted-foreground">to</span>
-        <input type="month" aria-label="To month" value={to} min={from} onChange={(e) => e.target.value && setTo(e.target.value)} className="h-10 rounded-xl border border-border bg-background px-3 tabular-nums" />
-      </div>
+    <div className="space-y-8">
+      {sections.map((section) => (
+        <section key={section.fy} className="overflow-hidden rounded-3xl border border-app-line bg-card shadow-e1">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-ink px-5 py-4 text-ink-fg sm:px-6">
+            <h2 className="font-semibold">Financial year {section.fy}</h2>
+            <span className="text-xs text-ink-fg/70">Due on the {settings?.due_day ?? 15}th of each month</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-b border-app-line bg-muted/50 text-left text-[11px] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+                  <th className="px-5 py-3">Month</th>
+                  <th className="px-5 py-3">Last date</th>
+                  <th className="px-5 py-3 text-right">Amount</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-app-line-soft">
+                {section.rows.map((row) => {
+                  const st = stateOf(row);
+                  const inv = row.inv;
+                  const lines = inv ? linesOf(inv) : [];
+                  const live = !!inv && inv.status === "unpaid" && !inv.locked_at && row.period.slice(0, 7) === thisMonth;
+                  const oneTime = lines.length > 0 && lines.every((l) => l.tag === "One-time");
+                  return (
+                    <tr
+                      key={row.period}
+                      onClick={() => inv && setOpen(inv)}
+                      className={cn(inv && "cursor-pointer hover:bg-muted/40", st === "unpaid" && "bg-amber-50/40")}
+                    >
+                      <td className="px-5 py-3.5">
+                        <span className="font-semibold">{month(row.period)}</span>
+                        {oneTime && <Tag>One-time</Tag>}
+                        {live && <Tag tone="live">Live</Tag>}
+                        {inv?.locked_at && inv.status === "unpaid" && <Tag tone="lock">Locked</Tag>}
+                        {inv && <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">{inv.number}</span>}
+                      </td>
+                      <td className="px-5 py-3.5 tabular-nums">{inv ? day(inv.due_on) : day(`${row.period.slice(0, 8)}${String(settings?.due_day ?? 15).padStart(2, "0")}`)}</td>
+                      <td className="px-5 py-3.5 text-right tabular-nums">
+                        {!inv ? (
+                          <span className="text-muted-foreground/60">—</span>
+                        ) : (
+                          <>
+                            <span className="font-semibold">{inr(inv.total_paise)}</span>
+                            {lines.map((l, i) => (
+                              <span key={i} className="mt-0.5 block text-[11px] text-muted-foreground">
+                                {isAccountsLine(l) ? `${l.qty} accounts × ${inr(l.rate_paise)}` : `${i ? "+ " : ""}${l.label} ${inr(l.amount_paise)}`}
+                              </span>
+                            ))}
+                            {inv.gst_paise > 0 && (
+                              <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                                + GST {Number(inv.gst_percent)}% {inr(inv.gst_paise)}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <StatusPill state={st} />
+                        {inv?.status === "paid" && inv.paid_at && <span className="ml-2 text-xs text-muted-foreground">{day(inv.paid_at)}</span>}
+                      </td>
+                      <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                          {!inv ? (
+                            <Lock className="size-4 text-muted-foreground/40" aria-label="Not open yet" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" className="size-8 p-0" aria-label={`Open the ${month(row.period)} invoice`} onClick={() => setOpen(inv)}>
+                                <FileText className="size-4" />
+                              </Button>
+                              {settings && (
+                                <Button size="sm" variant="ghost" className="size-8 p-0" aria-label={`Print the ${month(row.period)} invoice`} onClick={() => setPrinting([inv])}>
+                                  <Printer className="size-4" />
+                                </Button>
+                              )}
+                              {canEdit && inv.status !== "paid" && (
+                                <Button size="sm" variant="outline" disabled={skipping === inv.id} onClick={() => void skip(inv, inv.status !== "skipped")}>
+                                  {inv.status === "skipped" ? "Un-waive" : "Waive"}
+                                </Button>
+                              )}
+                              {inv.id === payableId &&
+                                (online ? (
+                                  <Button size="sm" onClick={() => void pay(inv)} disabled={paying === inv.id}>
+                                    {paying === inv.id && <Loader2 className="animate-spin" />}
+                                    Pay now
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Online payment not set up</span>
+                                ))}
+                              {inv.status === "unpaid" && inv.total_paise >= 100 && inv.id !== payableId && (
+                                <span className="text-xs text-muted-foreground">Pay the earlier month first</span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
 
-      <DataTable
-        title="Monthly invoices"
-        columns={columns}
-        data={shown}
-        getRowKey={(r) => r.id}
-        printTitle="Software fee invoices"
-        searchPlaceholder="Search month, invoice or status…"
-        emptyMessage="No invoices yet."
-        interactiveRows
-        rowClassName={(r) => (r.status === "unpaid" ? "bg-amber-50/40" : undefined)}
-      />
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        From {settings?.account_billing_from ? month(settings.account_billing_from) : "December 2026"} the fee is {inr(rate)} a month for every account that is
+        switched on (NBSS admins, supervisors, guards, housekeepers and field officers), whether it was used or not
+        {gst > 0 ? `, plus ${gst}% GST` : ""}. Clients and developers are never billed, and an account an administrator switches off stops
+        counting. While a month runs its amount follows today&apos;s accounts (<b>Live</b>); when the month ends, or is paid, its count and
+        lines are <b>locked</b> and never change. Months to come show no amount yet. November 2026 carries one charge only: the NBSS Kokrajhar
+        app on Google Play, ₹1,000 once. Only the oldest unpaid month can be paid.
+      </p>
+
+      <Accounts accounts={accounts} rate={rate} />
 
       {canEdit && settings && <RateForm settings={settings} />}
 
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-3xl">
-          {open && settings && <Invoice inv={open} s={settings} paying={paying === open.id} online={online} onPay={() => void pay(open)} onPrint={() => printInvoices([open])} />}
+          {open && settings && (
+            <Invoice
+              inv={open}
+              s={settings}
+              paying={paying === open.id}
+              online={online && open.id === payableId}
+              onPay={() => void pay(open)}
+              onPrint={() => setPrinting([open])}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -257,9 +388,138 @@ export function FeeWorkspace({ invoices, settings, canEdit, online }: { invoices
   );
 }
 
+function Tag({ children, tone }: { children: React.ReactNode; tone?: "live" | "lock" }) {
+  return (
+    <span
+      className={cn(
+        "ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 align-middle text-[10px] font-bold tracking-wide uppercase",
+        tone === "live" ? "bg-sky-100 text-sky-700" : tone === "lock" ? "bg-slate-100 text-slate-600" : "bg-muted text-muted-foreground",
+      )}
+    >
+      {tone === "live" && <span className="size-1.5 animate-pulse rounded-full bg-sky-500" />}
+      {tone === "lock" && <Lock className="size-2.5" />}
+      {children}
+    </span>
+  );
+}
+
+/** Who is billed: a card per kind (a filter), and every account in a table. */
+function Accounts({ accounts, rate }: { accounts: BilledAccount[]; rate: number }) {
+  const [kind, setKind] = useState<AccountKind | "all">("all");
+  const counts = useMemo(() => {
+    const c = new Map<AccountKind, number>();
+    for (const a of accounts) c.set(a.kind, (c.get(a.kind) ?? 0) + 1);
+    return c;
+  }, [accounts]);
+  const shown = kind === "all" ? accounts : accounts.filter((a) => a.kind === kind);
+
+  const columns: Column<BilledAccount>[] = [
+    {
+      header: "Name",
+      cell: (a) => (
+        <span>
+          <span className="font-semibold" data-row-primary>
+            {a.name}
+          </span>
+          <span className="block font-mono text-[11px] text-muted-foreground">{a.code}</span>
+        </span>
+      ),
+      sortValue: (a) => a.name,
+      searchValue: (a) => `${a.name} ${a.code}`,
+      printCell: (a) => `${a.name} (${a.code})`,
+    },
+    { header: "Account", cell: (a) => kindLabel(a.kind), sortValue: (a) => kindLabel(a.kind), searchValue: (a) => kindLabel(a.kind) },
+    { header: "Mobile", cell: (a) => <span className="tabular-nums">{a.phone ?? "—"}</span>, sortValue: (a) => a.phone ?? "", searchValue: (a) => a.phone ?? "" },
+    { header: "Active since", cell: (a) => (a.since ? day(a.since) : "—"), sortValue: (a) => a.since ?? "" },
+    { header: "Last seen", cell: (a) => (a.lastSeen ? day(a.lastSeen) : "Never"), sortValue: (a) => a.lastSeen ?? "" },
+    {
+      header: "Per month",
+      cell: () => <span className="tabular-nums">{inr(rate)}</span>,
+      printCell: () => inr(rate),
+      total: (rows) => inr(rows.length * rate),
+    },
+  ];
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold tracking-tight">Accounts being billed</h2>
+        <p className="text-sm text-muted-foreground">
+          Every account switched on today, {accounts.length} in all = {inr(accounts.length * rate)} a month before GST. Clients and developers are not
+          billed. Tap a card to see only that kind.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <KindCard label="All accounts" count={accounts.length} amount={accounts.length * rate} icon={Users} tint="text-foreground bg-muted" active={kind === "all"} onClick={() => setKind("all")} />
+        {KINDS.map((k) => (
+          <KindCard
+            key={k.kind}
+            label={k.label}
+            count={counts.get(k.kind) ?? 0}
+            amount={(counts.get(k.kind) ?? 0) * rate}
+            icon={k.icon}
+            tint={k.tint}
+            active={kind === k.kind}
+            onClick={() => setKind(kind === k.kind ? "all" : k.kind)}
+          />
+        ))}
+      </div>
+      <DataTable
+        title={kind === "all" ? "All billed accounts" : KINDS.find((k) => k.kind === kind)?.label}
+        columns={columns}
+        data={shown}
+        getRowKey={(a) => a.id}
+        printTitle="Accounts billed for the NBSS software fee"
+        searchPlaceholder="Search anything: name, code, mobile, kind…"
+        emptyMessage="No accounts of this kind are switched on."
+        initialPageSize={20}
+      />
+    </section>
+  );
+}
+
+function KindCard({
+  label,
+  count,
+  amount,
+  icon: Icon,
+  tint,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  amount: number;
+  icon: typeof Users;
+  tint: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "press rounded-2xl border bg-card p-4 text-left shadow-e1 transition-colors",
+        active ? "border-primary ring-2 ring-primary/25" : "border-app-line hover:border-primary/40",
+      )}
+    >
+      <span className={cn("grid size-9 place-items-center rounded-xl", tint)}>
+        <Icon className="size-4.5" />
+      </span>
+      <p className="mt-3 text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="text-2xl font-extrabold tabular-nums">{count}</p>
+      <p className="text-xs text-muted-foreground tabular-nums">{inr(amount)} / month</p>
+    </button>
+  );
+}
+
 function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { inv: FeeInvoice; s: FeeSettings; paying: boolean; online: boolean; onPay: () => void; onPrint: () => void; inDialog?: boolean }) {
   const paid = inv.status === "paid";
   const skipped = inv.status === "skipped";
+  const lines = linesOf(inv);
+  const acc = inv.accounts ?? null;
   return (
     <div id="fee-invoice" className="overflow-hidden rounded-2xl">
       {/* The band: who is billing, what this is, and whether it is settled. */}
@@ -280,7 +540,7 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
               paid ? "border-white bg-white text-emerald-700" : skipped ? "border-white/60 bg-white/20 text-white" : "border-amber-200 bg-amber-300 text-amber-950",
             )}
           >
-            {paid ? "Paid" : skipped ? "Skipped" : "Unpaid"}
+            {paid ? "Paid" : skipped ? "Waived" : "Unpaid"}
           </span>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -313,37 +573,50 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
             <thead className="bg-muted/60 text-left text-[11px] tracking-wider text-muted-foreground uppercase">
               <tr>
                 <th className="px-4 py-2.5 font-semibold">Description</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Guards</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Qty</th>
                 <th className="px-4 py-2.5 text-right font-semibold">Rate</th>
                 <th className="px-4 py-2.5 text-right font-semibold">Amount</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-t border-app-line-soft">
-                <td className="px-4 py-3">
-                  <p className="font-semibold">NBSS software</p>
-                  <p className="text-xs text-muted-foreground">Console and app, per active guard · {month(inv.period)}</p>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">{inv.guards}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{inr(inv.per_guard_paise)}</td>
-                <td className="px-4 py-3 text-right font-semibold tabular-nums">{inr(inv.amount_paise)}</td>
-              </tr>
+              {lines.length === 0 && (
+                <tr className="border-t border-app-line-soft">
+                  <td colSpan={4} className="px-4 py-3 text-muted-foreground">
+                    Nothing billed for {month(inv.period)}.
+                  </td>
+                </tr>
+              )}
+              {lines.map((l, i) => (
+                <tr key={i} className="border-t border-app-line-soft">
+                  <td className="px-4 py-3">
+                    <p className="font-semibold">
+                      {l.label}
+                      {l.tag && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-muted-foreground uppercase">{l.tag}</span>}
+                    </p>
+                    {isAccountsLine(l) && acc ? (
+                      <p className="text-xs text-muted-foreground">
+                        {KINDS.filter((k) => acc[k.kind]).map((k) => `${acc[k.kind]} ${k.label.toLowerCase()}`).join(" · ")} · {month(inv.period)}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{month(inv.period)}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">{l.qty}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{inr(l.rate_paise)}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums">{inr(l.amount_paise)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <p
-            className={cn(
-              "rounded-xl px-4 py-3 text-sm font-medium",
-              paid ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800",
-            )}
-          >
+          <p className={cn("rounded-xl px-4 py-3 text-sm font-medium", paid ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
             {paid
               ? `Paid ${inv.paid_at ? day(inv.paid_at) : ""} online${inv.razorpay_payment_id ? ` · ${inv.razorpay_payment_id}` : ""}`
               : skipped
-                ? `Skipped · ${inv.skip_note ?? "Free month"} · nothing due`
-                : `Unpaid · due on ${day(inv.due_on)}`}
+                ? `Waived · ${inv.skip_note ?? "Free month"} · nothing due`
+                : `Unpaid · due on ${day(inv.due_on)}${inv.locked_at ? " · amount locked" : " · amount live until the month ends"}`}
           </p>
           <dl className="w-full max-w-xs space-y-1.5 rounded-2xl bg-muted/50 p-4 text-sm sm:w-72">
             <div className="flex justify-between">
@@ -410,13 +683,13 @@ function RateForm({ settings }: { settings: FeeSettings }) {
         <Settings2 className="size-4 text-violet-600" /> Fee settings
         <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700">Developer only</span>
       </h2>
-      <p className="mt-1 text-xs text-muted-foreground">Applies to this month (if unpaid) and every month after. Paid months keep their figures.</p>
+      <p className="mt-1 text-xs text-muted-foreground">Applies to the month still running (if unpaid) and every month after. Locked and paid months keep their figures.</p>
       <form
         className="mt-3 flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           start(async () => {
-            const r = await saveFeeSettings({ perGuardRupees: Number(rate), gstPercent: Number(gst) });
+            const r = await saveFeeSettings({ perAccountRupees: Number(rate), gstPercent: Number(gst) });
             if (r.ok) {
               toast.success("Fee updated.");
               router.refresh();
@@ -425,7 +698,7 @@ function RateForm({ settings }: { settings: FeeSettings }) {
         }}
       >
         <label className="grid gap-1 text-sm">
-          <span className="font-medium">₹ per guard / month</span>
+          <span className="font-medium">₹ per account / month</span>
           <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="decimal" className="h-10 w-36 rounded-xl border border-border bg-card px-3 tabular-nums" />
         </label>
         <label className="grid gap-1 text-sm">

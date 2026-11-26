@@ -108,7 +108,7 @@ export function GuardRegister({ guardName, from, to, today, rows }: { guardName:
           data={rows}
           getRowKey={(r) => r.key}
           printTitle={`${guardName} · attendance ${from} to ${to}`}
-          searchPlaceholder="Search by site or note…"
+          searchPlaceholder="Search anything in the register…"
           emptyMessage="No duties or check-ins in this period."
           rowClassName={(r) => (r.status === "absent" ? "bg-rose-50/70 dark:bg-rose-500/10" : undefined)}
         />

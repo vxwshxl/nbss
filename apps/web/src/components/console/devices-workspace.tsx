@@ -247,7 +247,7 @@ export function DevicesWorkspace({ devices, flagged }: { devices: DeviceRow[]; f
         data={devices}
         getRowKey={(r) => r.id}
         printTitle="Guard devices"
-        searchPlaceholder="Search by guard, code or phone…"
+        searchPlaceholder="Search anything: name, code, phone, build, battery…"
         emptyMessage="No phones yet. A guard's phone appears here the first time they sign in to the app."
         rowClassName={(r) => (r.status === "pending" ? "bg-amber-50/70 dark:bg-amber-500/10" : undefined)}
         onRowClick={(r) => setOpenId(r.id)}

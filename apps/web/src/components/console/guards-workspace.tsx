@@ -410,7 +410,7 @@ export function GuardsWorkspace({
           rowPreview={false}
           onRowClick={setDetail}
           printTitle="People"
-          searchPlaceholder="Search by name, code, email or phone…"
+          searchPlaceholder="Search anything in the list…"
           emptyMessage={
             canManage ? "No accounts yet. Add the first person to get started." : "Nothing to show."
           }

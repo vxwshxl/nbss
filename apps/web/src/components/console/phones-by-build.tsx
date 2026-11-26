@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch } from "@/lib/utils";
 
 export type BuildPhone = { name: string; phone: string | null; device: string; seen: string };
 export type BuildGroup = { key: string; label: string; build: number | null; version: string | null; people: BuildPhone[] };
@@ -21,7 +21,7 @@ export function PhonesByBuild({ groups, required }: { groups: BuildGroup[]; requ
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = group?.people ?? [];
-    return q ? list.filter((p) => `${p.name} ${p.phone ?? ""} ${p.device}`.toLowerCase().includes(q)) : list;
+    return q ? list.filter((p) => matchesSearch(q, p)) : list;
   }, [group, query]);
 
   if (!group) return <p className="text-sm text-muted-foreground">No phones have reported in the last 30 days.</p>;
@@ -60,7 +60,7 @@ export function PhonesByBuild({ groups, required }: { groups: BuildGroup[]; requ
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Search ${group.label.toLowerCase()} by name, mobile or phone`}
+          placeholder={`Search ${group.label.toLowerCase()}: name, mobile, phone…`}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none"
         />
       </label>

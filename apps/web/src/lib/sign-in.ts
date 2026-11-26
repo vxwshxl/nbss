@@ -25,11 +25,12 @@ type Client = SupabaseClient<Database>;
 
 export type SignInResult =
   | { ok: true; userId: string; role: Role }
-  | { ok: false; error: string };
+  | { ok: false; error: string; inactive?: boolean };
 
 export const REFUSED = "Those details were not accepted.";
 export const NO_MATCH = "No account matches that name and mobile number. Check the spelling of your name, or ask the office.";
 export const TWO_MATCH = "Two accounts have this name and mobile number. Ask the office to correct one of them.";
+export const INACTIVE = "This account is inactive. Contact the NBSS administrator to switch it back on.";
 /** The 10 digits of what was typed in the mobile box, or "" when it is not a mobile. */
 export function cleanMobile(raw: string): string {
   const digits = raw.replace(/\D/g, "");
@@ -39,12 +40,21 @@ export function cleanMobile(raw: string): string {
 type Worker = { id: string; role: Role; email: string };
 
 /** The one active worker with this name and mobile, or why there is not one. */
-async function findWorker(name: string, mobile: string): Promise<Worker | { error: string }> {
+async function findWorker(name: string, mobile: string): Promise<Worker | { error: string; inactive?: boolean }> {
   if (!normaliseName(name) || !isValidMobile(mobile)) return { error: NO_MATCH };
-  const { data, error } = await supabaseAdmin().rpc("worker_for_sign_in", { p_name: name, p_mobile: mobile });
+  const admin = supabaseAdmin();
+  const { data, error } = await admin.rpc("worker_for_sign_in", { p_name: name, p_mobile: mobile });
   if (error) return { error: "Sign-in is not available right now. Try again in a minute." };
   const rows = (data ?? []) as Worker[];
-  if (rows.length === 0) return { error: NO_MATCH };
+  if (rows.length === 0) {
+    // The right name and mobile, on an account an administrator switched off:
+    // say so, rather than "no account", so the person knows whom to ask.
+    const { data: inactive } = await (admin as unknown as { rpc: (fn: string, args: Record<string, string>) => Promise<{ data: boolean | null }> }).rpc(
+      "worker_inactive_for_sign_in",
+      { p_name: name, p_mobile: mobile },
+    );
+    return inactive ? { error: INACTIVE, inactive: true } : { error: NO_MATCH };
+  }
   if (rows.length > 1) return { error: TWO_MATCH };
   return rows[0]!;
 }
@@ -67,7 +77,7 @@ async function openSession(email: string, client: Client): Promise<string | unde
 /** Name and mobile, for everyone who works for NBSS. */
 export async function signInWorker(name: string, mobile: string, client: Client): Promise<SignInResult> {
   const worker = await findWorker(name, mobile);
-  if ("error" in worker) return { ok: false, error: worker.error };
+  if ("error" in worker) return { ok: false, error: worker.error, inactive: worker.inactive };
   return finish(client, await openSession(worker.email, client));
 }
 

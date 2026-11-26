@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { isValidElement, useId, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -64,6 +64,37 @@ export type Column<T> = {
 };
 
 type SortState = { index: number; dir: "asc" | "desc" } | null;
+
+/**
+ * The words a rendered cell shows, read from the element tree without rendering it:
+ * strings and numbers, every element's children, and the labels people see on
+ * icons and badges (title, aria-label, alt). A component that draws its own text
+ * from props is reached through the column's printCell or searchValue instead.
+ */
+function nodeText(node: React.ReactNode, depth = 0): string {
+  if (node == null || typeof node === "boolean" || depth > 12) return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map((n) => nodeText(n, depth + 1)).join(" ");
+  if (isValidElement(node)) {
+    const p = node.props as { children?: React.ReactNode; title?: unknown; "aria-label"?: unknown; alt?: unknown; label?: unknown };
+    const own = [p.title, p["aria-label"], p.alt, p.label].filter((v): v is string | number => typeof v === "string" || typeof v === "number");
+    return [...own.map(String), nodeText(p.children, depth + 1)].join(" ");
+  }
+  return "";
+}
+
+/** Everything a row says, across all its columns, lower-cased, for the search box. */
+function rowText<T>(columns: Column<T>[], row: T): string {
+  const parts: string[] = [];
+  for (const c of columns) {
+    if (c.searchValue) parts.push(c.searchValue(row));
+    if (c.printCell) parts.push(nodeText(c.printCell(row)));
+    const sv = c.sortValue?.(row);
+    if (typeof sv === "string") parts.push(sv);
+    parts.push(nodeText(c.cell(row)));
+  }
+  return parts.join(" ").toLowerCase();
+}
 
 function compare(a: string | number, b: string | number) {
   if (typeof a === "number" && typeof b === "number") return a - b;
@@ -152,13 +183,14 @@ export function DataTable<T>({
   const processed = useMemo(() => {
     let rows = data;
 
-    const q = query.trim().toLowerCase();
-    if (q && searchable) {
-      rows = rows.filter((row) =>
-        columns.some((c) =>
-          c.searchValue?.(row).toLowerCase().includes(q),
-        ),
-      );
+    // Every word typed must appear somewhere in the row: in any column's text, not
+    // only the columns that named a searchValue.
+    const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length && searchable) {
+      rows = rows.filter((row) => {
+        const text = rowText(columns, row);
+        return words.every((w) => text.includes(w));
+      });
     }
 
     if (sort) {

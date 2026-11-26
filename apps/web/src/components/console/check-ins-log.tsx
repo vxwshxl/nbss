@@ -184,7 +184,7 @@ export function CheckInsLog({
         data={rows}
         getRowKey={(r) => r.id}
         printTitle={`Check-in log · ${periodTitle(view, at, today)}`}
-        searchPlaceholder="Search by name, code, role, site or phone…"
+        searchPlaceholder="Search anything in the log…"
         emptyMessage={`Nobody checked in ${periodPhrase(view, at, today)}.`}
         onRowClick={(r) => setOpenId(r.id)}
         initialPageSize={25}

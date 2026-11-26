@@ -38,6 +38,7 @@ export async function signInAction(_prev: SignInState, data: FormData): Promise<
 
   const result = await signInWorker(name, mobile, await supabaseServer());
   if (!result.ok) {
+    if (result.inactive) redirect("/account-inactive");
     recordFailure(ip, idKey);
     return { ...kept, error: result.error };
   }

@@ -31,6 +31,7 @@ import type { ErrorBoundaryProps } from "expo-router";
 import { DialogHost } from "@/components/dialog";
 import { ErrorScreen } from "@/components/error-screen";
 import { UpdateGate } from "@/components/update-screen";
+import { InactiveGate } from "@/components/inactive-screen";
 import { NotificationRouter } from "@/lib/notification-router";
 import { brandMarkPreloaded, preloadBrandMark } from "@/components/brand-mark";
 import { LogBox, View } from "react-native";
@@ -145,6 +146,8 @@ export default function RootLayout() {
           <NotificationRouter />
           {/* Over every screen, signed in or not, when the office has published a newer build. */}
           <UpdateGate />
+          {/* An account switched off by an administrator: said plainly, over everything. */}
+          <InactiveGate />
           {/* The app's own popups (showDialog), over everything. */}
           <DialogHost />
         </AuthProvider>

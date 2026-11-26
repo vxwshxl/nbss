@@ -56,7 +56,7 @@ import {
   type TrailStats,
   type TrailTuple,
 } from "@/lib/tracking";
-import { cn } from "@/lib/utils";
+import { cn, matchesSearch } from "@/lib/utils";
 
 export type DutyGuard = {
   attendanceId: string;
@@ -269,8 +269,7 @@ export function LiveTracking({
   const shown = rows
     .filter((r) => filter === "all" || r.state === filter || (filter === "offline" && (r.state === "stale" || r.state === "waiting")))
     .filter((r) => {
-      const q = query.trim().toLowerCase();
-      return !q || `${r.g.name} ${r.g.code} ${r.g.siteName}`.toLowerCase().includes(q);
+      return matchesSearch(query, r);
     })
     .sort((a, b) => order(a.state) - order(b.state) || a.g.name.localeCompare(b.g.name));
 

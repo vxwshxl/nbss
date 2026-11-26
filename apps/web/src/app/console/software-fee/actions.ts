@@ -29,6 +29,15 @@ export async function startFeePayment(invoiceId: string): Promise<Start> {
   }
   if (inv.status === "paid") return { ok: false, error: "This month is already paid." };
   if (inv.total_paise < 100) return { ok: false, error: "Nothing to pay for this month." };
+  // Months are paid in order: an earlier unpaid month comes first.
+  const { count: earlier } = await db
+    .from("software_fee_invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("is_test", !!inv.is_test)
+    .eq("status", "unpaid")
+    .gte("total_paise", 100)
+    .lt("period", inv.period);
+  if (earlier) return { ok: false, error: "Pay the earlier unpaid month first." };
   const order = await createOrder({
     amountPaise: inv.total_paise,
     receipt: inv.number,
@@ -58,11 +67,11 @@ export async function verifyFeePayment(input: { invoiceId: string; orderId: stri
   return r.ok ? { ok: true } : { ok: false, error: "Paid, but it could not be recorded yet. It will be picked up shortly." };
 }
 
-/** The rate and GST. Developers only; applies to this month if unpaid and every month after. */
-export async function saveFeeSettings(input: { perGuardRupees: number; gstPercent: number }): Promise<{ ok: boolean; error?: string }> {
+/** The rate per account and GST. Developers only; applies to the open month if unpaid and every month after. */
+export async function saveFeeSettings(input: { perAccountRupees: number; gstPercent: number }): Promise<{ ok: boolean; error?: string }> {
   const session = await currentSession();
   if (session?.realProfile.role !== "developer" || session.impersonating) return { ok: false, error: "Only a developer can change the fee." };
-  const paise = Math.round(Number(input.perGuardRupees) * 100);
+  const paise = Math.round(Number(input.perAccountRupees) * 100);
   const gst = Number(input.gstPercent);
   if (!Number.isFinite(paise) || paise < 0 || paise > 1_000_000) return { ok: false, error: "Enter a rate between ₹0 and ₹10,000." };
   if (!Number.isFinite(gst) || gst < 0 || gst > 50) return { ok: false, error: "GST must be between 0 and 50%." };

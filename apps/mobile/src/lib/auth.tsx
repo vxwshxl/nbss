@@ -2,6 +2,7 @@ import type { Session } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { AppState } from "react-native";
 
 import type { Row } from "@nbss/shared/db";
 import { isValidMobile, type Role } from "@nbss/shared/identity";
@@ -37,6 +38,9 @@ type AuthState = {
   signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** The account is switched off: the app shows the "Account inactive" screen. */
+  inactive: boolean;
+  dismissInactive: () => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -54,7 +58,7 @@ const AuthContext = createContext<AuthState | null>(null);
  */
 const REFUSED = "Those details were not accepted.";
 
-async function viaServer(body: Record<string, string>): Promise<{ error?: string }> {
+async function viaServer(body: Record<string, string>): Promise<{ error?: string; inactive?: boolean }> {
   if (!WEB_URL) return { error: "Sign-in is not set up in this build of the app." };
   try {
     const res = await fetch(`${WEB_URL}/api/auth/worker`, {
@@ -63,10 +67,12 @@ async function viaServer(body: Record<string, string>): Promise<{ error?: string
       body: JSON.stringify(body),
     });
     const data = (await res.json().catch(() => null)) as
-      | { error?: string; session?: { access_token: string; refresh_token: string } }
+      | { error?: string; code?: string; session?: { access_token: string; refresh_token: string } }
       | null;
     // A server that fails is not a wrong name, so it is not reported as one.
     if (res.status >= 500) return { error: "NBSS could not sign you in just now. Try again in a minute." };
+    // The right name and mobile, on an account an administrator has switched off.
+    if (data?.code === "inactive") return { inactive: true };
     if (!res.ok) return { error: data?.error ?? REFUSED };
     if (data?.session) {
       const { error } = await supabase.auth.setSession(data.session);
@@ -85,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // still checking, and says so (session undefined) rather than flash the sign-in page.
   const [checkedFor, setCheckedFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [inactive, setInactive] = useState(false);
 
   const loadProfile = useCallback(async (userId: string | undefined) => {
     if (!userId) {
@@ -98,6 +105,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // deactivating a guard should never require deleting their attendance history.
     setProfile(data && data.active ? data : null);
     setCheckedFor(userId);
+
+    // Switched off while signed in: say so, and sign this phone out properly (push
+    // token released and tracking stopped while the session is still valid). Not
+    // awaited, since this can run inside supabase-js's auth callback.
+    if (data && !data.active) {
+      setInactive(true);
+      void (async () => {
+        await releasePush().catch(() => undefined);
+        await stopTracking().catch(() => undefined);
+        await supabase.auth.signOut();
+      })();
+    }
   }, []);
 
   useEffect(() => {
@@ -121,9 +140,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === "SIGNED_OUT") setProfile(null);
     });
 
+    // Coming back to the app looks at the account again, so one switched off while
+    // the app sat in the background is noticed straight away.
+    const appState = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      void supabase.auth.getSession().then(({ data }) => {
+        if (!cancelled && data.session) void loadProfile(data.session.user.id);
+      });
+    });
+
     return () => {
       cancelled = true;
       subscription.subscription.unsubscribe();
+      appState.remove();
     };
   }, [loadProfile]);
 
@@ -133,7 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isValidMobile(mobile)) return { error: "Enter your 10-digit mobile number." };
     setLoading(true);
     try {
-      return await viaServer({ name, mobile });
+      const result = await viaServer({ name, mobile });
+      if (result.inactive) {
+        setInactive(true);
+        return {};
+      }
+      return result;
     } finally {
       setLoading(false);
     }
@@ -178,6 +212,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: profileRow } = await supabase.from("profiles").select("id, active").eq("id", exchanged.session.user.id).maybeSingle();
       if (!profileRow?.active) {
         await supabase.auth.signOut();
+        if (profileRow) {
+          setInactive(true);
+          return {};
+        }
         return { error: "This Google account is not registered with NBSS. Staff and guards sign in with their name and mobile number." };
       }
       return {};
@@ -212,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Signed in but the profile not looked up yet: still checking, as far as screens know.
   const settled = session && checkedFor !== session.user.id ? undefined : session;
+  const dismissInactive = useCallback(() => setInactive(false), []);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -223,8 +262,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOut,
       refresh,
+      inactive,
+      dismissInactive,
     }),
-    [settled, profile, loading, signIn, signInWithGoogle, signOut, refresh],
+    [settled, profile, loading, signIn, signInWithGoogle, signOut, refresh, inactive, dismissInactive],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

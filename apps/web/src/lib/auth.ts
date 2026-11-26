@@ -99,17 +99,31 @@ export const currentSession = cache(async (): Promise<Session | null> => {
   return { profile: data, realProfile, impersonating: true };
 });
 
+/**
+ * Signed in, but on an account an administrator has switched off. Such a person is
+ * sent to /account-inactive, which says so, rather than back to a sign-in form that
+ * would only refuse them again.
+ */
+async function signedInButInactive(): Promise<boolean> {
+  const [supabase, token] = await Promise.all([supabaseServer(), bearerToken()]);
+  const { data: claims } = await supabase.auth.getClaims(token ?? undefined);
+  const userId = claims?.claims?.sub;
+  if (!userId) return false;
+  const { data } = await supabaseAdmin().from("profiles").select("active").eq("id", userId).maybeSingle();
+  return !!data && !data.active;
+}
+
 /** Redirects to sign-in when nobody is signed in. */
 export async function requireProfile(): Promise<Profile> {
   const session = await currentSession();
-  if (!session) redirect("/login");
+  if (!session) redirect((await signedInButInactive()) ? "/account-inactive" : "/login");
   return session.profile;
 }
 
 /** Like requireProfile, but keeps hold of who is really signed in. */
 export async function requireSession(): Promise<Session> {
   const session = await currentSession();
-  if (!session) redirect("/login");
+  if (!session) redirect((await signedInButInactive()) ? "/account-inactive" : "/login");
   return session;
 }
 

@@ -1,8 +1,8 @@
 import { fetchAll } from "@nbss/shared/paging";
 import { router } from "expo-router";
-import { ChevronRight, LocateFixed, Maximize2, MapPin, MessageCircle, Navigation, Navigation2, Phone, SatelliteDish, Siren, UserRound, Users, X } from "lucide-react-native";
+import { ChevronRight, LocateFixed, Maximize2, MapPin, MessageCircle, Navigation, Navigation2, Phone, SatelliteDish, Search, Siren, UserRound, Users, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Linking, Pressable, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 
 import { clock12, istTime, tel } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
@@ -371,35 +371,93 @@ export default function LiveRoute() {
               />
             )}
 
-            <Panel tone="emerald" icon={MapPin} title="Sites" subtitle="Tap one to see it" bare>
-              {(board?.sites ?? []).map((s, i) => {
-                const on = list.filter((p) => p.site_id === s.id).length;
-                const posted = board?.posted.get(s.id)?.length ?? 0;
-                return (
-                  <Pressable key={s.id} accessibilityRole="button" onPress={() => pick(s.id)}>
-                    {({ pressed }) => (
-                      <PanelRow first={i === 0} style={pressed && styles.rowPressed}>
-                        <View style={[styles.siteDot, { backgroundColor: sosSites.has(s.id) ? color.destructive : on ? MAP_COLOR.inside : color.border }]} />
-                        <View style={styles.flex}>
-                          <Text variant="label" weight="semibold" numberOfLines={2}>
-                            {s.name}
-                          </Text>
-                          <Text variant="caption" tone="muted" numberOfLines={1}>
-                            {[s.district, `${on} on duty`, `${posted} posted`].filter(Boolean).join(" · ")}
-                          </Text>
-                        </View>
-                        <ChevronRight size={16} color={color.mutedForeground} strokeWidth={2} />
-                      </PanelRow>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </Panel>
+            <SitesPanel sites={board?.sites ?? []} list={list} posted={board?.posted} sosSites={sosSites} onPick={pick} />
           </>
         )}
         <View style={styles.sheetEnd} />
       </MapSheet>
     </View>
+  );
+}
+
+/**
+ * Every site, with a search box over them: name, district or address. Grows with
+ * the agency, so it shows 40 at a time and finds any one by a few letters.
+ */
+function SitesPanel({
+  sites,
+  list,
+  posted,
+  sosSites,
+  onPick,
+}: {
+  sites: Site[];
+  list: { site_id: string | null }[];
+  posted: Map<string, string[]> | undefined;
+  sosSites: Set<string>;
+  onPick: (id: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = words.length
+    ? sites.filter((s) => {
+        const text = [s.name, s.district, s.address].filter(Boolean).join(" ").toLowerCase();
+        return words.every((w) => text.includes(w));
+      })
+    : sites;
+  const page = useShowMore(shown, q);
+  return (
+    <Panel tone="emerald" icon={MapPin} title="Sites" subtitle={words.length ? `${shown.length} of ${sites.length}` : "Tap one to see it"} bare>
+      {sites.length > 5 && (
+        <View style={styles.siteSearch}>
+          <Search size={16} color={color.mutedForeground} strokeWidth={2} />
+          <TextInput
+            value={q}
+            onChangeText={setQ}
+            placeholder="Search a site or district"
+            placeholderTextColor={color.mutedForeground}
+            style={styles.siteSearchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {q ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear" hitSlop={8} onPress={() => setQ("")}>
+              <X size={16} color={color.mutedForeground} strokeWidth={2} />
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+      {page.visible.map((s, i) => {
+        const on = list.filter((p) => p.site_id === s.id).length;
+        const postedCount = posted?.get(s.id)?.length ?? 0;
+        return (
+          <Pressable key={s.id} accessibilityRole="button" onPress={() => onPick(s.id)}>
+            {({ pressed }) => (
+              <PanelRow first={i === 0 && sites.length <= 5} style={pressed && styles.rowPressed}>
+                <View style={[styles.siteDot, { backgroundColor: sosSites.has(s.id) ? color.destructive : on ? MAP_COLOR.inside : color.border }]} />
+                <View style={styles.flex}>
+                  <Text variant="label" weight="semibold" numberOfLines={2}>
+                    {s.name}
+                  </Text>
+                  <Text variant="caption" tone="muted" numberOfLines={1}>
+                    {[s.district, `${on} on duty`, `${postedCount} posted`].filter(Boolean).join(" · ")}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={color.mutedForeground} strokeWidth={2} />
+              </PanelRow>
+            )}
+          </Pressable>
+        );
+      })}
+      {words.length > 0 && shown.length === 0 && (
+        <PanelRow first>
+          <Text variant="label" tone="muted">
+            No site matches “{q.trim()}”.
+          </Text>
+        </PanelRow>
+      )}
+      <ShowMoreRow rest={page.rest} onPress={page.more} />
+    </Panel>
   );
 }
 
@@ -775,6 +833,20 @@ function Count({ value, label, tone, active, onPress }: { value: number; label: 
 }
 
 const styles = StyleSheet.create({
+  siteSearch: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[2],
+    marginHorizontal: space[3],
+    marginBottom: space[2],
+    paddingHorizontal: space[3],
+    minHeight: 44,
+    borderRadius: radius.full,
+    backgroundColor: color.card,
+    borderWidth: 1,
+    borderColor: color.border,
+  },
+  siteSearchInput: { flex: 1, fontSize: 15, color: color.foreground, paddingVertical: 8 },
   root: { flex: 1, backgroundColor: color.appBg },
   flex: { flex: 1, minWidth: 0, gap: 2 },
   headGap: { gap: 4 },
