@@ -77,6 +77,8 @@ export type MapCanvasProps = {
   showsUserLocation?: boolean;
   /** Changed to re-frame the view around everything drawn. */
   frameKey?: string;
+  /** When set, the camera frames just this point (a moment picked on a route), not everything drawn. */
+  focus?: MapPoint | null;
   padding?: { top: number; right: number; bottom: number; left: number };
   onPersonPress?: (id: string) => void;
   /** A site tapped: its boundary or its name pin. */
@@ -103,6 +105,7 @@ export function MapCanvas({
   pins = [],
   showsUserLocation = false,
   frameKey = "",
+  focus = null,
   padding,
   onPersonPress,
   onFencePress,
@@ -128,7 +131,7 @@ export function MapCanvas({
   const drawn = points.length > 0;
   // Re-framed when the visible area changes too (the sheet snapping up or down),
   // so "centre on me" means the centre of what is actually visible above it.
-  const key = drawn ? `${frameKey}|${me ? 1 : 0}|${Math.round((padding?.bottom ?? 0) / 24)}` : null;
+  const key = drawn ? `${frameKey}|${me ? 1 : 0}|${Math.round((padding?.bottom ?? 0) / 24)}|${focus ? `${focus.lat.toFixed(6)},${focus.lng.toFixed(6)}` : ""}` : null;
 
   const frame = () => {
     if (!map.current || !ready.current || !key || framed.current === key || points.length === 0) return;
@@ -139,14 +142,20 @@ export function MapCanvas({
     const margin = padding ? { top: 24, right: 24, bottom: 24, left: 24 } : { top: 60, right: 40, bottom: 60, left: 40 };
     // One point is framed as a ~90 m box around it rather than a camera centre:
     // a camera centre ignores the padding on iOS, a fitted box respects it on both.
-    const coords =
-      points.length === 1
-        ? [
-            { latitude: points[0]!.latitude - 0.0008, longitude: points[0]!.longitude - 0.0008 },
-            { latitude: points[0]!.latitude + 0.0008, longitude: points[0]!.longitude + 0.0008 },
-          ]
-        : points;
-    map.current.fitToCoordinates(coords, { edgePadding: margin, animated: true });
+    const only = focus ? { latitude: focus.lat, longitude: focus.lng } : points.length === 1 ? points[0]! : null;
+    const coords = only
+      ? [
+          { latitude: only.latitude - 0.0008, longitude: only.longitude - 0.0008 },
+          { latitude: only.latitude + 0.0008, longitude: only.longitude + 0.0008 },
+        ]
+      : points;
+    // A focused point usually comes with the sheet sliding down; moving the camera while
+    // the padding changes under it cancels the move on Android, so it waits for the sheet.
+    if (only && focus) {
+      setTimeout(() => map.current?.fitToCoordinates(coords, { edgePadding: margin, animated: true }), 450);
+    } else {
+      map.current.fitToCoordinates(coords, { edgePadding: margin, animated: true });
+    }
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

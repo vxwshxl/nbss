@@ -89,6 +89,12 @@ export default function LiveRoute() {
   const [guard, setGuard] = useState<string | null>(null);
   const [moment, setMoment] = useState<number | null>(null);
   const [snapTo, setSnapTo] = useState<{ to: SheetSnap; key: number } | null>(null);
+  // A moment tapped on the timeline: the sheet drops to half so the map shows where the
+  // guard was (the camera goes there, see MapCanvas focus); tapped again, it is cleared.
+  const pickMoment = (i: number | null) => {
+    setMoment(i);
+    if (i != null) setSnapTo({ to: "half", key: Date.now() });
+  };
   // A summary card tapped: the people it counts, listed above the sites.
   const [group, setGroup] = useState<Group | null>(null);
   // What the map frames: everything, the picked site alone, the guard, or where I am.
@@ -275,6 +281,8 @@ export default function LiveRoute() {
           // The guard's route arrives a moment after the tap; framed again once it has.
           frameKey={board ? `sites|${frame}|${focus}|${picked ?? ""}|${guard ?? ""}|${group ?? ""}|${guard && route.ready ? "route" : ""}` : ""}
           padding={{ top: 24, right: 24, bottom: sheetH + 16, left: 24 }}
+          // A moment picked on the guard's timeline: the camera goes to where they were then.
+          focus={guard && momentAt ? momentAt : null}
           onPersonPress={pickGuard}
           onFencePress={pick}
         />
@@ -341,7 +349,7 @@ export default function LiveRoute() {
             person={board.names.get(gp.guard_id)}
             route={route}
             moment={moment}
-            onMoment={setMoment}
+            onMoment={pickMoment}
             onProfile={() => openPerson(gp.guard_id)}
           />
         ) : site && board ? (

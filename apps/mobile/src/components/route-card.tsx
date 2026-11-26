@@ -127,7 +127,7 @@ export function RouteDetails({ route, moment, onMoment }: { route: RouteData; mo
             <Pressable
               key={`${e.kind}-${e.at}-${i}`}
               accessibilityRole="button"
-              onPress={() => onMoment(active || e.kind === "now" ? null : i)}
+              onPress={() => onMoment(active ? null : i)}
               style={({ pressed }) => [styles.event, active && styles.eventActive, pressed && styles.pressed]}
             >
               <View style={[styles.icon, { backgroundColor: TONE[e.kind] }]}>
