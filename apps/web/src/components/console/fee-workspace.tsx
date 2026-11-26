@@ -595,9 +595,9 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
             <tr className="border-y-2 border-slate-800 text-[11px] font-bold text-slate-700">
               <th className="w-12 bg-slate-50 py-2 pl-3 text-left">No.</th>
               <th className="bg-slate-50 py-2 pr-3 text-left">Item description</th>
-              <th className="border-l border-slate-200 py-2 text-right">Rate</th>
-              <th className="py-2 text-center">Qty</th>
-              <th className="py-2 pr-3 text-right">Total</th>
+              <th className="w-28 border-l border-slate-200 py-2 pr-2 text-right">Rate</th>
+              <th className="w-20 py-2 text-center">Qty</th>
+              <th className="w-32 py-2 pr-3 text-right">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -622,7 +622,7 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
                       : month(inv.period)}
                   </p>
                 </td>
-                <td className="border-l border-slate-200 py-2.5 text-right tabular-nums">{inr(l.rate_paise)}</td>
+                <td className="border-l border-slate-200 py-2.5 pr-2 text-right tabular-nums">{inr(l.rate_paise)}</td>
                 <td className="py-2.5 text-center tabular-nums">{l.qty}</td>
                 <td className="py-2.5 pr-3 text-right font-semibold tabular-nums">{inr(l.amount_paise)}</td>
               </tr>
