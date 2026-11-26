@@ -1,61 +1,36 @@
 import type { Metadata } from "next";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { Download, ShieldCheck, Smartphone } from "lucide-react";
+import { ShieldCheck, Smartphone, Store } from "lucide-react";
 
 import { pageMetadata } from "@/lib/seo/page-metadata";
 
 import { AuthShell } from "../login/auth-shell";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Download the NBSS Kokrajhar app for Android",
+  title: "Get the NBSS Kokrajhar app for Android",
   description:
-    "Get the NBSS Kokrajhar Android app: guards check in and out, share live location and raise SOS; supervisors and the office follow every post; clients see their site. Android 7.0 and newer.",
+    "Get the NBSS Kokrajhar Android app on Google Play: guards check in and out, share live location and raise SOS; supervisors and the office follow every post; clients see their site. Android 7.0 and newer.",
   path: "/android",
   image: { url: "/og/android", width: 1200, height: 630, alt: "Get the NBSS Kokrajhar app for Android" },
-  keywords: ["NBSS app", "NBSS Kokrajhar app", "security guard app Assam", "NBSS Android APK"],
+  keywords: ["NBSS app", "NBSS Kokrajhar app", "security guard app Assam", "NBSS Google Play"],
 });
 
-export const dynamic = "force-dynamic";
-
 /**
- * Where the APK and its details live on the server. nginx serves the APK itself at
- * /android/NBSS-Kokrajhar.apk (deploy/nginx); this page only reads the details, so a
- * new build is published by copying two files, with no deploy.
+ * The app is on Google Play since 26 Nov 2026 (1.1.0, build 39). The APK this page
+ * used to hand out is signed with a different key from the Play build, so a phone
+ * that has it must uninstall it once before Play can install the app.
  */
-const DIR = process.env.NBSS_ANDROID_DIR ?? "/var/www/nbss-android";
-const APK = "/android/NBSS-Kokrajhar.apk";
-
-type Build = { build: number; version: string; bytes: number; published: string };
-
-async function currentBuild(): Promise<Build | null> {
-  try {
-    return JSON.parse(await readFile(path.join(DIR, "version.json"), "utf8")) as Build;
-  } catch {
-    return null;
-  }
-}
+const PLAY = "https://play.google.com/store/apps/details?id=com.nbss.okhrang";
 
 const STEPS: { title: string; text: string }[] = [
-  { title: "Download", text: "Tap the green button. Let it finish: the file is large, so use Wi-Fi if you can." },
   {
-    title: "Open the file",
-    text: "Open it from the notification or from Files → Downloads. If the phone asks, allow “Install unknown apps” for Chrome or Files, then go back.",
+    title: "Had the old app from this website?",
+    text: "Uninstall it first: hold the NBSS icon, then Uninstall. Your duties and attendance stay safe with the office.",
   },
-  {
-    title: "Install",
-    text: "Tap Install. If Play Protect warns you, tap More details → Install anyway. Already have the app? Installing over it keeps you signed in.",
-  },
+  { title: "Install from Google Play", text: "Tap the green button, then Install. Updates come by themselves from now on." },
   { title: "Sign in", text: "Open NBSS Kokrajhar. Staff and guards sign in with their full name and mobile number; clients sign in with Google." },
 ];
 
-export default async function AndroidPage() {
-  const build = await currentBuild();
-  const size = build ? `${Math.round(build.bytes / 1_000_000)} MB` : null;
-  const published = build
-    ? new Date(build.published).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })
-    : null;
-
+export default function AndroidPage() {
   return (
     <AuthShell>
       <div className="text-center">
@@ -70,18 +45,12 @@ export default async function AndroidPage() {
       </div>
 
       <a
-        href={APK}
-        download="NBSS-Kokrajhar.apk"
+        href={PLAY}
         className="press mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-gradient-strong text-[15px] font-semibold text-white shadow-sm"
       >
-        <Download className="size-5" />
-        Download for Android
+        <Store className="size-5" />
+        Get it on Google Play
       </a>
-      {build && (
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          Version {build.version} · build {build.build} · {size} · {published}
-        </p>
-      )}
 
       <ol className="mt-7 space-y-4">
         {STEPS.map((s, i) => (
@@ -100,12 +69,11 @@ export default async function AndroidPage() {
       <div className="mt-7 rounded-xl border border-app-line-soft bg-muted/50 px-4 py-3 text-sm">
         <p className="flex items-center gap-1.5 font-semibold">
           <ShieldCheck className="size-4 text-primary" />
-          &ldquo;App not installed&rdquo;?
+          Play Store says it can&rsquo;t install?
         </p>
         <ul className="mt-1.5 list-disc space-y-1 pl-5 text-muted-foreground">
-          <li>Free at least 500 MB of storage and try again.</li>
-          <li>Download it again here: a file sent over WhatsApp can arrive incomplete.</li>
-          <li>If an old NBSS app is on the phone and still fails, uninstall it first.</li>
+          <li>The old NBSS app is still on the phone. Uninstall it, then try again.</li>
+          <li>Free at least 200 MB of storage.</li>
         </ul>
       </div>
     </AuthShell>

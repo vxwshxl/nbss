@@ -92,7 +92,7 @@ export function AppReleaseEditor({ release, latestBuild }: { release: Release; l
             <div className="flex flex-col gap-2">
               <Label htmlFor="version_name">Version name</Label>
               <Input id="version_name" name="version_name" value={name} onChange={(e) => setName(e.target.value)} placeholder="1.0.1" maxLength={40} />
-              <p className="text-xs text-muted-foreground">Shown to guards. Shared APKs are 1.0.0; the Play Store starts at 1.0.1.</p>
+              <p className="text-xs text-muted-foreground">Shown to guards: the version on the Play Store, like 1.1.0.</p>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="version_code">Build number</Label>
