@@ -409,22 +409,24 @@ function SitesPanel({
   return (
     <Panel tone="emerald" icon={MapPin} title="Sites" subtitle={words.length ? `${shown.length} of ${sites.length}` : "Tap one to see it"} bare>
       {sites.length > 5 && (
-        <View style={styles.siteSearch}>
-          <Search size={16} color={color.mutedForeground} strokeWidth={2} />
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            placeholder="Search a site or district"
-            placeholderTextColor={color.mutedForeground}
-            style={styles.siteSearchInput}
-            returnKeyType="search"
-            autoCorrect={false}
-          />
-          {q ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Clear" hitSlop={8} onPress={() => setQ("")}>
-              <X size={16} color={color.mutedForeground} strokeWidth={2} />
-            </Pressable>
-          ) : null}
+        <View style={styles.siteSearchWrap}>
+          <View style={styles.siteSearch}>
+            <Search size={18} color={color.mutedForeground} strokeWidth={2} />
+            <TextInput
+              value={q}
+              onChangeText={setQ}
+              placeholder="Search a site or district"
+              placeholderTextColor={color.mutedForeground}
+              style={styles.siteSearchInput}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {q ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear" hitSlop={10} onPress={() => setQ("")} style={styles.siteSearchClear}>
+                <X size={13} color={color.card} strokeWidth={2.8} />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       )}
       {page.visible.map((s, i) => {
@@ -833,20 +835,19 @@ function Count({ value, label, tone, active, onPress }: { value: number; label: 
 }
 
 const styles = StyleSheet.create({
+  // The same 16 px sides as the rows below it, so the field lines up with the names.
+  siteSearchWrap: { paddingHorizontal: space[4], paddingBottom: space[3] },
   siteSearch: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space[2],
-    marginHorizontal: space[3],
-    marginBottom: space[2],
-    paddingHorizontal: space[3],
-    minHeight: 44,
-    borderRadius: radius.full,
-    backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: color.border,
+    gap: space[2.5],
+    height: 46,
+    paddingHorizontal: 14,
+    borderRadius: radius.xl,
+    backgroundColor: color.muted,
   },
-  siteSearchInput: { flex: 1, fontSize: 15, color: color.foreground, paddingVertical: 8 },
+  siteSearchInput: { flex: 1, height: 46, fontSize: 15, color: color.foreground, paddingVertical: 0 },
+  siteSearchClear: { width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: color.mutedForeground },
   root: { flex: 1, backgroundColor: color.appBg },
   flex: { flex: 1, minWidth: 0, gap: 2 },
   headGap: { gap: 4 },

@@ -12,7 +12,6 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
-  withDecay,
   withSpring,
 } from "react-native-reanimated";
 
@@ -20,7 +19,6 @@ import { color, radius, shadow, space } from "@/theme/tokens";
 
 /** Where the sheet rests: just its header over a full map, half way, or the whole screen. */
 export type SheetSnap = "peek" | "half" | "full";
-const ORDER: SheetSnap[] = ["full", "half", "peek"];
 
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
 /** A release faster than this (px/s) is a flick: it opens or closes to the next stop. Slower, the sheet stays where it is let go. */
@@ -204,18 +202,6 @@ export function MapSheet({
           const p = pts.get();
           const now = top.get();
           const v = e.velocityY;
-          const nearest = (y: number): SheetSnap => {
-            let best: SheetSnap = "half";
-            let gap = Infinity;
-            for (const s of ORDER) {
-              const d = Math.abs(p[s] - y);
-              if (d < gap) {
-                gap = d;
-                best = s;
-              }
-            }
-            return best;
-          };
 
           if (fromContent && now <= p.full + 0.5 && (scrollY.get() > 0.5 || v < 0)) {
             // The list took this swipe; the sheet stays where it is.
@@ -225,31 +211,35 @@ export function MapSheet({
             return;
           }
 
-          // Pulled past either end: back to that end.
-          if (now < p.full || now > p.peek) {
-            const end: SheetSnap = now < p.full ? "full" : "peek";
-            locked.set(end !== "full");
-            top.set(withSpring(p[end], { ...SPRING, velocity: v }));
-            runOnJS(settleTo)(end, p[end]);
-            return;
+          // Where it comes to rest: pulled past either end, back to that end; flicked,
+          // on to the next stop in that direction; let go slowly, about where it was
+          // left, drifting a little with the finger.
+          let to: SheetSnap = "half";
+          let rest = now;
+          if (now < p.full) {
+            to = "full";
+            rest = p.full;
+          } else if (now > p.peek) {
+            to = "peek";
+            rest = p.peek;
+          } else if (v < -FLICK) {
+            to = now > p.half + 4 ? "half" : "full";
+            rest = p[to];
+          } else if (v > FLICK) {
+            to = now < p.half - 4 ? "half" : "peek";
+            rest = p[to];
+          } else {
+            rest = Math.min(p.peek, Math.max(p.full, now + v * 0.1));
+            // Within a few points of a stop it settles on the stop.
+            const dFull = Math.abs(rest - p.full);
+            const dHalf = Math.abs(rest - p.half);
+            const dPeek = Math.abs(rest - p.peek);
+            to = dFull <= dHalf && dFull <= dPeek ? "full" : dHalf <= dPeek ? "half" : "peek";
+            if (Math.abs(rest - p[to]) < 24) rest = p[to];
           }
-
-          if (Math.abs(v) > FLICK) {
-            // A flick: on to the next stop in its direction.
-            const ahead = ORDER.filter((s) => (v < 0 ? p[s] < now - 4 : p[s] > now + 4));
-            const to: SheetSnap = ahead.length ? (v < 0 ? ahead[ahead.length - 1]! : ahead[0]!) : v < 0 ? "full" : "peek";
-            locked.set(to !== "full");
-            top.set(withSpring(p[to], { ...SPRING, velocity: v }));
-            runOnJS(settleTo)(to, p[to]);
-            return;
-          }
-
-          // Let go slowly: it stays about where it was left, drifting a little with the
-          // finger's speed, never past full or peek.
-          const rest = Math.min(p.peek, Math.max(p.full, now + v * 0.12));
-          top.set(withDecay({ velocity: v * 0.6, deceleration: 0.985, clamp: [p.full, p.peek] }));
           locked.set(rest > p.full + 0.5);
-          runOnJS(settleTo)(nearest(rest), rest);
+          top.set(withSpring(rest, { ...SPRING, velocity: v }));
+          runOnJS(settleTo)(to, rest);
         });
     // settleRef is read inside onEnd, when a drag ends on the UI thread; the lint reads
     // building the gesture as if it ran then.
