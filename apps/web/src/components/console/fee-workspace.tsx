@@ -527,12 +527,6 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
   const skipped = inv.status === "skipped";
   const lines = linesOf(inv);
   const acc = inv.accounts ?? null;
-  const initials = s.seller_name
-    .split(/\s+/)
-    .filter((w) => /^[A-Za-z]/.test(w) && !/^(private|limited|pvt|ltd)\.?$/i.test(w))
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join("");
   const Title = inDialog ? DialogTitle : "h2";
 
   return (
@@ -551,9 +545,9 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
               <p className="text-[15px] font-extrabold tracking-tight text-slate-900">{s.seller_name}</p>
               <p className="text-[11px] tracking-wide text-slate-500">{s.seller_address ?? "Kokrajhar, Assam"}</p>
             </div>
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#006b4a] to-[#14b8a6] text-sm font-black tracking-wider text-white shadow-sm">
-              {initials || "BT"}
-            </span>
+            {/* The seller's own mark, from bodookhrang.com. */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- printed as-is; a plain image prints reliably */}
+            <img src="/img/bodookhrang-logo.png" alt="Bodo Okhrang Tech Pvt. Ltd." className="h-14 w-auto shrink-0" />
           </div>
         </div>
 
