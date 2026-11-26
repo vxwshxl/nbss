@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withDecay,
   withSpring,
 } from "react-native-reanimated";
 
@@ -22,15 +23,19 @@ export type SheetSnap = "peek" | "half" | "full";
 const ORDER: SheetSnap[] = ["full", "half", "peek"];
 
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
+/** A release faster than this (px/s) is a flick: it opens or closes to the next stop. Slower, the sheet stays where it is let go. */
+const FLICK = 1100;
 
 // Gesture Handler's own ScrollView, so the sheet's drag and the list's scroll can
 // hand over to each other; React Native's would swallow one or the other.
 const SheetScroll = Animated.createAnimatedComponent(GestureScrollView);
 
 /**
- * The bottom sheet over a map, as Google Maps and Instagram's comments have it:
- * drag the handle, the header or the list itself and the sheet follows the finger,
- * then settles at the nearest of three heights, carried by the flick.
+ * The bottom sheet over a map, as Google Maps and Zomato have it: drag the handle,
+ * the header or the list itself and the sheet follows the finger. Let go slowly and
+ * it stays where it was left (drifting a touch with the finger's speed), so it can
+ * rest half way up or anywhere between; flick it and it carries on to the next of
+ * its three stops (the header alone, half, or the whole screen) in that direction.
  *
  * The sheet and its list share one gesture. Pushing up on the list raises the sheet
  * first and, once it is at full height, the same swipe goes on to scroll the list.
@@ -134,11 +139,11 @@ export function MapSheet({
   }, [snapTo?.key]);
 
   // Called from the gesture, which is built once; the ref keeps it current.
-  const settleRef = useRef<(to: SheetSnap) => void>(() => {});
+  const settleRef = useRef<(to: SheetSnap, at: number) => void>(() => {});
   useLayoutEffect(() => {
-    settleRef.current = (to: SheetSnap) => {
+    settleRef.current = (to: SheetSnap, at: number) => {
       setSnap(to);
-      onSnap?.(to, height - points[to]);
+      onSnap?.(to, height - at);
     };
   });
 
@@ -153,7 +158,7 @@ export function MapSheet({
    */
   const { headerPan, contentPan, native } = useMemo(() => {
     // The ref is read when a drag settles, never while rendering.
-    const settleTo = (to: SheetSnap) => settleRef.current(to);
+    const settleTo = (to: SheetSnap, at: number) => settleRef.current(to, at);
     const native = Gesture.Native();
     const build = (fromContent: boolean) =>
       Gesture.Pan()
@@ -198,26 +203,53 @@ export function MapSheet({
         .onEnd((e) => {
           const p = pts.get();
           const now = top.get();
-          let best: SheetSnap = "half";
-          let velocity = e.velocityY;
-          if (fromContent && now <= p.full + 0.5 && (scrollY.get() > 0.5 || e.velocityY < 0)) {
-            // The list took this swipe; the sheet stays where it is.
-            best = "full";
-            velocity = 0;
-          } else {
-            const projected = now + e.velocityY * 0.18;
+          const v = e.velocityY;
+          const nearest = (y: number): SheetSnap => {
+            let best: SheetSnap = "half";
             let gap = Infinity;
             for (const s of ORDER) {
-              const d = Math.abs(p[s] - projected);
+              const d = Math.abs(p[s] - y);
               if (d < gap) {
                 gap = d;
                 best = s;
               }
             }
+            return best;
+          };
+
+          if (fromContent && now <= p.full + 0.5 && (scrollY.get() > 0.5 || v < 0)) {
+            // The list took this swipe; the sheet stays where it is.
+            locked.set(false);
+            top.set(withSpring(p.full, SPRING));
+            runOnJS(settleTo)("full", p.full);
+            return;
           }
-          locked.set(!(best === "full" && now <= p.full + 0.5));
-          top.set(withSpring(p[best], { ...SPRING, velocity }));
-          runOnJS(settleTo)(best);
+
+          // Pulled past either end: back to that end.
+          if (now < p.full || now > p.peek) {
+            const end: SheetSnap = now < p.full ? "full" : "peek";
+            locked.set(end !== "full");
+            top.set(withSpring(p[end], { ...SPRING, velocity: v }));
+            runOnJS(settleTo)(end, p[end]);
+            return;
+          }
+
+          if (Math.abs(v) > FLICK) {
+            // A flick: on to the next stop in its direction.
+            const ahead = ORDER.filter((s) => (v < 0 ? p[s] < now - 4 : p[s] > now + 4));
+            const to: SheetSnap = ahead.length ? (v < 0 ? ahead[ahead.length - 1]! : ahead[0]!) : v < 0 ? "full" : "peek";
+            locked.set(to !== "full");
+            top.set(withSpring(p[to], { ...SPRING, velocity: v }));
+            runOnJS(settleTo)(to, p[to]);
+            return;
+          }
+
+          // Let go slowly: it stays about where it was left, drifting a little with the
+          // finger's speed, never past full or peek.
+          const rest = Math.min(p.peek, Math.max(p.full, now + v * 0.12));
+          top.set(withDecay({ velocity: v * 0.6, deceleration: 0.985, clamp: [p.full, p.peek] }));
+          locked.set(rest > p.full + 0.5);
+          runOnJS(settleTo)(nearest(rest), rest);
         });
     // settleRef is read inside onEnd, when a drag ends on the UI thread; the lint reads
     // building the gesture as if it ran then.
