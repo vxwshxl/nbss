@@ -297,6 +297,7 @@ const UUID = /^[0-9a-f-]{36}$/i;
 function show(key: string, v: unknown, names: Record<string, string>): string {
   if (v === null || v === undefined || v === "") return "empty";
   if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (typeof v === "number" && key.endsWith("_minutes")) return v < 60 ? `${v} min` : `${Math.floor(v / 60)} h ${String(v % 60).padStart(2, "0")} min`;
   if (typeof v === "number" && key.endsWith("_paise")) return `₹${(v / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
   if (typeof v === "string") {
     if (UUID.test(v)) return names[v] ?? v.slice(0, 8);
