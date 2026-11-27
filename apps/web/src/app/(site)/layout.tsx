@@ -22,7 +22,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       </a>
       <SmoothScroll />
       <SiteHeader />
-      <main id="main" className="overflow-x-clip bg-background">
+      <main id="main" className="print-site overflow-x-clip bg-background">
         {children}
       </main>
       <SiteFooter />

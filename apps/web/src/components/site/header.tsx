@@ -51,7 +51,7 @@ export function SiteHeader() {
   return (
     <header
       ref={ref}
-      className="fixed inset-x-0 top-0 z-50 text-ink"
+      className="print-hide-fixed fixed inset-x-0 top-0 z-50 text-ink"
     >
       {/* The bar's surfaces fade instead of switching: frosted once the page moves, solid (to
           match the menu panel) while the menu is open. Same timing as the panel, so opening and

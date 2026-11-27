@@ -1401,8 +1401,10 @@ input[type="number"]::-webkit-outer-spin-button {
 @media print {
   /* Center the printed content on the page (both axes) with a small uniform
    * margin, so a compact invoice sits in the middle and fits one page on any
-   * paper size (down to A5); larger sizes fit trivially. */
-  main {
+   * paper size (down to A5); larger sizes fit trivially. Only for a page that
+   * holds #print-area: as a bare `main` rule it turned every page of the site into
+   * a full-height centred flex column on paper, which split and stretched them. */
+  main:has(#print-area) {
     display: flex !important;
     flex-direction: column;
     justify-content: center;
@@ -1478,6 +1480,51 @@ input[type="number"]::-webkit-outer-spin-button {
   .sheet-print tr {
     break-inside: avoid;
   }
+
+  /* ---- Every other page (public site, console) -----------------------------
+   * The global @page above has no margin (the invoices and tables bring their
+   * own), so pages of the public site print on a named page with real margins.
+   * Fixed things (the header, the WhatsApp button, Nibo) would otherwise repeat
+   * on every sheet, and nothing should split a photo or a card, or leave a
+   * heading alone at the foot of a page. */
+  .print-site {
+    page: site;
+  }
+  /* Scroll-in animations that never ran (below the fold) would print blank. */
+  .print-site [style*="opacity: 0"],
+  .print-site [style*="opacity:0"] {
+    opacity: 1 !important;
+  }
+  [data-nibo],
+  .print-hide-fixed {
+    display: none !important;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+  }
+  img,
+  svg,
+  figure,
+  picture,
+  video,
+  blockquote,
+  li {
+    break-inside: avoid;
+  }
+  /* A photo is usually an <img> filling a sized box, and a card a link or article
+   * around one: keep the box and the card whole too. */
+  .print-site div:has(> img),
+  .print-site a:has(img),
+  .print-site article {
+    break-inside: avoid;
+  }
+}
+
+@page site {
+  margin: 12mm 10mm;
 }
 
 /* ---------------------------------------------------------------------------

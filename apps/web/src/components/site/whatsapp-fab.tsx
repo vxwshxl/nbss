@@ -27,7 +27,7 @@ export function WhatsAppFab({ href = WHATSAPP_URL }: { href?: string }) {
   return (
     <div
       ref={ref}
-      className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[45] sm:right-6 sm:bottom-6"
+      className="print-hide-fixed fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[45] sm:right-6 sm:bottom-6"
     >
       <AnimatePresence>
         {shown && (

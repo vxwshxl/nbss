@@ -1,34 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  Banknote,
-  BellRing,
-  BookOpen,
-  ClipboardCheck,
-  Clock,
-  Factory,
-  FileText,
-  Flag,
-  Globe,
-  HardHat,
-  HeartPulse,
-  Landmark,
-  Layers,
-  Mail,
-  MapPin,
-  MapPinned,
-  MessageCircle,
-  Phone,
-  Radio,
-  ShieldCheck,
-  ShoppingBag,
-  Siren,
-  Target,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowUpRight, Clock, Globe, Mail, MapPin, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 
 import { tel } from "@nbss/shared/company";
 import { syllabus } from "@/content/gallery";
@@ -36,12 +9,15 @@ import { services } from "@/content/services";
 import { pillars, site, stats } from "@/content/site";
 import { pageMetadata } from "@/lib/seo/page-metadata";
 
-import { SavePdf } from "./save-pdf";
+import { PILLAR_ICONS, ROLES, SERVICE_ICONS, STEPS, TECH } from "./content";
+import { OnePager } from "./one-pager";
+import { PrintFromQuery, SavePdf } from "./save-pdf";
 import "./brochure.css";
 
 /**
- * The company brochure, as one link the team can send: everything NBSS supplies,
- * on a single page that reads well on a phone and saves as an A4 PDF.
+ * The company brochure, as one link the team can send. It holds two documents: the
+ * one-page summary first (for the client who reads one page), then the full brochure,
+ * each with its own button to print or save just that one as an A4 PDF.
  *
  * It sits outside the public site's chrome (no header, footer or menu) because it
  * is sent, not browsed; the website is one tap away at the foot. Its copy is read
@@ -60,50 +36,6 @@ export const metadata: Metadata = pageMetadata({
     alt: "NBSS company brochure: trained guards for every site, across Assam",
   },
 });
-
-const SERVICE_ICONS: Record<string, LucideIcon> = {
-  book: BookOpen,
-  cross: HeartPulse,
-  landmark: Landmark,
-  bank: Banknote,
-  bell: BellRing,
-  cart: ShoppingBag,
-  factory: Factory,
-  helmet: HardHat,
-  flag: Flag,
-};
-
-const PILLAR_ICONS: Record<string, LucideIcon> = {
-  drill: Target,
-  "clipboard-check": ClipboardCheck,
-  radio: Radio,
-  layers: Layers,
-  rupee: Banknote,
-  roots: Users,
-};
-
-/** The people NBSS posts, in a client's words rather than a job ad's. */
-const ROLES = [
-  { title: "Security guards", body: "Gate, floor, perimeter and night duty, in full uniform with identity cards." },
-  { title: "Lady security guards", body: "Women's entrances, hostels, frisking, wards and examination halls." },
-  { title: "Supervisors", body: "Check every post on their round, day and night, and answer for the shift." },
-  { title: "Field officers", body: "Your single point of contact: postings, replacements and the monthly review." },
-];
-
-/** What the NBSS app does on a client's site. Every line here is a live feature. */
-const TECH = [
-  { icon: MapPinned, title: "Attendance at the gate", body: "Guards punch in and out on the NBSS app, and only from inside your site's boundary." },
-  { icon: Radio, title: "Live tracking", body: "Our control room sees where every guard on duty is, on a map, as it happens." },
-  { icon: Siren, title: "SOS button", body: "One press raises an alarm at the control room with the guard's location." },
-  { icon: FileText, title: "Monthly reports", body: "Attendance, late arrivals and hours for your site, ready for billing and review." },
-];
-
-const STEPS = [
-  { title: "Call or message us", body: "Tell us the site, the hours to be covered and anything special." },
-  { title: "Free site visit", body: "A field officer walks the premises and marks every post." },
-  { title: "Clear quote", body: "Guards, shifts and the monthly cost, in writing. No hidden charges." },
-  { title: "Guards on duty", body: "Trained, verified and briefed for your site, with a supervisor assigned." },
-];
 
 const STRIP = [
   { src: "/img/nbss/parade-salute.webp", alt: "NBSS guards saluting at evening parade" },
@@ -126,9 +58,31 @@ const SCHOOLERP = "https://schoolerp.okhrang.com";
 export default function BrochurePage() {
   return (
     <div className="brochure min-h-dvh bg-[#f4f6f5] text-slate-900 [color-scheme:light]">
+      <PrintFromQuery />
+      <div className="sticky top-0 z-20 border-b border-slate-200/70 bg-[#f4f6f5]/90 backdrop-blur print:hidden">
+        <div className="mx-auto flex max-w-[1080px] items-center gap-2 px-3 py-2.5 sm:px-6">
+          <span className="mr-auto min-w-0 truncate text-[13px] font-semibold text-slate-600">
+            <span className="text-slate-900">NBSS</span> · Company brochure
+          </span>
+          <SavePdf target="onepager" label="One-pager PDF" />
+          <SavePdf target="brochure" label="Brochure PDF" className="hidden sm:inline-flex" />
+          <SavePdf target="brochure" label="Brochure" className="sm:hidden" />
+        </div>
+      </div>
+
       <div className="mx-auto max-w-[1080px] px-3 py-3 sm:px-6 sm:py-6">
+        {/* ─── 1. The one-pager ─── */}
+        <div className="onepager-doc">
+          <DocLabel n={1} title="At a glance" note="Everything NBSS does, on one A4 page" />
+          <OnePager />
+        </div>
+
+        {/* ─── 2. The full brochure ─── */}
+        <div className="brochure-doc mt-10 sm:mt-14 print:mt-0">
+        <DocLabel n={2} title="Full brochure" note="Services, people, training and supervision in detail" />
+
         {/* ─── Cover ─── */}
-        <section className="sheet overflow-hidden rounded-[28px] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04),0_24px_60px_-30px_rgb(0_60_40/0.25)]">
+        <section className="sheet keep overflow-hidden rounded-[28px] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04),0_24px_60px_-30px_rgb(0_60_40/0.25)]">
           <div className="h-1.5 bg-gradient-to-r from-[#006b4a] via-[#009164] to-[#14b8a6]" />
           <div className="flex items-center justify-between gap-3 px-5 pt-5 sm:px-10 sm:pt-8">
             <Link href="/" className="flex min-w-0 items-center gap-3">
@@ -138,20 +92,20 @@ export default function BrochurePage() {
                 <span className="block truncate text-[12px] font-medium text-slate-500 sm:text-[13px]">National Bodo Security Service</span>
               </span>
             </Link>
-            <SavePdf label="PDF" className="sm:hidden" />
-            <SavePdf className="hidden sm:inline-flex" />
+            <SavePdf target="brochure" label="PDF" className="sm:hidden" />
+            <SavePdf target="brochure" label="Save as PDF" className="hidden sm:inline-flex" />
           </div>
 
-          <div className="grid gap-8 px-5 pt-8 pb-6 sm:px-10 sm:pt-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:gap-10">
+          <div className="grid gap-8 px-5 pt-8 pb-6 sm:px-10 sm:pt-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:gap-10 print:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] print:items-center print:gap-7 print:px-8 print:pt-8">
             <div>
               <p className="text-[11px] font-bold tracking-[0.22em] text-[#00714e] uppercase sm:text-[12px]">Company profile · Security services</p>
-              <h1 className="mt-3 font-display text-[38px] leading-[1.02] font-extrabold tracking-[-0.04em] sm:text-[54px]">
+              <h1 className="mt-3 font-display text-[38px] leading-[1.02] font-extrabold tracking-[-0.04em] sm:text-[54px] print:text-[38px]">
                 Trained guards for every site,{" "}
                 <span className="bg-[linear-gradient(90deg,#16a36f,#009164,#00714e)] bg-clip-text text-transparent underline decoration-[#009164]/60 decoration-4 underline-offset-[10px]">
                   across Assam.
                 </span>
               </h1>
-              <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 sm:text-[16px]">
+              <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 sm:text-[16px] print:text-[13px]">
                 National Bodo Security Service is a professionally managed security agency headquartered in Kokrajhar, Bodoland
                 Territorial Council. We supply trained, police-verified security personnel to government, corporate, institutional
                 and commercial clients, supervised around the clock.
@@ -171,7 +125,7 @@ export default function BrochurePage() {
                 </Link>
               </div>
             </div>
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-slate-100 lg:aspect-[5/4]">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-slate-100 lg:aspect-[5/4] print:aspect-[5/4]">
               <Image
                 src="/img/nbss/parade-ranks.webp"
                 alt="NBSS guards in uniform standing in formation"
@@ -205,7 +159,7 @@ export default function BrochurePage() {
 
         {/* ─── Why NBSS ─── */}
         <Sheet eyebrow="Why NBSS" title="Six things every client gets.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
             {pillars.map((p) => {
               const Icon = PILLAR_ICONS[p.icon] ?? ShieldCheck;
               return (
@@ -223,7 +177,7 @@ export default function BrochurePage() {
 
         {/* ─── Services ─── */}
         <Sheet eyebrow="Our services" title={`Guards for ${services.length} kinds of site.`} lead="Every posting is planned for the premises: the posts, the hours, and the people best suited to them.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
             {services.map((s) => {
               const Icon = SERVICE_ICONS[s.icon] ?? ShieldCheck;
               return (
@@ -258,7 +212,7 @@ export default function BrochurePage() {
 
         {/* ─── People and training ─── */}
         <Sheet eyebrow="Our people" title="Who we post, and how they are trained.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
             {ROLES.map((r) => (
               <article key={r.title} className="keep rounded-2xl border border-slate-100 bg-[#fafbfa] p-5">
                 <h3 className="text-[15px] font-bold tracking-tight">{r.title}</h3>
@@ -268,7 +222,7 @@ export default function BrochurePage() {
           </div>
           <div className="keep mt-5 rounded-2xl bg-[#06110d] p-5 text-white sm:p-7">
             <p className="text-[11px] font-bold tracking-[0.22em] text-emerald-300 uppercase">Training before first duty</p>
-            <ol className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ol className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
               {syllabus.map((m) => (
                 <li key={m.code} className="flex gap-3">
                   <span className="font-mono text-[13px] font-semibold text-emerald-300">{m.code}</span>
@@ -284,7 +238,7 @@ export default function BrochurePage() {
 
         {/* ─── Technology ─── */}
         <Sheet eyebrow="Supervision you can see" title="Every guard, on our app." lead="Our own Android app runs every posting: attendance, tracking and alarms, checked by our control room around the clock.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
             {TECH.map((t) => (
               <article key={t.title} className="keep rounded-2xl border border-slate-100 bg-[#fafbfa] p-5">
                 <span className="flex size-10 items-center justify-center rounded-xl bg-[#009164]/12 text-[#00714e]">
@@ -298,8 +252,8 @@ export default function BrochurePage() {
         </Sheet>
 
         {/* ─── How to start, and the photos ─── */}
-        <Sheet eyebrow="Getting started" title="From first call to guards on duty.">
-          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Sheet flow eyebrow="Getting started" title="From first call to guards on duty.">
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
             {STEPS.map((s, i) => (
               <li key={s.title} className="keep relative rounded-2xl border border-slate-100 bg-[#fafbfa] p-5">
                 <span className="flex size-9 items-center justify-center rounded-full bg-[#009164] font-display text-[15px] font-extrabold text-white">{i + 1}</span>
@@ -308,7 +262,7 @@ export default function BrochurePage() {
               </li>
             ))}
           </ol>
-          <div className="keep mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="keep mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 print:hidden">
             {STRIP.map((p) => (
               <span key={p.src} className="relative block aspect-[4/3] overflow-hidden rounded-2xl bg-slate-100">
                 <Image src={p.src} alt={p.alt} fill sizes="(min-width: 640px) 25vw, 50vw" className="object-cover" />
@@ -378,7 +332,7 @@ export default function BrochurePage() {
 
         {/* ─── From the team that built our app ─── */}
         <section className="sheet sheet-flow keep mt-3 rounded-[28px] bg-white p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] sm:mt-5 sm:p-8">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:items-center lg:gap-10">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] lg:items-center lg:gap-10 print:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] print:items-center">
             <div>
               <p className="text-[11px] font-bold tracking-[0.22em] text-[#00714e] uppercase sm:text-[12px]">From our technology partner</p>
               <h2 className="mt-2 font-display text-[26px] leading-tight font-extrabold tracking-[-0.035em] sm:text-[32px]">Run a school? Meet SchoolERP.</h2>
@@ -426,19 +380,44 @@ export default function BrochurePage() {
             nbsskokrajhar.com
           </Link>
         </footer>
+        </div>
       </div>
     </div>
   );
 }
 
 /** One section of the brochure: a white sheet with a small capitals line and a heading. */
-function Sheet({ eyebrow, title, lead, children }: { eyebrow: string; title: string; lead?: string; children: React.ReactNode }) {
+function Sheet({
+  eyebrow,
+  title,
+  lead,
+  flow,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  lead?: string;
+  /** On paper, follow on from the section before instead of starting a new page. */
+  flow?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="sheet mt-3 rounded-[28px] bg-white p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] sm:mt-5 sm:p-10">
+    <section className={`sheet ${flow ? "sheet-flow" : ""} mt-3 rounded-[28px] bg-white p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] sm:mt-5 sm:p-10 print:p-8`}>
       <p className="text-[11px] font-bold tracking-[0.22em] text-[#00714e] uppercase sm:text-[12px]">{eyebrow}</p>
       <h2 className="mt-2 font-display text-[26px] leading-tight font-extrabold tracking-[-0.035em] sm:text-[36px]">{title}</h2>
       {lead && <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-slate-600">{lead}</p>}
       <div className="mt-6">{children}</div>
     </section>
+  );
+}
+
+/** Names each of the page's two documents on screen; not printed. */
+function DocLabel({ n, title, note }: { n: number; title: string; note: string }) {
+  return (
+    <div className="mb-3 flex items-baseline gap-3 px-2 print:hidden">
+      <span className="font-mono text-[12px] font-semibold text-[#00714e]">0{n}</span>
+      <h2 className="text-[15px] font-bold tracking-tight text-slate-900">{title}</h2>
+      <span className="hidden text-[13px] text-slate-500 sm:inline">{note}</span>
+    </div>
   );
 }

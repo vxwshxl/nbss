@@ -1,0 +1,509 @@
+/*
+ * The one-page summary at the top of /brochure. A4 portrait = 794 × 1123 CSS px.
+ * From 860 px wide up the sheet is drawn at exactly that size, so the screen is the
+ * proof of the print; below it, the same blocks reflow to one or two columns.
+ * Drawn in fixed light colours, like the brochure, whatever the reader's theme.
+ */
+.onepager {
+  --op-green: #009164;
+  --op-deep: #00714e;
+  --op-ink: #0f1a15;
+  --op-mute: #5a6a62;
+  --op-line: #e1ebe6;
+  --op-soft: #e7f6ef;
+  --op-paper: #f6faf8;
+  --op-night: #06110d;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 794px;
+  height: 1123px;
+  margin-inline: auto;
+  padding: 26px 32px 24px;
+  overflow: hidden;
+  border-radius: 28px;
+  color: var(--op-ink);
+  background-color: var(--op-paper);
+  background-image: radial-gradient(circle at 1px 1px, rgb(0 145 100 / 0.11) 1.2px, transparent 0);
+  background-size: 18px 18px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 24px 60px -30px rgb(0 60 40 / 0.3);
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.onepager::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: linear-gradient(90deg, #006b4a, #009164, #14b8a6);
+}
+.onepager svg {
+  flex-shrink: 0;
+}
+
+/* ─── Top bar ─── */
+.op-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.op-logo {
+  width: 44px;
+  height: 44px;
+}
+.op-brand {
+  display: grid;
+  line-height: 1.1;
+}
+.op-brand b {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.op-brand span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--op-mute);
+}
+.op-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 16px;
+  background: var(--op-green);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  box-shadow: 0 3px 0 #006b4a;
+}
+.op-badge svg {
+  width: 22px;
+  height: 22px;
+}
+.op-badge small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* ─── Hero ─── */
+.op-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 22px;
+  align-items: center;
+}
+.op-eyebrow,
+.op-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--op-deep);
+}
+.op-title {
+  margin-top: 6px;
+  font-size: 31px;
+  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.op-title em {
+  font-style: normal;
+  color: var(--op-green);
+}
+.op-lead {
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--op-mute);
+}
+.op-chips {
+  margin-top: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.op-chips li {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--op-soft);
+  color: var(--op-deep);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.op-photo {
+  position: relative;
+  height: 166px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #e5ece8;
+}
+.op-photo figcaption {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.93);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.op-photo figcaption svg {
+  width: 14px;
+  height: 14px;
+  color: var(--op-green);
+}
+
+/* ─── Stats ─── */
+.op-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.op-stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  padding: 7px 11px;
+  border: 1px solid var(--op-line);
+  border-radius: 14px;
+  background: #fff;
+}
+.op-stats dd {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--op-green);
+}
+.op-stats dt {
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* ─── Shared item rows: icon + bold line + quiet line ─── */
+.op-label {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.op-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--op-line);
+}
+.op-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--op-soft);
+  color: var(--op-deep);
+}
+.op-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.op-tech li,
+.op-compliance li,
+.op-steps li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+.op-tech b,
+.op-compliance b,
+.op-steps b {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.op-services li > span,
+.op-tech li > span:last-child > span,
+.op-compliance li > span:last-child > span,
+.op-steps li > span:last-child > span {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--op-mute);
+}
+
+/* ─── Services ─── */
+.op-services {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.op-services b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.op-services b svg {
+  width: 14px;
+  height: 14px;
+  color: var(--op-green);
+}
+.op-services li {
+  padding: 7px 10px;
+  border: 1px solid var(--op-line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+/* ─── Two-up cards ─── */
+.op-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.op-card {
+  padding: 10px 13px;
+  border: 1px solid var(--op-line);
+  border-radius: 16px;
+  background: #fff;
+}
+.op-checks {
+  display: grid;
+  gap: 4px;
+}
+.op-checks li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.op-checks svg {
+  width: 16px;
+  height: 16px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--op-green);
+  color: #fff;
+}
+.op-dark {
+  border-color: var(--op-night);
+  background: var(--op-night);
+  color: #fff;
+}
+.op-dark .op-label {
+  color: #6ee7b7;
+}
+.op-dark .op-label::after {
+  background: rgb(255 255 255 / 0.15);
+}
+.op-training {
+  display: grid;
+  gap: 4px;
+}
+.op-training li {
+  display: flex;
+  gap: 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.op-training li span {
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-weight: 700;
+  color: #6ee7b7;
+}
+.op-tech,
+.op-compliance {
+  display: grid;
+  gap: 5px;
+}
+.op-tech {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 10px;
+}
+.op-compliance {
+  gap: 3px;
+}
+.op-compliance li {
+  align-items: center;
+}
+.op-note {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--op-mute);
+}
+.op-compliance svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--op-green);
+}
+
+/* ─── Steps ─── */
+.op-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.op-steps li {
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid var(--op-line);
+  border-radius: 14px;
+  background: #fff;
+}
+.op-step-n {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--op-green);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+/* ─── Contact band, pinned to the foot of the page ─── */
+.op-contact {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 1.38fr);
+  gap: 16px;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #00714e, #009164 55%, #14b8a6);
+  color: #fff;
+  box-shadow: 0 4px 0 #005a3e;
+}
+.op-contact-lead p {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.op-contact-lead > span {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  opacity: 0.92;
+}
+.op-contact-list {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 14px;
+  padding-left: 16px;
+  border-left: 1px solid rgb(255 255 255 / 0.3);
+}
+.op-contact-list li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.op-contact-list svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.85;
+}
+.op-contact-list .op-web {
+  font-size: 12.5px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── Phones and small tablets: the same page, reflowed ─── */
+@media screen and (max-width: 859px) {
+  .onepager {
+    width: auto;
+    height: auto;
+    padding: 22px 16px 18px;
+    gap: 16px;
+    border-radius: 24px;
+    font-size: 12px;
+  }
+  .op-badge {
+    display: none;
+  }
+  .op-hero,
+  .op-two,
+  .op-contact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .op-title {
+    font-size: 30px;
+  }
+  .op-lead {
+    font-size: 13.5px;
+  }
+  .op-photo {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+  .op-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .op-stats > div:last-child {
+    grid-column: span 2;
+  }
+  .op-services,
+  .op-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .op-contact-list {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 0;
+    padding-top: 12px;
+    border-left: 0;
+    border-top: 1px solid rgb(255 255 255 / 0.3);
+  }
+  .op-contact-list li {
+    align-items: flex-start;
+    font-size: 12.5px;
+  }
+}
+@media screen and (max-width: 479px) {
+  .op-services,
+  .op-steps,
+  .op-tech {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ─── On paper: exactly one A4 page ───
+ * It prints on the default page, which globals.css leaves without a margin, and
+ * brochure.css makes A4. (A named page of its own made Chrome open a blank default
+ * page after it for whatever follows in <body>.) */
+@media print {
+  .onepager {
+    width: 210mm;
+    height: 296.5mm; /* a hair under 297: a rounding pixel over makes a blank second page */
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
