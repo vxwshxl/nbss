@@ -481,7 +481,8 @@ function ContactPage() {
         </div>
         <div className="bp-actions bp-actions-light">
           <a href={WHATSAPP} className="bp-btn bp-btn-white">
-            <MessageCircle aria-hidden /> Message on WhatsApp
+            <MessageCircle aria-hidden /> <span className="sm:hidden">WhatsApp</span>
+            <span className="hidden sm:inline">Message on WhatsApp</span>
           </a>
           <Link href="/contact" className="bp-btn bp-btn-ghost">
             Get a quote <ArrowUpRight aria-hidden />

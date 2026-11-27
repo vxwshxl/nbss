@@ -917,6 +917,11 @@
   .bp-cover-title {
     font-size: 38px;
   }
+  .bp-cover-shade {
+    background:
+      linear-gradient(180deg, rgb(4 14 10 / 0.6) 0%, rgb(4 14 10 / 0) 24%),
+      linear-gradient(0deg, rgb(4 14 10 / 0.95) 0%, rgb(4 14 10 / 0.72) 45%, rgb(4 14 10 / 0) 78%);
+  }
   .bp-cover-lead {
     font-size: 14.5px;
   }
