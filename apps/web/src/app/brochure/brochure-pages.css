@@ -612,7 +612,7 @@
 }
 .bp-nibo-says {
   display: grid;
-  align-content: center;
+  align-content: space-evenly;
   gap: 10px;
 }
 .bp-nibo-says li {

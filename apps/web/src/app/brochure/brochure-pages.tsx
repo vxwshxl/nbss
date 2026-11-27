@@ -53,6 +53,8 @@ const FIGURES = [
 const NUDGES: { who: string; mood: NiboMood; text: string; action: string }[] = [
   { who: "Control room", mood: "oops", text: "1 SOS alert still open.", action: "Open SOS" },
   { who: "Supervisor", mood: "think", text: "2 rostered guards not checked in yet.", action: "Who?" },
+  { who: "Supervisor", mood: "think", text: "3 punches waiting for review today.", action: "Review" },
+  { who: "Guard", mood: "wave", text: "Your shift has started. Check in when you reach the gate.", action: "Check in" },
   { who: "Client", mood: "cheer", text: "Your quotation is ready to look at.", action: "See it" },
 ];
 
