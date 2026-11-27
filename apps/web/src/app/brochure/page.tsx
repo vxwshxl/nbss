@@ -5,7 +5,7 @@ import { pageMetadata } from "@/lib/seo/page-metadata";
 
 import { BrochurePages } from "./brochure-pages";
 import { OnePager } from "./one-pager";
-import { PrintFromQuery, SavePdf } from "./save-pdf";
+import { PrintSupport, SavePdf } from "./save-pdf";
 import "./brochure.css";
 
 /**
@@ -35,7 +35,7 @@ export const metadata: Metadata = pageMetadata({
 export default function BrochurePage() {
   return (
     <div className="brochure min-h-dvh bg-[#eef2f0] text-slate-900 [color-scheme:light]">
-      <PrintFromQuery />
+      <PrintSupport />
       <div className="sticky top-0 z-20 border-b border-slate-200/70 bg-[#eef2f0]/90 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-[1080px] items-center gap-2 px-3 py-2.5 sm:px-6">
           <span className="mr-auto min-w-0 truncate text-[13px] font-semibold text-slate-600">
