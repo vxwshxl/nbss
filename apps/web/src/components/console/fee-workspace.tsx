@@ -686,9 +686,9 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
         <div className="flex justify-end">
           <div className="w-52 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element -- printed as-is; a plain image prints reliably */}
-            <img src="/img/signature-kamal-bodosa.png?v=3" alt="Signature of Dr. Kamal Bodosa" className="mx-auto h-14 w-auto" />
+            <img src="/img/signature-kamal-bodosa.png?v=3" alt="Signature of Dr. K. Bodosa" className="mx-auto h-14 w-auto" />
             <div className="mt-1 border-t border-slate-300 pt-1.5">
-              <p className="text-[13px] font-bold text-slate-900">Dr. Kamal Bodosa</p>
+              <p className="text-[13px] font-bold text-slate-900">Dr. K. Bodosa</p>
               <p className="text-[11px] text-slate-600">Managing Director</p>
               <p className="text-[11px] font-semibold tracking-wide text-slate-800">BODOOKHRANG TECH PVT. LTD.</p>
             </div>
