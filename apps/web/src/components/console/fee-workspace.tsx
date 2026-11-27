@@ -682,8 +682,24 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3 print:hidden">
-          <p className="text-[11px] text-slate-400">Computer-generated invoice · no signature required</p>
+        {/* Signed by the managing director, on the right. */}
+        <div className="flex justify-end">
+          <div className="w-52 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- printed as-is; a plain image prints reliably */}
+            <img src="/img/signature-kamal-bodosa.png" alt="Signature of Dr. Kamal Bodosa" className="mx-auto h-14 w-auto" />
+            <div className="mt-1 border-t border-slate-300 pt-1.5">
+              <p className="text-[13px] font-bold text-slate-900">Dr. Kamal Bodosa</p>
+              <p className="text-[11px] text-slate-600">Managing Director</p>
+              <p className="text-[11px] font-semibold tracking-wide text-slate-800">BODOOKHRANG TECH PVT. LTD.</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-[14px] font-semibold text-[#009164]">Thank you for using our service. It&apos;s a pleasure working with you!</p>
+
+        <p className="border-t border-slate-200 pt-3 text-center text-[11px] text-slate-400">This is a system generated invoice.</p>
+
+        <div className="flex justify-end print:hidden">
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={onPrint}>
               <Printer data-icon="inline-start" /> Print

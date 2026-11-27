@@ -1835,8 +1835,8 @@ body[data-sos-live] [data-nibo] {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 30px;
-    padding: 34px 44px 30px;
+    gap: 22px;
+    padding: 34px 44px 26px;
   }
   #fee-print-root .fee-body > * { margin-top: 0 !important; }
   #fee-print-root .fee-foot { margin-top: auto !important; }
