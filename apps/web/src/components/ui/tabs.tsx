@@ -151,15 +151,21 @@ function TabsList({
 
   if (!segmented) return list
 
+  // The bar scrolls sideways when its tabs cannot fit the screen, rather than
+  // widening the page. The scroller sits outside the measured wrapper, so the
+  // wrapper and the highlight move together and the clip stays on its tab.
   return (
     <div
-      ref={wrapRef}
-      data-slot="tabs-list-wrapper"
       className={cn(
-        "relative isolate w-full",
+        "max-w-full overflow-x-auto scrollbar-none",
         sticky &&
           "sticky top-3 z-20 my-1 rounded-xl bg-card/80 shadow-card backdrop-blur-md max-lg:top-16"
       )}
+    >
+    <div
+      ref={wrapRef}
+      data-slot="tabs-list-wrapper"
+      className="relative isolate w-full min-w-max"
     >
       {list}
       {/*
@@ -199,6 +205,7 @@ function TabsList({
           )
         })}
       </div>
+    </div>
     </div>
   )
 }

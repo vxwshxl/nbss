@@ -532,22 +532,22 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
   return (
     <div id="fee-invoice" className="bg-white text-[13px] leading-snug text-slate-800">
       <div className="h-1.5 bg-gradient-to-r from-[#006b4a] via-[#009164] to-[#14b8a6]" />
-      <div className="fee-body space-y-5 px-6 pt-5 pb-5 sm:px-9">
-        {/* Title and number; the seller's mark on the right. */}
-        <div className={cn("flex items-start justify-between gap-6", inDialog && "pr-8")}>
-          <div>
+      <div className="fee-body space-y-5 px-4 pt-5 pb-5 sm:px-9">
+        {/* Title and number; the seller's mark on the right, or above it on a phone. */}
+        <div className={cn("flex flex-col-reverse gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6", inDialog && "pr-8")}>
+          <div className="min-w-0">
             <Title className="text-[28px] leading-none font-black tracking-[0.18em] text-slate-900">INVOICE</Title>
             <div className="mt-2 h-0.5 w-full bg-slate-900" />
-            <p className="mt-1.5 font-mono text-[11px] tracking-[0.22em] text-slate-500">NO: {inv.number}</p>
+            <p className="mt-1.5 font-mono text-[11px] tracking-[0.12em] text-slate-500 sm:tracking-[0.22em]">NO: {inv.number}</p>
           </div>
-          <div className="flex items-center gap-3 text-right">
-            <div>
+          <div className="flex min-w-0 items-center gap-3 sm:text-right">
+            <div className="min-w-0 sm:order-first">
               <p className="text-[15px] font-extrabold tracking-tight text-slate-900">{s.seller_name}</p>
               <p className="text-[11px] tracking-wide text-slate-500">{s.seller_address ?? "Kokrajhar, Assam"}</p>
             </div>
             {/* The seller's own mark, from bodookhrang.com. */}
             {/* eslint-disable-next-line @next/next/no-img-element -- printed as-is; a plain image prints reliably */}
-            <img src="/img/bodookhrang-logo.png" alt="Bodo Okhrang Tech Pvt. Ltd." className="h-14 w-auto shrink-0" />
+            <img src="/img/bodookhrang-logo.png" alt="Bodo Okhrang Tech Pvt. Ltd." className="order-first h-12 w-auto shrink-0 sm:order-none sm:h-14" />
           </div>
         </div>
 
@@ -587,11 +587,13 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-y-2 border-slate-800 text-[11px] font-bold text-slate-700">
-              <th className="w-12 bg-slate-50 py-2 pl-3 text-left">No.</th>
-              <th className="bg-slate-50 py-2 pr-3 text-left">Item description</th>
-              <th className="w-28 border-l border-slate-200 py-2 pr-2 text-right">Rate</th>
-              <th className="w-20 py-2 text-center">Qty</th>
-              <th className="w-32 py-2 pr-3 text-right">Total</th>
+              <th className="hidden w-12 bg-slate-50 py-2 pl-3 text-left sm:table-cell">No.</th>
+              <th className="bg-slate-50 py-2 pr-2 pl-2 text-left sm:pr-3 sm:pl-0">
+                Item<span className="hidden sm:inline"> description</span>
+              </th>
+              <th className="border-l border-slate-200 py-2 pr-2 pl-2 text-right sm:w-28">Rate</th>
+              <th className="px-1 py-2 text-center sm:w-20">Qty</th>
+              <th className="py-2 pr-2 text-right sm:w-32 sm:pr-3">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -604,11 +606,11 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
             )}
             {lines.map((l, i) => (
               <tr key={i} className="border-b border-slate-200 align-top">
-                <td className="bg-slate-50 py-2.5 pl-3 text-slate-500 tabular-nums">{String(i + 1).padStart(2, "0")}.</td>
-                <td className="bg-slate-50 py-2.5 pr-3">
+                <td className="hidden bg-slate-50 py-2.5 pl-3 text-slate-500 tabular-nums sm:table-cell">{String(i + 1).padStart(2, "0")}.</td>
+                <td className="bg-slate-50 py-2.5 pr-2 pl-2 sm:pr-3 sm:pl-0">
                   <p className="font-bold text-slate-900">
                     {l.label}
-                    {l.tag && <span className="ml-2 rounded bg-emerald-100 px-1.5 py-px text-[9px] font-bold tracking-wider text-emerald-700 uppercase">{l.tag}</span>}
+                    {l.tag && <span className="ml-2 inline-block rounded whitespace-nowrap bg-emerald-100 px-1.5 py-px text-[9px] font-bold tracking-wider text-emerald-700 uppercase">{l.tag}</span>}
                   </p>
                   <p className="text-[11px] text-slate-500">
                     {isAccountsLine(l) && acc
@@ -616,9 +618,9 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
                       : month(inv.period)}
                   </p>
                 </td>
-                <td className="border-l border-slate-200 py-2.5 pr-2 text-right tabular-nums">{inr(l.rate_paise)}</td>
-                <td className="py-2.5 text-center tabular-nums">{l.qty}</td>
-                <td className="py-2.5 pr-3 text-right font-semibold tabular-nums">{inr(l.amount_paise)}</td>
+                <td className="border-l border-slate-200 py-2.5 pr-2 pl-2 text-right whitespace-nowrap tabular-nums">{inr(l.rate_paise)}</td>
+                <td className="px-1 py-2.5 text-center tabular-nums">{l.qty}</td>
+                <td className="py-2.5 pr-2 text-right font-semibold whitespace-nowrap tabular-nums sm:pr-3">{inr(l.amount_paise)}</td>
               </tr>
             ))}
           </tbody>

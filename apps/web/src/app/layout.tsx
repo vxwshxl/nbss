@@ -89,6 +89,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // The page is laid out for the screen it is on, so it never needs zooming. Without
+  // this, iOS zooms in whenever a field with text under 16px is tapped and leaves the
+  // page zoomed after; Android lets a pinch push the layout around.
+  maximumScale: 1,
   // Shrinks the layout viewport (and `dvh`) when the on-screen keyboard opens,
   // so a centred dialog repositions above the keyboard instead of hiding behind
   // it. That matters most on the one screen that is always used on a phone: a

@@ -64,7 +64,7 @@ export function PeriodSwitch({
             aria-checked={period === p.key}
             onClick={() => period !== p.key && go(p.key, convertAt(p.key, at, today))}
             className={cn(
-              "press rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
+              "press rounded-full px-2 py-1.5 text-sm font-semibold transition-colors sm:px-4",
               period === p.key ? "bg-[#009164] text-white shadow-[0_2px_0_#006b4a]" : "text-muted-foreground hover:text-foreground",
             )}
           >

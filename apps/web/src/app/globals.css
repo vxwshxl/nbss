@@ -346,6 +346,37 @@
   html,
   body {
     overscroll-behavior: none;
+    /*
+     * Nothing may ever widen the page. A phone shows a page wider than its
+     * screen zoomed out, or lets it slide sideways; either way every screen
+     * looks broken. `clip` rather than `hidden`: it makes no scroll container,
+     * so sticky headers and bars keep working. The rules below fix the causes;
+     * this is the backstop for one nobody has found yet.
+     */
+    overflow-x: clip;
+  }
+  /* A long unbroken word (a URL, an ID) breaks rather than pushing its box wider. */
+  body {
+    overflow-wrap: break-word;
+  }
+  /*
+   * Grid and flex children default to `min-width: auto`: they refuse to be
+   * narrower than their content. In a grid with no column template (the usual
+   * phone layout, columns only from `sm:`), one truncated name or a scrolling
+   * table then sets the column's width, and the column overflows the screen.
+   * Every dialog is a grid too, so this is also what widened popups past the
+   * phone's edge. Letting children shrink lets `truncate` and inner scrollers
+   * do their job. In a wrapping flex row the same applies to an item that sits
+   * alone on its line: it may not be wider than the row.
+   * Base layer, so any `min-w-*` / `max-w-*` utility still wins.
+   */
+  .grid > *,
+  .inline-grid > * {
+    min-width: 0;
+  }
+  .flex-wrap > * {
+    min-width: 0;
+    max-width: 100%;
   }
   /*
    * An icon beside text keeps its size: in a flex row whose label wraps, a
