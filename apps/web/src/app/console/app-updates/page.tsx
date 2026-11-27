@@ -44,7 +44,7 @@ export default async function AppUpdatesPage() {
     admin.from("app_release").select("version_code, version_name, store_url, notes, updated_at").eq("id", 1).maybeSingle(),
     admin
       .from("guard_devices")
-      .select("id, app_version, brand, model, last_seen_at, profiles!guard_devices_profile_id_fkey(full_name, phone, employee_code, active, is_test)")
+      .select("id, profile_id, app_version, brand, model, last_seen_at, profiles!guard_devices_profile_id_fkey(full_name, phone, employee_code, active, is_test)")
       .gte("last_seen_at", since)
       .order("last_seen_at", { ascending: false }),
   ]);
@@ -52,9 +52,19 @@ export default async function AppUpdatesPage() {
   const current = release ?? { version_code: 0, version_name: null, store_url: null, notes: null, updated_at: null };
 
   // Real phones only: in the last 30 days, of active people, not test or load-test accounts or developer test apps.
-  const real = (phones ?? [])
+  const used = (phones ?? [])
     .map((d) => ({ d, p: one(d.profiles as unknown as Person | null), v: parse(d.app_version) }))
     .filter(({ p, v }) => p && p.active && !p.is_test && !/^(TEST|LOAD|E2F)-/.test(p.employee_code) && !v.test);
+
+  // One row per person, at the newest build they used: someone already on the latest build
+  // is not also listed under an older one because of a second phone or an old install. On a
+  // tie, the phone seen last (the rows come newest first).
+  const best = new Map<string, (typeof used)[number]>();
+  for (const row of used) {
+    const prev = best.get(row.d.profile_id);
+    if (!prev || (row.v.build ?? -1) > (prev.v.build ?? -1)) best.set(row.d.profile_id, row);
+  }
+  const real = [...best.values()];
 
   const groups = new Map<string, BuildGroup>();
   for (const { d, p, v } of real) {
@@ -78,7 +88,7 @@ export default async function AppUpdatesPage() {
 
       <Panel tone="slate" title="Guards' phones" icon={Smartphone}>
         <p className="mb-4 text-sm text-muted-foreground">
-          {real.length} phones used in the last 30 days, by the app build they run
+          {real.length} people used the app in the last 30 days, each shown once at the newest build they run
           {current.version_code > 0 ? (
             <>
               . <span className="font-semibold text-foreground">{behind}</span> are below build {current.version_code} and see the update screen.
