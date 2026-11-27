@@ -76,12 +76,12 @@ export async function GET() {
             <div style={{ display: "flex", fontSize: 17, fontWeight: 700, letterSpacing: "0.2em", color: BRAND_DEEP, marginTop: 44 }}>
               COMPANY PROFILE · SECURITY SERVICES
             </div>
-            <div style={{ display: "flex", flexDirection: "column", fontSize: 72, fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.02, marginTop: 18 }}>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: 64, fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.04, marginTop: 18 }}>
               <div style={{ display: "flex" }}>Trained guards for</div>
               <div style={{ display: "flex", alignItems: "flex-start" }}>
-                <span>every site,&nbsp;</span>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ color: BRAND }}>across Assam.</span>
+                <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>every site,&nbsp;</span>
+                <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+                  <span style={{ color: BRAND, whiteSpace: "nowrap" }}>across Assam.</span>
                   <div style={{ display: "flex", height: 5, marginTop: 4, borderRadius: 3, background: `linear-gradient(90deg, ${BRAND}, ${BRAND_DEEP})` }} />
                 </div>
               </div>

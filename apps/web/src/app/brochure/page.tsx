@@ -7,6 +7,7 @@ import {
   BellRing,
   BookOpen,
   ClipboardCheck,
+  Clock,
   Factory,
   FileText,
   Flag,
@@ -24,7 +25,6 @@ import {
   ShieldCheck,
   ShoppingBag,
   Siren,
-  Smartphone,
   Target,
   Users,
   type LucideIcon,
@@ -344,7 +344,7 @@ export default function BrochurePage() {
                 {site.email}
               </a>
               <p className="mt-4 flex items-center gap-2 text-[12px] font-semibold text-emerald-100">
-                <Smartphone className="size-4" /> Office hours
+                <Clock className="size-4" /> Office hours
               </p>
               <p className="mt-1.5 text-[14px]">{site.hoursShort}</p>
             </div>
@@ -404,10 +404,10 @@ export default function BrochurePage() {
               </span>
               <span className="flex items-center gap-3 px-2 pt-4 pb-2 sm:px-3">
                 <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#ece6d6] bg-white">
-                  <Image src="/img/partners/schoolerp.webp" alt="" width={96} height={96} className="size-full object-contain p-1" />
+                  <Image src="/img/partners/schoolerp.webp" alt="" width={96} height={96} loading="eager" className="size-full object-contain p-1" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[16px] font-semibold">SchoolERP by Bodo Okhrang</span>
+                  <span className="block text-[15px] leading-snug font-semibold sm:text-[16px]">SchoolERP by Bodo Okhrang</span>
                   <span className="block truncate text-[13px] text-slate-500">schoolerp.okhrang.com</span>
                 </span>
                 <span aria-hidden className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f5c542] text-slate-900 shadow-sm transition-colors group-hover:bg-[#f0b92a]">
