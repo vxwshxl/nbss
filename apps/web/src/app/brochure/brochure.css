@@ -1,24 +1,14 @@
 /*
- * /brochure on paper. The route holds two documents:
- *   .onepager-doc  → one A4 page, no margin: the default page, which has no margin
- *                    site-wide (globals.css); only its size is set here, A4 as every
- *                    printout of this site already is   (one-pager.css)
- *   .brochure-doc  → A4 pages with 10 mm margins all round, each section from a fresh page,
- *                    no card, photo or stat split across two. A named page, so
- *                    its margin never leaks to the rest of the site (which keeps
- *                    this stylesheet after a client-side navigation)
+ * /brochure on paper. The route holds two documents, both drawn as A4 sheets that
+ * print on the default page, which globals.css leaves without a margin; only its
+ * size is set here (A4, as every printout of this site already is):
+ *   .onepager-doc  → one page   (one-pager.css)
+ *   .brochure-doc  → eight pages (brochure-pages.css)
  * The print buttons set <html data-print="onepager|brochure"> to print just one;
  * Cmd/Ctrl+P prints both, the one-pager first.
  */
 @page {
   size: A4;
-}
-/* Side margins are padding on .brochure-doc instead: Chrome lays the whole document
- * out at one width, so printed after the margin-less one-pager, a page with side
- * margins was cut off on the right. */
-@page brochure {
-  size: A4;
-  margin: 10mm 0;
 }
 
 @media print {
@@ -39,9 +29,8 @@
     max-width: none;
     padding: 0;
   }
-
   /* Only the brochure prints. The toast region and route announcer that follow it
-   * in <body> sit on the default page and would open a blank last sheet. */
+   * in <body> would open a blank last sheet. */
   body:has(> .brochure) > :not(.brochure) {
     display: none !important;
   }
@@ -51,37 +40,8 @@
   html[data-print="brochure"] .onepager-doc {
     display: none !important;
   }
-  /* A different named page starts a new sheet by itself; no forced break here,
-   * which would leave a blank page after the one-pager when it prints alone. */
-  .brochure-doc {
-    page: brochure;
-    padding-inline: 10mm;
-  }
-
-  /* Flat on paper: shadows print as grey smudges. */
-  .brochure-doc .sheet {
-    box-shadow: none !important;
-    border: 1px solid #e8ecea;
-    margin-top: 0 !important;
+  .onepager-doc + .brochure-doc {
     break-before: page;
-  }
-  .brochure-doc > section.sheet:first-of-type {
-    break-before: auto;
-  }
-  /* Short closing sections follow on rather than taking a page each. */
-  .brochure-doc .sheet-flow {
-    break-before: auto;
-    margin-top: 6mm !important;
-  }
-  .brochure .keep,
-  .brochure img,
-  .brochure li,
-  .brochure dl > div {
-    break-inside: avoid;
-  }
-  .brochure h2,
-  .brochure h3 {
-    break-after: avoid;
   }
   /* Hover lifts and zooms would be caught mid-way. */
   .brochure * {
