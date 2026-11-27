@@ -18,7 +18,9 @@ import { AronaiBand, BRAND, BRAND_DEEP, INK, INK_DIM, PAPER } from "@/lib/og/par
  */
 export const dynamic = "force-static";
 
-const CHIPS = ["Schools", "Hospitals", "Government", "Banks & ATMs", "Hotels", "Industry"];
+const CHIPS = ["Schools", "Hospitals", "Government", "Banks & ATMs", "Hotels"];
+/** The photo stops above the footer rule, so the address and facts sit on white. */
+const PHOTO_H = 470;
 
 export async function GET() {
   const root = process.cwd();
@@ -37,16 +39,27 @@ export async function GET() {
         <AronaiBand />
         <div style={{ position: "relative", flex: 1, display: "flex" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={guardsSrc} alt="" width={460} height={602} style={{ position: "absolute", right: 0, top: 0, width: 460, height: 602, objectFit: "cover" }} />
+          <img src={guardsSrc} alt="" width={460} height={PHOTO_H} style={{ position: "absolute", right: 0, top: 0, width: 460, height: PHOTO_H, objectFit: "cover", objectPosition: "50% 30%" }} />
           <div
             style={{
               position: "absolute",
               right: 0,
               top: 0,
               width: 460,
-              height: 602,
+              height: PHOTO_H,
               display: "flex",
               background: `linear-gradient(90deg, ${PAPER} 0%, rgba(255,255,255,0.8) 22%, rgba(255,255,255,0) 60%)`,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: PHOTO_H - 120,
+              width: 460,
+              height: 120,
+              display: "flex",
+              background: `linear-gradient(180deg, rgba(255,255,255,0) 0%, ${PAPER} 100%)`,
             }}
           />
 
@@ -65,9 +78,12 @@ export async function GET() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", fontSize: 72, fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.02, marginTop: 18 }}>
               <div style={{ display: "flex" }}>Trained guards for</div>
-              <div style={{ display: "flex" }}>
-                every site,&nbsp;
-                <span style={{ color: BRAND, borderBottom: `5px solid ${BRAND}`, paddingBottom: 2 }}>across Assam.</span>
+              <div style={{ display: "flex", alignItems: "flex-start" }}>
+                <span>every site,&nbsp;</span>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <span style={{ color: BRAND }}>across Assam.</span>
+                  <div style={{ display: "flex", height: 5, marginTop: 4, borderRadius: 3, background: `linear-gradient(90deg, ${BRAND}, ${BRAND_DEEP})` }} />
+                </div>
               </div>
             </div>
 
@@ -94,7 +110,6 @@ export async function GET() {
               alignItems: "center",
               borderTop: "1.5px solid #E3E8E5",
               paddingTop: 20,
-              background: PAPER,
             }}
           >
             <div style={{ display: "flex", fontSize: 22, fontWeight: 700 }}>nbsskokrajhar.com/brochure</div>

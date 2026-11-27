@@ -10,6 +10,7 @@ import {
   Factory,
   FileText,
   Flag,
+  Globe,
   HardHat,
   HeartPulse,
   Landmark,
@@ -111,6 +112,14 @@ const STRIP = [
   { src: "/img/nbss/hall-gate.webp", alt: "NBSS guards at a hall gate" },
 ];
 
+/**
+ * A row of buttons: on a phone two to a row at half width each, and an odd last one
+ * centred at the same width; from sm up, a plain row.
+ */
+const ACTIONS =
+  "grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap [&>*]:justify-center sm:[&>*]:justify-start [&>*:last-child:nth-child(odd)]:col-span-2 [&>*:last-child:nth-child(odd)]:w-[calc(50%-0.3125rem)] [&>*:last-child:nth-child(odd)]:justify-self-center sm:[&>*:last-child:nth-child(odd)]:w-auto print:hidden";
+const BTN = "press inline-flex h-11 min-w-0 items-center gap-2 rounded-full px-3 text-[14px] font-semibold whitespace-nowrap sm:px-5";
+
 const WHATSAPP = site.social.find((s) => s.label === "WhatsApp")?.url ?? "https://wa.me/917577036205";
 const SCHOOLERP = "https://schoolerp.okhrang.com";
 
@@ -147,15 +156,18 @@ export default function BrochurePage() {
                 Territorial Council. We supply trained, police-verified security personnel to government, corporate, institutional
                 and commercial clients, supervised around the clock.
               </p>
-              <div className="mt-6 flex flex-wrap gap-2.5 print:hidden">
-                <a href={`tel:${tel(site.phone)}`} className="press inline-flex h-11 items-center gap-2 rounded-full bg-[#009164] px-5 text-[14px] font-semibold text-white shadow-[0_2px_0_#006b4a] hover:bg-[#00845b]">
-                  <Phone className="size-4" /> Call {site.phone}
+              <div className={`mt-6 ${ACTIONS}`}>
+                <a href={`tel:${tel(site.phone)}`} className={`${BTN} bg-[#009164] text-white shadow-[0_2px_0_#006b4a] hover:bg-[#00845b]`}>
+                  <Phone className="size-4" /> Call<span className="hidden sm:inline"> {site.phone}</span>
                 </a>
-                <a href={WHATSAPP} className="press inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-5 text-[14px] font-semibold hover:bg-slate-50">
+                <a href={WHATSAPP} className={`${BTN} border border-slate-200 bg-white hover:bg-slate-50`}>
                   <MessageCircle className="size-4 text-[#25D366]" /> WhatsApp
                 </a>
-                <Link href="/contact" className="press inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-5 text-[14px] font-semibold hover:bg-slate-50">
+                <Link href="/contact" className={`${BTN} border border-slate-200 bg-white hover:bg-slate-50`}>
                   Get a quote <ArrowUpRight className="size-4" />
+                </Link>
+                <Link href="/" className={`${BTN} border border-slate-200 bg-white hover:bg-slate-50`}>
+                  <Globe className="size-4 text-[#009164]" /> Website
                 </Link>
               </div>
             </div>
@@ -349,12 +361,16 @@ export default function BrochurePage() {
               </p>
             </div>
           </div>
-          <div className="mt-7 flex flex-wrap gap-2.5 print:hidden">
-            <a href={WHATSAPP} className="press inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-[#00714e] shadow-sm">
-              <MessageCircle className="size-4" /> Message on WhatsApp
+          <div className={`mt-7 ${ACTIONS}`}>
+            <a href={WHATSAPP} className={`${BTN} bg-white text-[#00714e] shadow-sm`}>
+              <MessageCircle className="size-4" /> <span className="sm:hidden">WhatsApp</span>
+              <span className="hidden sm:inline">Message on WhatsApp</span>
             </a>
-            <Link href="/contact" className="press inline-flex h-11 items-center gap-2 rounded-full border border-white/40 px-5 text-[14px] font-semibold hover:bg-white/10">
-              Request a quote <ArrowUpRight className="size-4" />
+            <Link href="/contact" className={`${BTN} border border-white/40 hover:bg-white/10`}>
+              Get a quote <ArrowUpRight className="size-4" />
+            </Link>
+            <Link href="/" className={`${BTN} border border-white/40 hover:bg-white/10`}>
+              <Globe className="size-4" /> Visit website
             </Link>
           </div>
           <p className="mt-6 hidden text-[13px] font-semibold print:block">nbsskokrajhar.com · {site.phone}</p>
