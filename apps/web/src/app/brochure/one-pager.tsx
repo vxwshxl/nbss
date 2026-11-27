@@ -1,11 +1,10 @@
 import Image from "next/image";
 import { BadgeCheck, Check, Clock, Globe, Mail, MapPin, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 
-import { syllabus } from "@/content/gallery";
 import { services } from "@/content/services";
-import { BTR_DISTRICTS, pillars, site, stats } from "@/content/site";
+import { BTR_DISTRICTS, site, stats } from "@/content/site";
 
-import { ROLES, SERVICE_ICONS, STEPS, TECH } from "./content";
+import { REASONS, ROLES, SERVICE_ICONS, STEPS, TECH, TRAINING } from "./content";
 import "./one-pager.css";
 
 /**
@@ -43,9 +42,8 @@ export function OnePager() {
             Trained guards for every site, <em>across Assam.</em>
           </h2>
           <p className="op-lead">
-            A professionally managed security agency headquartered in Kokrajhar, BTC. We supply trained,
-            police-verified guards to government, corporate, institutional and commercial clients across Assam,
-            supervised around the clock.
+            Police-verified guards for every kind of site, trained before first duty and supervised day and
+            night from our own control room in Kokrajhar.
           </p>
           <ul className="op-chips" aria-label="Who we post">
             {ROLES.map((r) => (
@@ -55,11 +53,11 @@ export function OnePager() {
         </div>
         <figure className="op-photo">
           <Image
-            src="/img/nbss/parade-ranks.webp"
-            alt="NBSS guards in uniform standing in formation"
+            src="/img/nbss/stadium-night.webp"
+            alt="NBSS guards in uniform lined up at a stadium at dusk"
             fill
             sizes="(min-width: 860px) 300px, 100vw"
-            className="object-cover object-[60%_75%]"
+            className="object-cover object-[50%_60%]"
           />
           <figcaption>
             <ShieldCheck aria-hidden /> {site.tagline}
@@ -105,10 +103,10 @@ export function OnePager() {
             Why clients choose NBSS
           </h3>
           <ul className="op-checks">
-            {pillars.map((p) => (
-              <li key={p.index}>
+            {REASONS.map((r) => (
+              <li key={r.title}>
                 <Check aria-hidden strokeWidth={3} />
-                {p.title}
+                {r.title}
               </li>
             ))}
           </ul>
@@ -118,9 +116,9 @@ export function OnePager() {
             Training before first duty
           </h3>
           <ol className="op-training">
-            {syllabus.map((m) => (
-              <li key={m.code}>
-                <span>{m.code}</span>
+            {TRAINING.map((m, i) => (
+              <li key={m.title}>
+                <span>0{i + 1}</span>
                 {m.title}
               </li>
             ))}
@@ -197,7 +195,7 @@ export function OnePager() {
           </li>
           <li>
             <Clock aria-hidden />
-            <span>Office Mon–Sat, 9 AM–6 PM · desk 24 × 7</span>
+            <span>Office Mon to Sat, 9 AM to 6 PM · desk 24 × 7</span>
           </li>
           <li>
             <MapPin aria-hidden />

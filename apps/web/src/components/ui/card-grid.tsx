@@ -121,7 +121,7 @@ export function CardGrid({
       {filtered.length > pageSize && (
         <div className="flex items-center justify-end gap-4 text-sm text-muted-foreground">
           <span className="tabular-nums">
-            {current * pageSize + 1}&ndash;
+            {current * pageSize + 1}-
             {Math.min(filtered.length, current * pageSize + pageSize)} of{" "}
             {filtered.length}
           </span>

@@ -164,7 +164,7 @@ export function GalleryMosaic({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Photograph ${open! + 1} of ${photos.length} \u2014 ${photo.caption}`}
+          aria-label={`Photograph ${open! + 1} of ${photos.length} - ${photo.caption}`}
           /* Only a click that lands on the veil itself closes; one that lands
              on the photograph or a control bubbles up from a child and is
              ignored. */

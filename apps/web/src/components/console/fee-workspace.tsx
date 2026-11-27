@@ -116,11 +116,11 @@ function StatusPill({ state }: { state: State }) {
   return <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", cls)}>{label}</span>;
 }
 
-/** The Indian financial year a month belongs to, as "2026–27". */
+/** The Indian financial year a month belongs to, as "2026-27". */
 function fy(period: string) {
   const [y, m] = period.split("-").map(Number) as [number, number];
   const start = m >= 4 ? y : y - 1;
-  return `${start}–${String((start + 1) % 100).padStart(2, "0")}`;
+  return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
 }
 
 /** Every month from the first invoice to the end of the current financial year. */
@@ -279,7 +279,7 @@ export function FeeWorkspace({
                       <td className="px-5 py-3.5 tabular-nums">{inv ? day(inv.due_on) : day(`${row.period.slice(0, 8)}${String(settings?.due_day ?? 15).padStart(2, "0")}`)}</td>
                       <td className="px-5 py-3.5 text-right tabular-nums">
                         {!inv ? (
-                          <span className="text-muted-foreground/60">—</span>
+                          <span className="text-muted-foreground/60">-</span>
                         ) : (
                           <>
                             <span className="font-semibold">{inr(inv.total_paise)}</span>
@@ -429,8 +429,8 @@ function Accounts({ accounts, rate }: { accounts: BilledAccount[]; rate: number 
       printCell: (a) => `${a.name} (${a.code})`,
     },
     { header: "Account", cell: (a) => kindLabel(a.kind), sortValue: (a) => kindLabel(a.kind), searchValue: (a) => kindLabel(a.kind) },
-    { header: "Mobile", cell: (a) => <span className="tabular-nums">{a.phone ?? "—"}</span>, sortValue: (a) => a.phone ?? "", searchValue: (a) => a.phone ?? "" },
-    { header: "Active since", cell: (a) => (a.since ? day(a.since) : "—"), sortValue: (a) => a.since ?? "" },
+    { header: "Mobile", cell: (a) => <span className="tabular-nums">{a.phone ?? "-"}</span>, sortValue: (a) => a.phone ?? "", searchValue: (a) => a.phone ?? "" },
+    { header: "Active since", cell: (a) => (a.since ? day(a.since) : "-"), sortValue: (a) => a.since ?? "" },
     { header: "Last seen", cell: (a) => (a.lastSeen ? day(a.lastSeen) : "Never"), sortValue: (a) => a.lastSeen ?? "" },
     {
       header: "Per month",

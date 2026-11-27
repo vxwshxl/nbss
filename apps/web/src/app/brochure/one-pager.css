@@ -201,13 +201,15 @@
   margin-bottom: 6px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
 }
-.op-label::after {
+/* A short dash before the heading, not a long rule after it. */
+.op-label::before {
   content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--op-line);
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--op-green);
 }
 .op-icon {
   display: grid;
@@ -314,8 +316,8 @@
 .op-dark .op-label {
   color: #6ee7b7;
 }
-.op-dark .op-label::after {
-  background: rgb(255 255 255 / 0.15);
+.op-dark .op-label::before {
+  background: #6ee7b7;
 }
 .op-training {
   display: grid;
