@@ -695,7 +695,7 @@ function Invoice({ inv, s, paying, online, onPay, onPrint, inDialog = true }: { 
           </div>
         </div>
 
-        <p className="text-center text-[14px] font-semibold text-[#009164]">Thank you for using our service. It&apos;s a pleasure working with you!</p>
+        <p className="text-center text-[14px] font-semibold text-[#009164]">Thank you for using our service. We appreciate the opportunity to work with you.</p>
 
         <p className="border-t border-slate-200 pt-3 text-center text-[11px] text-slate-400">This is a system generated invoice.</p>
 
