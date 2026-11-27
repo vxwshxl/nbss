@@ -42,6 +42,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     // The app's download page lives outside the marketing pages, so it is listed here.
     { url: `${BASE}/android`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 },
+    // The brochure, sent as a link to prospective clients; also outside the marketing pages.
+    { url: `${BASE}/brochure`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 },
     ...vacancies.map((v) => ({
       url: `${BASE}/careers/${v.id}`,
       lastModified: now,

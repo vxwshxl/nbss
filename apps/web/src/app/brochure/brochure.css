@@ -1,0 +1,53 @@
+/*
+ * The brochure on paper: "Save as PDF" from the print sheet gives A4 pages, colours
+ * kept, each section starting on a fresh page and no card split across two.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .brochure,
+  .brochure * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .brochure {
+    background: #fff !important;
+  }
+  .brochure > div {
+    max-width: none;
+    padding: 0;
+  }
+  /* Flat on paper: shadows print as grey smudges. */
+  .brochure .sheet {
+    box-shadow: none !important;
+    border: 1px solid #e8ecea;
+    margin-top: 0 !important;
+    break-before: page;
+  }
+  .brochure .sheet:first-child {
+    break-before: auto;
+  }
+  /* Short closing sections follow on rather than taking a page each. */
+  .brochure .sheet-flow {
+    break-before: auto;
+    margin-top: 6mm !important;
+  }
+  .brochure .keep {
+    break-inside: avoid;
+  }
+  /* Hover lifts and zooms would be caught mid-way. */
+  .brochure * {
+    transition: none !important;
+  }
+  /* The site's floating widgets have no place on paper. */
+  [data-nibo],
+  [aria-label="Chat on WhatsApp"] {
+    display: none !important;
+  }
+}
