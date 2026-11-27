@@ -894,6 +894,11 @@
   height: 16px;
 }
 
+/* Paper only: the photo that stands in for the SchoolERP card when printed. */
+.bp-photo.bp-print-only {
+  display: none;
+}
+
 /* ─── Phones and small tablets: the same pages, reflowed ─── */
 @media screen and (max-width: 859px) {
   .bp-stack {
@@ -1027,5 +1032,17 @@
   }
   .bp-actions {
     display: none !important;
+  }
+  /* The SchoolERP card is for the website; on paper the last page ends on a photo. */
+  .bp-partner-row {
+    display: none !important;
+  }
+  .bp-photo.bp-print-only {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .bp-contact.bp-grow {
+    flex: none;
   }
 }

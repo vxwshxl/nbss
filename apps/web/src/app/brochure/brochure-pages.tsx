@@ -494,6 +494,9 @@ function ContactPage() {
         <p className="bp-contact-web">nbsskokrajhar.com</p>
       </div>
 
+      {/* On paper the SchoolERP card is left out (it is for the website); a photo takes its room. */}
+      <Photo src="/img/nbss/stadium-line.webp" alt="NBSS guards lined up at a stadium" className="bp-print-only" position="50% 60%" />
+
       <div className="bp-partner-row">
         <div className="bp-partner-copy">
           <small>From our technology partner</small>
