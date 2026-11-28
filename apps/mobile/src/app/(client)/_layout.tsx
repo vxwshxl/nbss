@@ -55,9 +55,9 @@ export default function ClientLayout() {
           backgroundColor: color.card,
           borderTopColor: color.lineSoft,
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: 72 + insets.bottom,
-          paddingBottom: insets.bottom + 10,
-          paddingTop: 6,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 8,
         },
         // Geist, so the tab bar does not betray the system font under a screen full of it.
         // Room for the icon and a whole label, at any system font size (it was cut at the bottom).

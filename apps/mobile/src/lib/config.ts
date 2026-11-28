@@ -73,6 +73,9 @@ export const APP_BUILD: number | null = (() => {
  */
 export const APP_VERSION = `${Constants.expoConfig?.version ?? "0.0.0"}${APP_BUILD ? ` (${APP_BUILD})` : ""}`;
 
+/** Just the version name, e.g. "1.3.0", for the footer under a screen. From app.config, so it is never hardcoded. */
+export const APP_VERSION_NAME = Constants.expoConfig?.version ?? "0.0.0";
+
 /**
  * Google Maps, for the browser preview (the native maps read it from the
  * manifest that app.config.ts writes). Public by design and restricted by

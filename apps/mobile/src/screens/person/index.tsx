@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { COMPANY, istTime, tel, clock12 } from "@nbss/shared/company";
 import { roleLabel, type Role } from "@nbss/shared/identity";
-import { toRing } from "@nbss/shared/geo";
+import { formatDistance, toRing } from "@nbss/shared/geo";
 import { freshness } from "@nbss/shared/location";
 import { hoursLabel, readBreaks, shiftTypeLabel, type Break } from "@nbss/shared/shifts";
 
@@ -275,7 +275,7 @@ export function PersonPage({ id }: { id: string }) {
                   <>
                     <Row
                       label="Position"
-                      value={`${d.position.inside ? "Inside the boundary" : `${Math.round(d.position.distance ?? 0)} m outside`} · ${age === "live" ? "live" : `heard ${ago(d.position.at, now).replace(/^(Just now|\d+ (min|h) ago)$/, (m) => m.toLowerCase())}`}`}
+                      value={`${d.position.inside ? "Inside the boundary" : `${formatDistance(d.position.distance ?? 0)} outside`} · ${age === "live" ? "live" : `heard ${ago(d.position.at, now).replace(/^(Just now|\d+ (min|h) ago)$/, (m) => m.toLowerCase())}`}`}
                       first
                     />
                     <Row label="Duty" value={open.duty ?? "No set time"} />

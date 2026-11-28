@@ -8,6 +8,7 @@ import { clock12, istTime, tel } from "@nbss/shared/company";
 import { freshness } from "@nbss/shared/location";
 import { seesAllSites } from "@nbss/shared/identity";
 import { EVENTS, LIVE_MAP_CHANNEL, siteChannel, type LivePosition, type PositionBatch } from "@nbss/shared/realtime";
+import { formatDistance } from "@nbss/shared/geo";
 import { SOS_KIND_LABEL } from "@nbss/shared/sos";
 
 import { Avatar } from "@/components/avatar";
@@ -559,7 +560,7 @@ function PeoplePanel({
                     <Text variant="caption" tone="muted" numberOfLines={2}>
                       {[
                         siteNames.get(p.site_id ?? "") ?? "A site",
-                        group === "outside" ? `${Math.round(p.distance_m ?? 0)} m out` : null,
+                        group === "outside" ? `${formatDistance(p.distance_m ?? 0)} out` : null,
                         p.battery != null ? `${p.battery}%${p.charging ? " charging" : ""}` : "battery -",
                       ]
                         .filter(Boolean)
@@ -598,7 +599,7 @@ function GuardHead({ p, person, site, now, onClose }: { p: LivePosition; person?
         <View style={styles.pillRow}>
           <StatusPill tone={p.mode === "emergency" ? "danger" : age} label={p.mode === "emergency" ? "SOS" : age === "live" ? "Live" : age === "stale" ? "No signal" : "Lost"} />
           <Text variant="caption" tone="muted" numberOfLines={1}>
-            {p.inside_fence ? "Inside" : `${Math.round(p.distance_m ?? 0)} m out`} · {istTime(p.recorded_at)}
+            {p.inside_fence ? "Inside" : `${formatDistance(p.distance_m ?? 0)} out`} · {istTime(p.recorded_at)}
           </Text>
         </View>
       </View>
@@ -706,7 +707,7 @@ function SiteBody({
       </View>
       <View style={styles.facts}>
         <Fact label="Shift" value={site.shift_start && site.shift_end ? `${clock12(site.shift_start)} - ${clock12(site.shift_end)}` : "Not set"} />
-        <Fact label="Boundary" value={site.polygon ? "Drawn area" : `${site.geofence_radius_m} m circle`} />
+        <Fact label="Boundary" value={site.polygon ? "Drawn area" : `${formatDistance(site.geofence_radius_m)} circle`} />
       </View>
       <Button label="Directions" icon={Navigation} variant="outline" fullWidth onPress={() => void Linking.openURL(directionsUrl(site))} />
 
@@ -774,7 +775,7 @@ function GuardRow({ p, person, site, now, first, onPress }: { p: LivePosition; p
               </Text>
             ) : null}
             <Text variant="caption" tone="muted" numberOfLines={2}>
-              {[site, p.inside_fence ? "inside" : `${Math.round(p.distance_m ?? 0)} m out`, p.battery !== null ? `${p.battery}%` : null].filter(Boolean).join(" · ")}
+              {[site, p.inside_fence ? "inside" : `${formatDistance(p.distance_m ?? 0)} out`, p.battery !== null ? `${p.battery}%` : null].filter(Boolean).join(" · ")}
             </Text>
           </View>
           <StatusPill tone={p.mode === "emergency" ? "danger" : age} label={p.mode === "emergency" ? "SOS" : age === "live" ? "Live" : age === "stale" ? "No signal" : "Lost"} />

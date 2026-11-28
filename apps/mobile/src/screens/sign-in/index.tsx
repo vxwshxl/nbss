@@ -12,7 +12,7 @@ import { Nibo } from "@/components/nibo/nibo";
 import { Text } from "@/components/text";
 import { useLayout } from "@/hooks/use-breakpoint";
 import { useAuth } from "@/lib/auth";
-import { WEB_URL } from "@/lib/config";
+import { APP_VERSION_NAME, WEB_URL } from "@/lib/config";
 import { color, font, gradient, radius, space } from "@/theme/tokens";
 
 /**
@@ -54,10 +54,15 @@ export function SignIn() {
   );
 
   const foot = (
-    <View style={[styles.foot, { paddingBottom: insets.bottom + space[4] }]}>
-      <FootLink label="Privacy" path="/privacy-policy" />
-      <Dot />
-      <FootLink label="Terms" path="/terms-and-conditions" />
+    <View style={[styles.footWrap, { paddingBottom: insets.bottom + space[4] }]}>
+      <View style={styles.foot}>
+        <FootLink label="Privacy" path="/privacy-policy" />
+        <Dot />
+        <FootLink label="Terms" path="/terms-and-conditions" />
+      </View>
+      <Text variant="caption" tone="muted" style={styles.version}>
+        Version {APP_VERSION_NAME}
+      </Text>
     </View>
   );
 
@@ -389,7 +394,9 @@ const styles = StyleSheet.create({
   band: { flexGrow: 1, minHeight: 120, marginTop: space[4], borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden", backgroundColor: "#06110d" },
   bandShort: { minHeight: 80 },
   cover: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
-  foot: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2], paddingTop: space[4] },
+  footWrap: { alignItems: "center", paddingTop: space[4], gap: space[2] },
+  foot: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space[2] },
+  version: { opacity: 0.7 },
   footItem: { flexDirection: "row", alignItems: "center", gap: 4 },
 
   night: { flex: 1.1, backgroundColor: "#06110d", justifyContent: "space-between", overflow: "hidden" },

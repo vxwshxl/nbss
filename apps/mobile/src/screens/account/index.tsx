@@ -12,7 +12,7 @@ import { PermissionsPanel } from "@/components/permissions-panel";
 import { Screen } from "@/components/screen";
 import { Text } from "@/components/text";
 import { photoOf, useAuth } from "@/lib/auth";
-import { WEB_URL } from "@/lib/config";
+import { APP_VERSION_NAME, WEB_URL } from "@/lib/config";
 import { gradient, radius, space } from "@/theme/tokens";
 
 /**
@@ -110,6 +110,9 @@ export function Account() {
         </Text>
         <LegalLink label="Privacy" path="/privacy-policy" />
       </View>
+      <Text variant="caption" tone="muted" style={styles.version}>
+        Version {APP_VERSION_NAME}
+      </Text>
     </Screen>
   );
 }
@@ -151,4 +154,5 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: space[2.5], paddingVertical: 3, borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.22)" },
   badgeSoft: { backgroundColor: "rgba(255,255,255,0.12)" },
   legal: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space[2] },
+  version: { textAlign: "center", opacity: 0.7, marginTop: space[2] },
 });
