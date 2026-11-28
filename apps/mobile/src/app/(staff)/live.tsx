@@ -15,6 +15,7 @@ import { Button } from "@/components/button";
 import { liveHeading, guardState, STATE_COLOR, MAP_COLOR, fenceRing, initialsOf } from "@/components/live-map/shared";
 import { MapCanvas, type MapFence, type MapPerson } from "@/components/map-canvas";
 import { MapSheet, SheetReveal, type SheetSnap } from "@/components/map-sheet";
+import { MyDutyCard } from "@/components/my-duty-card";
 import { Panel, PanelRow } from "@/components/panel";
 import { PermissionsPanel } from "@/components/permissions-panel";
 import { RouteDetails, useRoute } from "@/components/route-card";
@@ -363,6 +364,8 @@ export default function LiveRoute() {
           />
         ) : (
           <>
+            {/* A supervisor's or field officer's own check-in, as on Today; nothing for the office. */}
+            <MyDutyCard />
             {/* Location and alerts, so this phone can raise and hear an SOS: only while something is missing. */}
             <PermissionsPanel onlyIfMissing />
             {alerts.length > 0 && <SosPanel alerts={alerts} />}

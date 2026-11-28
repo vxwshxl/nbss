@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { LogIn, LogOut, MapPinned, Radio } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { istTime } from "@nbss/shared/company";
@@ -11,7 +11,7 @@ import { SolidButton } from "@/components/solid-button";
 import { Text } from "@/components/text";
 import { useLoader } from "@/hooks/use-loader";
 import { useAuth } from "@/lib/auth";
-import { openPunch, punchIn, punchOut, supervisedSites, type OpenPunch, type Site } from "@/lib/duty";
+import { onDutyChanged, openPunch, punchIn, punchOut, supervisedSites, type OpenPunch, type Site } from "@/lib/duty";
 import { ensureTracking } from "@/lib/keep-alive";
 import { requestTracking } from "@/lib/location";
 import { space } from "@/theme/tokens";
@@ -35,6 +35,8 @@ export function MyDutyCard() {
     return { punch, sites };
   }, [field, staffOnDuty]);
   const { data, reload } = useLoader(fetcher);
+  // The card is on Live and on Today: a check-in on one shows on the other at once.
+  useEffect(() => onDutyChanged(() => void reload()), [reload]);
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);

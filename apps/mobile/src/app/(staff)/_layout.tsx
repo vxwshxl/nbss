@@ -10,6 +10,7 @@ import { AppState } from "react-native";
 import { isStaff } from "@nbss/shared/identity";
 
 import { FloatingSos } from "@/components/floating-sos";
+import { OnDutyFeed } from "@/components/on-duty-feed";
 import { SosRinger } from "@/components/sos-ringer";
 import { TopBar } from "@/components/top-bar";
 import { Avatar } from "@/components/avatar";
@@ -59,6 +60,8 @@ export default function StaffLayout() {
 
   return (
     <LiveFeedProvider>
+      {/* A supervisor's or field officer's position while checked in and the app is open. */}
+      <OnDutyFeed />
       <Tabs
         screenOptions={{
           header: () => (

@@ -48,6 +48,19 @@ export type OpenPunch = {
   status: string;
 };
 
+/**
+ * Told whenever this phone checks in or out, so whatever follows the duty (the staff
+ * app's foreground feed, OnDutyFeed) reacts at once instead of on its next poll.
+ */
+const dutyListeners = new Set<() => void>();
+export function onDutyChanged(fn: () => void): () => void {
+  dutyListeners.add(fn);
+  return () => void dutyListeners.delete(fn);
+}
+function dutyChanged(): void {
+  for (const fn of dutyListeners) fn();
+}
+
 /** The guard's currently open punch, if they are on duty. */
 export async function openPunch(): Promise<OpenPunch | null> {
   // Always the signed-in person's own. A guard can read only their own rows, but a
@@ -285,6 +298,7 @@ export async function punchIn(siteId: string | null, fix?: Location.LocationObje
   // one landed. Nothing is overwritten (one open record at a time), so it is a success.
   if (error && /already checked in/i.test(error.message)) {
     if (!IS_WEB && CAN_TRACK_IN_BACKGROUND) await startTracking("on_duty").catch(() => undefined);
+    dutyChanged();
     return { ok: true, distanceM: 0, message: "You are checked in." };
   }
   // The function raises with a message written for a guard at a gate, so it is shown
@@ -330,6 +344,7 @@ export async function punchIn(siteId: string | null, fix?: Location.LocationObje
     }
   }
 
+  dutyChanged();
   return {
     ok: true,
     tracking,
@@ -368,6 +383,7 @@ export async function punchOut(handover?: string): Promise<PunchResult> {
   // Already out (a double tap, or a retry whose first reply was lost): the shift is closed.
   if (error && /not checked in/i.test(error.message)) {
     await stopTracking().catch(() => undefined);
+    dutyChanged();
     return { ok: true, distanceM: 0, message: "You are checked out." };
   }
   if (error) return { ok: false, error: error.message };
@@ -397,6 +413,7 @@ export async function punchOut(handover?: string): Promise<PunchResult> {
     distance_m?: number;
   };
   const worked = punch.worked_minutes ?? 0;
+  dutyChanged();
 
   return {
     ok: true,
