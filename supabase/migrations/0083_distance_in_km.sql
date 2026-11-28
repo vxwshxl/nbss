@@ -2,7 +2,7 @@
 -- Distances in a check-in / check-out refusal read in km past 1000 m.
 --
 -- punch_in and punch_out told a guard "You are 147848 m from ...". Anything under
--- a kilometre still reads in metres; a kilometre or more reads "147.8 km", as the
+-- a kilometre still reads in metres; a kilometre or more reads "147 km 848 m", as the
 -- app and the console already format every other distance (formatDistance / km()).
 -- Only the distance-from-site figure changes; the site's boundary radius (always a
 -- small number) and the ± accuracy stay in metres.
@@ -11,11 +11,12 @@
 create or replace function fmt_metres(m double precision) returns text
 language sql immutable
 as $$
+  -- km and the leftover metres together: 147848 -> '147 km 848 m', 850 -> '850 m'.
   select case
     when m is null then '?'
-    when m < 1000 then round(m)::text || ' m'
-    when m < 10000 then trim(to_char(m / 1000.0, 'FM990.0')) || ' km'
-    else round(m / 1000.0)::text || ' km'
+    when round(m) < 1000 then round(m)::text || ' m'
+    when (round(m)::bigint % 1000) = 0 then (round(m)::bigint / 1000)::text || ' km'
+    else (round(m)::bigint / 1000)::text || ' km ' || (round(m)::bigint % 1000)::text || ' m'
   end
 $$;
 

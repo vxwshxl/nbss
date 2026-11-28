@@ -112,11 +112,13 @@ export function nearestFence<T extends Fence>(
   return best;
 }
 
-/** "120 m away" / "1.4 km away" — the string under the check-in button. */
+/** "120 m" / "1 km 400 m" — a distance, km and the leftover metres together, as the office reads it. */
 export function formatDistance(metres: number): string {
   if (!Number.isFinite(metres)) return "-";
-  if (metres < 1000) return `${Math.round(metres)} m`;
-  return `${(metres / 1000).toFixed(metres < 10_000 ? 1 : 0)} km`;
+  const m = Math.round(metres);
+  if (m < 1000) return `${m} m`;
+  const rem = m % 1000;
+  return rem === 0 ? `${Math.floor(m / 1000)} km` : `${Math.floor(m / 1000)} km ${rem} m`;
 }
 
 /**
