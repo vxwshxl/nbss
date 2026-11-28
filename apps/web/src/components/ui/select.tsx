@@ -88,6 +88,30 @@ function itemTexts(children: React.ReactNode): string[] {
   return out
 }
 
+/**
+ * Keeps an open list open on a phone.
+ *
+ * Radix closes an open Select on every window `resize`. On a touch screen that is
+ * not the user resizing anything: it is the keyboard opening for the search field
+ * (focused as the list opens) or the address bar sliding away as the list scrolls.
+ * So on Android the guard and site pickers closed the instant they opened, and
+ * forms such as Post a guard could not be filled in on a phone at all.
+ *
+ * Mounted inside the open list only, and only on a coarse pointer: there, a resize
+ * is stopped before Radix hears it. The list still follows its trigger (Radix's
+ * popper repositions itself). On a laptop, resizing the window closes it as before.
+ */
+function HoldOpenOnTouch() {
+  React.useEffect(() => {
+    if (!window.matchMedia?.("(pointer: coarse)").matches) return
+    const hold = (e: Event) => e.stopImmediatePropagation()
+    // Capture at the window runs before Radix's own (bubble) listener there.
+    window.addEventListener("resize", hold, true)
+    return () => window.removeEventListener("resize", hold, true)
+  }, [])
+  return null
+}
+
 function matches(text: string, query: string) {
   return query.split(/\s+/).every((word) => text.includes(word))
 }
@@ -178,6 +202,7 @@ function SelectContent({
           setQuery("")
         }}
       >
+        <HoldOpenOnTouch />
         {show && (
           <div data-slot="select-search" className="sticky top-0 z-20 border-b border-app-line-soft bg-popover p-1.5">
             <div className="relative">
