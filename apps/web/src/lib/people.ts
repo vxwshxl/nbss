@@ -16,7 +16,10 @@ export function readPeople(v?: string | null): People {
 }
 
 /** "Guard" or "Housekeeper", from a guard-role account's trade. */
-export function workerLabel(trade?: string | null): string {
+export function workerLabel(trade?: string | null, role?: string | null): string {
+  // Supervisors and field officers check in too (0082).
+  if (role === "supervisor") return "Supervisor";
+  if (role === "field_officer") return "Field officer";
   return trade === "housekeeping" ? "Housekeeper" : "Guard";
 }
 

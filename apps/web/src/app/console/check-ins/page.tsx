@@ -34,7 +34,7 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
   let query = supabase
     .from("attendance")
     .select(
-      "id, guard_id, check_in_at, check_out_at, check_in_method, check_out_method, check_in_distance_m, check_out_distance_m, worked_minutes, overtime_minutes, status, off_roster, device_flag, device_id, profiles!attendance_guard_id_fkey(full_name, employee_code, trade), sites(name)",
+      "id, guard_id, check_in_at, check_out_at, check_in_method, check_out_method, check_in_distance_m, check_out_distance_m, worked_minutes, overtime_minutes, status, off_roster, device_flag, device_id, profiles!attendance_guard_id_fkey(full_name, employee_code, trade, role), sites(name)",
     )
     .gte("check_in_at", from.toISOString())
     .lt("check_in_at", to.toISOString())
@@ -52,14 +52,14 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
   const rows: CheckInRow[] = list
     .filter((r) => r.check_in_at)
     .map((r) => {
-      const g = one(r.profiles as unknown as { full_name: string; employee_code: string; trade: string | null } | null);
+      const g = one(r.profiles as unknown as { full_name: string; employee_code: string; trade: string | null; role: string | null } | null);
       const phone =
         (phones ?? []).find((p) => p.device_id === r.device_id && p.profile_id === r.guard_id) ?? (phones ?? []).find((p) => p.device_id === r.device_id);
       return {
         id: r.id,
         guardName: g?.full_name ?? "A guard",
         guardCode: g?.employee_code ?? "",
-        guardRole: workerLabel(g?.trade),
+        guardRole: workerLabel(g?.trade, g?.role),
         siteName: one(r.sites as unknown as { name: string } | null)?.name ?? "Field duty",
         checkInAt: r.check_in_at!,
         checkOutAt: r.check_out_at,

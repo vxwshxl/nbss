@@ -35,7 +35,7 @@ const IST = "Asia/Kolkata";
 
 /** How a check-in happened. */
 const IN_HOW: Record<string, string> = {
-  geofence: "Guard, in the app",
+  geofence: "In the app",
   supervisor_override: "By a supervisor",
   auto_close: "Automatic",
 };
@@ -45,7 +45,7 @@ function outHow(r: CheckInRow): { label: string; tone: string } {
   if (!r.checkOutAt) return { label: "Still on duty", tone: "text-emerald-700" };
   if (r.outMethod === "auto_close") return { label: "Automatic, end of shift", tone: "text-amber-700" };
   if (r.outMethod === "supervisor_override") return { label: "Closed by a supervisor", tone: "text-violet-700" };
-  return { label: "Guard, in the app", tone: "text-muted-foreground" };
+  return { label: "In the app", tone: "text-muted-foreground" };
 }
 
 const STATUS_LABEL: Record<string, string> = { present: "Present", late: "Late", absent: "Absent", pending_review: "Needs review", rejected: "Rejected" };
