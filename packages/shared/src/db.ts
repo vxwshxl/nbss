@@ -1131,6 +1131,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      software_fee_extras: {
+        Row: {
+          id: string;
+          period: string;
+          is_test: boolean;
+          label: string;
+          tag: string | null;
+          amount_paise: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          period: string;
+          is_test?: boolean;
+          label: string;
+          tag?: string | null;
+          amount_paise: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          period?: string;
+          is_test?: boolean;
+          label?: string;
+          tag?: string | null;
+          amount_paise?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       software_fee_invoices: {
         Row: {
           id: string;
@@ -1152,6 +1182,9 @@ export type Database = {
           updated_at: string;
           is_test: boolean;
           skip_note: string | null;
+          lines: Json;
+          accounts: Json | null;
+          locked_at: string | null;
         };
         Insert: {
           id?: string;
@@ -1173,6 +1206,9 @@ export type Database = {
           updated_at?: string;
           is_test?: boolean;
           skip_note?: string | null;
+          lines?: Json;
+          accounts?: Json | null;
+          locked_at?: string | null;
         };
         Update: {
           id?: string;
@@ -1194,6 +1230,9 @@ export type Database = {
           updated_at?: string;
           is_test?: boolean;
           skip_note?: string | null;
+          lines?: Json;
+          accounts?: Json | null;
+          locked_at?: string | null;
         };
         Relationships: [];
       };
@@ -1212,6 +1251,7 @@ export type Database = {
           updated_at: string;
           updated_by: string | null;
           seller_cin: string | null;
+          account_billing_from: string;
         };
         Insert: {
           id?: boolean;
@@ -1227,6 +1267,7 @@ export type Database = {
           updated_at?: string;
           updated_by?: string | null;
           seller_cin?: string | null;
+          account_billing_from?: string;
         };
         Update: {
           id?: boolean;
@@ -1242,6 +1283,7 @@ export type Database = {
           updated_at?: string;
           updated_by?: string | null;
           seller_cin?: string | null;
+          account_billing_from?: string;
         };
         Relationships: [];
       };
@@ -1484,6 +1526,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      audit_actor: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       auto_check_out: {
         Args: Record<PropertyKey, never>;
         Returns: number;
@@ -1511,6 +1557,13 @@ export type Database = {
       client_owns_site: {
         Args: {
           p_site_id: string;
+        };
+        Returns: boolean;
+      };
+      client_sees_position: {
+        Args: {
+          p_site_id: string;
+          p_attendance_id: string;
         };
         Returns: boolean;
       };
@@ -1682,6 +1735,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      mobile_key: {
+        Args: {
+          p: string;
+        };
+        Returns: string;
+      };
       my_attendance_json: {
         Args: {
           p_att: string;
@@ -1734,6 +1793,46 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: string;
       };
+      office_ids: {
+        Args: {
+          p_site: string;
+        };
+        Returns: string[];
+      };
+      office_ids_for: {
+        Args: {
+          p_profile: string;
+        };
+        Returns: string[];
+      };
+      overseen_people: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
+      oversees_alert: {
+        Args: {
+          p_alert: string;
+        };
+        Returns: boolean;
+      };
+      oversees_person: {
+        Args: {
+          p_profile: string;
+        };
+        Returns: boolean;
+      };
+      oversees_shift: {
+        Args: {
+          p_shift: string;
+        };
+        Returns: boolean;
+      };
+      oversees_site: {
+        Args: {
+          p_site: string;
+        };
+        Returns: boolean;
+      };
       point_in_ring: {
         Args: {
           ring: Json;
@@ -1741,6 +1840,13 @@ export type Database = {
           p_lng: number;
         };
         Returns: boolean;
+      };
+      posting_windows: {
+        Args: {
+          p_post: string;
+          p_day: string;
+        };
+        Returns: { starts_at: string; ends_at: string }[];
       };
       profile_is_test: {
         Args: {
@@ -1928,8 +2034,24 @@ export type Database = {
         };
         Returns: boolean;
       };
+      software_fee_accounts: {
+        Args: {
+          p_test: boolean;
+        };
+        Returns: Json;
+      };
+      software_fee_close_months: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       software_fee_sync: {
         Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      software_fee_sync_side: {
+        Args: {
+          p_test: boolean;
+        };
         Returns: string;
       };
       sos_allowed: {
@@ -1995,6 +2117,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      supervised_site_ids: {
+        Args: Record<PropertyKey, never>;
+        Returns: string[];
+      };
       touch_presence: {
         Args: Record<PropertyKey, never>;
         Returns: string;
@@ -2046,6 +2172,13 @@ export type Database = {
           p_mobile: string;
         };
         Returns: { id: string; role: Enums["user_role"]; email: string }[];
+      };
+      worker_inactive_for_sign_in: {
+        Args: {
+          p_name: string;
+          p_mobile: string;
+        };
+        Returns: boolean;
       };
     };
     Enums: Enums;
