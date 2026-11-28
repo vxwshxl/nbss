@@ -44,34 +44,37 @@ export function registerSheet(rows: RegisterEntry[], days: string[]): SheetRow[]
 }
 
 /** The register as a grid: a row per guard, a column per day, a coloured letter per duty. */
-export function MonthGrid({ rows, days, today }: { rows: RegisterEntry[]; days: string[]; today: string }) {
+export function MonthGrid({ rows, days, today, head = "plain" }: { rows: RegisterEntry[]; days: string[]; today: string; head?: "plain" | "ink" }) {
+  const ink = head === "ink";
   const guards = registerSheet(rows, days);
   const cell = new Map<string, RegisterEntry[]>();
   for (const r of rows) cell.set(`${r.guardId}|${r.day}`, [...(cell.get(`${r.guardId}|${r.day}`) ?? []), r]);
   if (guards.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">No duties in this month.</p>;
+  // `ink`: the dark column header that continues RegisterTable's band.
+  const th = ink ? "text-ink-fg" : "text-muted-foreground";
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-separate border-spacing-0 text-xs">
         <thead>
-          <tr>
-            <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-semibold text-muted-foreground">Guard</th>
+          <tr className={cn(ink && "bg-ink")}>
+            <th className={cn("sticky left-0 z-10 px-3 py-2 text-left font-semibold", ink ? "bg-ink pb-3 pl-5 text-[12.5px] sm:pl-6" : "bg-card", th)}>Guard</th>
             {days.map((d) => (
-              <th key={d} className={cn("px-0.5 py-2 text-center font-medium tabular-nums", d === today ? "text-emerald-700" : "text-muted-foreground")}>
+              <th key={d} className={cn("px-0.5 py-2 text-center font-medium tabular-nums", d === today ? (ink ? "text-emerald-300" : "text-emerald-700") : th, ink && "pb-3")}>
                 <span className="block text-[9px] uppercase">{new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "narrow", timeZone: "UTC" })}</span>
                 {Number(d.slice(8))}
               </th>
             ))}
-            <th className="px-2 py-2 text-right font-semibold text-muted-foreground">P</th>
-            <th className="px-2 py-2 text-right font-semibold text-muted-foreground">A</th>
-            <th className="px-3 py-2 text-right font-semibold text-muted-foreground">Hours</th>
+            <th className={cn("px-2 py-2 text-right font-semibold", th, ink && "pb-3")}>P</th>
+            <th className={cn("px-2 py-2 text-right font-semibold", th, ink && "pb-3")}>A</th>
+            <th className={cn("px-3 py-2 text-right font-semibold", th, ink && "pr-5 pb-3 sm:pr-6")}>Hours</th>
           </tr>
         </thead>
         <tbody>
           {guards.map((g) => {
             const t = { present: g.present, absent: g.absent, minutes: g.minutes };
             return (
-              <tr key={g.id} className="group">
-                <td className="sticky left-0 z-10 border-t border-app-line-soft bg-card px-3 py-1.5 group-hover:bg-muted/60">
+              <tr key={g.id} data-guard={g.id} className="group">
+                <td className={cn("sticky left-0 z-10 border-t border-app-line-soft px-3 py-1.5 group-hover:bg-muted/60", ink ? "bg-elevated pl-5 sm:pl-6" : "bg-card")}>
                   <Link href={`/console/reports/guard/${g.id}`} className="block max-w-44 truncate font-semibold hover:text-primary hover:underline">
                     {g.name}
                   </Link>
@@ -97,7 +100,7 @@ export function MonthGrid({ rows, days, today }: { rows: RegisterEntry[]; days: 
                 })}
                 <td className="border-t border-app-line-soft px-2 text-right font-semibold text-emerald-700 tabular-nums">{t.present}</td>
                 <td className={cn("border-t border-app-line-soft px-2 text-right font-semibold tabular-nums", t.absent ? "text-rose-600" : "text-muted-foreground")}>{t.absent}</td>
-                <td className="border-t border-app-line-soft px-3 text-right tabular-nums">{hours(t.minutes)}</td>
+                <td className={cn("border-t border-app-line-soft px-3 text-right tabular-nums", ink && "pr-5 sm:pr-6")}>{hours(t.minutes)}</td>
               </tr>
             );
           })}

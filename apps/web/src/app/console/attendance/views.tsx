@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarCheck, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Clock, Grid3x3, List, Percent, Users } from "lucide-react";
 
 import { DayList, GuardCards, Legend, MonthGrid, registerSheet } from "@/components/console/attendance-views";
-import { RegisterExport } from "@/components/console/register-export";
+import { RegisterTable } from "@/components/console/register-table";
 import { PageHeader } from "@/components/console/page-header";
 import { PeopleTabs } from "@/components/console/people-tabs";
 import { SiteFilter } from "@/components/console/site-filter";
@@ -105,23 +105,24 @@ export async function AttendanceViews({ view: raw, month: m, date: d, siteId, pe
         <StatCard label="Hours" value={(t.minutes / 60).toFixed(1)} hint={view === "day" ? dayName : monthName} icon={Clock} tone="sky" />
         <StatCard label="Attendance" value={t.rate == null ? "-" : `${t.rate}%`} hint={`${t.due} duties due`} icon={Percent} tone="violet" />
       </div>
-      <section className="overflow-hidden rounded-2xl border border-app-line bg-card p-4 shadow-e1">
-        {view === "month" && (
-          <div className="space-y-4">
-            <div className="flex justify-end">
-              <RegisterExport
-                title={`Attendance ${monthName}${siteId ? ` ${sites.find((s) => s.id === siteId)?.name ?? ""}` : ""}${people === "guard" ? " guards" : people === "housekeeping" ? " housekeepers" : ""}`}
-                days={days}
-                sheet={registerSheet(rows, days)}
-              />
-            </div>
-            <MonthGrid rows={rows} days={days} today={today} />
-            <Legend />
-          </div>
-        )}
-        {view === "guards" && <GuardCards rows={rows} />}
-        {view === "day" && <DayList rows={rows} />}
-      </section>
+      {view === "month" ? (
+        <div className="space-y-4">
+          <RegisterTable
+            exportTitle={`Attendance ${monthName}${siteId ? ` ${sites.find((s) => s.id === siteId)?.name ?? ""}` : ""}${people === "guard" ? " guards" : people === "housekeeping" ? " housekeepers" : ""}`}
+            noun={people === "guard" ? "guards" : people === "housekeeping" ? "housekeepers" : "people"}
+            days={days}
+            sheet={registerSheet(rows, days)}
+          >
+            <MonthGrid rows={rows} days={days} today={today} head="ink" />
+          </RegisterTable>
+          <Legend />
+        </div>
+      ) : (
+        <section className="overflow-hidden rounded-2xl border border-app-line bg-card p-4 shadow-e1">
+          {view === "guards" && <GuardCards rows={rows} />}
+          {view === "day" && <DayList rows={rows} />}
+        </section>
+      )}
     </div>
   );
 }

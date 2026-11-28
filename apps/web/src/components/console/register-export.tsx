@@ -20,7 +20,7 @@ const weekday = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en
  * (landscape, a column per day); the spreadsheet has a letter per day and the totals as
  * numbers, so it can be summed.
  */
-export function RegisterExport({ title, days, sheet }: { title: string; days: string[]; sheet: SheetRow[] }) {
+export function RegisterExport({ title, days, sheet, tone = "plain" }: { title: string; days: string[]; sheet: SheetRow[]; tone?: "plain" | "ink" }) {
   const [printing, setPrinting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -85,6 +85,27 @@ export function RegisterExport({ title, days, sheet }: { title: string; days: st
     }
   };
 
+  const preview = (
+    <TablePrintPreview open={printing} onClose={() => setPrinting(false)} title={title} columns={columns} rows={sheet} getRowKey={(r) => r.id} wide />
+  );
+
+  // On the dark band of a table head (RegisterTable), as the data table's own buttons.
+  if (tone === "ink") {
+    const ink =
+      "inline-flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[13px] font-medium text-ink-fg ring-1 ring-white/15 transition-colors hover:bg-white/20 disabled:opacity-40";
+    return (
+      <>
+        <button type="button" className={ink} disabled={sheet.length === 0} onClick={() => setPrinting(true)}>
+          <Printer className="size-4" /> Print
+        </button>
+        <button type="button" className={ink} disabled={sheet.length === 0 || exporting} onClick={excel}>
+          {exporting ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />} Excel
+        </button>
+        {preview}
+      </>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <Button type="button" variant="outline" size="sm" disabled={sheet.length === 0} onClick={() => setPrinting(true)}>
@@ -93,7 +114,7 @@ export function RegisterExport({ title, days, sheet }: { title: string; days: st
       <Button type="button" variant="outline" size="sm" disabled={sheet.length === 0 || exporting} onClick={excel}>
         {exporting ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <FileSpreadsheet data-icon="inline-start" />} Excel
       </Button>
-      <TablePrintPreview open={printing} onClose={() => setPrinting(false)} title={title} columns={columns} rows={sheet} getRowKey={(r) => r.id} wide />
+      {preview}
     </div>
   );
 }
