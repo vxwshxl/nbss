@@ -50,9 +50,15 @@ export type OpenPunch = {
 
 /** The guard's currently open punch, if they are on duty. */
 export async function openPunch(): Promise<OpenPunch | null> {
+  // Always the signed-in person's own. A guard can read only their own rows, but a
+  // supervisor reads their sites' and a field officer everyone's (0077, 0082): without
+  // this they would be shown, and tracked for, someone else's check-in.
+  const me = (await supabase.auth.getSession()).data.session?.user.id;
+  if (!me) return null;
   const { data } = await supabase
     .from("attendance")
     .select("id, site_id, check_in_at, status, sites(name)")
+    .eq("guard_id", me)
     .is("check_out_at", null)
     .order("check_in_at", { ascending: false })
     .limit(1)
