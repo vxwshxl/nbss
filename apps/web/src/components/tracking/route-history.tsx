@@ -36,6 +36,8 @@ export type RouteShift = {
   guardId: string;
   guardName: string;
   guardCode: string;
+  role: string | null;
+  trade: string | null;
   phone: string | null;
   /** Null for a field officer, who checks in from anywhere. */
   siteId: string | null;
@@ -51,6 +53,40 @@ export type RouteShift = {
   status: string;
   deviceFlag: string | null;
 };
+
+type RoleKey = "field_officer" | "supervisor" | "guard" | "housekeeping";
+
+/** Which of the four people chips a route's owner belongs under. */
+function roleKey(role: string | null, trade: string | null): RoleKey {
+  if (role === "field_officer") return "field_officer";
+  if (role === "supervisor") return "supervisor";
+  if (trade === "housekeeping") return "housekeeping";
+  return "guard";
+}
+
+const ROLE_FILTERS: { role: RoleKey; label: string }[] = [
+  { role: "field_officer", label: "Field Officer" },
+  { role: "supervisor", label: "Supervisor" },
+  { role: "guard", label: "Guard" },
+  { role: "housekeeping", label: "Housekeeper" },
+];
+
+/** One filter pill, highlighted when active. */
+function RoleChip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "press rounded-full px-3 py-1 text-xs font-semibold ring-1 transition-colors",
+        active ? "bg-foreground text-background ring-foreground" : "bg-card text-muted-foreground ring-border hover:text-foreground",
+      )}
+    >
+      {label} <span className="tabular-nums opacity-70">{count}</span>
+    </button>
+  );
+}
 
 const SPEEDS = [30, 120, 600] as const;
 /** Radix Select cannot hold an empty value, so "every guard" is this. */
@@ -102,6 +138,7 @@ export function RouteHistory({
   // The guard's full profile, from their name on the summary.
   const [profileId, setProfileId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [pan, setPan] = useState<{ lat: number; lng: number; key: string } | null>(null);
 
   const shift = shifts.find((s) => s.attendanceId === selected) ?? null;
@@ -254,7 +291,10 @@ export function RouteHistory({
   }
 
   const q = query.trim().toLowerCase();
-  const listed = q ? shifts.filter((s) => matchesSearch(q, s)) : shifts;
+  const byRole = roleFilter === "all" ? shifts : shifts.filter((s) => roleKey(s.role, s.trade) === roleFilter);
+  const listed = q ? byRole.filter((s) => matchesSearch(q, s)) : byRole;
+  // A role chip shows only when someone of that role has a route in view.
+  const roleCounts = shifts.reduce<Record<string, number>>((m, s) => ((m[roleKey(s.role, s.trade)] = (m[roleKey(s.role, s.trade)] ?? 0) + 1), m), {});
   const at = points[head];
 
   return (
@@ -290,6 +330,14 @@ export function RouteHistory({
             <Search className="size-4 text-muted-foreground" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${shifts.length} shifts by guard or site`} className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
           </label>
+          {ROLE_FILTERS.some((f) => (roleCounts[f.role] ?? 0) > 0) && (
+            <div className="col-span-2 flex flex-wrap gap-1.5">
+              <RoleChip active={roleFilter === "all"} onClick={() => setRoleFilter("all")} label="All" count={shifts.length} />
+              {ROLE_FILTERS.filter((f) => (roleCounts[f.role] ?? 0) > 0).map((f) => (
+                <RoleChip key={f.role} active={roleFilter === f.role} onClick={() => setRoleFilter(f.role)} label={f.label} count={roleCounts[f.role] ?? 0} />
+              ))}
+            </div>
+          )}
         </div>
         <ul className="min-h-0 flex-1 divide-y divide-app-line-soft overflow-y-auto">
           {listed.length === 0 && (

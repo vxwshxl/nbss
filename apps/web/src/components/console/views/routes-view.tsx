@@ -18,12 +18,12 @@ function roleHint(role: string | null, trade: string | null): string | undefined
 }
 
 
-type Person = { full_name: string; employee_code: string; phone: string | null };
+type Person = { full_name: string; employee_code: string; phone: string | null; role: string | null; trade: string | null };
 type SiteRow = { name: string; lat: number; lng: number; geofence_radius_m: number; polygon: unknown; shift_start: string | null; shift_end: string | null };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
 const SELECT =
-  "id, guard_id, site_id, device_id, check_in_at, check_out_at, worked_minutes, status, device_flag, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone), sites(name, lat, lng, geofence_radius_m, polygon, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)";
+  "id, guard_id, site_id, device_id, check_in_at, check_out_at, worked_minutes, status, device_flag, reviewed_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone, role, trade), sites(name, lat, lng, geofence_radius_m, polygon, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)";
 
 /**
  * Every shift's path, from check-in to check-out, for a day, a month or a year
@@ -102,6 +102,8 @@ export async function RoutesView({
         attendanceId: a.id,
         guardId: a.guard_id,
         guardName: p?.full_name ?? "A guard",
+        role: p?.role ?? null,
+        trade: p?.trade ?? null,
         guardCode: p?.employee_code ?? "",
         phone: p?.phone ?? null,
         siteId: a.site_id,
