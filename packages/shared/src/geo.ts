@@ -148,7 +148,12 @@ export type Fix = Point & { at: number; accuracy?: number | null; /** The phone'
  * hundreds of metres to kilometres off and then comes straight back. Drawn as is, each
  * one is a long straight spoke across the map, and it adds two false kilometres to
  * "walked". A fix is dropped when:
- *   - the phone itself says it could be more than 500 m out;
+ *   - the phone itself says it could be more than 75 m out: a fix that loose is a guess,
+ *     not a position, and a guard standing still emits a scribble of them (seen on the
+ *     live map: a 256 m starburst at a church, 73% of fixes under 50 m but the rest to
+ *     320 m). Dropping them leaves the trustworthy cluster for `settled` to collapse;
+ *   - it jumped more than 60 m and more than twice its own error radius while neither it
+ *     nor the fix before it read any real speed: drift at a standstill, not a step;
  *   - reaching it would need more speed than is believable right now: 40 m/s (~145 km/h)
  *     when the phone reads itself still or walking, rising with what the phone itself
  *     reads (half as fast again as its own reading, plus a margin), so a guard really
@@ -214,16 +219,20 @@ function excursionEnd(fixes: readonly Fix[], a: Fix, i: number): number | null {
 }
 
 export function withoutSpikes<T extends Fix>(fixes: readonly T[]): T[] {
-  if (fixes.length < 3) return fixes.filter((f) => (f.accuracy ?? 0) <= 500 || fixes.length === 1);
+  if (fixes.length < 3) return fixes.filter((f) => (f.accuracy ?? 0) <= 75 || fixes.length === 1);
   const kept: T[] = [fixes[0]!];
   for (let i = 1; i < fixes.length; i++) {
     const b = fixes[i]!;
     const a = kept[kept.length - 1]!;
-    if ((b.accuracy ?? 0) > 500) continue;
+    if ((b.accuracy ?? 0) > 75) continue;
     const d = distanceMetres(a, b);
     const speed = d / Math.max(1, (b.at - a.at) / 1000);
     if (d > 100 && speed > plausibleSpeed(a, b)) continue;
     if (d > 150 && speed > 6 && b.speed != null && b.speed < 1.5) continue;
+    // Neither fix read real movement, yet it jumped well past its own error radius: GPS
+    // drift at a standstill (a phone near a building wanders 100–300 m and snaps back).
+    // A real slow walk reads some speed or stays within a few times its accuracy.
+    if (d > 60 && d > (b.accuracy ?? 30) * 2 && !felt(a) && !felt(b)) continue;
     if (d > 35) {
       const back = excursionEnd(fixes, a, i);
       if (back != null) {

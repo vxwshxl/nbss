@@ -49,7 +49,12 @@ export default function StaffLayout() {
     // checked in this does nothing.
     void ensureTracking();
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") void ensureTracking();
+      if (state === "active") {
+        void ensureTracking();
+        // Re-report permissions on every return to the front, so a change made in
+        // Settings (leaving the app) shows on the console's Devices page at once.
+        void registerHandset();
+      }
     });
     return () => sub.remove();
   }, [session]);

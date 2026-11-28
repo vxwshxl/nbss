@@ -10,7 +10,7 @@ import { requireRole } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
 
-type Person = { full_name: string; employee_code: string; phone: string | null };
+type Person = { full_name: string; employee_code: string; phone: string | null; role: string | null; trade: string | null };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
 /** The request's clock, read once. */
@@ -32,7 +32,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
   const [open, positions, sites, devices, sos, due] = await Promise.all([
     supabase
       .from("attendance")
-      .select("id, guard_id, site_id, check_in_at, status, device_flag, device_id, reviewed_at, silent_alerted_at, silent_staff_alerted_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone), sites(name, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)")
+      .select("id, guard_id, site_id, check_in_at, status, device_flag, device_id, reviewed_at, silent_alerted_at, silent_staff_alerted_at, profiles!attendance_guard_id_fkey(full_name, employee_code, phone, role, trade), sites(name, shift_start, shift_end), shifts!attendance_shift_id_fkey(starts_at, ends_at)")
       .is("check_out_at", null)
       .match(siteId ? { site_id: siteId } : {})
       .order("check_in_at"),
@@ -69,6 +69,8 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
       name: p?.full_name ?? "A guard",
       code: p?.employee_code ?? "",
       phone: p?.phone ?? null,
+      role: p?.role ?? null,
+      trade: p?.trade ?? null,
       siteId: a.site_id,
       siteName: a.site_id ? (site?.name ?? "A site") : "Field duty",
       checkInAt: a.check_in_at ?? now,

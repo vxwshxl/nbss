@@ -9,6 +9,14 @@ import { istToday, periodBounds, readPeriod } from "@/lib/period";
 import type { LivePosition } from "@nbss/shared/realtime";
 import { supabaseServer } from "@/lib/supabase/server";
 
+/** The small role label beside a name in the guard picker; blank for a plain guard. */
+function roleHint(role: string | null, trade: string | null): string | undefined {
+  if (role === "field_officer") return "Field officer";
+  if (role === "supervisor") return "Supervisor";
+  if (trade === "housekeeping") return "Housekeeper";
+  return undefined;
+}
+
 
 type Person = { full_name: string; employee_code: string; phone: string | null };
 type SiteRow = { name: string; lat: number; lng: number; geofence_radius_m: number; polygon: unknown; shift_start: string | null; shift_end: string | null };
@@ -64,7 +72,7 @@ export async function RoutesView({
 
   const [rows, guards, sites] = await Promise.all([
     q,
-    supabase.from("profiles").select("id, full_name").eq("role", "guard").order("full_name"),
+    supabase.from("profiles").select("id, full_name, role, trade").in("role", ["guard", "supervisor", "field_officer"]).order("full_name"),
     supabase.from("sites").select("id, name").eq("active", true).order("name"),
   ]);
 
@@ -134,7 +142,7 @@ export async function RoutesView({
       />
       <RouteHistory
         shifts={shifts}
-        guards={(guards.data ?? []).map((g) => ({ id: g.id, name: g.full_name }))}
+        guards={(guards.data ?? []).map((g) => ({ id: g.id, name: g.full_name, hint: roleHint(g.role, g.trade) }))}
         sites={siteId ? [] : (sites.data ?? [])}
         period={{ period, at, today }}
         initial={{ attendance: attendance ?? null, guard: guard ?? null, site: onlySite ?? null }}

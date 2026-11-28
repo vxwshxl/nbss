@@ -64,6 +64,9 @@ export type DutyGuard = {
   name: string;
   code: string;
   phone: string | null;
+  /** The signed-in role and trade, for the role filter: field officer, supervisor, guard, housekeeper. */
+  role: string | null;
+  trade: string | null;
   /** Null for a field officer, who checks in from anywhere. */
   siteId: string | null;
   siteName: string;
@@ -99,13 +102,47 @@ export type DutyGuard = {
 
 export type NotArrived = { shiftId: string; name: string; code: string; phone: string | null; siteId: string; siteName: string; startsAt: string };
 
-const FILTERS: { key: "all" | GuardState; label: string }[] = [
+type RoleKey = "field_officer" | "supervisor" | "guard" | "housekeeping";
+
+/** Which of the four people chips a person belongs under. */
+function roleKey(role: string | null, trade: string | null): RoleKey {
+  if (role === "field_officer") return "field_officer";
+  if (role === "supervisor") return "supervisor";
+  if (trade === "housekeeping") return "housekeeping";
+  return "guard";
+}
+
+const ROLE_FILTERS: { key: string; role: RoleKey; label: string }[] = [
+  { key: "r:field_officer", role: "field_officer", label: "Field Officer" },
+  { key: "r:supervisor", role: "supervisor", label: "Supervisor" },
+  { key: "r:guard", role: "guard", label: "Guard" },
+  { key: "r:housekeeping", role: "housekeeping", label: "Housekeeper" },
+];
+
+const STATE_FILTERS: { key: "all" | GuardState; label: string }[] = [
   { key: "all", label: "All" },
   { key: "inside", label: "Inside" },
   { key: "outside", label: "Outside" },
   { key: "offline", label: "No signal" },
   { key: "sos", label: "SOS" },
 ];
+
+/** One filter pill: a label and its count, highlighted when it is the active filter. */
+function Chip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "press rounded-full px-3 py-1 text-xs font-semibold ring-1 transition-colors",
+        active ? "bg-foreground text-background ring-foreground" : "bg-card text-muted-foreground ring-border hover:text-foreground",
+      )}
+    >
+      {label} <span className="tabular-nums opacity-70">{count}</span>
+    </button>
+  );
+}
 
 const NO_TRAIL: TrailPoint[] = [];
 
@@ -156,7 +193,7 @@ export function LiveTracking({
   const [heard, setHeard] = useState<Record<string, LivePosition>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lng: number; key: string; offset?: { x: number; y: number } } | null>(null);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [filter, setFilter] = useState<string>("all");
   // One site, or every site (the default).
   const [site, setSite] = useState<string>(ALL_SITES);
   const atSite = (siteId: string) => site === ALL_SITES || siteId === site;
@@ -263,12 +300,23 @@ export function LiveTracking({
     for (const r of rows) {
       const k = r.state === "stale" || r.state === "waiting" ? "offline" : r.state;
       c[k] = (c[k] ?? 0) + 1;
+      c[`r:${roleKey(r.g.role, r.g.trade)}`] = (c[`r:${roleKey(r.g.role, r.g.trade)}`] ?? 0) + 1;
     }
     return c;
   }, [rows]);
 
+  // Role chips are shown only for roles actually on duty, so a company with no field
+  // officers never sees the chip; the status chips always show.
+  const roleChips = ROLE_FILTERS.filter((f) => (counts[f.key] ?? 0) > 0);
+
   const shown = rows
-    .filter((r) => filter === "all" || r.state === filter || (filter === "offline" && (r.state === "stale" || r.state === "waiting")))
+    .filter((r) =>
+      filter === "all"
+        ? true
+        : filter.startsWith("r:")
+          ? `r:${roleKey(r.g.role, r.g.trade)}` === filter
+          : r.state === filter || (filter === "offline" && (r.state === "stale" || r.state === "waiting")),
+    )
     .filter((r) => {
       return matchesSearch(query, r);
     })
@@ -440,18 +488,20 @@ export function LiveTracking({
             <span className={cn("size-2 rounded-full", live ? "animate-pulse bg-emerald-500" : "bg-amber-500")} />
             {live ? `Live · ${rows.length} on duty` : `Every ${FALLBACK_S} s · ${rows.length} on duty`}
           </span>
-          {atMoment && sel && (
-            <span className="pointer-events-auto flex max-w-full items-center gap-2 rounded-2xl bg-slate-900/95 py-1 pr-1 pl-3 text-xs text-white shadow-md">
-              <History className="size-3.5 shrink-0" />
-              <span className="min-w-0 truncate">
-                <span className="font-semibold">{sel.g.name.split(" ")[0]}</span> at {istClock(atMoment.event.at)} · {atMoment.event.text}
-              </span>
-              <button type="button" onClick={backToNow} className="shrink-0 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-900 hover:bg-slate-100">
-                Back to now
-              </button>
-            </span>
-          )}
         </div>
+        {/* The "viewing an earlier moment" banner sits at the foot of the map, clear of the
+            top-centre place search it used to overlap. */}
+        {atMoment && sel && (
+          <span className="pointer-events-auto absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-2xl bg-slate-900/95 py-1 pr-1 pl-3 text-xs text-white shadow-md">
+            <History className="size-3.5 shrink-0" />
+            <span className="min-w-0 truncate">
+              <span className="font-semibold">{sel.g.name.split(" ")[0]}</span> at {istClock(atMoment.event.at)} · {atMoment.event.text}
+            </span>
+            <button type="button" onClick={backToNow} className="shrink-0 rounded-full bg-white px-2.5 py-1 font-semibold text-slate-900 hover:bg-slate-100">
+              Back to now
+            </button>
+          </span>
+        )}
         <button
           type="button"
           onClick={toggleFull}
@@ -505,21 +555,19 @@ export function LiveTracking({
               className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setFilter(f.key)}
-                aria-pressed={filter === f.key}
-                className={cn(
-                  "press rounded-full px-3 py-1 text-xs font-semibold ring-1 transition-colors",
-                  filter === f.key ? "bg-foreground text-background ring-foreground" : "bg-card text-muted-foreground ring-border hover:text-foreground",
-                )}
-              >
-                {f.label} <span className="tabular-nums opacity-70">{counts[f.key] ?? 0}</span>
-              </button>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            {roleChips.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {roleChips.map((f) => (
+                  <Chip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)} label={f.label} count={counts[f.key] ?? 0} />
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              {STATE_FILTERS.map((f) => (
+                <Chip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)} label={f.label} count={counts[f.key] ?? 0} />
+              ))}
+            </div>
           </div>
         </div>
 

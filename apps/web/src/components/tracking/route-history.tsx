@@ -72,7 +72,7 @@ export function RouteHistory({
   initial,
 }: {
   shifts: RouteShift[];
-  guards: { id: string; name: string }[];
+  guards: { id: string; name: string; hint?: string }[];
   /** For the site picker; empty inside one site's own workspace. */
   sites: { id: string; name: string }[];
   /** The day, month or year shown (Daily / Monthly / Yearly, beside the page title). */
@@ -273,7 +273,7 @@ export function RouteHistory({
             <SelectContent position="popper" align="start" searchPlaceholder="Find a guard">
               <SelectItem value={ALL}>All guards</SelectItem>
               {guards.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
+                <SelectItem key={g.id} value={g.id} description={g.hint}>
                   {g.name}
                 </SelectItem>
               ))}

@@ -707,20 +707,21 @@ export type RoutePoint = { lat: number; lng: number; at: number; inside: boolean
 /** One duty's route, check-in to check-out, with the time and fence verdict of each point. */
 export async function myRoute(attendanceId: string): Promise<RoutePoint[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
-  const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number, boolean | null][];
+  const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number, boolean | null, number | null, number | null][];
   // The phone's wild guesses out and its stays settled, as on the website (cleanRoute).
+  // Speed (index 6) rides along so the spike filter can tell GPS drift from a real walk.
   return cleanRoute(
-    points.map(([lat, lng, t, accuracy, inside]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy), inside: inside ?? null })),
-  ).map(({ accuracy: _accuracy, ...p }) => p);
+    points.map(([lat, lng, t, accuracy, inside, , speed]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy), inside: inside ?? null, speed: speed ?? undefined })),
+  ).map(({ accuracy: _accuracy, speed: _speed, ...p }) => p);
 }
 
 /** The path walked since check-in, for the blue line on the duty map. */
 export async function myTrail(attendanceId: string): Promise<{ lat: number; lng: number }[]> {
   const { data } = await supabase.rpc("guard_trail", { p_attendance_id: attendanceId });
-  const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number][];
-  return cleanRoute(points.map(([lat, lng, t, accuracy]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy) }))).map(
-    ({ lat, lng }) => ({ lat, lng }),
-  );
+  const points = ((data as { points?: unknown[][] } | null)?.points ?? []) as [number, number, number, number, boolean | null, number | null, number | null][];
+  return cleanRoute(
+    points.map(([lat, lng, t, accuracy, inside, , speed]) => ({ lat: Number(lat), lng: Number(lng), at: Number(t) * 1000, accuracy: Number(accuracy), inside: inside ?? null, speed: speed ?? undefined })),
+  ).map(({ lat, lng }) => ({ lat, lng }));
 }
 
 /* ─────────────────────────────────────────── areas, colleagues and SOS on the map ── */
