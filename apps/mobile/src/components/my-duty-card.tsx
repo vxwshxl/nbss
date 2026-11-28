@@ -89,23 +89,15 @@ export function MyDutyCard() {
             {`Checked in${punch.check_in_at ? ` at ${istTime(punch.check_in_at)}` : ""} · ${where}. `}
             {field ? "Your location is shared with the office until you check out." : "Check out at the site when you leave."}
           </Text>
-        ) : field ? (
-          <Text variant="label" tone="muted">
-            Check in from wherever you are. Your location is shared with the office until you check out.
-          </Text>
-        ) : sites.length === 0 ? (
+        ) : field ? null : sites.length === 0 ? (
           <Text variant="label" tone="muted">
             You are not posted to supervise a site yet. The office posts you from the roster; then you check in at that site.
           </Text>
         ) : (
-          <>
-            <Text variant="label" tone="muted">
-              Check in at the site you supervise, from inside its boundary.
-            </Text>
-            {sites.length > 1 && siteId && (
-              <Select title="Site" value={siteId} onChange={setSiteId} options={sites.map((s) => ({ value: s.id, label: s.name, hint: s.district ?? undefined }))} />
-            )}
-          </>
+          sites.length > 1 &&
+          siteId && (
+            <Select title="Site" value={siteId} onChange={setSiteId} options={sites.map((s) => ({ value: s.id, label: s.name, hint: s.district ?? undefined }))} />
+          )
         )}
 
         {message && (

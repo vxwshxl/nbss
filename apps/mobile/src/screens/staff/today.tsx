@@ -8,7 +8,6 @@ import { istTime, tel } from "@nbss/shared/company";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
 
 import { Avatar } from "@/components/avatar";
-import { MyDutyCard } from "@/components/my-duty-card";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
@@ -181,8 +180,6 @@ export function StaffToday() {
   return (
     <Screen topInset={false} bottomInset={false} contentStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh()} />}>
       <PageHeader eyebrow="Shift management" title={day === "0" ? "Today" : day === "-1" ? "Yesterday" : "Tomorrow"} />
-      {/* A supervisor's or field officer's own check-in; nothing for the office. */}
-      <MyDutyCard />
       <Segmented
         value={day}
         stretch
