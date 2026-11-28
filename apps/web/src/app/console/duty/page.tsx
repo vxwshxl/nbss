@@ -164,7 +164,7 @@ export default async function DutyPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="My shift" title={`${firstName}, here is your shift`} />
 
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard
           label="Right now"
           value={open ? "On duty" : "Off duty"}

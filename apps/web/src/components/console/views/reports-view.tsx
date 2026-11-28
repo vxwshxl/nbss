@@ -118,7 +118,7 @@ export async function ReportsView({ searchParams, siteId }: { searchParams: Prom
   return (
     <div className="space-y-6">
       <PageHeader title="Reports" action={<PeopleTabs value={people} />} />
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Hours worked" value={(total / 60).toFixed(0)} hint={`${from} to ${to}`} icon={Clock} tone="emerald" />
         <StatCard label="Shifts worked" value={String(guardRows.reduce((n, r) => n + r.shifts, 0))} hint={`${guardRows.length} ${people === "housekeeping" ? "housekeepers" : people === "guard" ? "guards" : "people"}`} icon={CalendarCheck} tone="sky" />
         <StatCard label="Absent" value={String(guardRows.reduce((n, r) => n + r.absent, 0))} hint="Rostered, no check-in" icon={CalendarX2} tone="rose" />

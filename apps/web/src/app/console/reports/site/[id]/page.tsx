@@ -143,7 +143,7 @@ export default async function SiteReportPage({
       />
       <PeriodNav from={from} to={to} />
 
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Guards posted" value={String(posted.size)} hint={`Needs ${site.guards_required ?? "-"} on duty · ${came} came`} icon={Users} tone="amber" />
         <StatCard label="Present" value={String(t.present)} hint={`${t.late} late`} icon={CalendarCheck} tone="emerald" />
         <StatCard label="Absent" value={String(t.absent)} hint="Rostered, no check-in" icon={CalendarX2} tone={t.absent ? "rose" : "slate"} />

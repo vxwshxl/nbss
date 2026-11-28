@@ -34,7 +34,7 @@ export default async function BookingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Desk" title="Bookings" />
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="New" value={String(open)} hint={open ? "Waiting for a call back" : "Nothing waiting"} icon={CalendarClock} tone={open ? "amber" : "emerald"} />
         <StatCard label="In progress" value={String(inProgress)} hint="Survey, quote or accepted" icon={MessageSquareQuote} tone="violet" />
         <StatCard label="Deployed" value={String(deployed)} hint="Guards on the client's site" icon={CheckCircle2} tone="emerald" />

@@ -74,7 +74,7 @@ export default async function ImpressionsPage({ searchParams }: { searchParams: 
         ))}
       </div>
 
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Impressions" value={fmt(users + bots)} hint={`${r.label.toLowerCase()}, users and bots`} icon={Eye} tone="sky" />
         <StatCard label="Real users" value={fmt(users)} hint="browsers" icon={User} tone="emerald" />
         <StatCard label="Bots" value={fmt(bots)} hint="crawlers and link previews" icon={Bot} tone="amber" />

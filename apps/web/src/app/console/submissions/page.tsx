@@ -36,7 +36,7 @@ export default async function SubmissionsPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Desk" title="Enquiries" />
 
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard
           label="Unactioned"
           value={String(counts.new)}

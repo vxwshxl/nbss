@@ -167,7 +167,7 @@ export default async function GuardAttendancePage({
           </div>
         }
       />
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Present" value={String(present)} hint={`${late} late`} icon={CalendarCheck} tone="emerald" />
         <StatCard label="Absent" value={String(absent)} hint="Rostered, no check-in" icon={CalendarX2} tone={absent ? "rose" : "slate"} />
         <StatCard label="Hours" value={(minutes / 60).toFixed(1)} hint={`${from} to ${to}`} icon={Clock} tone="sky" />

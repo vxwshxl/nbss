@@ -138,7 +138,7 @@ export async function ReplacementsView({ siteId }: { siteId?: string } = {}) {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Shift management" title="Replacements" />
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Asked for cover" value={String(reqs.length)} hint={reqs.length ? "Waiting for you" : "No requests"} icon={UserRoundX} tone={reqs.length ? "amber" : "slate"} />
         <StatCard
           label="Replacements, 30 days"

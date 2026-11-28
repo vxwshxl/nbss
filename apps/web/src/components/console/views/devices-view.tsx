@@ -126,7 +126,7 @@ export async function DevicesView({ siteId }: { siteId?: string } = {}) {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Security management" title="Devices" />
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Phones" value={String(rows.length)} hint="Registered by guards" icon={Smartphone} tone="sky" />
         <StatCard label="Waiting for approval" value={String(pending)} hint={pending ? "New or shared phones" : "Every phone is approved"} icon={ShieldCheck} tone={pending ? "amber" : "emerald"} />
         <StatCard label="Check-ins held" value={String(held.length)} hint={held.length ? "From a phone not approved for the guard" : "Nothing held"} icon={AlertTriangle} tone={held.length ? "rose" : "slate"} />

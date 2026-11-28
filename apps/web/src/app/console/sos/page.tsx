@@ -73,7 +73,7 @@ export default async function SosPage({ searchParams }: { searchParams: Promise<
   return (
     <div className="space-y-6">
       <PageHeader title="SOS alerts" action={<PeriodSwitch period={period} at={at} today={today} inHeader />} />
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard
           label="Live now"
           value={String(live)}

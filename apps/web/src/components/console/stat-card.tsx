@@ -70,7 +70,7 @@ export function StatCard({
 
   const className = cn(
     `hue-${hue}`,
-    "group/stat @container relative flex flex-col overflow-hidden p-4 print:shadow-none",
+    "group/stat @container relative flex flex-col overflow-hidden p-3.5 sm:p-4 print:shadow-none",
     hero
       ? "rounded-[24px] bg-[linear-gradient(145deg,color-mix(in_oklab,var(--h)_82%,white),var(--h)_55%,var(--h-deep))] text-white shadow-[0_18px_36px_-18px_var(--h)]"
       : cardSurface,

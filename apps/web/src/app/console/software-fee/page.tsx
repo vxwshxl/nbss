@@ -66,7 +66,7 @@ export default async function SoftwareFeePage() {
         {s?.seller_gstin ? ` (GSTIN ${s.seller_gstin})` : ""} for the NBSS console and app: {inr(rate)} a month for every active account
         from {startsLabel}. Each month is due on the {s?.due_day ?? 15}th.
       </p>
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 max-lg:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label="Active accounts" value={String(accounts.length)} hint="Admins, supervisors, guards and housekeepers" icon={Users} tone="sky" />
         <StatCard
           label="Per account"
