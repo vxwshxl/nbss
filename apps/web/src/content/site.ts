@@ -40,6 +40,13 @@ export const site = {
   phonesText: phonesInProse(COMPANY.phones),
   /** Confirmed by the client. Enquiries from the contact form are mailed here too. */
   email: "support@nbsskokrajhar.com",
+  /**
+   * The PSARA licence, as printed on the company letterhead (November 2026). It
+   * replaces the older number on the first visiting card, which is no longer used.
+   */
+  psaraLicence: "PSA/L/18/AS/2026/FEB/3/358",
+  /** The office's postal address, as on the company seal. */
+  postal: ["Titaguri Pt-I, P.O. Titaguri", "Kokrajhar, BTR, Assam 783374"],
   address: {
     label: "Registered Office",
     /** Rendered line by line wherever the address appears. */

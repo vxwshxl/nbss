@@ -44,6 +44,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/android`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 },
     // The brochure, sent as a link to prospective clients; also outside the marketing pages.
     { url: `${BASE}/brochure`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 },
+    // The visiting card, three designs to download; also outside the marketing pages.
+    { url: `${BASE}/card`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.5 },
     ...vacancies.map((v) => ({
       url: `${BASE}/careers/${v.id}`,
       lastModified: now,
