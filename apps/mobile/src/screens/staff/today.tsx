@@ -8,6 +8,7 @@ import { istTime, tel } from "@nbss/shared/company";
 import { shiftTypeLabel } from "@nbss/shared/shifts";
 
 import { Avatar } from "@/components/avatar";
+import { MyDutyCard } from "@/components/my-duty-card";
 import { PageHeader } from "@/components/page-header";
 import { Panel, PanelRow } from "@/components/panel";
 import { CardGrid, Screen } from "@/components/screen";
@@ -123,8 +124,8 @@ async function load(day: Day): Promise<Duty[]> {
       guard: p?.full_name ?? "A guard",
       avatar: p?.avatar_url ?? null,
       phone: p?.phone ?? null,
-      siteId: a.site_id,
-      site: one(a.sites as unknown as { name: string } | null)?.name ?? "A site",
+      siteId: a.site_id ?? "",
+      site: a.site_id ? (one(a.sites as unknown as { name: string } | null)?.name ?? "A site") : "Field duty",
       grace: 0,
       inAt: a.check_in_at,
       outAt: a.check_out_at,
@@ -180,6 +181,8 @@ export function StaffToday() {
   return (
     <Screen topInset={false} bottomInset={false} contentStyle={styles.body} refreshControl={<RefreshControl refreshing={refreshing} tintColor={color.primary} onRefresh={() => void refresh()} />}>
       <PageHeader eyebrow="Shift management" title={day === "0" ? "Today" : day === "-1" ? "Yesterday" : "Tomorrow"} />
+      {/* A supervisor's or field officer's own check-in; nothing for the office. */}
+      <MyDutyCard />
       <Segmented
         value={day}
         stretch

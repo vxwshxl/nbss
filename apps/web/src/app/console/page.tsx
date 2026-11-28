@@ -177,7 +177,7 @@ export default async function ConsoleDashboard() {
       kind: a.kind,
       guardName: g?.full_name ?? "A guard",
       guardPhone: g?.phone ?? null,
-      siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "a site",
+      siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "field duty",
       raised: time(a.raised_at),
     };
   });

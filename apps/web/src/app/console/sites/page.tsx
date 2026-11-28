@@ -63,6 +63,7 @@ export default async function SitesPage() {
 
   const onDutyBySite = new Map<string, number>();
   for (const row of live.data ?? []) {
+    if (!row.site_id) continue; // a field officer's check-in has no site
     onDutyBySite.set(row.site_id, (onDutyBySite.get(row.site_id) ?? 0) + 1);
   }
 

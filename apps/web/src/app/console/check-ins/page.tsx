@@ -60,7 +60,7 @@ export default async function CheckInsPage({ searchParams }: { searchParams: Pro
         guardName: g?.full_name ?? "A guard",
         guardCode: g?.employee_code ?? "",
         guardRole: workerLabel(g?.trade),
-        siteName: one(r.sites as unknown as { name: string } | null)?.name ?? "A site",
+        siteName: one(r.sites as unknown as { name: string } | null)?.name ?? "Field duty",
         checkInAt: r.check_in_at!,
         checkOutAt: r.check_out_at,
         inMethod: r.check_in_method,

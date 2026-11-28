@@ -64,7 +64,8 @@ export type DutyGuard = {
   name: string;
   code: string;
   phone: string | null;
-  siteId: string;
+  /** Null for a field officer, who checks in from anywhere. */
+  siteId: string | null;
   siteName: string;
   checkInAt: string;
   /**

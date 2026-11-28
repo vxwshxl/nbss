@@ -120,7 +120,7 @@ export function PunchControl({
   openPunch,
 }: {
   sites: PunchSite[];
-  openPunch: { siteId: string; siteName: string; since: string } | null;
+  openPunch: { siteId: string | null; siteName: string; since: string } | null;
 }) {
   /**
    * Starts at "locating", not at an "idle" placeholder the effect then immediately

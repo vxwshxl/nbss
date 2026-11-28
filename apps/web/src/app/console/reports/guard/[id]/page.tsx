@@ -124,7 +124,7 @@ export default async function GuardAttendancePage({
       key: a.id,
       date: istDate(new Date(a.check_in_at)),
       dateLabel: dayLabel(a.check_in_at),
-      site: one(a.sites as unknown as { name: string } | null)?.name ?? "A site",
+      site: one(a.sites as unknown as { name: string } | null)?.name ?? "Field duty",
       shift: "Not on the roster",
       status: !a.check_out_at ? "on_duty" : (a.status as RegisterRow["status"]),
       checkIn: clock(a.check_in_at),

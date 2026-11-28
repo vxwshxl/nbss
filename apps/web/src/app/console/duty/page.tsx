@@ -154,7 +154,7 @@ export default async function DutyPage() {
       guard_name: null,
       guard_code: null,
       site_name: place?.name ?? null,
-      site: fences.get(r.site_id) ?? null,
+      site: (r.site_id && fences.get(r.site_id)) || null,
     };
   });
 

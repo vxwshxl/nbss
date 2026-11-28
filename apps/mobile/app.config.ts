@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: "nbss-operations",
   owner: "vxwshxl",
   scheme: "nbss",
-  version: "1.2.0",
+  version: "1.3.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   userInterfaceStyle: "light",

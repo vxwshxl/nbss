@@ -115,7 +115,7 @@ export async function personPreview(id: string): Promise<PersonPreview | { error
           }
         : null,
       onDuty: open
-        ? { site: (open.sites as unknown as { name: string } | null)?.name ?? "A site", since: open.check_in_at! }
+        ? { site: (open.sites as unknown as { name: string } | null)?.name ?? "Field duty", since: open.check_in_at! }
         : null,
       days30: new Set(worked.map((r) => istDate(new Date(r.check_in_at!)))).size,
       // Days, not punches: two late check-ins on one day are one late day.

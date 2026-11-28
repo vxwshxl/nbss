@@ -14,7 +14,8 @@ import type { TrailSite } from "@/components/tracking/trail-map";
 /** One colour per shift on the overview, repeated past the end. */
 export const ROUTE_HUES = ["#2563eb", "#059669", "#d97706", "#7c3aed", "#db2777", "#0891b2", "#65a30d", "#dc2626", "#4f46e5", "#0d9488"];
 
-export type OverviewShift = { attendanceId: string; guardName: string; siteId: string; site: TrailSite; open: boolean };
+/** `site` is null for field duty (a field officer checks in from anywhere): a path, no fence. */
+export type OverviewShift = { attendanceId: string; guardName: string; siteId: string | null; site: TrailSite | null; open: boolean };
 
 /**
  * Route history before a shift is picked: every listed shift's path on one map, each in
@@ -27,7 +28,7 @@ export function RoutesOverview({ shifts, onPick, className }: { shifts: Overview
   // Each site on the map once, for the search box to offer first.
   const local = useMemo(() => {
     const seen = new Map<string, { id: string; label: string; lat: number; lng: number }>();
-    for (const s of shifts) if (!seen.has(s.siteId)) seen.set(s.siteId, { id: s.siteId, label: s.site.name, lat: s.site.lat, lng: s.site.lng });
+    for (const s of shifts) if (s.siteId && s.site && !seen.has(s.siteId)) seen.set(s.siteId, { id: s.siteId, label: s.site.name, lat: s.site.lat, lng: s.site.lng });
     return [...seen.values()];
   }, [shifts]);
   const [trails, setTrails] = useState<Record<string, TrailPoint[]>>({});
@@ -61,8 +62,8 @@ export function RoutesOverview({ shifts, onPick, className }: { shifts: Overview
   }, [ids]);
 
   // Fences, once per set of sites.
-  const sites = [...new Map(shifts.map((s) => [s.siteId, s.site])).values()];
-  const siteKey = shifts.map((s) => s.siteId).sort().join(",");
+  const sites = [...new Map(shifts.flatMap((s) => (s.siteId && s.site ? [[s.siteId, s.site] as const] : []))).values()];
+  const siteKey = shifts.flatMap((s) => (s.siteId ? [s.siteId] : [])).sort().join(",");
   useEffect(() => {
     if (!maps || !map) return;
     const drawn = sites.map(
@@ -91,7 +92,7 @@ export function RoutesOverview({ shifts, onPick, className }: { shifts: Overview
       const pts = trails[s.attendanceId];
       const hue = ROUTE_HUES[i % ROUTE_HUES.length]!;
       if (!pts?.length) {
-        bounds.extend(s.site);
+        if (s.site) bounds.extend(s.site);
         return;
       }
       for (const p of pts) bounds.extend(p);

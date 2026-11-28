@@ -134,10 +134,10 @@ async function load(id: string): Promise<Detail | null> {
             ? `${clock12(hours.shift_start)} - ${clock12(hours.shift_end)} (site hours)`
             : null;
         const place = one(a.sites as unknown as SiteRow | SiteRow[] | null);
-        const fence: MapSite | null = place
+        const fence: MapSite | null = place && a.site_id
           ? { id: a.site_id, name: place.name, lat: place.lat, lng: place.lng, radiusM: place.geofence_radius_m, ring: toRing(place.polygon) }
           : null;
-        return { id: a.id, in: a.check_in_at!, out: a.check_out_at, minutes: a.worked_minutes, status: a.status, site: site(a.sites), duty, fence };
+        return { id: a.id, in: a.check_in_at!, out: a.check_out_at, minutes: a.worked_minutes, status: a.status, site: a.site_id ? site(a.sites) : "Field duty", duty, fence };
       }),
     position: pos.data
       ? {

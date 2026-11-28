@@ -235,7 +235,7 @@ export function AttendancePreviewDialog({
                 <>
                   {d.guard && <span className="font-mono">{d.guard.code}</span>}
                   {d.guard && <span aria-hidden>·</span>}
-                  <span>{d.site?.name ?? "Unknown site"}</span>
+                  <span>{d.site?.name ?? "Field duty"}</span>
                 </>
               }
               badge={
@@ -264,12 +264,13 @@ export function AttendancePreviewDialog({
                 </Stat>
               </StatGrid>
 
-              {d.site && points.length > 1 ? (
+              {points.length > 1 ? (
                 <Section title={d.check_out_at ? "The route they walked" : "The route so far"}>
                   <TrailMap
                     points={points}
                     stats={stats}
-                    site={{ name: d.site.name, lat: d.site.lat, lng: d.site.lng, radiusM: d.site.geofence_radius_m, ring: d.site.ring }}
+                    // Field duty (a field officer, from anywhere) has no site and no fence.
+                    site={d.site ? { name: d.site.name, lat: d.site.lat, lng: d.site.lng, radiusM: d.site.geofence_radius_m, ring: d.site.ring } : null}
                     head={points.length - 1}
                     height={320}
                   />
@@ -277,9 +278,11 @@ export function AttendancePreviewDialog({
                     <span>
                       <span className="font-semibold text-foreground">{km(stats?.distanceM ?? 0)}</span> walked
                     </span>
-                    <span>
-                      <span className="font-semibold text-foreground">{minutes(stats?.outsideMinutes ?? 0)}</span> outside the fence
-                    </span>
+                    {d.site && (
+                      <span>
+                        <span className="font-semibold text-foreground">{minutes(stats?.outsideMinutes ?? 0)}</span> outside the fence
+                      </span>
+                    )}
                     <span>
                       <span className="font-semibold text-foreground">{stats?.stops.length ?? 0}</span> stops
                     </span>
@@ -288,7 +291,7 @@ export function AttendancePreviewDialog({
                     </span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Blue is inside the site&apos;s fence, orange outside it. S is the check-in, the numbered dots are stops
+                    {d.site ? "Blue is inside the site's fence, orange outside it. " : "Field duty: no site, so no fence. "}S is the check-in, the numbered dots are stops
                     of five minutes or more, and the blue dot is {d.check_out_at ? "where they checked out" : "where the phone last reported"}.
                   </p>
                 </Section>

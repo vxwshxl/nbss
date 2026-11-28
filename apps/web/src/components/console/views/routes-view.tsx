@@ -97,7 +97,7 @@ export async function RoutesView({
         guardCode: p?.employee_code ?? "",
         phone: p?.phone ?? null,
         siteId: a.site_id,
-        siteName: s?.name ?? "A site",
+        siteName: a.site_id ? (s?.name ?? "A site") : "Field duty",
         // The rostered shift this punch answered, else the site's daily window.
         duty: shift
           ? { kind: "shift" as const, start: shift.starts_at, end: shift.ends_at }
@@ -105,13 +105,16 @@ export async function RoutesView({
             ? { kind: "site" as const, start: s.shift_start, end: s.shift_end }
             : null,
         device: d ? { label: [d.brand, d.model].filter(Boolean).join(" ") || "Unknown phone", appVersion: d.app_version } : null,
-        site: {
-          name: s?.name ?? "",
-          lat: s?.lat ?? 0,
-          lng: s?.lng ?? 0,
-          radiusM: s?.geofence_radius_m ?? 150,
-          ring: (toRing(s?.polygon) as [number, number][] | null) ?? null,
-        },
+        // Field duty has no site, so no fence to draw.
+        site: s
+          ? {
+              name: s.name ?? "",
+              lat: s.lat ?? 0,
+              lng: s.lng ?? 0,
+              radiusM: s.geofence_radius_m ?? 150,
+              ring: (toRing(s.polygon) as [number, number][] | null) ?? null,
+            }
+          : null,
         checkInAt: a.check_in_at!,
         checkOutAt: a.check_out_at,
         workedMinutes: a.worked_minutes,

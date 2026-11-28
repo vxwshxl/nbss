@@ -210,6 +210,7 @@ const listSites: AiTool = {
 
     const onDuty = new Map<string, number>();
     for (const row of live.data ?? []) {
+      if (!row.site_id) continue; // a field officer's check-in has no site
       onDuty.set(row.site_id, (onDuty.get(row.site_id) ?? 0) + 1);
     }
 
@@ -574,9 +575,9 @@ async function readRosterDay(supabase: Supabase, offset: number) {
     supabase.from("attendance").select("guard_id, site_id, sites(name)").is("check_out_at", null),
   ]);
 
-  const openBy = new Map<string, { siteId: string; site: string }>();
+  const openBy = new Map<string, { siteId: string | null; site: string }>();
   for (const a of open.data ?? []) {
-    openBy.set(a.guard_id, { siteId: a.site_id, site: one<{ name: string }>(a.sites)?.name ?? "another site" });
+    openBy.set(a.guard_id, { siteId: a.site_id, site: a.site_id ? (one<{ name: string }>(a.sites)?.name ?? "another site") : "field duty" });
   }
 
   const now = Date.now();

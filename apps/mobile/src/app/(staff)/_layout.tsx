@@ -5,6 +5,7 @@ import { CalendarClock, Radar, Siren, Users } from "lucide-react-native";
 import { StyleSheet, type ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEffect } from "react";
+import { AppState } from "react-native";
 
 import { isStaff } from "@nbss/shared/identity";
 
@@ -15,6 +16,7 @@ import { Avatar } from "@/components/avatar";
 import { photoOf, useAuth } from "@/lib/auth";
 import { registerHandset } from "@/lib/device";
 import { LiveFeedProvider } from "@/lib/live-feed";
+import { ensureTracking } from "@/lib/keep-alive";
 import { askForegroundOnce } from "@/lib/location";
 import { registerForPush } from "@/lib/push";
 import { color, font } from "@/theme/tokens";
@@ -41,6 +43,14 @@ export default function StaffLayout() {
     // The phone in Devices, as a guard's is; office phones are approved on sight (0023).
     void askForegroundOnce().then(() => registerHandset());
     void registerForPush();
+    // Supervisors and field officers check in now (0082): on duty but not tracking (app
+    // swiped away, phone restarted), start again, as the guard app does. For anyone not
+    // checked in this does nothing.
+    void ensureTracking();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void ensureTracking();
+    });
+    return () => sub.remove();
   }, [session]);
 
   if (session === undefined) return <Splash />;

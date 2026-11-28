@@ -56,7 +56,7 @@ export type Database = {
           id: string;
           shift_id: string | null;
           guard_id: string;
-          site_id: string;
+          site_id: string | null;
           check_in_at: string | null;
           check_in_lat: number | null;
           check_in_lng: number | null;
@@ -93,7 +93,7 @@ export type Database = {
           id?: string;
           shift_id?: string | null;
           guard_id: string;
-          site_id: string;
+          site_id?: string | null;
           check_in_at?: string | null;
           check_in_lat?: number | null;
           check_in_lng?: number | null;
@@ -130,7 +130,7 @@ export type Database = {
           id?: string;
           shift_id?: string | null;
           guard_id?: string;
-          site_id?: string;
+          site_id?: string | null;
           check_in_at?: string | null;
           check_in_lat?: number | null;
           check_in_lng?: number | null;

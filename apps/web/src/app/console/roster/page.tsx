@@ -71,7 +71,7 @@ export default async function RosterPage({ searchParams }: { searchParams: Promi
 
   const guardById = new Map((guards.data ?? []).map((g) => [g.id, g]));
   const onDutyAt = new Map<string, string>(); // guard → site they are checked in at
-  for (const a of open.data ?? []) onDutyAt.set(a.guard_id, a.site_id);
+  for (const a of open.data ?? []) if (a.site_id) onDutyAt.set(a.guard_id, a.site_id);
 
   const now = nowMs();
   const graceBySite = new Map((sites.data ?? []).map((s) => [s.id, s.grace_minutes]));

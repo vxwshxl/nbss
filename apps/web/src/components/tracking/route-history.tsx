@@ -37,9 +37,10 @@ export type RouteShift = {
   guardName: string;
   guardCode: string;
   phone: string | null;
-  siteId: string;
+  /** Null for a field officer, who checks in from anywhere. */
+  siteId: string | null;
   siteName: string;
-  site: TrailSite;
+  site: TrailSite | null;
   duty: Duty;
   device: { label: string; appVersion: string | null } | null;
   checkInAt: string;

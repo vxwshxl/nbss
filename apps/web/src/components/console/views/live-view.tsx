@@ -70,7 +70,7 @@ export async function LiveView({ siteId }: { siteId?: string } = {}) {
       code: p?.employee_code ?? "",
       phone: p?.phone ?? null,
       siteId: a.site_id,
-      siteName: site?.name ?? "A site",
+      siteName: a.site_id ? (site?.name ?? "A site") : "Field duty",
       checkInAt: a.check_in_at ?? now,
       // The rostered shift this punch answered, else the site's daily window.
       duty: shift

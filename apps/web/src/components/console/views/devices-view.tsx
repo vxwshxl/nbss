@@ -107,7 +107,7 @@ export async function DevicesView({ siteId }: { siteId?: string } = {}) {
   const held: FlaggedPunch[] = (flagged.data ?? []).map((a) => ({
     id: a.id,
     guardName: one(a.profiles as unknown as { full_name: string } | null)?.full_name ?? "A guard",
-    siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "a site",
+    siteName: one(a.sites as unknown as { name: string } | null)?.name ?? "field duty",
     checkInAt: a.check_in_at ?? "",
     flag: a.device_flag ?? "",
     phone: a.device_id ? (phoneOf.get(a.device_id) ?? null) : null,

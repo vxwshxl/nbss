@@ -41,7 +41,8 @@ const SITE_COLUMNS =
 
 export type OpenPunch = {
   id: string;
-  site_id: string;
+  /** Null for field duty: a field officer checks in from anywhere. */
+  site_id: string | null;
   site_name: string | null;
   check_in_at: string | null;
   status: string;
@@ -67,6 +68,27 @@ export async function openPunch(): Promise<OpenPunch | null> {
     check_in_at: data.check_in_at,
     status: data.status,
   };
+}
+
+/**
+ * The sites a supervisor is posted to supervise (active postings, active sites): the
+ * only places `punch_in` lets them check in (0082).
+ */
+export async function supervisedSites(): Promise<Site[]> {
+  const me = (await supabase.auth.getSession()).data.session?.user.id;
+  if (!me) return [];
+  const { data } = await supabase
+    .from("site_postings")
+    .select(`site_id, sites!inner(${SITE_COLUMNS})`)
+    .eq("guard_id", me)
+    .eq("active", true)
+    .eq("sites.active", true);
+  const sites = new Map<string, Site>();
+  for (const row of data ?? []) {
+    const site = (Array.isArray(row.sites) ? row.sites[0] : row.sites) as Site | null;
+    if (site) sites.set(site.id, site);
+  }
+  return [...sites.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** The sites this guard is rostered to around now — what the check-in picker offers. */
@@ -230,7 +252,8 @@ export type PunchResult =
  * `position` is the fix the arrival check already took, so the guard does not
  * wait for a second one; without it a fresh fix is read here.
  */
-export async function punchIn(siteId: string, fix?: Location.LocationObject | null): Promise<PunchResult> {
+/** `siteId` null is field duty: a field officer checking in from wherever they are (0082). */
+export async function punchIn(siteId: string | null, fix?: Location.LocationObject | null): Promise<PunchResult> {
   const position = fix ?? (await currentFix());
   if (!position) {
     return {
@@ -240,7 +263,9 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
   }
 
   const args = {
-    p_site_id: siteId,
+    // The generated Args type cannot say an argument may be null; punch_in takes null
+    // as field duty.
+    p_site_id: siteId as string,
     p_lat: position.coords.latitude,
     p_lng: position.coords.longitude,
     p_accuracy_m: position.coords.accuracy ?? 9999,
@@ -261,7 +286,8 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
   if (error) return { ok: false, error: error.message };
 
   const punch = (data ?? {}) as {
-    site_name?: string;
+    site_name?: string | null;
+    field?: boolean;
     status?: string;
     distance_m?: number;
     mode?: "on_duty" | "emergency";
@@ -303,7 +329,11 @@ export async function punchIn(siteId: string, fix?: Location.LocationObject | nu
     tracking,
     distanceM: punch.distance_m ?? 0,
     message:
-      (punch.status === "late" ? `Checked in at ${punch.site_name}. Marked late.` : `Checked in at ${punch.site_name}.`) +
+      (punch.field
+        ? "Checked in for field duty. Your location is shared until you check out."
+        : punch.status === "late"
+          ? `Checked in at ${punch.site_name}. Marked late.`
+          : `Checked in at ${punch.site_name}.`) +
       (punch.device_flag === "shared_device"
         ? " This phone belongs to another guard, so your supervisor will check this attendance."
         : punch.device_flag === "new_device"
@@ -354,7 +384,8 @@ export async function punchOut(handover?: string): Promise<PunchResult> {
   }
 
   const punch = (data ?? {}) as {
-    site_name?: string;
+    site_name?: string | null;
+    field?: boolean;
     worked_minutes?: number;
     overtime_minutes?: number;
     distance_m?: number;
@@ -364,7 +395,7 @@ export async function punchOut(handover?: string): Promise<PunchResult> {
   return {
     ok: true,
     distanceM: punch.distance_m ?? 0,
-    message: `Checked out of ${punch.site_name ?? "your site"}. ${Math.floor(worked / 60)}h ${String(
+    message: `Checked out of ${punch.field ? "field duty" : (punch.site_name ?? "your site")}. ${Math.floor(worked / 60)}h ${String(
       worked % 60,
     ).padStart(2, "0")}m recorded${
       punch.overtime_minutes ? `, including ${punch.overtime_minutes} min overtime` : ""
